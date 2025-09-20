@@ -61,15 +61,72 @@ export function isValidUUID(uuid: string): boolean {
 }
 
 /**
- * Sanitizes user input by removing potentially dangerous characters.
+ * Sanitizes user input by removing potentially dangerous characters and patterns.
+ * Provides comprehensive XSS protection through multiple sanitization layers.
  * @param input - User input to sanitize
  * @returns Sanitized string
  */
 export function sanitizeInput(input: string): string {
+  if (!input || typeof input !== 'string') {
+    return '';
+  }
+
   return input
-    .replace(/[<>]/g, '') // Remove HTML brackets
-    .replace(/javascript:/gi, '') // Remove javascript: protocol
-    .replace(/on\w+\s*=/gi, '') // Remove event handlers
+    // Remove HTML tags and brackets
+    .replace(/<[^>]*>/g, '')
+    .replace(/[<>]/g, '')
+
+    // Remove dangerous protocols
+    .replace(/javascript:/gi, '')
+    .replace(/data:/gi, '')
+    .replace(/vbscript:/gi, '')
+    .replace(/about:/gi, '')
+
+    // Remove event handlers
+    .replace(/on\w+\s*=/gi, '')
+
+    // Remove script-related patterns
+    .replace(/script/gi, '')
+    .replace(/eval\s*\(/gi, '')
+    .replace(/expression\s*\(/gi, '')
+
+    // Remove dangerous characters and entities
+    .replace(/&[#x]?\w+;/g, '') // HTML entities
+    .replace(/[\x00-\x1f\x7f-\x9f]/g, '') // Control characters
+
+    // Remove dangerous CSS patterns
+    .replace(/behavior\s*:/gi, '')
+    .replace(/-moz-binding\s*:/gi, '')
+
+    // Remove SQL injection patterns
+    .replace(/union\s+select/gi, '')
+    .replace(/drop\s+table/gi, '')
+    .replace(/delete\s+from/gi, '')
+    .replace(/insert\s+into/gi, '')
+
+    .trim();
+}
+
+/**
+ * Validates and sanitizes HTML content for safe display.
+ * More restrictive than general input sanitization.
+ * @param html - HTML content to sanitize
+ * @returns Sanitized HTML string with only safe tags and attributes
+ */
+export function sanitizeHtml(html: string): string {
+  if (!html || typeof html !== 'string') {
+    return '';
+  }
+
+  // List of allowed tags (very restrictive)
+  const allowedTags = ['p', 'br', 'strong', 'em', 'u', 'b', 'i'];
+  const tagPattern = new RegExp(`<(?!/?(?:${allowedTags.join('|')})\\b)[^>]*>`, 'gi');
+
+  return html
+    .replace(tagPattern, '') // Remove all tags except allowed ones
+    .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '') // Remove event handlers
+    .replace(/javascript:/gi, '') // Remove javascript: protocols
+    .replace(/style\s*=\s*["'][^"']*["']/gi, '') // Remove inline styles
     .trim();
 }
 

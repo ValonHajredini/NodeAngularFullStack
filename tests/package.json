@@ -1,0 +1,27 @@
+{
+  "name": "docker-integration-tests",
+  "version": "1.0.0",
+  "description": "Docker environment integration tests",
+  "private": true,
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.8"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testTimeout": 30000,
+    "collectCoverageFrom": [
+      "**/*.{js,ts}",
+      "!**/node_modules/**"
+    ],
+    "testMatch": [
+      "**/*.test.js",
+      "**/*.spec.js"
+    ]
+  }
+}

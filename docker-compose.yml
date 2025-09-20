@@ -1,0 +1,148 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: nodeangularfullstack-db
+    environment:
+      POSTGRES_DB: nodeangularfullstack
+      POSTGRES_USER: dbuser
+      POSTGRES_PASSWORD: dbpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dbuser -d nodeangularfullstack"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
+    networks:
+      - nodeangularfullstack-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: nodeangularfullstack-cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+        reservations:
+          memory: 64M
+          cpus: '0.1'
+    networks:
+      - nodeangularfullstack-network
+
+  # Express API
+  api:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.api
+      target: ${BUILD_TARGET:-production}
+    container_name: nodeangularfullstack-api
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3000
+      DATABASE_URL: postgresql://dbuser:dbpassword@postgres:5432/nodeangularfullstack
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-development-secret-key-change-in-production}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-development-refresh-secret-key}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:4200}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./apps/api:/app/apps/api
+      - ./packages:/app/packages
+      - /app/node_modules
+      - /app/apps/api/node_modules
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+          cpus: '0.2'
+    networks:
+      - nodeangularfullstack-network
+
+  # Angular Frontend
+  web:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.web
+      target: ${BUILD_TARGET:-production}
+    container_name: nodeangularfullstack-web
+    ports:
+      - "4200:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
+    networks:
+      - nodeangularfullstack-network
+
+  # pgWeb Database Interface
+  pgweb:
+    image: sosedoff/pgweb:latest
+    container_name: nodeangularfullstack-pgweb
+    ports:
+      - "8080:8081"
+    environment:
+      PGWEB_DATABASE_URL: postgresql://dbuser:dbpassword@postgres:5432/nodeangularfullstack?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+        reservations:
+          memory: 64M
+          cpus: '0.1'
+    networks:
+      - nodeangularfullstack-network
+
+volumes:
+  postgres-data:
+  redis-data:
+
+networks:
+  nodeangularfullstack-network:
+    driver: bridge

@@ -27,7 +27,7 @@ export interface User {
 export interface LoginCredentials {
   /** User's email address */
   email: string;
-  /** User's password (plain text, to be hashed on server) */
+  /** User's password (must be transmitted securely via HTTPS and hashed immediately) */
   password: string;
 }
 

@@ -1,0 +1,29 @@
+# Development Dockerfile for Angular Web App with hot-reload
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install Angular CLI globally
+RUN npm install -g @angular/cli@latest
+
+# Copy package files
+COPY package*.json ./
+COPY apps/web/package*.json ./apps/web/
+COPY packages/shared/package*.json ./packages/shared/
+COPY packages/config/package*.json ./packages/config/
+
+# Install dependencies
+RUN npm ci --workspace=apps/web --include-workspace-root
+
+# Copy source files
+COPY tsconfig.json ./
+COPY apps/web ./apps/web
+COPY packages ./packages
+
+WORKDIR /app/apps/web
+
+# Expose Angular dev server port
+EXPOSE 4200
+
+# Start Angular development server with host binding for Docker
+CMD ["ng", "serve", "--host", "0.0.0.0", "--poll", "2000"]
