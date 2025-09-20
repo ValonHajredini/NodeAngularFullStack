@@ -177,24 +177,100 @@ import { environment } from '@env/environment';
             </button>
           </div>
 
-          <!-- Development Environment Test Credentials -->
+          <!-- Development Environment Test Users -->
           @if (isDevelopment()) {
-            <div class="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
-              <h4 class="text-sm font-medium text-yellow-800 mb-2">
-                <i class="pi pi-info-circle mr-1"></i>
-                Development Test Credentials
+            <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
+              <h4 class="text-sm font-medium text-blue-800 mb-3">
+                <i class="pi pi-users mr-1"></i>
+                Demo Users - Click email to auto-fill
               </h4>
-              <div class="text-xs text-yellow-700 space-y-1">
-                <div><strong>Admin:</strong> admin&#64;example.com / Test123!&#64;#</div>
-                <div><strong>User:</strong> user&#64;example.com / Test123!&#64;#</div>
-                <div><strong>Readonly:</strong> readonly&#64;example.com / Test123!&#64;#</div>
+              <div class="space-y-3">
+                <!-- Admin User -->
+                <div class="bg-white p-3 rounded border border-blue-100">
+                  <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                      <div class="text-sm font-medium text-gray-900">
+                        <i class="pi pi-shield text-red-500 mr-1"></i>
+                        Administrator
+                      </div>
+                      <button
+                        type="button"
+                        (click)="fillTestCredentials('admin')"
+                        class="text-xs text-blue-600 hover:text-blue-800 hover:underline transition-colors">
+                        admin@example.com
+                      </button>
+                      <div class="text-xs text-gray-500 mt-1">
+                        Full system access • Can manage users and settings
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      (click)="fillTestCredentials('admin')"
+                      class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 px-2 py-1 rounded transition-colors">
+                      Use Account
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Regular User -->
+                <div class="bg-white p-3 rounded border border-blue-100">
+                  <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                      <div class="text-sm font-medium text-gray-900">
+                        <i class="pi pi-user text-green-500 mr-1"></i>
+                        Regular User
+                      </div>
+                      <button
+                        type="button"
+                        (click)="fillTestCredentials('user')"
+                        class="text-xs text-blue-600 hover:text-blue-800 hover:underline transition-colors">
+                        user@example.com
+                      </button>
+                      <div class="text-xs text-gray-500 mt-1">
+                        Standard access • Can view reports and manage own data
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      (click)="fillTestCredentials('user')"
+                      class="text-xs bg-green-100 hover:bg-green-200 text-green-800 px-2 py-1 rounded transition-colors">
+                      Use Account
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Readonly User -->
+                <div class="bg-white p-3 rounded border border-blue-100">
+                  <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                      <div class="text-sm font-medium text-gray-900">
+                        <i class="pi pi-eye text-gray-500 mr-1"></i>
+                        Read-Only User
+                      </div>
+                      <button
+                        type="button"
+                        (click)="fillTestCredentials('readonly')"
+                        class="text-xs text-blue-600 hover:text-blue-800 hover:underline transition-colors">
+                        readonly@example.com
+                      </button>
+                      <div class="text-xs text-gray-500 mt-1">
+                        View-only access • Can browse data but cannot modify
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      (click)="fillTestCredentials('readonly')"
+                      class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-800 px-2 py-1 rounded transition-colors">
+                      Use Account
+                    </button>
+                  </div>
+                </div>
               </div>
-              <button
-                type="button"
-                (click)="fillTestCredentials('admin')"
-                class="mt-2 text-xs bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-2 py-1 rounded transition-colors">
-                Fill Admin Credentials
-              </button>
+
+              <div class="mt-3 text-xs text-blue-700 bg-blue-100 p-2 rounded">
+                <i class="pi pi-info-circle mr-1"></i>
+                All demo accounts use the same password format based on role + "123!@#"
+              </div>
             </div>
           }
         </form>
@@ -249,7 +325,7 @@ export class LoginComponent implements OnInit {
 
   ngOnInit(): void {
     // Get return URL from query parameters or default to dashboard
-    this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
+    this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/app/dashboard';
 
     // If user is already authenticated, redirect to return URL
     if (this.authService.isAuthenticated()) {
@@ -302,9 +378,9 @@ export class LoginComponent implements OnInit {
    */
   fillTestCredentials(role: 'admin' | 'user' | 'readonly'): void {
     const credentials = {
-      admin: { email: 'admin@example.com', password: 'Test123!@#' },
-      user: { email: 'user@example.com', password: 'Test123!@#' },
-      readonly: { email: 'readonly@example.com', password: 'Test123!@#' }
+      admin: { email: 'admin@example.com', password: 'Admin123!@#' },
+      user: { email: 'user@example.com', password: 'User123!@#' },
+      readonly: { email: 'readonly@example.com', password: 'Read123!@#' }
     };
 
     this.loginForm.patchValue(credentials[role]);

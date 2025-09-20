@@ -7,6 +7,10 @@ export const routes: Routes = [
     path: 'debug',
     loadComponent: () => import('./test-debug.component').then(m => m.TestDebugComponent)
   },
+  {
+    path: 'auth-debug',
+    loadComponent: () => import('./auth-debug.component').then(m => m.AuthDebugComponent)
+  },
 
   // Public landing page
   {
