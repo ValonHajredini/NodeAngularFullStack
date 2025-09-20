@@ -1,0 +1,12 @@
+{
+  "name": "@nodeangularfullstack/config",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "Shared configuration for NodeAngularFullStack"
+}

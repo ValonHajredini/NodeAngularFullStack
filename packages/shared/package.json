@@ -1,0 +1,14 @@
+{
+  "name": "@nodeangularfullstack/shared",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "Shared types and utilities for NodeAngularFullStack"
+}
