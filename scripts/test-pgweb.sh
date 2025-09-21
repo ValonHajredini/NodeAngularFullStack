@@ -32,7 +32,7 @@ print_error() {
 }
 
 # Check if pgWeb is running
-if ! curl -s http://localhost:8081/api/info > /dev/null 2>&1; then
+if ! curl -s http://localhost:8080/api/info > /dev/null 2>&1; then
     print_error "pgWeb is not running. Start it with: docker-compose up -d pgweb"
     exit 1
 fi
@@ -42,7 +42,7 @@ source .env
 
 # Test 1: Authentication
 print_status "Testing authentication..."
-auth_response=$(curl -s -u "$PGWEB_AUTH_USER:$PGWEB_AUTH_PASS" http://localhost:8081/api/info)
+auth_response=$(curl -s -u "$PGWEB_AUTH_USER:$PGWEB_AUTH_PASS" http://localhost:8080/api/info)
 if echo "$auth_response" | grep -q "version"; then
     print_success "Authentication working"
 else
@@ -56,7 +56,7 @@ session_response=$(curl -s -u "$PGWEB_AUTH_USER:$PGWEB_AUTH_PASS" \
     -X POST \
     -H "Content-Type: application/json" \
     -d "{\"host\":\"postgres\",\"port\":5432,\"user\":\"dbuser\",\"password\":\"dbpassword\",\"database\":\"nodeangularfullstack\",\"ssl\":\"disable\"}" \
-    http://localhost:8081/api/connect)
+    http://localhost:8080/api/connect)
 
 echo "Session response: $session_response"
 
@@ -67,7 +67,7 @@ print_status "Testing schema visualization..."
 echo "📊 Testing database schema access through pgWeb interface..."
 
 # Test database connection by checking if we can access the interface
-http_status=$(curl -s -o /dev/null -w "%{http_code}" -u "$PGWEB_AUTH_USER:$PGWEB_AUTH_PASS" http://localhost:8081/)
+http_status=$(curl -s -o /dev/null -w "%{http_code}" -u "$PGWEB_AUTH_USER:$PGWEB_AUTH_PASS" http://localhost:8080/)
 
 if [ "$http_status" = "200" ]; then
     print_success "pgWeb interface accessible"
@@ -118,7 +118,7 @@ fi
 
 print_success "pgWeb database schema verification completed!"
 echo ""
-echo "🌐 pgWeb Interface: http://localhost:8081"
+echo "🌐 pgWeb Interface: http://localhost:8080"
 echo "👤 Username: $PGWEB_AUTH_USER"
 echo "🔑 Password: [CONFIGURED]"
 echo ""

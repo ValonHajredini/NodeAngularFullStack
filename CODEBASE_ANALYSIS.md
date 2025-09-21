@@ -43,7 +43,7 @@ graph TB
     subgraph "Data Layer"
         PG[(PostgreSQL<br/>Port: 5432)]
         REDIS[(Redis Cache<br/>Port: 6379)]
-        PGWEB[pgWeb Admin<br/>Port: 8081]
+        PGWEB[pgWeb Admin<br/>Port: 8080]
     end
 
     WEB --> NGINX

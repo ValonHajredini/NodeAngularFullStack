@@ -19,7 +19,7 @@ NC='\033[0m' # No Color
 FRONTEND_PORT=4200
 API_PORT=3000
 POSTGRES_PORT=5432
-PGWEB_PORT=8081
+PGWEB_PORT=8080
 
 # Function to check if command exists
 command_exists() {
@@ -55,6 +55,26 @@ ensure_docker_running() {
 # Function to check if port is in use
 port_in_use() {
     lsof -Pi :$1 -sTCP:LISTEN -t >/dev/null 2>&1
+}
+
+free_port() {
+    local port=$1
+    if port_in_use $port; then
+        echo -e "${YELLOW}⚠️  Port $port is currently in use. Attempting to free it...${NC}"
+        local pids=$(lsof -ti :$port)
+        if [ -n "$pids" ]; then
+            echo -e "${BLUE}🛑 Killing processes on port $port: $pids${NC}"
+            echo $pids | xargs -I {} kill {}
+            sleep 2
+        fi
+
+        if port_in_use $port; then
+            echo -e "${RED}❌ Failed to free port $port. Please stop the process manually and rerun the script.${NC}"
+            exit 1
+        fi
+
+        echo -e "${GREEN}✅ Port $port freed successfully${NC}"
+    fi
 }
 
 # Function to wait for service to be ready
@@ -123,9 +143,7 @@ if port_in_use $POSTGRES_PORT; then
     echo -e "${YELLOW}⚠️  Port $POSTGRES_PORT is in use - PostgreSQL might already be running${NC}"
 fi
 
-if port_in_use $PGWEB_PORT; then
-    echo -e "${YELLOW}⚠️  Port $PGWEB_PORT is in use - pgWeb database UI might already be running${NC}"
-fi
+free_port $PGWEB_PORT
 
 # Step 1: Start Docker containers
 echo -e "${BLUE}🐳 Starting Docker containers (PostgreSQL + pgAdmin)...${NC}"

@@ -83,7 +83,7 @@ docker-compose up -d pgweb
 
 print_status "Waiting for pgWeb to be ready..."
 counter=0
-while ! curl -s http://localhost:8081/api/info > /dev/null 2>&1; do
+while ! curl -s http://localhost:8080/api/info > /dev/null 2>&1; do
     if [ $counter -ge 30 ]; then
         print_error "pgWeb failed to start within 30 seconds"
         exit 1
@@ -94,7 +94,7 @@ done
 
 print_success "pgWeb Database Management Interface is now running!"
 echo ""
-echo "🌐 Access pgWeb at: http://localhost:8081"
+echo "🌐 Access pgWeb at: http://localhost:8080"
 echo "👤 Username: $PGWEB_AUTH_USER"
 echo "🔑 Password: $PGWEB_AUTH_PASS"
 echo ""

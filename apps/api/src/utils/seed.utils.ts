@@ -1,5 +1,4 @@
 import bcrypt from 'bcryptjs';
-import { config } from './config.utils';
 import { databaseService, DatabaseService } from '../services/database.service';
 
 /**
@@ -30,9 +29,23 @@ export class SeedUtils {
   private static async ensureDatabaseConnection(): Promise<void> {
     const status = databaseService.getStatus();
     if (!status.isConnected) {
-      const dbConfig = DatabaseService.parseConnectionUrl(config.DATABASE_URL);
+      const dbConfig = DatabaseService.parseConnectionUrl(this.getDatabaseUrl());
       await databaseService.initialize(dbConfig);
     }
+  }
+
+  private static getDatabaseUrl(): string {
+    if (process.env.DATABASE_URL && process.env.DATABASE_URL.trim().length > 0) {
+      return process.env.DATABASE_URL;
+    }
+
+    const host = process.env.DB_HOST || 'localhost';
+    const port = process.env.DB_PORT || '5432';
+    const name = process.env.DB_NAME || 'nodeangularfullstack';
+    const user = process.env.DB_USER || 'dbuser';
+    const password = process.env.DB_PASSWORD || 'dbpassword';
+
+    return `postgresql://${user}:${password}@${host}:${port}/${name}`;
   }
 
   /**

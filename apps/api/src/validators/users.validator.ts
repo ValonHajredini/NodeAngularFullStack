@@ -187,7 +187,7 @@ export const patchUserValidator = [
 
   // Custom validator to ensure at least one field is provided
   body()
-    .custom((value, { req }) => {
+    .custom((_value, { req }) => {
       const allowedFields = ['email', 'firstName', 'lastName', 'role', 'isActive', 'emailVerified'];
       const providedFields = Object.keys(req.body).filter(key => allowedFields.includes(key));
 
@@ -269,7 +269,7 @@ export const updatePasswordValidator = [
  * Sanitization middleware to remove sensitive fields from request body.
  * Prevents users from setting internal fields directly.
  */
-export const sanitizeUserInput = (req: any, res: any, next: any) => {
+export const sanitizeUserInput = (req: any, _res: any, next: any) => {
   // Remove sensitive/internal fields that users shouldn't be able to set
   const sensitiveFields = ['id', 'passwordHash', 'createdAt', 'updatedAt', 'lastLogin'];
 

@@ -24,11 +24,91 @@ import {
 const router = Router();
 
 /**
- * @route POST /users
- * @desc Create a new user (admin only)
- * @access Admin
- * @validation createUserValidator
- * @middleware sanitizeUserInput, xssProtection
+ * @swagger
+ * /api/v1/users:
+ *   post:
+ *     summary: Create a new user
+ *     description: Create a new user account (admin only)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, firstName, lastName, role]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: User's unique email address
+ *               firstName:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 50
+ *                 description: User's first name
+ *               lastName:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 50
+ *                 description: User's last name
+ *               role:
+ *                 type: string
+ *                 enum: [admin, user, readonly]
+ *                 description: User role determining permissions
+ *               password:
+ *                 type: string
+ *                 minLength: 8
+ *                 description: Temporary password (optional, auto-generated if not provided)
+ *               isActive:
+ *                 type: boolean
+ *                 default: true
+ *                 description: Whether the user account is active
+ *               emailVerified:
+ *                 type: boolean
+ *                 default: false
+ *                 description: Whether the user's email is verified
+ *           example:
+ *             email: "newuser@example.com"
+ *             firstName: "John"
+ *             lastName: "Doe"
+ *             role: "user"
+ *             password: "TempPassword123!"
+ *             isActive: true
+ *             emailVerified: false
+ *     responses:
+ *       201:
+ *         description: User created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Admin access required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       409:
+ *         description: Email already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post(
   '/',
@@ -42,16 +122,94 @@ router.post(
 );
 
 /**
- * @route GET /users
- * @desc Get paginated list of users with search and filtering (admin only)
- * @access Admin
- * @validation getUsersValidator
- * @query
- *   - page: number (optional, default: 1)
- *   - limit: number (optional, default: 20, max: 100)
- *   - search: string (optional, searches email, firstName, lastName)
- *   - role: string (optional, filters by role: admin|user|readonly)
- *   - status: string (optional, filters by status: active|inactive|all)
+ * @swagger
+ * /api/v1/users:
+ *   get:
+ *     summary: Get paginated list of users
+ *     description: Get paginated list of users with search and filtering (admin only)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 20
+ *         description: Number of items per page
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search term for email, firstName, or lastName
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [admin, user, readonly]
+ *         description: Filter by user role
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [active, inactive, all]
+ *           default: all
+ *         description: Filter by user status
+ *     responses:
+ *       200:
+ *         description: Users retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/PaginationResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/User'
+ *             example:
+ *               data:
+ *                 - id: "123e4567-e89b-12d3-a456-426614174000"
+ *                   email: "admin@example.com"
+ *                   firstName: "Admin"
+ *                   lastName: "User"
+ *                   role: "admin"
+ *                   createdAt: "2024-01-01T00:00:00.000Z"
+ *                   updatedAt: "2024-01-01T00:00:00.000Z"
+ *               pagination:
+ *                 page: 1
+ *                 limit: 20
+ *                 total: 1
+ *                 totalPages: 1
+ *       400:
+ *         description: Invalid query parameters
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Admin access required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get(
   '/',
@@ -62,12 +220,63 @@ router.get(
 );
 
 /**
- * @route GET /users/:id
- * @desc Get user by ID with role-based access control
- * @access Admin (any user) | User (own profile only)
- * @validation userIdValidator
- * @params
- *   - id: UUID (required, user ID)
+ * @swagger
+ * /api/v1/users/{id}:
+ *   get:
+ *     summary: Get user by ID
+ *     description: Get user by ID with role-based access control (admin can access any user, users can only access their own profile)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: User ID (UUID)
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *     responses:
+ *       200:
+ *         description: User retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *             example:
+ *               id: "123e4567-e89b-12d3-a456-426614174000"
+ *               email: "user@example.com"
+ *               firstName: "John"
+ *               lastName: "Doe"
+ *               role: "user"
+ *               tenantId: null
+ *               createdAt: "2024-01-01T00:00:00.000Z"
+ *               updatedAt: "2024-01-01T00:00:00.000Z"
+ *       400:
+ *         description: Invalid user ID format
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Access denied (can only access own profile unless admin)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get(
   '/:id',
@@ -77,20 +286,99 @@ router.get(
 );
 
 /**
- * @route PUT /users/:id
- * @desc Update user (full replacement) - admin only
- * @access Admin
- * @validation userIdValidator, updateUserValidator
- * @middleware sanitizeUserInput, xssProtection
- * @params
- *   - id: UUID (required, user ID)
- * @body
- *   - email: string (required, valid email)
- *   - firstName: string (required, 1-50 chars)
- *   - lastName: string (required, 1-50 chars)
- *   - role: string (required, admin|user|readonly)
- *   - isActive: boolean (optional)
- *   - emailVerified: boolean (optional)
+ * @swagger
+ * /api/v1/users/{id}:
+ *   put:
+ *     summary: Update user (full replacement)
+ *     description: Update user with full replacement of data (admin only)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: User ID (UUID)
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, firstName, lastName, role]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: User's email address
+ *               firstName:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 50
+ *                 description: User's first name
+ *               lastName:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 50
+ *                 description: User's last name
+ *               role:
+ *                 type: string
+ *                 enum: [admin, user, readonly]
+ *                 description: User role determining permissions
+ *               isActive:
+ *                 type: boolean
+ *                 description: Whether the user account is active
+ *               emailVerified:
+ *                 type: boolean
+ *                 description: Whether the user's email is verified
+ *           example:
+ *             email: "updated.user@example.com"
+ *             firstName: "Updated"
+ *             lastName: "User"
+ *             role: "user"
+ *             isActive: true
+ *             emailVerified: true
+ *     responses:
+ *       200:
+ *         description: User updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Admin access required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       409:
+ *         description: Email already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.put(
   '/:id',
@@ -105,20 +393,95 @@ router.put(
 );
 
 /**
- * @route PATCH /users/:id
- * @desc Partially update user
- * @access Admin (all fields) | User (own profile, limited fields)
- * @validation userIdValidator, patchUserValidator
- * @middleware sanitizeUserInput, xssProtection
- * @params
- *   - id: UUID (required, user ID)
- * @body (at least one field required)
- *   - email: string (optional, valid email)
- *   - firstName: string (optional, 1-50 chars)
- *   - lastName: string (optional, 1-50 chars)
- *   - role: string (optional, admin|user|readonly) [admin only]
- *   - isActive: boolean (optional) [admin only]
- *   - emailVerified: boolean (optional) [admin only]
+ * @swagger
+ * /api/v1/users/{id}:
+ *   patch:
+ *     summary: Partially update user
+ *     description: Partially update user data (admin can update all fields, users can only update their own profile with limited fields)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: User ID (UUID)
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             minProperties: 1
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: User's email address
+ *               firstName:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 50
+ *                 description: User's first name
+ *               lastName:
+ *                 type: string
+ *                 minLength: 1
+ *                 maxLength: 50
+ *                 description: User's last name
+ *               role:
+ *                 type: string
+ *                 enum: [admin, user, readonly]
+ *                 description: User role determining permissions (admin only)
+ *               isActive:
+ *                 type: boolean
+ *                 description: Whether the user account is active (admin only)
+ *               emailVerified:
+ *                 type: boolean
+ *                 description: Whether the user's email is verified (admin only)
+ *           example:
+ *             firstName: "Updated First Name"
+ *             lastName: "Updated Last Name"
+ *     responses:
+ *       200:
+ *         description: User updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Validation error or no fields provided
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Access denied (can only update own profile unless admin, or trying to update admin-only fields)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       409:
+ *         description: Email already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.patch(
   '/:id',
@@ -132,13 +495,56 @@ router.patch(
 );
 
 /**
- * @route DELETE /users/:id
- * @desc Soft delete user (admin only)
- * @access Admin
- * @validation userIdValidator
- * @params
- *   - id: UUID (required, user ID)
- * @returns 204 No Content on success
+ * @swagger
+ * /api/v1/users/{id}:
+ *   delete:
+ *     summary: Delete user (soft delete)
+ *     description: Soft delete user account (admin only) - marks user as inactive rather than permanently deleting
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: User ID (UUID)
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *     responses:
+ *       204:
+ *         description: User deleted successfully (no content)
+ *       400:
+ *         description: Invalid user ID format
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Admin access required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       409:
+ *         description: Cannot delete user (e.g., cannot delete own admin account)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.delete(
   '/:id',

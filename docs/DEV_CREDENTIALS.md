@@ -1,7 +1,7 @@
 # Development Credentials
 
 ## pgWeb (Database UI)
-- URL: http://localhost:8081
+- URL: http://localhost:8080
 - Basic Auth: `admin` / `pgweb_dev_password_2024`
 - Default Connection (inside Docker network):
   - Host: `postgres`

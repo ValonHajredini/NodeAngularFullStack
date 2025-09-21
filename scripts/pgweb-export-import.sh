@@ -206,7 +206,7 @@ echo "   ✅ Filtered data exports with WHERE clauses"
 
 echo ""
 echo "📤 How to Export Data in pgWeb:"
-echo "   1. Open http://localhost:8081 in your browser"
+echo "   1. Open http://localhost:8080 in your browser"
 echo "   2. Navigate to any table or query result"
 echo "   3. Click the 'Export' button in the interface"
 echo "   4. Choose format: CSV, JSON, SQL, or TSV"

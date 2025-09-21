@@ -7,6 +7,7 @@ import { auditService, AuditLogEntry } from '../services/audit.service';
 interface AuthRequest extends Request {
   user?: {
     id: string;
+    email: string;
     role: string;
     tenantId?: string;
   };
@@ -34,15 +35,15 @@ export class AuditMiddleware {
     action: string,
     resourceType: string,
     options: {
-      extractResourceId?: (req: Request) => string | undefined;
-      extractChanges?: (req: Request, res: Response) => any;
-      skipCondition?: (req: Request, res: Response) => boolean;
+      extractResourceId?: (req: AuthRequest) => string | undefined;
+      extractChanges?: (req: AuthRequest, res: Response) => any;
+      skipCondition?: (req: AuthRequest, res: Response) => boolean;
     } = {}
   ) {
     return (req: AuthRequest, res: Response, next: NextFunction) => {
       const {
-        extractResourceId = (req: Request) => req.params.id,
-        extractChanges = (req: Request) => req.body,
+        extractResourceId = (req: AuthRequest) => req.params.id,
+        extractChanges = (req: AuthRequest) => req.body,
         skipCondition = () => false
       } = options;
 
@@ -52,7 +53,8 @@ export class AuditMiddleware {
       const originalStatus = res.status;
 
       let statusCode = 200;
-      let responseData: any = null;
+      // @ts-ignore: Variable is used conditionally for audit logging
+      let _responseData: any = null;
 
       // Override res.status to capture status code
       res.status = function(code: number) {
@@ -62,13 +64,13 @@ export class AuditMiddleware {
 
       // Override res.send to capture response
       res.send = function(body: any) {
-        responseData = body;
+        _responseData = body;
         return originalSend.call(this, body);
       };
 
       // Override res.json to capture response
       res.json = function(body: any) {
-        responseData = body;
+        _responseData = body;
         return originalJson.call(this, body);
       };
 
@@ -123,7 +125,7 @@ export class AuditMiddleware {
         }
         return req.params.id;
       },
-      extractChanges: (req: Request, res: Response) => {
+      extractChanges: (req: AuthRequest, _res: Response) => {
         const changes: any = {};
 
         // For CREATE operations, include the created user data
@@ -231,7 +233,8 @@ export class AuditMiddleware {
       const originalStatus = res.status;
 
       let statusCode = 200;
-      let responseData: any = null;
+      // @ts-ignore: Variable is used conditionally for audit logging
+      let _responseData: any = null;
 
       res.status = function(code: number) {
         statusCode = code;
@@ -239,12 +242,12 @@ export class AuditMiddleware {
       };
 
       res.send = function(body: any) {
-        responseData = body;
+        _responseData = body;
         return originalSend.call(this, body);
       };
 
       res.json = function(body: any) {
-        responseData = body;
+        _responseData = body;
         return originalJson.call(this, body);
       };
 
@@ -257,13 +260,13 @@ export class AuditMiddleware {
           let changes: any = { success: isSuccess };
 
           // Extract user ID from different sources based on action
-          if (action === 'LOGIN' && isSuccess && responseData?.data?.user?.id) {
-            userId = responseData.data.user.id;
+          if (action === 'LOGIN' && isSuccess && _responseData?.data?.user?.id) {
+            userId = _responseData.data.user.id;
             changes.email = req.body.email;
           } else if (action === 'LOGOUT' && req.user?.id) {
             userId = req.user.id;
-          } else if (action === 'REGISTER' && isSuccess && responseData?.data?.user?.id) {
-            userId = responseData.data.user.id;
+          } else if (action === 'REGISTER' && isSuccess && _responseData?.data?.user?.id) {
+            userId = _responseData.data.user.id;
             changes.email = req.body.email;
           }
 

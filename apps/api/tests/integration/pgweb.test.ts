@@ -16,7 +16,7 @@ import fs from 'fs';
 import path from 'path';
 
 describe('pgWeb Database Management Integration Tests', () => {
-  const PGWEB_URL = 'http://localhost:8081';
+  const PGWEB_URL = 'http://localhost:8080';
   const AUTH_CREDENTIALS = {
     username: process.env.PGWEB_AUTH_USER || 'admin',
     password: process.env.PGWEB_AUTH_PASS || 'pgweb_dev_password_2024'
@@ -426,7 +426,7 @@ describe('pgWeb Database Management Integration Tests', () => {
       // Test the health check using curl instead of wget
       try {
         const result = execSync(
-          'docker-compose exec pgweb curl -f -s http://localhost:8081/api/info',
+          'docker-compose exec pgweb curl -f -s http://localhost:8080/api/info',
           { encoding: 'utf8' }
         );
 

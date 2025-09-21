@@ -34,7 +34,7 @@ print_error() {
 source .env
 
 # Check if pgWeb is running
-if ! curl -s http://localhost:8081/api/info > /dev/null 2>&1; then
+if ! curl -s http://localhost:8080/api/info > /dev/null 2>&1; then
     print_error "pgWeb is not running. Start it with: docker-compose up -d pgweb"
     exit 1
 fi
@@ -255,7 +255,7 @@ echo "   ✅ Error handling and validation"
 echo "   ✅ Result pagination for large datasets"
 echo ""
 echo "📋 How to Use pgWeb Query Interface:"
-echo "   1. Open http://localhost:8081 in your browser"
+echo "   1. Open http://localhost:8080 in your browser"
 echo "   2. Login with credentials from .env file"
 echo "   3. Click 'SQL Query' tab in the interface"
 echo "   4. Paste any of the above queries"

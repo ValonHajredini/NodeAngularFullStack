@@ -95,7 +95,7 @@ fi
 # Test authentication endpoint
 auth_test=$(curl -s -o /dev/null -w "%{http_code}" \
     -u "$PGWEB_AUTH_USER:$PGWEB_AUTH_PASS" \
-    http://localhost:8081/api/info)
+    http://localhost:8080/api/info)
 
 if [ "$auth_test" = "200" ]; then
     print_success "Authentication working correctly"
@@ -106,7 +106,7 @@ fi
 
 # Test unauthorized access is blocked
 unauth_test=$(curl -s -o /dev/null -w "%{http_code}" \
-    http://localhost:8081/api/info)
+    http://localhost:8080/api/info)
 
 if [ "$unauth_test" = "401" ]; then
     print_success "Unauthorized access properly blocked"
@@ -123,7 +123,7 @@ echo "   ✅ Session management enabled"
 echo "   ✅ Connection limits configured"
 echo "   ✅ CORS origin restricted"
 echo ""
-echo "🌐 Access URL: http://localhost:8081"
+echo "🌐 Access URL: http://localhost:8080"
 echo "👤 Username: $PGWEB_AUTH_USER"
 echo "🔑 Password: [CONFIGURED]"
 echo ""

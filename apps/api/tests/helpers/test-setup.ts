@@ -5,8 +5,6 @@
 
 import { Pool } from 'pg';
 import { databaseService } from '../../src/services/database.service';
-import { app } from '../../src/server';
-import request from 'supertest';
 
 let pool: Pool;
 

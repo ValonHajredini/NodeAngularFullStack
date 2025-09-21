@@ -271,7 +271,7 @@ echo "   ✅ Bulk operations for user management"
 
 echo ""
 echo "📋 User Management Operations in pgWeb:"
-echo "   1. Open http://localhost:8081 in your browser"
+echo "   1. Open http://localhost:8080 in your browser"
 echo "   2. Navigate to the 'users' table"
 echo "   3. Use filters to find specific users"
 echo "   4. Click 'Edit' to modify user data"

@@ -6,7 +6,7 @@ This document describes the database schema for the NodeAngularFullStack applica
 
 ## Access Information
 
-- **pgWeb URL**: http://localhost:8081
+- **pgWeb URL**: http://localhost:8080
 - **Authentication**: Required (see .env file for credentials)
 - **Database**: PostgreSQL 15+ with full ACID compliance
 

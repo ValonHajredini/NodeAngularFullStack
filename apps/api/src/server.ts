@@ -237,6 +237,14 @@ class Server {
   }
 
   /**
+   * Gets the Express application instance for testing.
+   * @returns Express application instance
+   */
+  public getApp(): Application {
+    return this.app;
+  }
+
+  /**
    * Gracefully shuts down the server and closes database connections.
    * @returns Promise that resolves when shutdown is complete
    */
@@ -273,6 +281,9 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
   process.exit(1);
 });
+
+// Export app for testing
+export const app = server.getApp();
 
 // Start the server
 server.start().catch((error) => {

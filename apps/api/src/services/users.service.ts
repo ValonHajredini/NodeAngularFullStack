@@ -1,4 +1,4 @@
-const bcrypt = require('bcrypt');
+import * as bcrypt from 'bcryptjs';
 import { usersRepository, User, CreateUserData, UpdateUserData } from '../repositories/users.repository';
 
 /**
