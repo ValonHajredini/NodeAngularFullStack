@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
-import { databaseService } from '../services/database.service';
+import { config } from './config.utils';
+import { databaseService, DatabaseService } from '../services/database.service';
 
 /**
  * Test user credentials for development environment.
@@ -22,6 +23,17 @@ export interface TestUser {
  */
 export class SeedUtils {
   private static readonly SALT_ROUNDS = 12;
+
+  /**
+   * Ensures the database connection is initialized before running queries.
+   */
+  private static async ensureDatabaseConnection(): Promise<void> {
+    const status = databaseService.getStatus();
+    if (!status.isConnected) {
+      const dbConfig = DatabaseService.parseConnectionUrl(config.DATABASE_URL);
+      await databaseService.initialize(dbConfig);
+    }
+  }
 
   /**
    * Predefined test users with secure credentials.
@@ -220,6 +232,8 @@ export class SeedUtils {
     try {
       console.log('🌱 Starting database seeding process...');
 
+      await this.ensureDatabaseConnection();
+
       // Check if multi-tenancy is enabled
       const isMultiTenant = process.env.ENABLE_MULTI_TENANCY === 'true';
 
@@ -270,6 +284,8 @@ export class SeedUtils {
     try {
       console.log('🧹 Clearing test data...');
 
+      await this.ensureDatabaseConnection();
+
       // Delete in order to respect foreign key constraints
       await databaseService.query('DELETE FROM password_resets');
       await databaseService.query('DELETE FROM sessions');
@@ -296,6 +312,8 @@ export class SeedUtils {
     missingUsers: string[];
   }> {
     try {
+      await this.ensureDatabaseConnection();
+
       const expectedEmails = this.TEST_USERS.map(u => u.email);
       const missingUsers: string[] = [];
 

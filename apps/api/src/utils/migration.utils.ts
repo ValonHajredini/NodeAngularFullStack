@@ -1,12 +1,81 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { databaseService } from '../services/database.service';
+import { databaseService, DatabaseService } from '../services/database.service';
+import { config } from './config.utils';
 
 /**
  * Database migration utility for running SQL migration files.
  * Provides methods to execute and track database schema changes.
  */
 export class MigrationUtils {
+  /**
+   * Parses SQL statements from migration file, properly handling PostgreSQL functions.
+   * @param sql - Raw SQL content
+   * @returns Array of individual SQL statements
+   */
+  private static parseSQLStatements(sql: string): string[] {
+    const statements: string[] = [];
+    let currentStatement = '';
+    let inFunction = false;
+    let functionDelimiter = '';
+
+    const lines = sql.split('\n');
+
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+
+      // Skip empty lines and comments
+      if (!trimmedLine || trimmedLine.startsWith('--')) {
+        continue;
+      }
+
+      // Check for function start with $$ delimiter
+      const dollarMatch = trimmedLine.match(/\$(\w*)\$/);
+      if (dollarMatch && !inFunction) {
+        inFunction = true;
+        functionDelimiter = dollarMatch[0];
+        currentStatement += line + '\n';
+        continue;
+      }
+
+      // Check for function end
+      if (inFunction && trimmedLine.includes(functionDelimiter)) {
+        currentStatement += line + '\n';
+        // Check if this closes the function
+        const endMatch = line.match(new RegExp(`\\${functionDelimiter}\\s*(?:language|LANGUAGE)`));
+        if (endMatch) {
+          inFunction = false;
+          functionDelimiter = '';
+          statements.push(currentStatement.trim());
+          currentStatement = '';
+        }
+        continue;
+      }
+
+      // If we're inside a function, keep adding lines
+      if (inFunction) {
+        currentStatement += line + '\n';
+        continue;
+      }
+
+      // Normal statement processing
+      currentStatement += line + '\n';
+
+      // Check if statement ends with semicolon
+      if (trimmedLine.endsWith(';')) {
+        statements.push(currentStatement.trim());
+        currentStatement = '';
+      }
+    }
+
+    // Add any remaining statement
+    if (currentStatement.trim()) {
+      statements.push(currentStatement.trim());
+    }
+
+    return statements.filter(stmt => stmt.length > 0);
+  }
+
   /**
    * Executes a SQL migration file against the database.
    * @param migrationFile - Name of the migration file in database/migrations/
@@ -17,20 +86,21 @@ export class MigrationUtils {
    */
   public static async runMigration(migrationFile: string): Promise<void> {
     try {
+      // Ensure database connection is ready
+      await this.ensureDatabaseConnection();
+
       const migrationPath = join(process.cwd(), 'database', 'migrations', migrationFile);
       console.log(`🔧 Running migration: ${migrationFile}`);
       console.log(`📁 Migration path: ${migrationPath}`);
 
       const migrationSql = readFileSync(migrationPath, 'utf8');
 
-      // Split SQL by statements (handle multi-statement files)
-      const statements = migrationSql
-        .split(';')
-        .map(stmt => stmt.trim())
-        .filter(stmt => stmt.length > 0 && !stmt.startsWith('--'));
+      // Parse SQL statements properly, handling PostgreSQL functions with $$ delimiters
+      const statements = this.parseSQLStatements(migrationSql);
 
       for (const statement of statements) {
         if (statement.trim()) {
+          console.log(`🔍 Executing statement: ${statement.substring(0, 100)}${statement.length > 100 ? '...' : ''}`);
           await databaseService.query(statement);
         }
       }
@@ -70,6 +140,26 @@ export class MigrationUtils {
   }
 
   /**
+   * Ensures database connection is initialized before running operations.
+   * @returns Promise that resolves when database is ready
+   */
+  private static async ensureDatabaseConnection(): Promise<void> {
+    try {
+      // Check if database service is already initialized
+      const status = databaseService.getStatus();
+      if (!status.isConnected) {
+        console.log('🔄 Initializing database connection...');
+        const dbConfig = DatabaseService.parseConnectionUrl(config.DATABASE_URL);
+        await databaseService.initialize(dbConfig);
+        console.log('✅ Database connection initialized');
+      }
+    } catch (error) {
+      console.error('❌ Failed to initialize database connection:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Creates database tables if they don't exist by running migrations.
    * This is safe to run multiple times (idempotent).
    * @returns Promise that resolves when setup is complete
@@ -77,6 +167,10 @@ export class MigrationUtils {
   public static async setupDatabase(): Promise<void> {
     try {
       console.log('🔄 Setting up database schema...');
+
+      // Ensure database connection is ready
+      await this.ensureDatabaseConnection();
+
       await this.runAllMigrations();
       console.log('✅ Database schema setup complete');
     } catch (error) {
@@ -91,6 +185,8 @@ export class MigrationUtils {
    */
   public static async checkTablesExist(): Promise<boolean> {
     try {
+      // Ensure database connection is ready
+      await this.ensureDatabaseConnection();
       const requiredTables = ['users', 'sessions', 'password_resets', 'tenants'];
 
       for (const table of requiredTables) {
@@ -128,6 +224,9 @@ export class MigrationUtils {
     const issues: string[] = [];
 
     try {
+      // Ensure database connection is ready
+      await this.ensureDatabaseConnection();
+
       // Check if tables exist
       const tablesExist = await this.checkTablesExist();
       if (!tablesExist) {

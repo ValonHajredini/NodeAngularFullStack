@@ -8,7 +8,9 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run dev:api & npm run dev:web",
+    "start": "./start-dev.sh",
+    "stop": "./stop-dev.sh",
+    "dev": "./start-dev.sh",
     "dev:api": "npm --workspace=apps/api run dev",
     "dev:web": "npm --workspace=apps/web run dev",
     "build": "npm run build:shared && npm run build:api && npm run build:web",

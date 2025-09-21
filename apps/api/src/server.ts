@@ -11,6 +11,7 @@ import { databaseService, DatabaseService } from './services/database.service';
 import swaggerSpec from './config/swagger.config';
 import healthRoutes from './routes/health.routes';
 import authRoutes from './routes/auth.routes';
+import { usersRoutes } from './routes/users.routes';
 
 /**
  * Express application server for the API.
@@ -81,6 +82,12 @@ class Server {
    * Sets up health check, authentication, and other route handlers.
    */
   private initializeRoutes(): void {
+    // Swagger JSON endpoint (must be before the UI middleware)
+    this.app.get('/api-docs/swagger.json', (_req, res: Response) => {
+      res.setHeader('Content-Type', 'application/json');
+      res.send(swaggerSpec);
+    });
+
     // Swagger documentation
     this.app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
       customCss: '.swagger-ui .topbar { display: none }',
@@ -99,6 +106,7 @@ class Server {
     // API v1 routes
     this.app.use('/api/v1', healthRoutes);
     this.app.use('/api/v1/auth', authRoutes);
+    this.app.use('/api/v1/users', usersRoutes);
 
     // API root endpoint
     this.app.get('/api', (_req, res: Response) => {
@@ -211,6 +219,13 @@ class Server {
           console.log('  GET  /api/v1/auth/profile   - Get profile (protected)');
           console.log('  PATCH /api/v1/auth/profile  - Update profile (protected)');
           console.log('  GET  /api/v1/auth/me        - Token info (protected)');
+          console.log('\n👥 User management endpoints:');
+          console.log('  POST   /api/v1/users        - Create user (admin)');
+          console.log('  GET    /api/v1/users        - Get users with pagination (admin)');
+          console.log('  GET    /api/v1/users/:id    - Get user by ID (protected)');
+          console.log('  PUT    /api/v1/users/:id    - Update user (admin)');
+          console.log('  PATCH  /api/v1/users/:id    - Partial update user (protected)');
+          console.log('  DELETE /api/v1/users/:id    - Delete user (admin)');
 
           resolve();
         }).on('error', reject);

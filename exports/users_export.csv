@@ -1,0 +1,9 @@
+id,email,first_name,last_name,role,is_active,email_verified,tenant_name,created_date
+03d53aba-ff14-4e68-9826-035257d27ac0,admin@example.com,Admin,User,admin,t,t,,2025-09-20
+6e29c207-6155-4950-b26b-806be11c0f52,user@example.com,Regular,User,user,t,t,,2025-09-20
+479a4665-d66b-42e8-99d3-e38f4d2d6485,readonly@example.com,Readonly,User,readonly,t,t,,2025-09-20
+f2ddde50-fbac-4eb5-ac69-3e3a63c95e91,inactive@example.com,Inactive,User,user,t,t,,2025-09-20
+ddf68dcd-8c87-48c4-a716-793ae1f558a1,unverified@example.com,Unverified,User,user,t,f,,2025-09-20
+33ff5018-e490-4416-9262-c05a521f3133,naxa@mailinator.com,Avram,Wiggins,user,t,f,,2025-09-20
+34677e8a-6fb0-4926-99ab-971b55da0c57,sodonuty@mailinator.com,Hammett,Gutierrez,user,t,t,,2025-09-20
+4e6d2122-48f1-4a0d-9784-9592eea73fc5,reset-test@example.com,Reset,Test,user,t,f,,2025-09-20

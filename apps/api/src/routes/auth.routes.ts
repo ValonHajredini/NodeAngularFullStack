@@ -108,18 +108,39 @@ router.post(
 );
 
 /**
- * @route POST /api/v1/auth/refresh
- * @desc Refresh access token using refresh token
- * @access Public
- * @body {string} refreshToken - Valid JWT refresh token
- * @returns {object} 200 - Token refresh successful with new tokens
- * @returns {object} 400 - Validation error
- * @returns {object} 401 - Invalid or expired refresh token
- * @example
- * POST /api/v1/auth/refresh
- * {
- *   "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
- * }
+ * @swagger
+ * /api/v1/auth/refresh:
+ *   post:
+ *     summary: Refresh access token
+ *     description: Refresh access token using a valid refresh token
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/RefreshTokenRequest'
+ *           example:
+ *             refreshToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *     responses:
+ *       200:
+ *         description: Token refresh successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
+ *       401:
+ *         description: Invalid or expired refresh token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post(
   '/refresh',
@@ -131,16 +152,35 @@ router.post(
 );
 
 /**
- * @route POST /api/v1/auth/logout
- * @desc Logout user by invalidating refresh token
- * @access Public
- * @body {string} [refreshToken] - Refresh token to invalidate
- * @returns {object} 200 - Logout successful
- * @example
- * POST /api/v1/auth/logout
- * {
- *   "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
- * }
+ * @swagger
+ * /api/v1/auth/logout:
+ *   post:
+ *     summary: Logout user
+ *     description: Logout user by invalidating refresh token
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *                 description: Refresh token to invalidate
+ *           example:
+ *             refreshToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *     responses:
+ *       200:
+ *         description: Logout successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Logged out successfully"
  */
 router.post(
   '/logout',
@@ -149,15 +189,31 @@ router.post(
 );
 
 /**
- * @route POST /api/v1/auth/logout-all
- * @desc Logout user from all devices
- * @access Protected
- * @headers {string} Authorization - Bearer access token
- * @returns {object} 200 - Logout from all devices successful
- * @returns {object} 401 - Authentication required
- * @example
- * POST /api/v1/auth/logout-all
- * Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ * @swagger
+ * /api/v1/auth/logout-all:
+ *   post:
+ *     summary: Logout from all devices
+ *     description: Logout user from all devices by invalidating all refresh tokens
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Logout from all devices successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Logged out from all devices successfully"
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post(
   '/logout-all',
@@ -201,24 +257,49 @@ router.get(
 );
 
 /**
- * @route PATCH /api/v1/auth/profile
- * @desc Update authenticated user's profile
- * @access Protected
- * @headers {string} Authorization - Bearer access token
- * @body {string} [firstName] - Updated first name
- * @body {string} [lastName] - Updated last name
- * @body {string} [email] - Updated email address
- * @returns {object} 200 - Profile updated successfully
- * @returns {object} 400 - Validation error
- * @returns {object} 401 - Authentication required
- * @returns {object} 409 - Email already exists
- * @example
- * PATCH /api/v1/auth/profile
- * Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
- * {
- *   "firstName": "Jane",
- *   "lastName": "Smith"
- * }
+ * @swagger
+ * /api/v1/auth/profile:
+ *   patch:
+ *     summary: Update user profile
+ *     description: Update authenticated user's profile information
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UserUpdateRequest'
+ *           example:
+ *             firstName: "Jane"
+ *             lastName: "Smith"
+ *             email: "jane.smith@example.com"
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UserProfile'
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       409:
+ *         description: Email already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.patch(
   '/profile',
@@ -231,17 +312,37 @@ router.patch(
 );
 
 /**
- * @route POST /api/v1/auth/password-reset
- * @desc Request password reset
- * @access Public
- * @body {string} email - User email address
- * @returns {object} 200 - Password reset email sent (always returns success for security)
- * @returns {object} 400 - Validation error
- * @example
- * POST /api/v1/auth/password-reset
- * {
- *   "email": "user@example.com"
- * }
+ * @swagger
+ * /api/v1/auth/password-reset:
+ *   post:
+ *     summary: Request password reset
+ *     description: Request password reset email (always returns success for security)
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/PasswordResetRequest'
+ *           example:
+ *             email: "user@example.com"
+ *     responses:
+ *       200:
+ *         description: Password reset email sent (always returns success for security)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Password reset email sent if account exists"
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
  */
 router.post(
   '/password-reset',
@@ -253,19 +354,38 @@ router.post(
 );
 
 /**
- * @route POST /api/v1/auth/password-reset/confirm
- * @desc Confirm password reset with token and set new password
- * @access Public
- * @body {string} token - Password reset token
- * @body {string} newPassword - New password meeting security requirements
- * @returns {object} 200 - Password reset successful
- * @returns {object} 400 - Invalid token or validation error
- * @example
- * POST /api/v1/auth/password-reset/confirm
- * {
- *   "token": "abc123def456",
- *   "newPassword": "NewSecurePassword123!"
- * }
+ * @swagger
+ * /api/v1/auth/password-reset/confirm:
+ *   post:
+ *     summary: Confirm password reset
+ *     description: Confirm password reset with token and set new password
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/PasswordResetConfirm'
+ *           example:
+ *             token: "abc123def456"
+ *             newPassword: "NewSecurePassword123!"
+ *     responses:
+ *       200:
+ *         description: Password reset successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Password reset successful"
+ *       400:
+ *         description: Invalid token or validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post(
   '/password-reset/confirm',
@@ -277,14 +397,39 @@ router.post(
 );
 
 /**
- * @route GET /api/v1/auth/password-reset/validate/:token
- * @desc Validate password reset token without using it
- * @access Public
- * @param {string} token - Password reset token to validate
- * @returns {object} 200 - Token is valid with expiration info
- * @returns {object} 400 - Invalid or expired token
- * @example
- * GET /api/v1/auth/password-reset/validate/abc123def456
+ * @swagger
+ * /api/v1/auth/password-reset/validate/{token}:
+ *   get:
+ *     summary: Validate password reset token
+ *     description: Validate password reset token without using it
+ *     tags: [Authentication]
+ *     parameters:
+ *       - in: path
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Password reset token to validate
+ *     responses:
+ *       200:
+ *         description: Token is valid
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 valid:
+ *                   type: boolean
+ *                   example: true
+ *                 expiresAt:
+ *                   type: string
+ *                   format: date-time
+ *       400:
+ *         description: Invalid or expired token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get(
   '/password-reset/validate/:token',
@@ -293,13 +438,39 @@ router.get(
 );
 
 /**
- * @route GET /api/v1/auth/test-credentials
- * @desc Get test user credentials for development environment
- * @access Public (Development only)
- * @returns {object} 200 - Test credentials for development testing
- * @returns {object} 404 - Not available in production mode
- * @example
- * GET /api/v1/auth/test-credentials
+ * @swagger
+ * /api/v1/auth/test-credentials:
+ *   get:
+ *     summary: Get test credentials
+ *     description: Get test user credentials for development environment
+ *     tags: [Authentication, Development]
+ *     responses:
+ *       200:
+ *         description: Test credentials for development testing
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 testUsers:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       email:
+ *                         type: string
+ *                         format: email
+ *                       password:
+ *                         type: string
+ *                       role:
+ *                         type: string
+ *                         enum: [admin, user, readonly]
+ *       404:
+ *         description: Not available in production mode
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get(
   '/test-credentials',
@@ -308,15 +479,39 @@ router.get(
 );
 
 /**
- * @route GET /api/v1/auth/me
- * @desc Get user information from access token
- * @access Protected
- * @headers {string} Authorization - Bearer access token
- * @returns {object} 200 - User information from token
- * @returns {object} 401 - Authentication required
- * @example
- * GET /api/v1/auth/me
- * Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ * @swagger
+ * /api/v1/auth/me:
+ *   get:
+ *     summary: Get token information
+ *     description: Get user information from access token
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User information from token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user:
+ *                   $ref: '#/components/schemas/UserProfile'
+ *                 tokenInfo:
+ *                   type: object
+ *                   properties:
+ *                     issuedAt:
+ *                       type: string
+ *                       format: date-time
+ *                     expiresAt:
+ *                       type: string
+ *                       format: date-time
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get(
   '/me',

@@ -107,6 +107,10 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
+-- Drop existing triggers if they exist to keep migration idempotent
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
+DROP TRIGGER IF EXISTS update_tenants_updated_at ON tenants;
+
 -- Create triggers to automatically update updated_at on record changes
 CREATE TRIGGER update_users_updated_at
     BEFORE UPDATE ON users

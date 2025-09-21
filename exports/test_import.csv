@@ -1,0 +1,5 @@
+email,first_name,last_name,role,is_active
+test.import1@example.com,Test,User1,user,true
+test.import2@example.com,Test,User2,readonly,true
+invalid.email,Invalid,User,user,true
+test.import3@example.com,Test,User3,admin,false

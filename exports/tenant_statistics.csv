@@ -1,0 +1,2 @@
+tenant_name,slug,is_active,total_users,active_users,admin_users,verified_users,first_user_date,latest_user_date
+Default Tenant,default,t,0,0,0,0,,

@@ -121,13 +121,28 @@ services:
     image: sosedoff/pgweb:latest
     container_name: nodeangularfullstack-pgweb
     ports:
-      - "8080:8081"
+      - "8081:8081"
     environment:
-      PGWEB_DATABASE_URL: postgresql://dbuser:dbpassword@postgres:5432/nodeangularfullstack?sslmode=disable
+      PGWEB_DATABASE_URL: ${PGWEB_DATABASE_URL}
+      PGWEB_AUTH_USER: ${PGWEB_AUTH_USER}
+      PGWEB_AUTH_PASS: ${PGWEB_AUTH_PASS}
+      PGWEB_READ_ONLY: ${PGWEB_READ_ONLY:-false}
+      PGWEB_SESSIONS: ${PGWEB_SESSIONS:-true}
+      PGWEB_CORS_ORIGIN: ${PGWEB_CORS_ORIGIN}
+      PGWEB_MAX_RESULT_ROWS: 1000
+      PGWEB_MAX_CLIENT_CONN: 100
+      PGWEB_SERVER_READ_TIMEOUT: 30
+      PGWEB_SERVER_WRITE_TIMEOUT: 30
     depends_on:
       postgres:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8081/api/info"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     deploy:
       resources:
         limits:

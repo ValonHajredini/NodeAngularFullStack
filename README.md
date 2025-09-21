@@ -65,12 +65,26 @@ cp .env.example .env
 
 ### Development
 
-Run both frontend and backend in development mode:
+#### ⚡ One-Command Startup (Recommended)
 ```bash
+# Start everything (Docker, Database, Backend, Frontend, pgAdmin)
+./start-dev.sh
+# OR
+npm start
+# OR
 npm run dev
 ```
 
-Or run them separately:
+#### ⚡ One-Command Shutdown
+```bash
+# Stop all services
+./stop-dev.sh
+# OR
+npm stop
+```
+
+#### Manual Development (Alternative)
+Run services separately:
 ```bash
 # Backend API
 npm run dev:api
@@ -79,10 +93,22 @@ npm run dev:api
 npm run dev:web
 ```
 
-Access the applications:
-- Frontend: http://localhost:4200
-- Backend API: http://localhost:3000
-- API Health Check: http://localhost:3000/health
+#### Service URLs
+- **Frontend (Angular)**: http://localhost:4200
+- **Backend API**: http://localhost:3000
+- **API Documentation (Swagger)**: http://localhost:3000/api-docs
+- **pgAdmin (Database UI)**: http://localhost:8080
+- **API Health Check**: http://localhost:3000/health
+
+#### Login Credentials
+**pgAdmin Database UI:**
+- Email: admin@admin.com
+- Password: admin
+
+**Test User Accounts:**
+- Admin: admin@example.com / password123
+- User: user@example.com / password123
+- ReadOnly: readonly@example.com / password123
 
 ### Building for Production
 

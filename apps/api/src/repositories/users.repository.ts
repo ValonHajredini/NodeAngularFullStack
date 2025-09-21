@@ -465,6 +465,162 @@ export class UsersRepository {
       client.release();
     }
   }
+
+  /**
+   * Gets paginated users with search and filter capabilities.
+   * @param options - Pagination and filter options
+   * @returns Promise containing paginated user results
+   * @example
+   * const result = await usersRepository.findWithPagination({
+   *   page: 1,
+   *   limit: 20,
+   *   search: 'john',
+   *   role: 'user'
+   * });
+   */
+  async findWithPagination(options: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    role?: string;
+    tenantId?: string;
+    status?: 'active' | 'inactive' | 'all';
+  }): Promise<{
+    users: User[];
+    total: number;
+    page: number;
+    limit: number;
+    pages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  }> {
+    const client = await this.pool.connect();
+
+    try {
+      const {
+        page = 1,
+        limit = 20,
+        search,
+        role,
+        tenantId,
+        status = 'active'
+      } = options;
+
+      const offset = (page - 1) * limit;
+      const conditions: string[] = [];
+      const values: any[] = [];
+      let paramIndex = 1;
+
+      // Base WHERE conditions
+      if (tenantId !== undefined) {
+        conditions.push(`tenant_id = $${paramIndex++}`);
+        values.push(tenantId);
+      } else {
+        conditions.push(`tenant_id IS NULL`);
+      }
+
+      // Status filter
+      if (status === 'active') {
+        conditions.push(`is_active = true`);
+      } else if (status === 'inactive') {
+        conditions.push(`is_active = false`);
+      }
+      // 'all' status doesn't add condition
+
+      // Role filter
+      if (role) {
+        conditions.push(`role = $${paramIndex++}`);
+        values.push(role);
+      }
+
+      // Search filter (searches in email, firstName, lastName)
+      if (search) {
+        conditions.push(`(
+          email ILIKE $${paramIndex} OR
+          first_name ILIKE $${paramIndex} OR
+          last_name ILIKE $${paramIndex} OR
+          CONCAT(first_name, ' ', last_name) ILIKE $${paramIndex}
+        )`);
+        values.push(`%${search}%`);
+        paramIndex++;
+      }
+
+      const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+      // Count query
+      const countQuery = `
+        SELECT COUNT(*) as count
+        FROM users
+        ${whereClause}
+      `;
+
+      // Data query
+      const dataQuery = `
+        SELECT
+          id, tenant_id as "tenantId", email, password_hash as "passwordHash",
+          first_name as "firstName", last_name as "lastName", role,
+          created_at as "createdAt", updated_at as "updatedAt",
+          last_login as "lastLogin", is_active as "isActive",
+          email_verified as "emailVerified"
+        FROM users
+        ${whereClause}
+        ORDER BY created_at DESC
+        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+      `;
+
+      const countValues = values.slice(); // Copy for count query
+      const dataValues = [...values, limit, offset];
+
+      const [countResult, dataResult] = await Promise.all([
+        client.query(countQuery, countValues),
+        client.query(dataQuery, dataValues)
+      ]);
+
+      const total = parseInt(countResult.rows[0].count, 10);
+      const pages = Math.ceil(total / limit);
+
+      return {
+        users: dataResult.rows as User[],
+        total,
+        page,
+        limit,
+        pages,
+        hasNext: page < pages,
+        hasPrev: page > 1
+      };
+    } catch (error: any) {
+      throw new Error(`Failed to find users with pagination: ${error.message}`);
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Soft deletes a user by adding deleted_at timestamp.
+   * @param id - User ID to soft delete
+   * @returns Promise containing boolean indicating success
+   * @example
+   * const deleted = await usersRepository.softDelete('user-uuid');
+   */
+  async softDelete(id: string): Promise<boolean> {
+    const client = await this.pool.connect();
+
+    try {
+      const query = `
+        UPDATE users
+        SET deleted_at = CURRENT_TIMESTAMP, is_active = false, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1 AND deleted_at IS NULL
+      `;
+
+      const result = await client.query(query, [id]);
+
+      return result.rowCount !== null && result.rowCount > 0;
+    } catch (error: any) {
+      throw new Error(`User soft deletion failed: ${error.message}`);
+    } finally {
+      client.release();
+    }
+  }
 }
 
 // Export singleton instance
