@@ -1,0 +1,196 @@
+name: 🚀 Onboarding Help
+description: Get help with getting started or following the tutorials
+title: "[ONBOARDING] "
+labels: ["onboarding", "help-wanted", "documentation"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for using NodeAngularFullStack! This template helps you get assistance with onboarding, tutorials, or general getting started questions.
+
+  - type: dropdown
+    id: help-type
+    attributes:
+      label: What type of help do you need?
+      description: Select the category that best describes your question
+      options:
+        - Initial setup and installation
+        - Tutorial completion issues
+        - Development environment problems
+        - Understanding project structure
+        - Example implementation questions
+        - Performance optimization help
+        - Deployment guidance
+        - Other onboarding question
+    validations:
+      required: true
+
+  - type: dropdown
+    id: tutorial-step
+    attributes:
+      label: Which tutorial or step are you working on?
+      description: If applicable, select the specific tutorial or documentation section
+      options:
+        - "N/A - General question"
+        - "Initial setup (README.md)"
+        - "First Feature Tutorial"
+        - "Common Patterns Examples"
+        - "Development Workflow Guide"
+        - "Testing Strategy"
+        - "Deployment Process"
+        - "Performance Optimization"
+        - "API Documentation"
+        - "Component Examples"
+    validations:
+      required: false
+
+  - type: textarea
+    id: current-situation
+    attributes:
+      label: Current Situation
+      description: Describe what you're trying to accomplish and where you're stuck
+      placeholder: |
+        Example: "I'm following the first feature tutorial and I'm on step 3 (Build Angular Components). I created the service file but when I run npm run dev:web, I get a compilation error..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-taken
+    attributes:
+      label: Steps Already Taken
+      description: What have you already tried to resolve this issue?
+      placeholder: |
+        - Checked the documentation
+        - Searched existing issues
+        - Verified environment setup
+        - Tried the validation script
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-outcome
+    attributes:
+      label: Expected Outcome
+      description: What should happen when everything is working correctly?
+      placeholder: "I should be able to see the product list component running in the browser..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: error-output
+    attributes:
+      label: Error Messages or Output
+      description: If you're getting errors, please paste them here (use code blocks)
+      placeholder: |
+        ```
+        Error: Cannot find module '@nodeangularfullstack/shared'
+        at Module._resolveFilename (node:internal/modules/cjs/loader.js:933:15)
+        ...
+        ```
+    validations:
+      required: false
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Development Environment
+      description: Which environment are you using?
+      options:
+        - "Docker (recommended setup)"
+        - "Local development (manual setup)"
+        - "Mixed (some Docker, some local)"
+        - "Cloud development environment"
+        - "Other"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: environment-check
+    attributes:
+      label: Environment Verification
+      description: Please verify your development environment setup
+      options:
+        - label: Node.js 18+ installed
+        - label: npm 9+ installed
+        - label: Docker Desktop installed (if using Docker)
+        - label: Git configured
+        - label: Project dependencies installed (npm install completed)
+        - label: Environment variables configured (.env file)
+        - label: Development services running
+
+  - type: textarea
+    id: system-info
+    attributes:
+      label: System Information
+      description: Provide your system details
+      placeholder: |
+        - OS: macOS Ventura 13.4
+        - Node.js: v18.16.0
+        - npm: 9.5.1
+        - Docker: 24.0.2
+        - IDE: VS Code 1.80.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: experience-level
+    attributes:
+      label: Experience Level
+      description: This helps us provide appropriate guidance
+      options:
+        - "New to this stack (Angular + Express + TypeScript)"
+        - "Familiar with some technologies in the stack"
+        - "Experienced developer, new to this specific boilerplate"
+        - "Experienced with similar boilerplates"
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Any other information that might be helpful
+      placeholder: |
+        - Are you working on a specific project or just learning?
+        - Any modifications you've made to the boilerplate?
+        - Any specific requirements or constraints?
+        - Screenshots or screen recordings (if helpful)
+
+  - type: checkboxes
+    id: contribution-interest
+    attributes:
+      label: Contribution Interest
+      description: Would you be interested in contributing improvements based on your experience?
+      options:
+        - label: I'd like to help improve the documentation after I complete this
+        - label: I'd be interested in contributing example implementations
+        - label: I'd like to help other developers with similar issues
+        - label: I'd be willing to test new features or tutorials
+
+  - type: markdown
+    attributes:
+      value: |
+        ## 📚 Helpful Resources
+
+        Before submitting, you might find answers in:
+        - [Developer Workflow Guide](../docs/DEVELOPER_WORKFLOW.md)
+        - [Examples Directory](../examples/)
+        - [Architecture Documentation](../docs/architecture/)
+        - [Troubleshooting Guide](../docs/troubleshooting-guide.md)
+
+        ## 🚀 Quick Self-Help
+
+        Try these quick fixes:
+        1. Run `node scripts/validate-environment.js` to check your setup
+        2. Run `npm run health:check` to verify all services
+        3. Check `npm run lint` and `npm run typecheck` for code issues
+        4. Review the console output for any error messages
+
+        ## ⏱️ Response Time
+
+        - **Onboarding questions**: Usually answered within 24 hours
+        - **Tutorial issues**: Priority support, usually within 12 hours
+        - **Setup problems**: Highest priority, usually within 6 hours
+
+        Thank you for helping us improve the developer experience! 🎉

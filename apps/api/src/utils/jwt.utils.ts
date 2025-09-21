@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { config } from './config.utils';
+import { tenantConfig } from '../config/tenant.config';
+import { TenantContext } from './tenant.utils';
 
 /**
  * JWT token payload interface for access tokens.
@@ -15,6 +17,19 @@ export interface JwtPayload {
   tenantId?: string;
   /** Token type identifier */
   type: 'access';
+  /** Tenant context for multi-tenant tokens */
+  tenant?: {
+    id: string;
+    slug: string;
+    plan: 'free' | 'starter' | 'professional' | 'enterprise';
+    features: string[];
+    limits: {
+      maxUsers: number;
+      maxStorage: number;
+      maxApiCalls: number;
+    };
+    status: 'active' | 'suspended' | 'inactive';
+  };
 }
 
 /**
@@ -45,24 +60,45 @@ export interface TokenPair {
  */
 export class JwtUtils {
   /**
-   * Generates an access token with user information.
+   * Generates an access token with user information and optional tenant context.
    * @param payload - User information to encode in the token
+   * @param tenantContext - Optional tenant context for multi-tenancy
    * @returns Signed JWT access token
    * @throws {Error} When token generation fails
    * @example
    * const accessToken = JwtUtils.generateAccessToken({
    *   userId: 'uuid-here',
    *   email: 'user@example.com',
-   *   role: 'user',
-   *   type: 'access'
-   * });
+   *   role: 'user'
+   * }, tenantContext);
    */
-  static generateAccessToken(payload: Omit<JwtPayload, 'type'>): string {
+  static generateAccessToken(
+    payload: Omit<JwtPayload, 'type' | 'tenant'>,
+    tenantContext?: TenantContext & {
+      limits?: { maxUsers: number; maxStorage: number; maxApiCalls: number };
+    }
+  ): string {
     try {
       const tokenPayload: JwtPayload = {
         ...payload,
         type: 'access',
       };
+
+      // Include tenant context if multi-tenancy is enabled and tenant context is provided
+      if (tenantConfig.tokenIsolation && tenantContext) {
+        tokenPayload.tenant = {
+          id: tenantContext.id,
+          slug: tenantContext.slug,
+          plan: tenantContext.plan || 'free',
+          features: tenantContext.features || [],
+          limits: {
+            maxUsers: tenantContext.limits?.maxUsers || 5,
+            maxStorage: tenantContext.limits?.maxStorage || 1000,
+            maxApiCalls: tenantContext.limits?.maxApiCalls || 10000,
+          },
+          status: tenantContext.status || 'active',
+        };
+      }
 
       return jwt.sign(tokenPayload, config.JWT_SECRET, {
         expiresIn: config.JWT_ACCESS_EXPIRES_IN,
@@ -70,7 +106,9 @@ export class JwtUtils {
         audience: 'nodeangularfullstack-client',
       } as jwt.SignOptions);
     } catch (error) {
-      throw new Error(`Access token generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Access token generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -86,7 +124,9 @@ export class JwtUtils {
    *   type: 'refresh'
    * });
    */
-  static generateRefreshToken(payload: Omit<RefreshTokenPayload, 'type'>): string {
+  static generateRefreshToken(
+    payload: Omit<RefreshTokenPayload, 'type'>
+  ): string {
     try {
       const tokenPayload: RefreshTokenPayload = {
         ...payload,
@@ -99,27 +139,34 @@ export class JwtUtils {
         audience: 'nodeangularfullstack-client',
       } as jwt.SignOptions);
     } catch (error) {
-      throw new Error(`Refresh token generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Refresh token generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
   /**
-   * Generates both access and refresh tokens.
+   * Generates both access and refresh tokens with optional tenant context.
    * @param userPayload - User information for access token
    * @param sessionId - Session ID for refresh token
+   * @param tenantContext - Optional tenant context for multi-tenancy
    * @returns Token pair containing both tokens
    * @throws {Error} When token generation fails
    * @example
    * const tokens = JwtUtils.generateTokenPair(
    *   { userId: 'uuid', email: 'user@example.com', role: 'user' },
-   *   'session-uuid'
+   *   'session-uuid',
+   *   tenantContext
    * );
    */
   static generateTokenPair(
-    userPayload: Omit<JwtPayload, 'type'>,
-    sessionId: string
+    userPayload: Omit<JwtPayload, 'type' | 'tenant'>,
+    sessionId: string,
+    tenantContext?: TenantContext & {
+      limits?: { maxUsers: number; maxStorage: number; maxApiCalls: number };
+    }
   ): TokenPair {
-    const accessToken = this.generateAccessToken(userPayload);
+    const accessToken = this.generateAccessToken(userPayload, tenantContext);
     const refreshToken = this.generateRefreshToken({
       userId: userPayload.userId,
       sessionId,
@@ -154,6 +201,11 @@ export class JwtUtils {
 
       if (decoded.type !== 'access') {
         throw new Error('Invalid token type');
+      }
+
+      // Validate tenant status if present in token
+      if (decoded.tenant && decoded.tenant.status !== 'active') {
+        throw new Error('Tenant account is suspended or inactive');
       }
 
       return decoded;
@@ -241,7 +293,9 @@ export class JwtUtils {
     try {
       return jwt.decode(token);
     } catch (error) {
-      throw new Error(`Token decode failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Token decode failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 

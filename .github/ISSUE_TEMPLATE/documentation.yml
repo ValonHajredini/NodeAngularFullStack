@@ -1,0 +1,162 @@
+name: 📚 Documentation
+description: Report an issue with documentation or suggest improvements
+title: "[Docs]: "
+labels: ["documentation", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping improve our documentation! Clear and comprehensive documentation is crucial for the success of this project.
+
+  - type: checkboxes
+    id: prerequisites
+    attributes:
+      label: Prerequisites
+      description: Please confirm you have completed the following
+      options:
+        - label: I have searched existing issues to ensure this documentation issue hasn't been reported
+          required: true
+        - label: I have checked the latest version of the documentation
+          required: true
+
+  - type: dropdown
+    id: issue-type
+    attributes:
+      label: Documentation Issue Type
+      description: What type of documentation issue is this?
+      options:
+        - Missing documentation
+        - Outdated documentation
+        - Incorrect information
+        - Unclear instructions
+        - Broken links
+        - Typos or grammar issues
+        - Formatting issues
+        - Code examples not working
+        - API documentation incomplete
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: location
+    attributes:
+      label: Documentation Location
+      description: Where is the documentation issue located?
+      placeholder: |
+        File: [e.g. docs/api/authentication.md]
+        Section: [e.g. "JWT Token Refresh"]
+        Line numbers: [if applicable]
+        URL: [if online documentation]
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-content
+    attributes:
+      label: Current Content
+      description: What does the current documentation say? (Copy the problematic content)
+      placeholder: |
+        Current content:
+        ```
+        [Paste the current content here]
+        ```
+      render: markdown
+
+  - type: textarea
+    id: issue-description
+    attributes:
+      label: Issue Description
+      description: Clearly describe what's wrong with the current documentation
+      placeholder: |
+        The issue is:
+        - [Describe the problem]
+        - [What makes it confusing or incorrect]
+        - [How it affects users]
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggested-improvement
+    attributes:
+      label: Suggested Improvement
+      description: How should the documentation be improved?
+      placeholder: |
+        Suggested content:
+        ```
+        [Provide the corrected or improved content]
+        ```
+
+        Or describe the improvement:
+        - [What should be added]
+        - [What should be changed]
+        - [What should be removed]
+    validations:
+      required: true
+
+  - type: dropdown
+    id: audience
+    attributes:
+      label: Target Audience
+      description: Who would benefit most from this documentation improvement?
+      options:
+        - New users getting started
+        - Developers implementing features
+        - Contributors to the project
+        - System administrators deploying
+        - API consumers
+        - All users
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this documentation fix?
+      options:
+        - Low - Minor improvement
+        - Medium - Helpful clarification
+        - High - Important for user success
+        - Critical - Blocking user progress
+    validations:
+      required: true
+
+  - type: textarea
+    id: user-impact
+    attributes:
+      label: User Impact
+      description: How does this documentation issue affect users?
+      placeholder: |
+        Impact on users:
+        - [Who is affected]
+        - [What problems does it cause]
+        - [How does it block or slow down users]
+
+        Example scenarios:
+        - [Specific situation where this causes problems]
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Any additional information about this documentation issue
+      placeholder: |
+        Additional details:
+        - [Related documentation sections]
+        - [External resources that might help]
+        - [Screenshots if visual formatting issues]
+
+  - type: checkboxes
+    id: contributing
+    attributes:
+      label: Contributing
+      options:
+        - label: I am willing to submit a pull request to fix this documentation issue
+          required: false
+        - label: I can provide additional examples or use cases
+          required: false
+        - label: I can help review the updated documentation
+          required: false

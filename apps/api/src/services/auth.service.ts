@@ -1,11 +1,21 @@
-import { usersRepository, User, CreateUserData } from '../repositories/users.repository';
+import {
+  usersRepository,
+  User,
+  CreateUserData,
+} from '../repositories/users.repository';
 import { sessionsRepository } from '../repositories/sessions.repository';
-import { passwordResetRepository, PasswordResetRepository } from '../repositories/password-resets.repository';
+import {
+  passwordResetRepository,
+  PasswordResetRepository,
+} from '../repositories/password-resets.repository';
 import { emailService } from '../services/email.service';
+import { tenantRepository } from '../repositories/tenant.repository';
 import { PasswordUtils } from '../utils/password.utils';
 import { JwtUtils, TokenPair } from '../utils/jwt.utils';
 import { ValidationUtils } from '../utils/validation.utils';
 import { config } from '../utils/config.utils';
+import { tenantConfig } from '../config/tenant.config';
+import { TenantContext } from '../utils/tenant.utils';
 
 /**
  * Registration request interface.
@@ -85,17 +95,29 @@ export class AuthService {
 
     const passwordValidation = PasswordUtils.validatePassword(password);
     if (!passwordValidation.isValid) {
-      throw new Error(`Invalid password: ${passwordValidation.errors.join(', ')}`);
+      throw new Error(
+        `Invalid password: ${passwordValidation.errors.join(', ')}`
+      );
     }
 
-    const firstNameValidation = ValidationUtils.validateName(firstName, 'First name');
+    const firstNameValidation = ValidationUtils.validateName(
+      firstName,
+      'First name'
+    );
     if (!firstNameValidation.isValid) {
-      throw new Error(`Invalid first name: ${firstNameValidation.errors.join(', ')}`);
+      throw new Error(
+        `Invalid first name: ${firstNameValidation.errors.join(', ')}`
+      );
     }
 
-    const lastNameValidation = ValidationUtils.validateName(lastName, 'Last name');
+    const lastNameValidation = ValidationUtils.validateName(
+      lastName,
+      'Last name'
+    );
     if (!lastNameValidation.isValid) {
-      throw new Error(`Invalid last name: ${lastNameValidation.errors.join(', ')}`);
+      throw new Error(
+        `Invalid last name: ${lastNameValidation.errors.join(', ')}`
+      );
     }
 
     // Check if email already exists
@@ -109,7 +131,10 @@ export class AuthService {
 
     // Create user
     const userData: CreateUserData = {
-      email: emailValidation.errors.length === 0 ? email : email.toLowerCase().trim(),
+      email:
+        emailValidation.errors.length === 0
+          ? email
+          : email.toLowerCase().trim(),
       passwordHash,
       firstName: firstNameValidation.sanitizedValue,
       lastName: lastNameValidation.sanitizedValue,
@@ -118,6 +143,28 @@ export class AuthService {
     };
 
     const user = await usersRepository.create(userData);
+
+    // Get tenant context if multi-tenancy is enabled
+    let tenantContext: TenantContext | undefined;
+    if (tenantConfig.tokenIsolation && user.tenantId) {
+      const tenant = await tenantRepository.findById(user.tenantId);
+      if (tenant) {
+        tenantContext = {
+          id: tenant.id,
+          slug: tenant.slug,
+          plan: tenant.plan,
+          features: Object.keys(tenant.settings.features).filter(
+            (key) => tenant.settings.features[key]
+          ),
+          limits: {
+            maxUsers: tenant.maxUsers,
+            maxStorage: tenant.settings.limits.maxStorage,
+            maxApiCalls: tenant.settings.limits.maxApiCalls,
+          },
+          status: tenant.isActive ? 'active' : 'inactive',
+        };
+      }
+    }
 
     // Generate tokens and create session
     const sessionId = crypto.randomUUID();
@@ -128,13 +175,15 @@ export class AuthService {
         role: user.role,
         tenantId: user.tenantId,
       },
-      sessionId
+      sessionId,
+      tenantContext
     );
 
     // Calculate refresh token expiration
     const refreshExpiresAt = new Date();
     refreshExpiresAt.setTime(
-      refreshExpiresAt.getTime() + this.parseExpirationTime(config.JWT_REFRESH_EXPIRES_IN)
+      refreshExpiresAt.getTime() +
+        this.parseExpirationTime(config.JWT_REFRESH_EXPIRES_IN)
     );
 
     // Create session
@@ -191,13 +240,38 @@ export class AuthService {
     }
 
     // Verify password
-    const isPasswordValid = await PasswordUtils.verifyPassword(password, user.passwordHash);
+    const isPasswordValid = await PasswordUtils.verifyPassword(
+      password,
+      user.passwordHash
+    );
     if (!isPasswordValid) {
       throw new Error('Invalid email or password');
     }
 
     // Update last login
     await usersRepository.updateLastLogin(user.id);
+
+    // Get tenant context if multi-tenancy is enabled
+    let tenantContext: TenantContext | undefined;
+    if (tenantConfig.tokenIsolation && user.tenantId) {
+      const tenant = await tenantRepository.findById(user.tenantId);
+      if (tenant) {
+        tenantContext = {
+          id: tenant.id,
+          slug: tenant.slug,
+          plan: tenant.plan,
+          features: Object.keys(tenant.settings.features).filter(
+            (key) => tenant.settings.features[key]
+          ),
+          limits: {
+            maxUsers: tenant.maxUsers,
+            maxStorage: tenant.settings.limits.maxStorage,
+            maxApiCalls: tenant.settings.limits.maxApiCalls,
+          },
+          status: tenant.isActive ? 'active' : 'inactive',
+        };
+      }
+    }
 
     // Generate tokens and create session
     const sessionId = crypto.randomUUID();
@@ -208,13 +282,15 @@ export class AuthService {
         role: user.role,
         tenantId: user.tenantId,
       },
-      sessionId
+      sessionId,
+      tenantContext
     );
 
     // Calculate refresh token expiration
     const refreshExpiresAt = new Date();
     refreshExpiresAt.setTime(
-      refreshExpiresAt.getTime() + this.parseExpirationTime(config.JWT_REFRESH_EXPIRES_IN)
+      refreshExpiresAt.getTime() +
+        this.parseExpirationTime(config.JWT_REFRESH_EXPIRES_IN)
     );
 
     // Create session
@@ -277,6 +353,28 @@ export class AuthService {
       throw new Error('User not found or inactive');
     }
 
+    // Get tenant context if multi-tenancy is enabled
+    let tenantContext: TenantContext | undefined;
+    if (tenantConfig.tokenIsolation && user.tenantId) {
+      const tenant = await tenantRepository.findById(user.tenantId);
+      if (tenant) {
+        tenantContext = {
+          id: tenant.id,
+          slug: tenant.slug,
+          plan: tenant.plan,
+          features: Object.keys(tenant.settings.features).filter(
+            (key) => tenant.settings.features[key]
+          ),
+          limits: {
+            maxUsers: tenant.maxUsers,
+            maxStorage: tenant.settings.limits.maxStorage,
+            maxApiCalls: tenant.settings.limits.maxApiCalls,
+          },
+          status: tenant.isActive ? 'active' : 'inactive',
+        };
+      }
+    }
+
     // Generate new tokens
     const newSessionId = crypto.randomUUID();
     const newTokens = JwtUtils.generateTokenPair(
@@ -286,13 +384,15 @@ export class AuthService {
         role: user.role,
         tenantId: user.tenantId,
       },
-      newSessionId
+      newSessionId,
+      tenantContext
     );
 
     // Calculate new refresh token expiration
     const newRefreshExpiresAt = new Date();
     newRefreshExpiresAt.setTime(
-      newRefreshExpiresAt.getTime() + this.parseExpirationTime(config.JWT_REFRESH_EXPIRES_IN)
+      newRefreshExpiresAt.getTime() +
+        this.parseExpirationTime(config.JWT_REFRESH_EXPIRES_IN)
     );
 
     // Update session with new refresh token (token rotation)
@@ -391,17 +491,27 @@ export class AuthService {
     const validatedData: any = {};
 
     if (updateData.firstName !== undefined) {
-      const firstNameValidation = ValidationUtils.validateName(updateData.firstName, 'First name');
+      const firstNameValidation = ValidationUtils.validateName(
+        updateData.firstName,
+        'First name'
+      );
       if (!firstNameValidation.isValid) {
-        throw new Error(`Invalid first name: ${firstNameValidation.errors.join(', ')}`);
+        throw new Error(
+          `Invalid first name: ${firstNameValidation.errors.join(', ')}`
+        );
       }
       validatedData.firstName = firstNameValidation.sanitizedValue;
     }
 
     if (updateData.lastName !== undefined) {
-      const lastNameValidation = ValidationUtils.validateName(updateData.lastName, 'Last name');
+      const lastNameValidation = ValidationUtils.validateName(
+        updateData.lastName,
+        'Last name'
+      );
       if (!lastNameValidation.isValid) {
-        throw new Error(`Invalid last name: ${lastNameValidation.errors.join(', ')}`);
+        throw new Error(
+          `Invalid last name: ${lastNameValidation.errors.join(', ')}`
+        );
       }
       validatedData.lastName = lastNameValidation.sanitizedValue;
     }
@@ -414,7 +524,9 @@ export class AuthService {
       validatedData.email = updateData.email.toLowerCase().trim();
 
       // Check if new email already exists
-      const existingUser = await usersRepository.findByEmail(validatedData.email);
+      const existingUser = await usersRepository.findByEmail(
+        validatedData.email
+      );
       if (existingUser && existingUser.id !== userId) {
         throw new Error('Email already registered');
       }
@@ -473,8 +585,8 @@ export class AuthService {
     const unit = match[2];
 
     const multipliers = {
-      s: 1000,           // seconds
-      m: 60 * 1000,      // minutes
+      s: 1000, // seconds
+      m: 60 * 1000, // minutes
       h: 60 * 60 * 1000, // hours
       d: 24 * 60 * 60 * 1000, // days
       w: 7 * 24 * 60 * 60 * 1000, // weeks
@@ -504,7 +616,9 @@ export class AuthService {
 
     if (!user || !user.isActive) {
       // Don't reveal if email exists for security - always return success
-      console.log(`Password reset requested for non-existent or inactive user: ${normalizedEmail}`);
+      console.log(
+        `Password reset requested for non-existent or inactive user: ${normalizedEmail}`
+      );
       return;
     }
 
@@ -517,7 +631,7 @@ export class AuthService {
 
       // Set expiration time (1 hour from now)
       const expiresAt = new Date();
-      expiresAt.setTime(expiresAt.getTime() + (60 * 60 * 1000)); // 1 hour
+      expiresAt.setTime(expiresAt.getTime() + 60 * 60 * 1000); // 1 hour
 
       // Store reset token in database
       await passwordResetRepository.create({
@@ -540,7 +654,9 @@ export class AuthService {
       console.log(`📧 Password reset email sent to: ${user.email}`);
     } catch (error) {
       console.error('Password reset request failed:', error);
-      throw new Error(`Failed to process password reset request: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to process password reset request: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -553,7 +669,10 @@ export class AuthService {
    * @example
    * await authService.confirmPasswordReset('reset-token-123', 'NewPassword123!');
    */
-  async confirmPasswordReset(token: string, newPassword: string): Promise<void> {
+  async confirmPasswordReset(
+    token: string,
+    newPassword: string
+  ): Promise<void> {
     if (!token || typeof token !== 'string') {
       throw new Error('Reset token is required');
     }
@@ -561,7 +680,9 @@ export class AuthService {
     // Validate new password
     const passwordValidation = PasswordUtils.validatePassword(newPassword);
     if (!passwordValidation.isValid) {
-      throw new Error(`Invalid password: ${passwordValidation.errors.join(', ')}`);
+      throw new Error(
+        `Invalid password: ${passwordValidation.errors.join(', ')}`
+      );
     }
 
     // Find reset token
@@ -599,7 +720,9 @@ export class AuthService {
       console.log(`🔐 Password reset completed for user: ${user.email}`);
     } catch (error) {
       console.error('Password reset confirmation failed:', error);
-      throw new Error(`Failed to reset password: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to reset password: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -649,7 +772,9 @@ export class AuthService {
       return await passwordResetRepository.cleanup();
     } catch (error) {
       console.error('Password reset cleanup failed:', error);
-      throw new Error(`Failed to cleanup password reset tokens: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to cleanup password reset tokens: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 }

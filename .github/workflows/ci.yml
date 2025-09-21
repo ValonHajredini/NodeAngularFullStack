@@ -1,0 +1,421 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      api-cache-key: ${{ steps.api-cache.outputs.cache-hit }}
+      web-cache-key: ${{ steps.web-cache.outputs.cache-hit }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Cache API dependencies
+        id: api-cache
+        uses: actions/cache@v3
+        with:
+          path: apps/api/node_modules
+          key: api-deps-${{ hashFiles('apps/api/package-lock.json') }}
+
+      - name: Cache Web dependencies
+        id: web-cache
+        uses: actions/cache@v3
+        with:
+          path: apps/web/node_modules
+          key: web-deps-${{ hashFiles('apps/web/package-lock.json') }}
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install API dependencies
+        if: steps.api-cache.outputs.cache-hit != 'true'
+        run: cd apps/api && npm ci
+
+      - name: Install Web dependencies
+        if: steps.web-cache.outputs.cache-hit != 'true'
+        run: cd apps/web && npm ci
+
+  security-audit:
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Restore API dependencies
+        uses: actions/cache@v3
+        with:
+          path: apps/api/node_modules
+          key: api-deps-${{ hashFiles('apps/api/package-lock.json') }}
+
+      - name: Restore Web dependencies
+        uses: actions/cache@v3
+        with:
+          path: apps/web/node_modules
+          key: web-deps-${{ hashFiles('apps/web/package-lock.json') }}
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Security audit - API
+        run: |
+          cd apps/api
+          npm audit --audit-level=moderate --production
+          npm audit --format=json --audit-level=moderate --production > ../../audit-api.json || true
+
+      - name: Security audit - Web
+        run: |
+          cd apps/web
+          npm audit --audit-level=moderate --production
+          npm audit --format=json --audit-level=moderate --production > ../../audit-web.json || true
+
+      - name: Upload audit results
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-audit-results
+          path: |
+            audit-api.json
+            audit-web.json
+
+  code-quality:
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Restore API dependencies
+        uses: actions/cache@v3
+        with:
+          path: apps/api/node_modules
+          key: api-deps-${{ hashFiles('apps/api/package-lock.json') }}
+
+      - name: Restore Web dependencies
+        uses: actions/cache@v3
+        with:
+          path: apps/web/node_modules
+          key: web-deps-${{ hashFiles('apps/web/package-lock.json') }}
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: ESLint - API
+        run: |
+          cd apps/api
+          npx eslint . --ext .ts,.js --format json --output-file ../../eslint-api.json || true
+          npx eslint . --ext .ts,.js
+
+      - name: ESLint - Web
+        run: |
+          cd apps/web
+          npx eslint . --ext .ts,.js --format json --output-file ../../eslint-web.json || true
+          npx eslint . --ext .ts,.js
+
+      - name: TypeScript Check - API
+        run: |
+          cd apps/api
+          npx tsc --noEmit
+
+      - name: TypeScript Check - Web
+        run: |
+          cd apps/web
+          npx tsc --noEmit
+
+      - name: Prettier Check
+        run: |
+          npx prettier --check "apps/**/*.{ts,js,json,html,scss,css,md}"
+
+      - name: Upload code quality results
+        uses: actions/upload-artifact@v3
+        with:
+          name: code-quality-results
+          path: |
+            eslint-api.json
+            eslint-web.json
+
+  test:
+    runs-on: ubuntu-latest
+    needs: setup
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_USER: test_user
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Restore API dependencies
+        uses: actions/cache@v3
+        with:
+          path: apps/api/node_modules
+          key: api-deps-${{ hashFiles('apps/api/package-lock.json') }}
+
+      - name: Restore Web dependencies
+        uses: actions/cache@v3
+        with:
+          path: apps/web/node_modules
+          key: web-deps-${{ hashFiles('apps/web/package-lock.json') }}
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Setup test environment
+        run: |
+          cp apps/api/.env.example apps/api/.env.test
+          echo "DATABASE_URL=postgresql://test_user:test_password@localhost:5432/test_db" >> apps/api/.env.test
+          echo "REDIS_URL=redis://localhost:6379" >> apps/api/.env.test
+          echo "NODE_ENV=test" >> apps/api/.env.test
+
+      - name: Run API tests with coverage
+        run: |
+          cd apps/api
+          npm run test:coverage
+        env:
+          NODE_ENV: test
+
+      - name: Run Web tests with coverage
+        run: |
+          cd apps/web
+          npm run test:coverage
+
+      - name: Upload test coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./apps/api/coverage/lcov.info,./apps/web/coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-results
+          path: |
+            apps/api/coverage/
+            apps/web/coverage/
+            apps/api/test-results.xml
+            apps/web/test-results.xml
+
+  sast-scanning:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: javascript
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v2
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "/language:javascript"
+
+      - name: Run Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/secrets
+            p/typescript
+            p/nodejs
+          generateSarif: "1"
+
+      - name: Upload Semgrep results to GitHub
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: semgrep.sarif
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [security-audit, code-quality, test]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Restore API dependencies
+        uses: actions/cache@v3
+        with:
+          path: apps/api/node_modules
+          key: api-deps-${{ hashFiles('apps/api/package-lock.json') }}
+
+      - name: Restore Web dependencies
+        uses: actions/cache@v3
+        with:
+          path: apps/web/node_modules
+          key: web-deps-${{ hashFiles('apps/web/package-lock.json') }}
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Build API
+        run: |
+          cd apps/api
+          npm run build
+
+      - name: Build Web
+        run: |
+          cd apps/web
+          npm run build
+
+      - name: Check bundle size
+        run: |
+          cd apps/web
+          npx bundlesize
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: |
+            apps/api/dist/
+            apps/web/dist/
+
+  security-headers-test:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-artifacts
+
+      - name: Start API server
+        run: |
+          cd apps/api
+          npm ci
+          npm start &
+          sleep 10
+        env:
+          NODE_ENV: production
+
+      - name: Test security headers
+        run: |
+          # Test for security headers
+          echo "Testing security headers..."
+
+          # Check for Helmet security headers
+          headers=$(curl -I http://localhost:3000/api/health)
+
+          echo "$headers" | grep -i "x-frame-options" || { echo "Missing X-Frame-Options header"; exit 1; }
+          echo "$headers" | grep -i "x-content-type-options" || { echo "Missing X-Content-Type-Options header"; exit 1; }
+          echo "$headers" | grep -i "x-xss-protection" || { echo "Missing X-XSS-Protection header"; exit 1; }
+          echo "$headers" | grep -i "strict-transport-security" || { echo "Missing HSTS header"; exit 1; }
+          echo "$headers" | grep -i "content-security-policy" || { echo "Missing CSP header"; exit 1; }
+
+          echo "All security headers present!"
+
+  quality-gate:
+    runs-on: ubuntu-latest
+    needs: [security-audit, code-quality, test, sast-scanning, security-headers-test]
+    if: always()
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Quality Gate Check
+        run: |
+          echo "=== Quality Gate Results ==="
+
+          # Check if all jobs passed
+          if [ "${{ needs.security-audit.result }}" != "success" ]; then
+            echo "❌ Security audit failed"
+            exit 1
+          fi
+
+          if [ "${{ needs.code-quality.result }}" != "success" ]; then
+            echo "❌ Code quality checks failed"
+            exit 1
+          fi
+
+          if [ "${{ needs.test.result }}" != "success" ]; then
+            echo "❌ Tests failed"
+            exit 1
+          fi
+
+          if [ "${{ needs.sast-scanning.result }}" != "success" ]; then
+            echo "❌ SAST scanning failed"
+            exit 1
+          fi
+
+          if [ "${{ needs.security-headers-test.result }}" != "success" ]; then
+            echo "❌ Security headers test failed"
+            exit 1
+          fi
+
+          echo "✅ All quality gates passed!"
+          echo "✅ Security audit: passed"
+          echo "✅ Code quality: passed"
+          echo "✅ Tests: passed"
+          echo "✅ SAST scanning: passed"
+          echo "✅ Security headers: passed"

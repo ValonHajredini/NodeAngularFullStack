@@ -37,11 +37,44 @@
     "docker:test:all": "npm run docker:test && npm run docker:test:integration",
     "docker:lint": "docker-compose exec -T api npm run lint && docker-compose exec -T web npm run lint",
     "docker:lint:api": "docker-compose exec -T api npm run lint",
-    "docker:lint:web": "docker-compose exec -T web npm run lint"
+    "docker:lint:web": "docker-compose exec -T web npm run lint",
+    "format": "prettier --write \"**/*.{ts,js,json,html,scss,css,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,js,json,html,scss,css,md}\"",
+    "typecheck": "npm run typecheck:api && npm run typecheck:web",
+    "typecheck:api": "npm --workspace=apps/api run typecheck",
+    "typecheck:web": "npm --workspace=apps/web run typecheck",
+    "security:audit": "node scripts/security-audit.js",
+    "quality:check": "npm run lint && npm run typecheck && npm run format:check",
+    "metrics:init": "node scripts/metrics-collector.js init",
+    "metrics:dashboard": "node scripts/metrics-collector.js dashboard",
+    "metrics:export": "node scripts/metrics-collector.js export",
+    "feedback:init": "node scripts/feedback-collector.js init",
+    "feedback:collect": "node scripts/feedback-collector.js collect",
+    "feedback:quick": "node scripts/feedback-collector.js quick",
+    "feedback:dashboard": "node scripts/feedback-collector.js dashboard",
+    "onboarding:setup": "npm run metrics:init && npm run feedback:init && node examples/tutorials/first-feature/validation.js",
+    "onboarding:help": "echo 'Visit examples/tutorials/first-feature/README.md to get started!'",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "apps/api/**/*.{ts,js}": [
+      "cd apps/api && npx eslint --fix",
+      "prettier --write"
+    ],
+    "apps/web/**/*.{ts,js}": [
+      "cd apps/web && npx eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,html,scss,css,md}": [
+      "prettier --write"
+    ]
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.13",
     "@types/node": "^20.11.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.6",
+    "prettier": "^3.6.2",
     "ts-jest": "^29.4.4",
     "typescript": "^5.3.3"
   },

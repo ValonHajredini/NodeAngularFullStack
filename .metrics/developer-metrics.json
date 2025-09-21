@@ -1,0 +1,16 @@
+{
+  "version": "1.0.0",
+  "projectId": "proj_we5onejwo",
+  "startDate": "2025-09-21T17:28:27.118Z",
+  "sessions": [],
+  "tutorials": {},
+  "features": [],
+  "metrics": {
+    "totalSessions": 0,
+    "tutorialCompletions": 0,
+    "featuresImplemented": 0,
+    "averageTimeToFirstFeature": 0,
+    "errorReductionRate": 0,
+    "onboardingSuccessRate": 0
+  }
+}
