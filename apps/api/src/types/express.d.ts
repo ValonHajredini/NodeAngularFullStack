@@ -1,16 +1,12 @@
-import 'express';
+declare namespace Express {
+  interface User {
+    id: string;
+    email: string;
+    role: string;
+    tenantId?: string;
+  }
 
-declare global {
-  namespace Express {
-    interface User {
-      id: string;
-      email: string;
-      role: string;
-      tenantId?: string;
-    }
-
-    interface Request {
-      user?: User;
-    }
+  interface Request {
+    user?: User;
   }
 }

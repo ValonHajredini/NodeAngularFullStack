@@ -5,7 +5,7 @@ import { emailService } from '../services/email.service';
 import { PasswordUtils } from '../utils/password.utils';
 import { JwtUtils, TokenPair } from '../utils/jwt.utils';
 import { ValidationUtils } from '../utils/validation.utils';
-import { config } from '../utils/config.utils';
+import { config } from '../config';
 
 /**
  * Registration request interface.
@@ -462,8 +462,17 @@ export class AuthService {
    * @private
    */
   private parseExpirationTime(expirationString: string): number {
+    const trimmed = expirationString.trim();
+
+    // Support pure numeric values as seconds (e.g., "604800" → 7 days)
+    if (/^\d+$/.test(trimmed)) {
+      const seconds = parseInt(trimmed, 10);
+      return seconds * 1000;
+    }
+
+    // Support suffixed values (e.g., '15m', '7d')
     const regex = /^(\d+)([smhdw])$/;
-    const match = expirationString.match(regex);
+    const match = trimmed.match(regex);
 
     if (!match) {
       throw new Error(`Invalid expiration format: ${expirationString}`);

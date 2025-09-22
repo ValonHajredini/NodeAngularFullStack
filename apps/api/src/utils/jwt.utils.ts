@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { config } from './config.utils';
+import { config } from '../config';
 
 /**
  * JWT token payload interface for access tokens.
@@ -65,7 +65,7 @@ export class JwtUtils {
       };
 
       return jwt.sign(tokenPayload, config.JWT_SECRET, {
-        expiresIn: config.JWT_ACCESS_EXPIRES_IN,
+        expiresIn: config.JWT_EXPIRES_IN,
         issuer: 'nodeangularfullstack-api',
         audience: 'nodeangularfullstack-client',
       } as jwt.SignOptions);

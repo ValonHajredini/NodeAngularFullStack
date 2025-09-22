@@ -1,13 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 import { usersService, CreateUserRequest, UpdateUserRequest } from '../services/users.service';
-
-/**
- * Authenticated request interface with user data.
- */
-interface AuthRequest extends Request {
-  user?: Express.User;
-}
+import { AuthUser } from '../types/auth.types';
 
 /**
  * Users controller handling HTTP requests for user management operations.
@@ -36,7 +30,7 @@ export class UsersController {
    *   "role": "user"
    * }
    */
-  createUser = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  createUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       // Check validation results
       const errors = validationResult(req);
@@ -59,7 +53,7 @@ export class UsersController {
         firstName: req.body.firstName,
         lastName: req.body.lastName,
         role: req.body.role || 'user',
-        tenantId: req.user?.tenantId
+        tenantId: (req.user as AuthUser)?.tenantId
       };
 
       const user = await usersService.createUser(userData);
@@ -100,7 +94,7 @@ export class UsersController {
    * GET /api/v1/users?page=1&limit=20&search=john&role=user
    * Authorization: Bearer <admin-token>
    */
-  getUsers = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  getUsers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
@@ -114,7 +108,7 @@ export class UsersController {
         search,
         role,
         status,
-        tenantId: req.user?.tenantId
+        tenantId: (req.user as AuthUser)?.tenantId
       });
 
       res.status(200).json({
@@ -145,11 +139,11 @@ export class UsersController {
    * GET /api/v1/users/user-uuid
    * Authorization: Bearer <token>
    */
-  getUserById = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  getUserById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params;
-      const requestingUserId = req.user?.id;
-      const requestingUserRole = req.user?.role;
+      const requestingUserId = (req.user as AuthUser)?.id;
+      const requestingUserRole = (req.user as AuthUser)?.role;
 
       // Check access permissions
       if (!requestingUserId || !requestingUserRole) {
@@ -225,7 +219,7 @@ export class UsersController {
    *   "role": "admin"
    * }
    */
-  updateUser = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  updateUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       // Check validation results
       const errors = validationResult(req);
@@ -320,7 +314,7 @@ export class UsersController {
    *   "firstName": "Jane"
    * }
    */
-  patchUser = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  patchUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       // Check validation results
       const errors = validationResult(req);
@@ -338,8 +332,8 @@ export class UsersController {
       }
 
       const { id } = req.params;
-      const requestingUserId = req.user?.id;
-      const requestingUserRole = req.user?.role;
+      const requestingUserId = (req.user as AuthUser)?.id;
+      const requestingUserRole = (req.user as AuthUser)?.role;
 
       // Check access permissions
       if (!requestingUserId || !requestingUserRole) {
@@ -448,7 +442,7 @@ export class UsersController {
    * DELETE /api/v1/users/user-uuid
    * Authorization: Bearer <admin-token>
    */
-  deleteUser = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  deleteUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params;
 

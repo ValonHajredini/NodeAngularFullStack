@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { databaseService } from '../services/database.service';
-import { config } from '../utils/config.utils';
+import { config } from '../config';
 
 /**
  * Health check response interface

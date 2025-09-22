@@ -1,17 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { auditService, AuditLogEntry } from '../services/audit.service';
-
-/**
- * Enhanced request interface with user data.
- */
-interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-    role: string;
-    tenantId?: string;
-  };
-}
+import { AuthUser } from '../types/auth.types';
 
 /**
  * Audit middleware for automatic logging of user operations.
@@ -35,15 +24,15 @@ export class AuditMiddleware {
     action: string,
     resourceType: string,
     options: {
-      extractResourceId?: (req: AuthRequest) => string | undefined;
-      extractChanges?: (req: AuthRequest, res: Response) => any;
-      skipCondition?: (req: AuthRequest, res: Response) => boolean;
+      extractResourceId?: (req: Request) => string | undefined;
+      extractChanges?: (req: Request, res: Response) => any;
+      skipCondition?: (req: Request, res: Response) => boolean;
     } = {}
   ) {
-    return (req: AuthRequest, res: Response, next: NextFunction) => {
+    return (req: Request, res: Response, next: NextFunction) => {
       const {
-        extractResourceId = (req: AuthRequest) => req.params.id,
-        extractChanges = (req: AuthRequest) => req.body,
+        extractResourceId = (req: Request) => req.params.id,
+        extractChanges = (req: Request) => req.body,
         skipCondition = () => false
       } = options;
 
@@ -88,8 +77,8 @@ export class AuditMiddleware {
             const changes = extractChanges(req, res);
 
             const auditEntry: AuditLogEntry = {
-              userId: req.user?.id,
-              tenantId: req.user?.tenantId,
+              userId: (req.user as AuthUser)?.id,
+              tenantId: (req.user as AuthUser)?.tenantId,
               action,
               resourceType,
               resourceId,
@@ -125,7 +114,7 @@ export class AuditMiddleware {
         }
         return req.params.id;
       },
-      extractChanges: (req: AuthRequest, _res: Response) => {
+      extractChanges: (req: Request, _res: Response) => {
         const changes: any = {};
 
         // For CREATE operations, include the created user data
@@ -170,7 +159,7 @@ export class AuditMiddleware {
     resourceType: string,
     extractAffectedIds: (req: Request, res: Response) => string[]
   ) {
-    return (req: AuthRequest, res: Response, next: NextFunction) => {
+    return (req: Request, res: Response, next: NextFunction) => {
       const originalSend = res.send;
       const originalJson = res.json;
       const originalStatus = res.status;
@@ -197,8 +186,8 @@ export class AuditMiddleware {
 
             for (const resourceId of affectedIds) {
               const auditEntry: AuditLogEntry = {
-                userId: req.user?.id,
-                tenantId: req.user?.tenantId,
+                userId: (req.user as AuthUser)?.id,
+                tenantId: (req.user as AuthUser)?.tenantId,
                 action,
                 resourceType,
                 resourceId,
@@ -227,7 +216,7 @@ export class AuditMiddleware {
    * @returns Express middleware function
    */
   static auditAuthOperation(action: string) {
-    return (req: AuthRequest, res: Response, next: NextFunction) => {
+    return (req: Request, res: Response, next: NextFunction) => {
       const originalSend = res.send;
       const originalJson = res.json;
       const originalStatus = res.status;
@@ -263,8 +252,8 @@ export class AuditMiddleware {
           if (action === 'LOGIN' && isSuccess && _responseData?.data?.user?.id) {
             userId = _responseData.data.user.id;
             changes.email = req.body.email;
-          } else if (action === 'LOGOUT' && req.user?.id) {
-            userId = req.user.id;
+          } else if (action === 'LOGOUT' && (req.user as AuthUser)?.id) {
+            userId = (req.user as AuthUser).id;
           } else if (action === 'REGISTER' && isSuccess && _responseData?.data?.user?.id) {
             userId = _responseData.data.user.id;
             changes.email = req.body.email;
@@ -277,7 +266,7 @@ export class AuditMiddleware {
 
           const auditEntry: AuditLogEntry = {
             userId,
-            tenantId: req.user?.tenantId,
+            tenantId: (req.user as AuthUser)?.tenantId,
             action,
             resourceType: 'auth',
             changes,
