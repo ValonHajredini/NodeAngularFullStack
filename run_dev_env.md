@@ -42,6 +42,61 @@ psql -U dbuser -d nodeangularfullstack -h localhost
 PGPASSWORD=dbpassword psql -h localhost -U dbuser -d nodeangularfullstack -c '\conninfo'
 ```
 
+### pgWeb Database Management UI
+
+pgWeb provides a web-based interface for managing your PostgreSQL database.
+
+#### Install pgWeb (if not already installed)
+
+```bash
+brew install pgweb
+```
+
+#### Start pgWeb UI
+
+```bash
+# Using npm script (recommended)
+npm run pgweb
+
+# Or run the script directly
+./start-pgweb.sh
+```
+
+The pgWeb interface will be available at: **http://localhost:8081**
+
+#### pgWeb Login Credentials
+
+- **Username**: admin
+- **Password**: development-password
+
+#### pgWeb Database Connection
+
+- **Host**: localhost
+- **Port**: 5432
+- **Database**: nodeangularfullstack
+- **Username**: dbuser
+- **Password**: dbpassword
+
+#### pgWeb Features
+
+- **Browse Tables**: View all database tables and their data
+- **SQL Query Editor**: Execute SQL queries with syntax highlighting
+- **Data Export**: Export data in CSV, JSON, and SQL formats
+- **Schema Browser**: View database structure and relationships
+- **Data Import**: Import data from files
+- **Real-time Queries**: Execute queries and see results instantly
+
+#### Common pgWeb Operations
+
+```bash
+# Start pgWeb
+npm run pgweb
+
+# Stop pgWeb (Ctrl+C in the terminal where it's running)
+# Or kill the process
+pkill -f pgweb
+```
+
 ## 2. Backend API (Express.js)
 
 ### Navigate to Backend Directory
@@ -152,7 +207,7 @@ npm run typecheck
 
 ### Option A: Using Individual Commands (Recommended)
 
-Open 3 terminal windows/tabs:
+Open 4 terminal windows/tabs:
 
 **Terminal 1 - PostgreSQL:**
 
@@ -174,6 +229,12 @@ npm run dev
 ```bash
 cd apps/web
 npm run dev
+```
+
+**Terminal 4 - pgWeb Database UI (Optional):**
+
+```bash
+npm run pgweb
 ```
 
 ### Option B: Using Start Script
@@ -249,6 +310,9 @@ lsof -i:3000
 # Find process using port 4200 (frontend)
 lsof -i:4200
 
+# Find process using port 8081 (pgWeb)
+lsof -i:8081
+
 # Kill process by PID
 kill -9 <PID>
 ```
@@ -259,6 +323,7 @@ kill -9 <PID>
 # Stop all services
 brew services stop postgresql@14
 pkill -f "node"
+pkill -f "pgweb"
 
 # Start fresh
 brew services start postgresql@14
@@ -275,6 +340,7 @@ cd apps/web && npm run dev
 | Backend API  | http://localhost:3000          | Express.js REST API   |
 | API Docs     | http://localhost:3000/api-docs | Swagger documentation |
 | Health Check | http://localhost:3000/health   | API health status     |
+| pgWeb UI     | http://localhost:8081          | Database management   |
 
 ---
 

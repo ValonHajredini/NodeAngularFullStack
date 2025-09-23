@@ -1,0 +1,34 @@
+{
+  "timestamp": "2025-09-23T00:00:54.251Z",
+  "projects": {
+    "api": {
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "success": true,
+      "reportPath": "/Applications/MAMP/htdocs/Projects/NodeAngularFullStack/reports/security/api-audit.json"
+    },
+    "web": {
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "success": true,
+      "reportPath": "/Applications/MAMP/htdocs/Projects/NodeAngularFullStack/reports/security/web-audit.json"
+    }
+  },
+  "summary": {
+    "totalProjects": 2,
+    "projectsWithVulnerabilities": 0,
+    "totalVulnerabilities": 0
+  }
+}
