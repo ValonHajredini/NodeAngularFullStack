@@ -355,15 +355,11 @@ export class ThemeService {
     if (!this.isBrowser) return;
 
     const html = document.documentElement;
-    const theme = this._currentTheme();
     const isDark = this._isDarkMode();
 
-    // Set theme attribute
-    if (theme === 'system') {
-      html.removeAttribute(this.THEME_ATTRIBUTE);
-    } else {
-      html.setAttribute(this.THEME_ATTRIBUTE, theme);
-    }
+    // Always set theme attribute based on actual dark/light state
+    // This ensures CSS variables switch correctly
+    html.setAttribute(this.THEME_ATTRIBUTE, isDark ? 'dark' : 'light');
 
     // Set dark mode class for compatibility
     html.classList.toggle('dark', isDark);

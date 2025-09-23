@@ -343,16 +343,30 @@
   }
 }
 
+/* Manual light theme class - Force light theme regardless of system preference */
+[data-theme='light'] {
+  --color-background: #f9fafb;
+  --color-surface: #ffffff;
+  --color-text-primary: #111827;
+  --color-text-secondary: #4b5563;
+  --color-text-muted: #6b7280;
+  --color-text-inverse: #ffffff;
+  --color-border: #d1d5db;
+  --color-border-light: #e5e7eb;
+  --color-border-dark: #9ca3af;
+}
+
 /* Manual dark theme class */
 [data-theme='dark'] {
-  --color-background: var(--color-gray-900);
-  --color-surface: var(--color-gray-800);
-  --color-text-primary: var(--color-gray-100);
-  --color-text-secondary: var(--color-gray-300);
-  --color-text-muted: var(--color-gray-400);
-  --color-border: var(--color-gray-600);
-  --color-border-light: var(--color-gray-700);
-  --color-border-dark: var(--color-gray-500);
+  --color-background: #111827;
+  --color-surface: #1f2937;
+  --color-text-primary: #f3f4f6;
+  --color-text-secondary: #d1d5db;
+  --color-text-muted: #9ca3af;
+  --color-text-inverse: #111827;
+  --color-border: #4b5563;
+  --color-border-light: #374151;
+  --color-border-dark: #6b7280;
 }
 
 /* ==========================================================================

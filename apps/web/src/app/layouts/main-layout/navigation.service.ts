@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
-import { AuthService } from '@core/auth/auth.service';
+import { AuthService } from '../../core/auth/auth.service';
 
 /**
  * Interface for breadcrumb items.
@@ -54,7 +54,10 @@ export class NavigationService {
   /**
    * Route metadata for generating breadcrumbs and titles.
    */
-  private readonly routeMetadata: Record<string, { title: string; parent?: string; icon?: string }> = {
+  private readonly routeMetadata: Record<
+    string,
+    { title: string; parent?: string; icon?: string }
+  > = {
     '/dashboard': { title: 'Dashboard', icon: 'pi pi-home' },
     '/profile': { title: 'Profile', parent: '/dashboard', icon: 'pi pi-user' },
     '/projects': { title: 'Projects', icon: 'pi pi-folder' },
@@ -66,7 +69,7 @@ export class NavigationService {
     '/admin/users': { title: 'User Management', parent: '/admin', icon: 'pi pi-users' },
     '/admin/settings': { title: 'System Settings', parent: '/admin', icon: 'pi pi-cog' },
     '/settings': { title: 'Settings', parent: '/dashboard', icon: 'pi pi-cog' },
-    '/support': { title: 'Help & Support', parent: '/dashboard', icon: 'pi pi-question-circle' }
+    '/support': { title: 'Help & Support', parent: '/dashboard', icon: 'pi pi-question-circle' },
   };
 
   constructor() {
@@ -81,12 +84,15 @@ export class NavigationService {
    * navigationService.navigateTo('/profile');
    * navigationService.navigateTo('/projects', { replaceUrl: true });
    */
-  navigateTo(route: string, options: { replaceUrl?: boolean; queryParams?: any } = {}): Promise<boolean> {
+  navigateTo(
+    route: string,
+    options: { replaceUrl?: boolean; queryParams?: any } = {},
+  ): Promise<boolean> {
     this.isNavigatingSignal.set(true);
 
     const navigationPromise = this.router.navigate([route], {
       replaceUrl: options.replaceUrl,
-      queryParams: options.queryParams
+      queryParams: options.queryParams,
     });
 
     navigationPromise.finally(() => {
@@ -167,7 +173,7 @@ export class NavigationService {
         breadcrumbs.push({
           label: meta.title,
           route: index < chain.length - 1 ? routePath : undefined, // Last item is not clickable
-          icon: index === 0 ? meta.icon : undefined // Only show icon for first item
+          icon: index === 0 ? meta.icon : undefined, // Only show icon for first item
         });
       }
     });
@@ -199,7 +205,7 @@ export class NavigationService {
       '/admin': ['admin'],
       '/admin/users': ['admin'],
       '/admin/settings': ['admin'],
-      '/reports': ['admin', 'user']
+      '/reports': ['admin', 'user'],
     };
 
     const requiredRoles = routePermissions[route];
@@ -212,7 +218,12 @@ export class NavigationService {
    * Gets suggested navigation based on user role and current context.
    * @returns Array of suggested navigation items
    */
-  getSuggestedNavigation(): Array<{ label: string; route: string; icon: string; description: string }> {
+  getSuggestedNavigation(): Array<{
+    label: string;
+    route: string;
+    icon: string;
+    description: string;
+  }> {
     const user = this.authService.user();
     if (!user) return [];
 
@@ -221,14 +232,14 @@ export class NavigationService {
         label: 'Dashboard',
         route: '/dashboard',
         icon: 'pi pi-home',
-        description: 'Overview of your workspace'
+        description: 'Overview of your workspace',
       },
       {
         label: 'Profile',
         route: '/profile',
         icon: 'pi pi-user',
-        description: 'Manage your account settings'
-      }
+        description: 'Manage your account settings',
+      },
     ];
 
     // Add role-specific suggestions
@@ -238,14 +249,14 @@ export class NavigationService {
           label: 'User Management',
           route: '/admin/users',
           icon: 'pi pi-users',
-          description: 'Manage system users'
+          description: 'Manage system users',
         },
         {
           label: 'System Settings',
           route: '/admin/settings',
           icon: 'pi pi-cog',
-          description: 'Configure system preferences'
-        }
+          description: 'Configure system preferences',
+        },
       );
     }
 
@@ -254,7 +265,7 @@ export class NavigationService {
         label: 'Reports',
         route: '/reports',
         icon: 'pi pi-chart-bar',
-        description: 'View analytics and reports'
+        description: 'View analytics and reports',
       });
     }
 
@@ -283,7 +294,7 @@ export class NavigationService {
   private initializeRouteTracking(): void {
     // Track route changes
     this.router.events
-      .pipe(filter(event => event instanceof NavigationEnd))
+      .pipe(filter((event) => event instanceof NavigationEnd))
       .subscribe((event: NavigationEnd) => {
         const route = event.urlAfterRedirects;
         this.currentRouteSignal.set(route);
@@ -292,7 +303,7 @@ export class NavigationService {
         if (!this.navigationContextSignal()) {
           this.setNavigationContext({
             title: this.getPageTitle(route),
-            breadcrumbs: this.generateBreadcrumbs(route)
+            breadcrumbs: this.generateBreadcrumbs(route),
           });
         }
 

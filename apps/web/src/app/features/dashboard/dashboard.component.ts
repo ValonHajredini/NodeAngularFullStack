@@ -1,8 +1,11 @@
-import { Component, ChangeDetectionStrategy, inject, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { NavigationService } from '../../layouts/main-layout/navigation.service';
+import { ActionCardComponent, type ActionCardData } from '../../shared/components/action-card';
+import { StatsCardComponent, type StatsCardData } from '../../shared/components/stats-card';
+import { SectionContainerComponent } from '../../shared/components/section-container';
 
 /**
  * Dashboard component providing overview of user's workspace.
@@ -11,243 +14,219 @@ import { NavigationService } from '../../layouts/main-layout/navigation.service'
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [
+    CommonModule,
+    RouterLink,
+    ActionCardComponent,
+    StatsCardComponent,
+    SectionContainerComponent,
+  ],
   template: `
-    <div class="min-h-screen bg-gray-50 py-8">
+    <div class="dashboard-container">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Welcome Header -->
         <div class="mb-8">
           @if (user()) {
-            <h1 class="text-3xl font-bold text-gray-900">
-              Welcome back, {{ user()!.firstName }}!
-            </h1>
-            <p class="mt-2 text-gray-600">
-              Here's what's happening in your workspace today.
-            </p>
+            <h1 class="welcome-title">Welcome back, {{ user()!.firstName }}!</h1>
+            <p class="welcome-subtitle">Here's what's happening in your workspace today.</p>
           }
         </div>
 
         <!-- Quick Stats Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-5">
-              <div class="flex items-center">
-                <div class="flex-shrink-0">
-                  <i class="pi pi-folder text-primary-600 text-2xl"></i>
-                </div>
-                <div class="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt class="text-sm font-medium text-gray-500 truncate">
-                      Active Projects
-                    </dt>
-                    <dd class="text-lg font-medium text-gray-900">
-                      12
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-5">
-              <div class="flex items-center">
-                <div class="flex-shrink-0">
-                  <i class="pi pi-check-square text-green-600 text-2xl"></i>
-                </div>
-                <div class="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt class="text-sm font-medium text-gray-500 truncate">
-                      Completed Tasks
-                    </dt>
-                    <dd class="text-lg font-medium text-gray-900">
-                      48
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-5">
-              <div class="flex items-center">
-                <div class="flex-shrink-0">
-                  <i class="pi pi-users text-blue-600 text-2xl"></i>
-                </div>
-                <div class="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt class="text-sm font-medium text-gray-500 truncate">
-                      Team Members
-                    </dt>
-                    <dd class="text-lg font-medium text-gray-900">
-                      8
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="p-5">
-              <div class="flex items-center">
-                <div class="flex-shrink-0">
-                  <i class="pi pi-calendar text-purple-600 text-2xl"></i>
-                </div>
-                <div class="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt class="text-sm font-medium text-gray-500 truncate">
-                      This Week's Tasks
-                    </dt>
-                    <dd class="text-lg font-medium text-gray-900">
-                      15
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
+          @for (statsCard of statsCards; track statsCard.title) {
+            <app-stats-card
+              [title]="statsCard.title"
+              [value]="statsCard.value"
+              [icon]="statsCard.icon"
+              [iconColor]="statsCard.iconColor"
+              [size]="'md'"
+              [ariaLabel]="statsCard.ariaLabel"
+            />
+          }
         </div>
 
-        <!-- Quick Actions -->
+        <!-- Main Content Sections -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <!-- Recent Activity -->
-          <div class="bg-white shadow rounded-lg">
-            <div class="px-4 py-5 sm:p-6">
-              <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
-                Recent Activity
-              </h3>
-              <div class="space-y-4">
-                <div class="flex items-start space-x-3">
-                  <div class="flex-shrink-0">
-                    <div class="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
-                      <i class="pi pi-check text-green-600 text-sm"></i>
-                    </div>
-                  </div>
-                  <div class="min-w-0 flex-1">
-                    <p class="text-sm text-gray-900">
-                      <span class="font-medium">Task completed:</span> Update user interface components
-                    </p>
-                    <p class="text-sm text-gray-500">2 hours ago</p>
+          <app-section-container
+            [title]="'Recent Activity'"
+            [variant]="'default'"
+            [size]="'lg'"
+            [ariaLabel]="'Recent activity and updates in your workspace'"
+          >
+            <div class="space-y-4">
+              <div class="activity-item">
+                <div class="flex-shrink-0">
+                  <div class="activity-icon activity-icon-success">
+                    <i class="pi pi-check text-sm"></i>
                   </div>
                 </div>
+                <div class="min-w-0 flex-1">
+                  <p class="activity-text">
+                    <span class="font-medium">Task completed:</span> Update user interface
+                    components
+                  </p>
+                  <p class="activity-time">2 hours ago</p>
+                </div>
+              </div>
 
-                <div class="flex items-start space-x-3">
-                  <div class="flex-shrink-0">
-                    <div class="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
-                      <i class="pi pi-plus text-blue-600 text-sm"></i>
-                    </div>
-                  </div>
-                  <div class="min-w-0 flex-1">
-                    <p class="text-sm text-gray-900">
-                      <span class="font-medium">New project created:</span> Mobile App Redesign
-                    </p>
-                    <p class="text-sm text-gray-500">5 hours ago</p>
+              <div class="activity-item">
+                <div class="flex-shrink-0">
+                  <div class="activity-icon activity-icon-info">
+                    <i class="pi pi-plus text-sm"></i>
                   </div>
                 </div>
+                <div class="min-w-0 flex-1">
+                  <p class="activity-text">
+                    <span class="font-medium">New project created:</span> Mobile App Redesign
+                  </p>
+                  <p class="activity-time">5 hours ago</p>
+                </div>
+              </div>
 
-                <div class="flex items-start space-x-3">
-                  <div class="flex-shrink-0">
-                    <div class="h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center">
-                      <i class="pi pi-users text-purple-600 text-sm"></i>
-                    </div>
+              <div class="activity-item">
+                <div class="flex-shrink-0">
+                  <div class="activity-icon activity-icon-purple">
+                    <i class="pi pi-users text-sm"></i>
                   </div>
-                  <div class="min-w-0 flex-1">
-                    <p class="text-sm text-gray-900">
-                      <span class="font-medium">Team member added:</span> Sarah joined the development team
-                    </p>
-                    <p class="text-sm text-gray-500">1 day ago</p>
-                  </div>
+                </div>
+                <div class="min-w-0 flex-1">
+                  <p class="activity-text">
+                    <span class="font-medium">Team member added:</span> Sarah joined the development
+                    team
+                  </p>
+                  <p class="activity-time">1 day ago</p>
                 </div>
               </div>
             </div>
-          </div>
+          </app-section-container>
 
           <!-- Quick Actions -->
-          <div class="bg-white shadow rounded-lg">
-            <div class="px-4 py-5 sm:p-6">
-              <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
-                Quick Actions
-              </h3>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <a routerLink="/projects/new"
-                   class="group relative rounded-lg p-6 bg-white hover:bg-gray-50 border border-gray-200 hover:border-gray-300 transition-all duration-200">
-                  <div>
-                    <span class="rounded-lg inline-flex p-3 bg-primary-600 text-white group-hover:bg-primary-700">
-                      <i class="pi pi-plus text-lg"></i>
-                    </span>
-                  </div>
-                  <div class="mt-4">
-                    <h3 class="text-lg font-medium text-gray-900 group-hover:text-gray-800">
-                      New Project
-                    </h3>
-                    <p class="mt-2 text-sm text-gray-500">
-                      Start a new project with your team.
-                    </p>
-                  </div>
-                </a>
-
-                <a routerLink="/tasks"
-                   class="group relative rounded-lg p-6 bg-white hover:bg-gray-50 border border-gray-200 hover:border-gray-300 transition-all duration-200">
-                  <div>
-                    <span class="rounded-lg inline-flex p-3 bg-green-600 text-white group-hover:bg-green-700">
-                      <i class="pi pi-check-square text-lg"></i>
-                    </span>
-                  </div>
-                  <div class="mt-4">
-                    <h3 class="text-lg font-medium text-gray-900 group-hover:text-gray-800">
-                      View Tasks
-                    </h3>
-                    <p class="mt-2 text-sm text-gray-500">
-                      Manage your tasks and deadlines.
-                    </p>
-                  </div>
-                </a>
-
-                <a routerLink="/team"
-                   class="group relative rounded-lg p-6 bg-white hover:bg-gray-50 border border-gray-200 hover:border-gray-300 transition-all duration-200">
-                  <div>
-                    <span class="rounded-lg inline-flex p-3 bg-blue-600 text-white group-hover:bg-blue-700">
-                      <i class="pi pi-users text-lg"></i>
-                    </span>
-                  </div>
-                  <div class="mt-4">
-                    <h3 class="text-lg font-medium text-gray-900 group-hover:text-gray-800">
-                      Team
-                    </h3>
-                    <p class="mt-2 text-sm text-gray-500">
-                      Collaborate with your team members.
-                    </p>
-                  </div>
-                </a>
-
-                @if (user() && (user()!.role === 'admin' || user()!.role === 'user')) {
-                  <a routerLink="/reports"
-                     class="group relative rounded-lg p-6 bg-white hover:bg-gray-50 border border-gray-200 hover:border-gray-300 transition-all duration-200">
-                    <div>
-                      <span class="rounded-lg inline-flex p-3 bg-purple-600 text-white group-hover:bg-purple-700">
-                        <i class="pi pi-chart-bar text-lg"></i>
-                      </span>
-                    </div>
-                    <div class="mt-4">
-                      <h3 class="text-lg font-medium text-gray-900 group-hover:text-gray-800">
-                        Reports
-                      </h3>
-                      <p class="mt-2 text-sm text-gray-500">
-                        View analytics and insights.
-                      </p>
-                    </div>
-                  </a>
-                }
-              </div>
+          <app-section-container
+            [title]="'Quick Actions'"
+            [variant]="'default'"
+            [size]="'lg'"
+            [ariaLabel]="'Quick action shortcuts for common tasks'"
+          >
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              @for (actionCard of visibleActionCards(); track actionCard.title) {
+                <app-action-card
+                  [title]="actionCard.title"
+                  [description]="actionCard.description"
+                  [icon]="actionCard.icon"
+                  [iconColor]="actionCard.iconColor"
+                  [routerLink]="actionCard.routerLink"
+                  [size]="'md'"
+                  [ariaLabel]="actionCard.ariaLabel"
+                />
+              }
             </div>
-          </div>
+          </app-section-container>
         </div>
       </div>
     </div>
   `,
-  changeDetection: ChangeDetectionStrategy.OnPush
+  styles: [
+    `
+      /* Dashboard Container */
+      .dashboard-container {
+        min-height: 100vh;
+        background-color: var(--color-background);
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+        transition: var(--transition-colors);
+      }
+
+      /* Welcome Section */
+      .welcome-title {
+        font-size: 1.875rem;
+        font-weight: bold;
+        color: var(--color-text-primary);
+        line-height: 2.25rem;
+      }
+
+      .welcome-subtitle {
+        margin-top: 0.5rem;
+        color: var(--color-text-secondary);
+      }
+
+      /* Activity Items */
+      .activity-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+      }
+
+      .activity-icon {
+        height: 2rem;
+        width: 2rem;
+        border-radius: 9999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: var(--transition-colors);
+      }
+
+      .activity-icon-success {
+        background-color: rgba(34, 197, 94, 0.1);
+        color: var(--color-success-600);
+      }
+
+      .activity-icon-info {
+        background-color: rgba(59, 130, 246, 0.1);
+        color: var(--color-primary-600);
+      }
+
+      .activity-icon-purple {
+        background-color: rgba(147, 51, 234, 0.1);
+        color: #7c3aed;
+      }
+
+      /* Dark mode adjustments for activity icons */
+      [data-theme='dark'] .activity-icon-success {
+        background-color: rgba(34, 197, 94, 0.2);
+        color: var(--color-success-500);
+      }
+
+      [data-theme='dark'] .activity-icon-info {
+        background-color: rgba(59, 130, 246, 0.2);
+        color: var(--color-primary-500);
+      }
+
+      [data-theme='dark'] .activity-icon-purple {
+        background-color: rgba(147, 51, 234, 0.2);
+        color: #a78bfa;
+      }
+
+      .activity-text {
+        font-size: 0.875rem;
+        color: var(--color-text-primary);
+      }
+
+      .activity-time {
+        font-size: 0.875rem;
+        color: var(--color-text-muted);
+        margin-top: 0.125rem;
+      }
+
+      /* Responsive adjustments */
+      @media (min-width: 640px) {
+        .dashboard-container {
+          padding-top: 2rem;
+          padding-bottom: 2rem;
+        }
+      }
+
+      @media (min-width: 1024px) {
+        .welcome-title {
+          font-size: 2.25rem;
+          line-height: 2.5rem;
+        }
+      }
+    `,
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DashboardComponent implements OnInit {
   private readonly authService = inject(AuthService);
@@ -255,13 +234,99 @@ export class DashboardComponent implements OnInit {
 
   protected readonly user = this.authService.user;
 
+  /**
+   * Configuration for statistics cards displayed in the dashboard
+   */
+  protected readonly statsCards: StatsCardData[] = [
+    {
+      title: 'Active Projects',
+      value: 12,
+      icon: 'pi pi-folder',
+      iconColor: 'primary',
+      ariaLabel: 'Active Projects: 12 projects currently in progress',
+    },
+    {
+      title: 'Completed Tasks',
+      value: 48,
+      icon: 'pi pi-check-square',
+      iconColor: 'success',
+      ariaLabel: 'Completed Tasks: 48 tasks finished successfully',
+    },
+    {
+      title: 'Team Members',
+      value: 8,
+      icon: 'pi pi-users',
+      iconColor: 'info',
+      ariaLabel: 'Team Members: 8 people working on your projects',
+    },
+    {
+      title: "This Week's Tasks",
+      value: 15,
+      icon: 'pi pi-calendar',
+      iconColor: 'purple',
+      ariaLabel: "This Week's Tasks: 15 tasks scheduled for this week",
+    },
+  ];
+
+  /**
+   * Configuration for action cards displayed in the Quick Actions section
+   */
+  private readonly actionCards: ActionCardData[] = [
+    {
+      title: 'New Project',
+      description: 'Start a new project with your team.',
+      icon: 'pi pi-plus',
+      iconColor: 'primary',
+      routerLink: '/projects/new',
+      ariaLabel: 'Create a new project and start collaborating with your team',
+    },
+    {
+      title: 'View Tasks',
+      description: 'Manage your tasks and deadlines.',
+      icon: 'pi pi-check-square',
+      iconColor: 'success',
+      routerLink: '/tasks',
+      ariaLabel: 'View and manage your assigned tasks and deadlines',
+    },
+    {
+      title: 'Team',
+      description: 'Collaborate with your team members.',
+      icon: 'pi pi-users',
+      iconColor: 'info',
+      routerLink: '/team',
+      ariaLabel: 'View team members and collaborate on projects',
+    },
+    {
+      title: 'Reports',
+      description: 'View analytics and insights.',
+      icon: 'pi pi-chart-bar',
+      iconColor: 'warning',
+      routerLink: '/reports',
+      ariaLabel: 'Access reports, analytics and project insights',
+    },
+  ];
+
+  /**
+   * Returns action cards visible to the current user based on their role
+   */
+  protected readonly visibleActionCards = computed(() => {
+    const currentUser = this.user();
+    if (!currentUser) return [];
+
+    return this.actionCards.filter((card) => {
+      // Reports are only available to admin and user roles
+      if (card.routerLink === '/reports') {
+        return currentUser.role === 'admin' || currentUser.role === 'user';
+      }
+      return true;
+    });
+  });
+
   ngOnInit(): void {
     // Set navigation context for dashboard
     this.navigationService.setNavigationContext({
       title: 'Dashboard',
-      breadcrumbs: [
-        { label: 'Dashboard', icon: 'pi pi-home' }
-      ]
+      breadcrumbs: [{ label: 'Dashboard', icon: 'pi pi-home' }],
     });
   }
 }
