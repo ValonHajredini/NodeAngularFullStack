@@ -96,15 +96,22 @@ export class JwtUtils {
             maxStorage: tenantContext.limits?.maxStorage || 1000,
             maxApiCalls: tenantContext.limits?.maxApiCalls || 10000,
           },
-          status: tenantContext.status || 'active',
+          status: (tenantContext.status || 'active') as
+            | 'active'
+            | 'inactive'
+            | 'suspended',
         };
       }
 
-      return jwt.sign(tokenPayload, config.JWT_SECRET, {
-        expiresIn: config.JWT_ACCESS_EXPIRES_IN,
-        issuer: 'nodeangularfullstack-api',
-        audience: 'nodeangularfullstack-client',
-      } as jwt.SignOptions);
+      return jwt.sign(
+        tokenPayload,
+        config.JWT_SECRET as string,
+        {
+          expiresIn: config.JWT_ACCESS_EXPIRES_IN,
+          issuer: 'nodeangularfullstack-api',
+          audience: 'nodeangularfullstack-client',
+        } as jwt.SignOptions
+      );
     } catch (error) {
       throw new Error(
         `Access token generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -133,11 +140,15 @@ export class JwtUtils {
         type: 'refresh',
       };
 
-      return jwt.sign(tokenPayload, config.JWT_REFRESH_SECRET, {
-        expiresIn: config.JWT_REFRESH_EXPIRES_IN,
-        issuer: 'nodeangularfullstack-api',
-        audience: 'nodeangularfullstack-client',
-      } as jwt.SignOptions);
+      return jwt.sign(
+        tokenPayload,
+        config.JWT_REFRESH_SECRET as string,
+        {
+          expiresIn: config.JWT_REFRESH_EXPIRES_IN,
+          issuer: 'nodeangularfullstack-api',
+          audience: 'nodeangularfullstack-client',
+        } as jwt.SignOptions
+      );
     } catch (error) {
       throw new Error(
         `Refresh token generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -194,7 +205,7 @@ export class JwtUtils {
         throw new Error('Token must be a non-empty string');
       }
 
-      const decoded = jwt.verify(token, config.JWT_SECRET, {
+      const decoded = jwt.verify(token, config.JWT_SECRET as string, {
         issuer: 'nodeangularfullstack-api',
         audience: 'nodeangularfullstack-client',
       }) as JwtPayload;
@@ -236,7 +247,7 @@ export class JwtUtils {
         throw new Error('Token must be a non-empty string');
       }
 
-      const decoded = jwt.verify(token, config.JWT_REFRESH_SECRET, {
+      const decoded = jwt.verify(token, config.JWT_REFRESH_SECRET as string, {
         issuer: 'nodeangularfullstack-api',
         audience: 'nodeangularfullstack-client',
       }) as RefreshTokenPayload;

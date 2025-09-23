@@ -1,12 +1,15 @@
 #!/bin/bash
 
 # NodeAngularFullStack Development Startup Script
-# This script starts all services needed for development
+# Starts PostgreSQL-dependent services using local installations (no Docker)
 
-set -e  # Exit on any error
+set -euo pipefail
 
-echo "🚀 Starting NodeAngularFullStack Development Environment..."
-echo "=================================================="
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$ROOT_DIR"
+
+LOG_DIR="$ROOT_DIR/logs"
+mkdir -p "$LOG_DIR"
 
 # Colors for output
 RED='\033[0;31m'
@@ -15,255 +18,230 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Port configuration (keep in sync with docker-compose.yml)
-FRONTEND_PORT=4200
-API_PORT=3000
-POSTGRES_PORT=5432
-PGWEB_PORT=8080
-
-# Function to check if command exists
 command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
-# Ensure Docker daemon is running (tries to start on macOS if possible)
-ensure_docker_running() {
-    if docker info >/dev/null 2>&1; then
-        return 0
+ensure_command() {
+    local cmd=$1
+    local guidance=$2
+    if ! command_exists "$cmd"; then
+        echo -e "${RED}❌ Required command '$cmd' is not available.${NC}"
+        if [ -n "$guidance" ]; then
+            echo -e "${YELLOW}💡 $guidance${NC}"
+        fi
+        exit 1
     fi
-
-    echo -e "${YELLOW}⚠️  Docker daemon is not running.${NC}"
-
-    if [[ "$OSTYPE" == "darwin"* ]] && command_exists open; then
-        echo -e "${BLUE}▶️  Attempting to start Docker Desktop...${NC}"
-        open -a Docker >/dev/null 2>&1 || true
-
-        echo -e "${YELLOW}⏳ Waiting for Docker Desktop to start...${NC}"
-        for attempt in {1..30}; do
-            if docker info >/dev/null 2>&1; then
-                echo -e "${GREEN}✅ Docker Desktop is running${NC}"
-                return 0
-            fi
-            sleep 2
-        done
-    fi
-
-    echo -e "${RED}❌ Please start the Docker daemon and rerun this script.${NC}"
-    exit 1
 }
 
-# Function to check if port is in use
 port_in_use() {
-    lsof -Pi :$1 -sTCP:LISTEN -t >/dev/null 2>&1
+    lsof -Pi :"$1" -sTCP:LISTEN -t >/dev/null 2>&1
 }
 
-free_port() {
+stop_process_on_port() {
     local port=$1
-    if port_in_use $port; then
-        echo -e "${YELLOW}⚠️  Port $port is currently in use. Attempting to free it...${NC}"
-        local pids=$(lsof -ti :$port)
+    local service_name=$2
+
+    if port_in_use "$port"; then
+        echo -e "${YELLOW}⚠️  Port $port is in use. Stopping existing $service_name...${NC}"
+        local pids
+        pids=$(lsof -ti :"$port" || true)
         if [ -n "$pids" ]; then
-            echo -e "${BLUE}🛑 Killing processes on port $port: $pids${NC}"
-            echo $pids | xargs -I {} kill {}
+            echo -e "${BLUE}🛑 Killing processes: $pids${NC}"
+            echo "$pids" | xargs -I {} kill {} >/dev/null 2>&1 || true
             sleep 2
         fi
 
-        if port_in_use $port; then
-            echo -e "${RED}❌ Failed to free port $port. Please stop the process manually and rerun the script.${NC}"
+        if port_in_use "$port"; then
+            echo -e "${RED}❌ Unable to free port $port for $service_name.${NC}"
             exit 1
         fi
 
-        echo -e "${GREEN}✅ Port $port freed successfully${NC}"
+        echo -e "${GREEN}✅ Port $port is now free for $service_name${NC}"
     fi
 }
 
-# Function to wait for service to be ready
 wait_for_service() {
     local url=$1
     local service_name=$2
-    local max_attempts=30
-    local attempt=1
+    local max_attempts=${3:-30}
 
-    echo -e "${YELLOW}⏳ Waiting for $service_name to be ready...${NC}"
-
-    while [ $attempt -le $max_attempts ]; do
+    echo -e "${YELLOW}⏳ Waiting for $service_name to become available...${NC}"
+    for attempt in $(seq 1 "$max_attempts"); do
         if curl -s "$url" >/dev/null 2>&1; then
             echo -e "${GREEN}✅ $service_name is ready!${NC}"
             return 0
         fi
-        echo -e "${YELLOW}   Attempt $attempt/$max_attempts - $service_name not ready yet...${NC}"
+        echo -e "${YELLOW}   Attempt $attempt/$max_attempts - still waiting for $service_name...${NC}"
         sleep 2
-        attempt=$((attempt + 1))
     done
 
-    echo -e "${RED}❌ $service_name failed to start after $max_attempts attempts${NC}"
+    echo -e "${RED}❌ $service_name failed to respond at $url${NC}"
     return 1
 }
 
-# Check prerequisites
-echo -e "${BLUE}🔍 Checking prerequisites...${NC}"
+to_lower() {
+    echo "$1" | tr '[:upper:]' '[:lower:]'
+}
 
-if ! command_exists docker; then
-    echo -e "${RED}❌ Docker is not installed or not in PATH${NC}"
-    exit 1
+normalize_bool() {
+    local value=$(to_lower "$1")
+    case "$value" in
+        true|1|yes|y) echo "true" ;;
+        *) echo "false" ;;
+    esac
+}
+
+# Prefer Homebrew PostgreSQL binaries if they exist
+if ! command_exists psql && [ -d "/opt/homebrew/opt/postgresql@14/bin" ]; then
+    export PATH="/opt/homebrew/opt/postgresql@14/bin:$PATH"
 fi
 
-if ! command_exists docker-compose; then
-    echo -e "${RED}❌ Docker Compose is not installed or not in PATH${NC}"
-    exit 1
-fi
+FRONTEND_PORT="${FRONTEND_PORT:-4200}"
+API_PORT="${PORT:-3000}"
+PGWEB_PORT="${PGWEB_PORT:-8080}"
 
-if ! command_exists npm; then
-    echo -e "${RED}❌ npm is not installed or not in PATH${NC}"
-    exit 1
-fi
-
-if ! command_exists node; then
-    echo -e "${RED}❌ Node.js is not installed or not in PATH${NC}"
-    exit 1
-fi
-
-echo -e "${GREEN}✅ All prerequisites found${NC}"
-
-# Ensure Docker daemon is running before continuing
-ensure_docker_running
-
-# Check if ports are available
-echo -e "${BLUE}🔍 Checking port availability...${NC}"
-
-if port_in_use $API_PORT; then
-    echo -e "${YELLOW}⚠️  Port $API_PORT is in use - backend might already be running${NC}"
-fi
-
-if port_in_use $FRONTEND_PORT; then
-    echo -e "${YELLOW}⚠️  Port $FRONTEND_PORT is in use - frontend might already be running${NC}"
-fi
-
-if port_in_use $POSTGRES_PORT; then
-    echo -e "${YELLOW}⚠️  Port $POSTGRES_PORT is in use - PostgreSQL might already be running${NC}"
-fi
-
-free_port $PGWEB_PORT
-
-# Step 1: Start Docker containers
-echo -e "${BLUE}🐳 Starting Docker containers (PostgreSQL + pgAdmin)...${NC}"
-docker-compose up -d
-
-if [ $? -eq 0 ]; then
-    echo -e "${GREEN}✅ Docker containers started successfully${NC}"
+ENV_FILE="${ENV_FILE:-.env.development}"
+if [ -f "$ROOT_DIR/$ENV_FILE" ]; then
+    echo -e "${BLUE}🧾 Loading environment variables from $ENV_FILE${NC}"
+    set -a
+    # shellcheck disable=SC1090
+    source "$ROOT_DIR/$ENV_FILE"
+    set +a
 else
-    echo -e "${RED}❌ Failed to start Docker containers${NC}"
-    exit 1
+    echo -e "${YELLOW}⚠️  No environment file found at $ENV_FILE. Using built-in defaults.${NC}"
 fi
 
-# Wait for PostgreSQL to be ready
-echo -e "${BLUE}⏳ Waiting for PostgreSQL to be ready...${NC}"
-sleep 5
+FRONTEND_PORT="${FRONTEND_PORT:-4200}"
+API_PORT="${PORT:-3000}"
+PGWEB_PORT="${PGWEB_PORT:-8080}"
 
-# Check if PostgreSQL is responding
-max_db_attempts=30
-db_attempt=1
-while [ $db_attempt -le $max_db_attempts ]; do
-    if docker-compose exec -T postgres pg_isready -U postgres >/dev/null 2>&1; then
-        echo -e "${GREEN}✅ PostgreSQL is ready!${NC}"
+DB_HOST="${DB_HOST:-localhost}"
+DB_PORT="${DB_PORT:-5432}"
+DB_NAME="${DB_NAME:-nodeangularfullstack}"
+DB_USER="${DB_USER:-dbuser}"
+DB_PASSWORD="${DB_PASSWORD:-dbpassword}"
+
+PGWEB_AUTH_USER="${PGWEB_AUTH_USER:-admin}"
+PGWEB_AUTH_PASS="${PGWEB_AUTH_PASS:-development-password}"
+PGWEB_READ_ONLY="$(normalize_bool "${PGWEB_READ_ONLY:-false}")"
+PGWEB_SESSIONS="$(normalize_bool "${PGWEB_SESSIONS:-true}")"
+PGWEB_CORS_ORIGIN="${PGWEB_CORS_ORIGIN:-http://localhost:4200}"
+
+PGWEB_DATABASE_URL="${PGWEB_DATABASE_URL:-}"
+if [ -z "$PGWEB_DATABASE_URL" ]; then
+    PGWEB_DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable"
+fi
+
+echo ""
+echo -e "${BLUE}🔍 Checking prerequisites...${NC}"
+ensure_command node "Install Node.js 20+ from https://nodejs.org/"
+ensure_command npm "Install Node.js which bundles npm"
+ensure_command psql "Install PostgreSQL (e.g., brew install postgresql@14)"
+ensure_command pgweb "Install pgweb (e.g., brew install pgweb)"
+
+if ! command_exists ng; then
+    echo -e "${YELLOW}⚠️  Angular CLI not found. Installing globally...${NC}"
+    npm install -g @angular/cli >/dev/null 2>&1
+fi
+
+echo -e "${BLUE}📡 Verifying PostgreSQL connectivity...${NC}"
+POSTGRES_CHECK="false"
+for attempt in $(seq 1 10); do
+    if PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1" >/dev/null 2>&1; then
+        POSTGRES_CHECK="true"
         break
     fi
-    echo -e "${YELLOW}   Attempt $db_attempt/$max_db_attempts - PostgreSQL not ready yet...${NC}"
+    echo -e "${YELLOW}   Attempt $attempt/10 - waiting for PostgreSQL at ${DB_HOST}:${DB_PORT}...${NC}"
     sleep 2
-    db_attempt=$((db_attempt + 1))
 done
 
-if [ $db_attempt -gt $max_db_attempts ]; then
-    echo -e "${RED}❌ PostgreSQL failed to start${NC}"
+if [ "$POSTGRES_CHECK" != "true" ]; then
+    echo -e "${RED}❌ Unable to connect to PostgreSQL using the provided credentials.${NC}"
+    echo -e "${YELLOW}   Host: $DB_HOST${NC}"
+    echo -e "${YELLOW}   Port: $DB_PORT${NC}"
+    echo -e "${YELLOW}   Database: $DB_NAME${NC}"
+    echo -e "${YELLOW}   User: $DB_USER${NC}"
+    echo ""
+    echo -e "${YELLOW}💡 Ensure PostgreSQL is running (e.g., brew services start postgresql@14) and that the user/database exist.${NC}"
     exit 1
 fi
 
-# Step 2: Setup database
-echo -e "${BLUE}🗄️  Setting up database...${NC}"
-cd apps/api
+echo -e "${GREEN}✅ PostgreSQL connection verified${NC}"
 
-# Check if node_modules exists
-if [ ! -d "node_modules" ]; then
+stop_process_on_port "$API_PORT" "Backend API"
+stop_process_on_port "$FRONTEND_PORT" "Frontend Angular"
+stop_process_on_port "$PGWEB_PORT" "pgWeb"
+
+echo -e "${BLUE}🔧 Preparing backend dependencies...${NC}"
+if [ ! -d "apps/api/node_modules" ]; then
     echo -e "${YELLOW}📦 Installing backend dependencies...${NC}"
-    npm install
+    npm --workspace=apps/api install
 fi
 
-# Run database setup
-echo -e "${BLUE}🔧 Running database migrations...${NC}"
-npm run db:migrate
+echo -e "${BLUE}🗄️  Running database migrations...${NC}"
+npm --workspace=apps/api run db:migrate
 
-echo -e "${BLUE}🌱 Seeding database with test data...${NC}"
-npm run db:seed
+echo -e "${BLUE}🌱 Seeding database with development data...${NC}"
+npm --workspace=apps/api run db:seed
 
-echo -e "${GREEN}✅ Database setup complete${NC}"
-
-# Step 3: Start backend in background
 echo -e "${BLUE}🔧 Starting backend API server...${NC}"
-npm run dev > ../../logs/backend.log 2>&1 &
+npm --workspace=apps/api run dev > "$LOG_DIR/backend.log" 2>&1 &
 BACKEND_PID=$!
+echo $BACKEND_PID > .backend.pid
 
-# Store PID for cleanup
-echo $BACKEND_PID > ../../.backend.pid
-
-cd ../..
-
-# Wait for backend to be ready
 wait_for_service "http://localhost:${API_PORT}/health" "Backend API"
 
-# Ensure database web UI is up
-wait_for_service "http://localhost:${PGWEB_PORT}" "pgWeb Database UI"
+echo -e "${BLUE}🌐 Starting pgWeb database UI...${NC}"
+PGWEB_CMD=(pgweb "--bind" "127.0.0.1" "--listen" ":${PGWEB_PORT}" "--url" "$PGWEB_DATABASE_URL" "--cors-origin" "$PGWEB_CORS_ORIGIN")
+if [ -n "$PGWEB_AUTH_USER" ] && [ -n "$PGWEB_AUTH_PASS" ]; then
+    PGWEB_CMD+=("--auth-user" "$PGWEB_AUTH_USER" "--auth-pass" "$PGWEB_AUTH_PASS")
+fi
+if [ "$PGWEB_READ_ONLY" = "true" ]; then
+    PGWEB_CMD+=("--readonly")
+fi
+if [ "$PGWEB_SESSIONS" != "true" ]; then
+    PGWEB_CMD+=("--no-sessions")
+fi
 
-# Step 4: Start frontend
-echo -e "${BLUE}🌐 Starting frontend Angular development server...${NC}"
-cd apps/web
+"${PGWEB_CMD[@]}" > "$LOG_DIR/pgweb.log" 2>&1 &
+PGWEB_PID=$!
+echo $PGWEB_PID > .pgweb.pid
 
-# Check if node_modules exists
-if [ ! -d "node_modules" ]; then
+wait_for_service "http://localhost:${PGWEB_PORT}" "pgWeb"
+
+echo -e "${BLUE}🌐 Preparing frontend Angular application...${NC}"
+if [ ! -d "apps/web/node_modules" ]; then
     echo -e "${YELLOW}📦 Installing frontend dependencies...${NC}"
-    npm install
+    npm --workspace=apps/web install
 fi
 
-# Check if Angular CLI is available
-if ! command_exists ng; then
-    echo -e "${YELLOW}📦 Installing Angular CLI globally...${NC}"
-    npm install -g @angular/cli
-fi
-
-# Start frontend in background
-ng serve > ../../logs/frontend.log 2>&1 &
+echo -e "${BLUE}🚀 Starting Angular development server...${NC}"
+npm --workspace=apps/web run dev > "$LOG_DIR/frontend.log" 2>&1 &
 FRONTEND_PID=$!
+echo $FRONTEND_PID > .frontend.pid
 
-# Store PID for cleanup
-echo $FRONTEND_PID > ../../.frontend.pid
+wait_for_service "http://localhost:${FRONTEND_PORT}" "Frontend Angular"
 
-cd ../..
-
-# Wait for frontend to be ready
-wait_for_service "http://localhost:4200" "Frontend Angular"
-
-# Step 5: Display success message and URLs
 echo ""
-echo -e "${GREEN}🎉 SUCCESS! All services are now running${NC}"
+echo -e "${GREEN}🎉 SUCCESS! Local development environment is ready${NC}"
 echo "=================================================="
 echo -e "${BLUE}📋 Service URLs:${NC}"
 echo -e "   Frontend (Angular):     ${GREEN}http://localhost:${FRONTEND_PORT}${NC}"
 echo -e "   Backend API:            ${GREEN}http://localhost:${API_PORT}${NC}"
-echo -e "   API Documentation:      ${GREEN}http://localhost:${API_PORT}/api-docs${NC}"
+echo -e "   API Docs:               ${GREEN}http://localhost:${API_PORT}/api-docs${NC}"
 echo -e "   pgWeb (Database UI):    ${GREEN}http://localhost:${PGWEB_PORT}${NC}"
 echo -e "   API Health Check:       ${GREEN}http://localhost:${API_PORT}/health${NC}"
 echo ""
-echo -e "${BLUE}ℹ️  pgWeb is pre-configured to connect to Postgres using docker-compose environment variables.${NC}"
-echo ""
-echo -e "${BLUE}🧪 Test Users Available:${NC}"
+echo -e "${BLUE}🧪 Test User Credentials:${NC}"
 echo -e "   Admin:    ${YELLOW}admin@example.com${NC} / ${YELLOW}Admin123!@#${NC}"
 echo -e "   User:     ${YELLOW}user@example.com${NC} / ${YELLOW}User123!@#${NC}"
 echo -e "   ReadOnly: ${YELLOW}readonly@example.com${NC} / ${YELLOW}Read123!@#${NC}"
 echo ""
-echo -e "${BLUE}📝 Log Files:${NC}"
+echo -e "${BLUE}📝 Logs:${NC}"
 echo -e "   Backend:  ${YELLOW}logs/backend.log${NC}"
 echo -e "   Frontend: ${YELLOW}logs/frontend.log${NC}"
+echo -e "   pgWeb:    ${YELLOW}logs/pgweb.log${NC}"
 echo ""
 echo -e "${YELLOW}💡 To stop all services, run: ${NC}./stop-dev.sh"
-echo -e "${YELLOW}💡 To view logs in real-time: ${NC}tail -f logs/backend.log ${NC}or ${NC}tail -f logs/frontend.log"
-echo ""
-echo -e "${GREEN}🚀 Happy coding!${NC}"
+echo -e "${GREEN}🚀 Happy coding without Docker!${NC}"

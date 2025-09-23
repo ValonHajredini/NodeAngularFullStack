@@ -1,3 +1,6 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express, { Application, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -35,17 +38,19 @@ class Server {
    */
   private initializeMiddleware(): void {
     // Security middleware
-    this.app.use(helmet({
-      crossOriginEmbedderPolicy: false,
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          scriptSrc: ["'self'"],
-          imgSrc: ["'self'", "data:", "https:"],
+    this.app.use(
+      helmet({
+        crossOriginEmbedderPolicy: false,
+        contentSecurityPolicy: {
+          directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            scriptSrc: ["'self'"],
+            imgSrc: ["'self'", 'data:', 'https:'],
+          },
         },
-      },
-    }));
+      })
+    );
 
     // Rate limiting
     const limiter = rateLimit({
@@ -61,12 +66,14 @@ class Server {
     this.app.use('/api/', limiter);
 
     // CORS configuration
-    this.app.use(cors({
-      origin: config.FRONTEND_URL,
-      credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-    }));
+    this.app.use(
+      cors({
+        origin: config.FRONTEND_URL,
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+      })
+    );
 
     // Body parsing and compression
     this.app.use(compression());
@@ -89,16 +96,20 @@ class Server {
     });
 
     // Swagger documentation
-    this.app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-      customCss: '.swagger-ui .topbar { display: none }',
-      customSiteTitle: 'NodeAngularFullStack API Documentation',
-      swaggerOptions: {
-        persistAuthorization: true,
-        displayRequestDuration: true,
-        filter: true,
-        tryItOutEnabled: true
-      }
-    }));
+    this.app.use(
+      '/api-docs',
+      swaggerUi.serve,
+      swaggerUi.setup(swaggerSpec, {
+        customCss: '.swagger-ui .topbar { display: none }',
+        customSiteTitle: 'NodeAngularFullStack API Documentation',
+        swaggerOptions: {
+          persistAuthorization: true,
+          displayRequestDuration: true,
+          filter: true,
+          tryItOutEnabled: true,
+        },
+      })
+    );
 
     // Legacy health check endpoint
     this.app.use('/health', healthRoutes);
@@ -115,7 +126,7 @@ class Server {
         version: '1.0.0',
         environment: config.NODE_ENV,
         timestamp: new Date().toISOString(),
-        documentation: '/api-docs'
+        documentation: '/api-docs',
       });
     });
 
@@ -126,7 +137,7 @@ class Server {
         version: '1.0.0',
         status: 'running',
         docs: '/api-docs',
-        api: '/api'
+        api: '/api',
       });
     });
   }
@@ -171,10 +182,14 @@ class Server {
       await databaseService.initialize(dbConfig);
     } catch (error) {
       console.error('❌ Failed to initialize database:', error);
-      console.warn('⚠️  Continuing without database for development testing...');
+      console.warn(
+        '⚠️  Continuing without database for development testing...'
+      );
       // In development, continue without database for Swagger testing
       if (config.NODE_ENV === 'development') {
-        console.log('🔧 Running in development mode without database connection');
+        console.log(
+          '🔧 Running in development mode without database connection'
+        );
         return;
       }
       throw error;
@@ -192,43 +207,59 @@ class Server {
 
       // Start the server
       return new Promise((resolve, reject) => {
-        this.app.listen(this.port, () => {
-          console.log('\n🚀 NodeAngularFullStack API Server Started');
-          console.log(`📡 Server: http://localhost:${this.port}`);
-          console.log(`📦 Environment: ${config.NODE_ENV}`);
-          console.log(`🔗 CORS Origin: ${config.FRONTEND_URL}`);
-          console.log(`💾 Database: Connected`);
+        this.app
+          .listen(this.port, () => {
+            console.log('\n🚀 NodeAngularFullStack API Server Started');
+            console.log(`📡 Server: http://localhost:${this.port}`);
+            console.log(`📦 Environment: ${config.NODE_ENV}`);
+            console.log(`🔗 CORS Origin: ${config.FRONTEND_URL}`);
+            console.log(`💾 Database: Connected`);
 
-          if (config.NODE_ENV === 'production') {
-            console.log('✅ Production mode - All validations passed');
-          } else {
-            console.log('⚠️  Development mode - Additional debugging enabled');
-          }
+            if (config.NODE_ENV === 'production') {
+              console.log('✅ Production mode - All validations passed');
+            } else {
+              console.log(
+                '⚠️  Development mode - Additional debugging enabled'
+              );
+            }
 
-          console.log('\n📋 Available endpoints:');
-          console.log('  GET  /              - API info');
-          console.log('  GET  /api           - API details');
-          console.log('  GET  /api-docs      - Swagger API documentation');
-          console.log('  GET  /health        - Health check');
-          console.log('  GET  /api/v1/health - Detailed health');
-          console.log('\n🔐 Authentication endpoints:');
-          console.log('  POST /api/v1/auth/register  - User registration');
-          console.log('  POST /api/v1/auth/login     - User login');
-          console.log('  POST /api/v1/auth/refresh   - Token refresh');
-          console.log('  POST /api/v1/auth/logout    - User logout');
-          console.log('  GET  /api/v1/auth/profile   - Get profile (protected)');
-          console.log('  PATCH /api/v1/auth/profile  - Update profile (protected)');
-          console.log('  GET  /api/v1/auth/me        - Token info (protected)');
-          console.log('\n👥 User management endpoints:');
-          console.log('  POST   /api/v1/users        - Create user (admin)');
-          console.log('  GET    /api/v1/users        - Get users with pagination (admin)');
-          console.log('  GET    /api/v1/users/:id    - Get user by ID (protected)');
-          console.log('  PUT    /api/v1/users/:id    - Update user (admin)');
-          console.log('  PATCH  /api/v1/users/:id    - Partial update user (protected)');
-          console.log('  DELETE /api/v1/users/:id    - Delete user (admin)');
+            console.log('\n📋 Available endpoints:');
+            console.log('  GET  /              - API info');
+            console.log('  GET  /api           - API details');
+            console.log('  GET  /api-docs      - Swagger API documentation');
+            console.log('  GET  /health        - Health check');
+            console.log('  GET  /api/v1/health - Detailed health');
+            console.log('\n🔐 Authentication endpoints:');
+            console.log('  POST /api/v1/auth/register  - User registration');
+            console.log('  POST /api/v1/auth/login     - User login');
+            console.log('  POST /api/v1/auth/refresh   - Token refresh');
+            console.log('  POST /api/v1/auth/logout    - User logout');
+            console.log(
+              '  GET  /api/v1/auth/profile   - Get profile (protected)'
+            );
+            console.log(
+              '  PATCH /api/v1/auth/profile  - Update profile (protected)'
+            );
+            console.log(
+              '  GET  /api/v1/auth/me        - Token info (protected)'
+            );
+            console.log('\n👥 User management endpoints:');
+            console.log('  POST   /api/v1/users        - Create user (admin)');
+            console.log(
+              '  GET    /api/v1/users        - Get users with pagination (admin)'
+            );
+            console.log(
+              '  GET    /api/v1/users/:id    - Get user by ID (protected)'
+            );
+            console.log('  PUT    /api/v1/users/:id    - Update user (admin)');
+            console.log(
+              '  PATCH  /api/v1/users/:id    - Partial update user (protected)'
+            );
+            console.log('  DELETE /api/v1/users/:id    - Delete user (admin)');
 
-          resolve();
-        }).on('error', reject);
+            resolve();
+          })
+          .on('error', reject);
       });
     } catch (error) {
       console.error('❌ Failed to start server:', error);

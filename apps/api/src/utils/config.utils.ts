@@ -4,7 +4,64 @@
  */
 import crypto from 'crypto';
 import { tenantConfig, appConfig } from '../config';
-import { validateCompleteConfig, ConfigValidationResult } from '../validators/config.validators';
+import {
+  validateCompleteConfig,
+  ConfigValidationResult,
+} from '../validators/config.validators';
+
+/**
+ * Runtime environment configuration interface.
+ * Provides loose typing for environment variables with key access.
+ */
+export interface EnvConfig {
+  [key: string]: string | number | boolean | undefined;
+  NODE_ENV: string;
+  PORT: number;
+  FRONTEND_URL: string;
+  RATE_LIMIT_WINDOW_MS: string;
+  RATE_LIMIT_MAX_REQUESTS: string;
+  CORS_ORIGINS: string;
+  DATABASE_URL: string;
+  DB_HOST: string;
+  DB_PORT: string;
+  DB_NAME: string;
+  DB_USER: string;
+  DB_PASSWORD: string;
+  JWT_SECRET: string;
+  JWT_REFRESH_SECRET: string;
+  JWT_ACCESS_EXPIRES_IN: string;
+  JWT_REFRESH_EXPIRES_IN: string;
+}
+
+/**
+ * Runtime environment configuration map.
+ * Falls back to sensible defaults when values are missing.
+ */
+export const config: EnvConfig = {
+  ...process.env,
+  NODE_ENV: process.env.NODE_ENV ?? 'development',
+  PORT: parseInt(process.env.PORT ?? '3000', 10),
+  FRONTEND_URL: process.env.FRONTEND_URL ?? 'http://localhost:4200',
+  RATE_LIMIT_WINDOW_MS: process.env.RATE_LIMIT_WINDOW_MS ?? '900000',
+  RATE_LIMIT_MAX_REQUESTS: process.env.RATE_LIMIT_MAX_REQUESTS ?? '100',
+  CORS_ORIGINS: process.env.CORS_ORIGINS ?? 'http://localhost:4200',
+  DB_HOST: process.env.DB_HOST ?? 'localhost',
+  DB_PORT: process.env.DB_PORT ?? '5432',
+  DB_NAME: process.env.DB_NAME ?? 'nodeangularfullstack',
+  DB_USER: process.env.DB_USER ?? 'dbuser',
+  DB_PASSWORD: process.env.DB_PASSWORD ?? 'dbpassword',
+  DATABASE_URL:
+    process.env.DATABASE_URL ??
+    `postgresql://${process.env.DB_USER ?? 'dbuser'}:${process.env.DB_PASSWORD ?? 'dbpassword'}@${process.env.DB_HOST ?? 'localhost'}:${process.env.DB_PORT ?? '5432'}/${process.env.DB_NAME ?? 'nodeangularfullstack'}`,
+  JWT_SECRET:
+    process.env.JWT_SECRET ??
+    'development-jwt-secret-key-at-least-32-characters-long',
+  JWT_REFRESH_SECRET:
+    process.env.JWT_REFRESH_SECRET ??
+    'development-refresh-secret-key-at-least-32-characters-long',
+  JWT_ACCESS_EXPIRES_IN: process.env.JWT_ACCESS_EXPIRES_IN ?? '1h',
+  JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN ?? '7d',
+} as EnvConfig;
 
 /**
  * Configuration change detection interface.
@@ -32,7 +89,13 @@ export interface ConfigBackup {
  */
 export interface ConfigAuditEntry {
   timestamp: Date;
-  action: 'startup' | 'validation' | 'change_detected' | 'backup_created' | 'restore_attempted' | 'hot_reload';
+  action:
+    | 'startup'
+    | 'validation'
+    | 'change_detected'
+    | 'backup_created'
+    | 'restore_attempted'
+    | 'hot_reload';
   environment: string;
   details: string;
   configHash: string;
@@ -102,7 +165,7 @@ export const generateConfigHash = (customKeys?: string[]): string => {
   ];
 
   const configString = criticalKeys
-    .map(key => `${key}=${process.env[key] || ''}`)
+    .map((key) => `${key}=${process.env[key] || ''}`)
     .sort()
     .join('|');
 
@@ -128,7 +191,7 @@ export const validateConfigurationConsistency = (): void => {
   // Handle warnings
   if (validationResult.warnings.length > 0) {
     console.warn('⚠️  Configuration warnings detected:');
-    validationResult.warnings.forEach(warning => {
+    validationResult.warnings.forEach((warning) => {
       console.warn(`   • ${warning}`);
     });
   }
@@ -136,10 +199,12 @@ export const validateConfigurationConsistency = (): void => {
   // Handle errors
   if (!validationResult.isValid) {
     console.error('❌ Critical configuration errors detected:');
-    validationResult.errors.forEach(error => {
+    validationResult.errors.forEach((error) => {
       console.error(`   • ${error}`);
     });
-    throw new Error(`Configuration validation failed: ${validationResult.errors.join(', ')}`);
+    throw new Error(
+      `Configuration validation failed: ${validationResult.errors.join(', ')}`
+    );
   }
 
   console.log('✅ Configuration validation passed');
@@ -166,14 +231,20 @@ export const detectConfigurationChanges = (): ConfigChangeResult => {
     result.hasChanged = true;
     result.changedKeys = detectChangedKeys(previousHash, currentHash);
 
-    logConfigAudit('change_detected', `Configuration change detected. Hash changed from ${previousHash?.substring(0, 8)} to ${currentHash.substring(0, 8)}`, {
-      changedKeys: result.changedKeys,
-    });
+    logConfigAudit(
+      'change_detected',
+      `Configuration change detected. Hash changed from ${previousHash?.substring(0, 8)} to ${currentHash.substring(0, 8)}`,
+      {
+        changedKeys: result.changedKeys,
+      }
+    );
 
     console.warn('⚠️  Configuration change detected!');
     console.warn(`   Previous hash: ${previousHash?.substring(0, 16)}...`);
     console.warn(`   Current hash:  ${currentHash.substring(0, 16)}...`);
-    console.warn('   💡 Application restart required for changes to take effect.');
+    console.warn(
+      '   💡 Application restart required for changes to take effect.'
+    );
   }
 
   return result;
@@ -290,7 +361,7 @@ export const getConfigurationSummary = () => {
     audit: {
       totalEntries: configAuditLog.length,
       lastValidation: configAuditLog
-        .filter(entry => entry.action === 'validation')
+        .filter((entry) => entry.action === 'validation')
         .pop()?.timestamp,
     },
   };
@@ -302,18 +373,24 @@ export const getConfigurationSummary = () => {
  * @param targetEnv - Target environment ('production', 'staging', etc.)
  * @returns {ConfigValidationResult} Deployment readiness result
  */
-export const validateDeploymentReadiness = (targetEnv: string = 'production'): ConfigValidationResult => {
+export const validateDeploymentReadiness = (
+  targetEnv: string = 'production'
+): ConfigValidationResult => {
   const result = validateCompleteConfig();
 
   if (targetEnv === 'production') {
     // Additional production-specific checks
     if (process.env.JWT_SECRET?.includes('change-in-production')) {
-      result.errors.push('Default JWT secret detected in production configuration');
+      result.errors.push(
+        'Default JWT secret detected in production configuration'
+      );
       result.isValid = false;
     }
 
     if (process.env.PGWEB_AUTH_PASS?.includes('change-this-password')) {
-      result.errors.push('Default pgWeb password detected in production configuration');
+      result.errors.push(
+        'Default pgWeb password detected in production configuration'
+      );
       result.isValid = false;
     }
 
@@ -332,7 +409,10 @@ export const validateDeploymentReadiness = (targetEnv: string = 'production'): C
  * @param currentHash - Current configuration hash
  * @returns {string[]} Array of changed configuration keys
  */
-const detectChangedKeys = (previousHash: string, currentHash: string): string[] => {
+const detectChangedKeys = (
+  previousHash: string,
+  currentHash: string
+): string[] => {
   // This is a simplified implementation
   // In practice, you'd need to store individual key hashes to detect specific changes
   const criticalKeys = [
@@ -346,7 +426,9 @@ const detectChangedKeys = (previousHash: string, currentHash: string): string[] 
   // For now, return all critical keys as potentially changed
   // A more sophisticated implementation would compare individual key hashes
   // TODO: Implement actual comparison logic using previousHash and currentHash
-  console.debug(`Configuration change detected: ${previousHash?.substring(0, 8)} -> ${currentHash.substring(0, 8)}`);
+  console.debug(
+    `Configuration change detected: ${previousHash?.substring(0, 8)} -> ${currentHash.substring(0, 8)}`
+  );
   return criticalKeys;
 };
 
@@ -354,7 +436,9 @@ const detectChangedKeys = (previousHash: string, currentHash: string): string[] 
  * Registers a listener for hot-reloadable configuration changes.
  * @param listener - Function to call when configuration changes
  */
-export const addConfigChangeListener = (listener: (config: HotReloadableConfig) => void): void => {
+export const addConfigChangeListener = (
+  listener: (config: HotReloadableConfig) => void
+): void => {
   configChangeListeners.push(listener);
 };
 
@@ -362,7 +446,9 @@ export const addConfigChangeListener = (listener: (config: HotReloadableConfig) 
  * Removes a configuration change listener.
  * @param listener - Listener function to remove
  */
-export const removeConfigChangeListener = (listener: (config: HotReloadableConfig) => void): void => {
+export const removeConfigChangeListener = (
+  listener: (config: HotReloadableConfig) => void
+): void => {
   const index = configChangeListeners.indexOf(listener);
   if (index > -1) {
     configChangeListeners.splice(index, 1);
@@ -383,13 +469,18 @@ export const getHotReloadableConfig = (): HotReloadableConfig => {
  * @param newConfig - New configuration values to update
  * @returns {boolean} True if update was successful
  */
-export const updateHotReloadableConfig = (newConfig: Partial<HotReloadableConfig>): boolean => {
+export const updateHotReloadableConfig = (
+  newConfig: Partial<HotReloadableConfig>
+): boolean => {
   try {
     // Validate the new configuration before applying
     const validatedConfig = validateHotReloadableConfig(newConfig);
 
     if (!validatedConfig.isValid) {
-      console.warn('⚠️  Hot-reload configuration validation failed:', validatedConfig.errors);
+      console.warn(
+        '⚠️  Hot-reload configuration validation failed:',
+        validatedConfig.errors
+      );
       return false;
     }
 
@@ -400,12 +491,16 @@ export const updateHotReloadableConfig = (newConfig: Partial<HotReloadableConfig
     };
 
     // Log the hot-reload action
-    logConfigAudit('hot_reload', `Hot-reloaded configuration: ${JSON.stringify(newConfig)}`, {
-      warnings: validatedConfig.warnings,
-    });
+    logConfigAudit(
+      'hot_reload',
+      `Hot-reloaded configuration: ${JSON.stringify(newConfig)}`,
+      {
+        warnings: validatedConfig.warnings,
+      }
+    );
 
     // Notify all listeners of the configuration change
-    configChangeListeners.forEach(listener => {
+    configChangeListeners.forEach((listener) => {
       try {
         listener(hotReloadableConfigCache);
       } catch (error) {
@@ -427,7 +522,9 @@ export const updateHotReloadableConfig = (newConfig: Partial<HotReloadableConfig
  * @param config - Configuration to validate
  * @returns {object} Validation result with errors and warnings
  */
-export const validateHotReloadableConfig = (config: Partial<HotReloadableConfig>) => {
+export const validateHotReloadableConfig = (
+  config: Partial<HotReloadableConfig>
+) => {
   const result = {
     isValid: true,
     errors: [] as string[],
@@ -436,11 +533,19 @@ export const validateHotReloadableConfig = (config: Partial<HotReloadableConfig>
 
   // Validate rate limiting settings
   if (config.rateLimit) {
-    if (config.rateLimit.windowMs && (config.rateLimit.windowMs < 1000 || config.rateLimit.windowMs > 3600000)) {
-      result.errors.push('Rate limit window must be between 1 second and 1 hour');
+    if (
+      config.rateLimit.windowMs &&
+      (config.rateLimit.windowMs < 1000 || config.rateLimit.windowMs > 3600000)
+    ) {
+      result.errors.push(
+        'Rate limit window must be between 1 second and 1 hour'
+      );
       result.isValid = false;
     }
-    if (config.rateLimit.maxRequests && (config.rateLimit.maxRequests < 1 || config.rateLimit.maxRequests > 10000)) {
+    if (
+      config.rateLimit.maxRequests &&
+      (config.rateLimit.maxRequests < 1 || config.rateLimit.maxRequests > 10000)
+    ) {
       result.errors.push('Rate limit max requests must be between 1 and 10000');
       result.isValid = false;
     }
@@ -463,7 +568,9 @@ export const validateHotReloadableConfig = (config: Partial<HotReloadableConfig>
   if (config.monitoring?.logLevel) {
     const validLevels = ['error', 'warn', 'info', 'debug'];
     if (!validLevels.includes(config.monitoring.logLevel)) {
-      result.errors.push(`Invalid log level: ${config.monitoring.logLevel}. Must be one of: ${validLevels.join(', ')}`);
+      result.errors.push(
+        `Invalid log level: ${config.monitoring.logLevel}. Must be one of: ${validLevels.join(', ')}`
+      );
       result.isValid = false;
     }
   }
@@ -478,14 +585,20 @@ export const validateHotReloadableConfig = (config: Partial<HotReloadableConfig>
 export const resetHotReloadableConfig = (): void => {
   hotReloadableConfigCache = {};
 
-  logConfigAudit('hot_reload', 'Hot-reloadable configuration reset to defaults');
+  logConfigAudit(
+    'hot_reload',
+    'Hot-reloadable configuration reset to defaults'
+  );
 
   // Notify listeners of the reset
-  configChangeListeners.forEach(listener => {
+  configChangeListeners.forEach((listener) => {
     try {
       listener(hotReloadableConfigCache);
     } catch (error) {
-      console.error('Error in configuration change listener during reset:', error);
+      console.error(
+        'Error in configuration change listener during reset:',
+        error
+      );
     }
   });
 
@@ -502,7 +615,7 @@ export const getHotReloadableConfigStatus = () => {
     activeConfig: hotReloadableConfigCache,
     listenerCount: configChangeListeners.length,
     lastHotReload: configAuditLog
-      .filter(entry => entry.action === 'hot_reload')
+      .filter((entry) => entry.action === 'hot_reload')
       .pop()?.timestamp,
   };
 };

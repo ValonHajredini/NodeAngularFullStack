@@ -1,5 +1,5 @@
 {
-  "name": "docker-integration-tests",
+  "name": "deployment-tests",
   "version": "1.0.0",
   "description": "Docker environment integration tests",
   "private": true,

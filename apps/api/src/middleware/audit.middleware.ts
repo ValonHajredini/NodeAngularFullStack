@@ -2,18 +2,6 @@ import { Request, Response, NextFunction } from 'express';
 import { auditService, AuditLogEntry } from '../services/audit.service';
 
 /**
- * Enhanced request interface with user data.
- */
-interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-    role: string;
-    tenantId?: string;
-  };
-}
-
-/**
  * Audit middleware for automatic logging of user operations.
  * Tracks successful operations for security and debugging purposes.
  */
@@ -35,16 +23,16 @@ export class AuditMiddleware {
     action: string,
     resourceType: string,
     options: {
-      extractResourceId?: (req: AuthRequest) => string | undefined;
-      extractChanges?: (req: AuthRequest, res: Response) => any;
-      skipCondition?: (req: AuthRequest, res: Response) => boolean;
+      extractResourceId?: (req: Request) => string | undefined;
+      extractChanges?: (req: Request, res: Response) => any;
+      skipCondition?: (req: Request, res: Response) => boolean;
     } = {}
   ) {
-    return (req: AuthRequest, res: Response, next: NextFunction) => {
+    return (req: Request, res: Response, next: NextFunction) => {
       const {
-        extractResourceId = (req: AuthRequest) => req.params.id,
-        extractChanges = (req: AuthRequest) => req.body,
-        skipCondition = () => false
+        extractResourceId = (req: Request) => req.params.id,
+        extractChanges = (req: Request) => req.body,
+        skipCondition = () => false,
       } = options;
 
       // Store original response methods
@@ -57,19 +45,19 @@ export class AuditMiddleware {
       let _responseData: any = null;
 
       // Override res.status to capture status code
-      res.status = function(code: number) {
+      res.status = function (code: number) {
         statusCode = code;
         return originalStatus.call(this, code);
       };
 
       // Override res.send to capture response
-      res.send = function(body: any) {
+      res.send = function (body: any) {
         _responseData = body;
         return originalSend.call(this, body);
       };
 
       // Override res.json to capture response
-      res.json = function(body: any) {
+      res.json = function (body: any) {
         _responseData = body;
         return originalJson.call(this, body);
       };
@@ -95,11 +83,11 @@ export class AuditMiddleware {
               resourceId,
               changes,
               ipAddress: AuditMiddleware.extractClientIp(req),
-              userAgent: req.get('User-Agent')
+              userAgent: req.get('User-Agent'),
             };
 
             // Log audit entry (don't await to avoid blocking response)
-            auditService.log(auditEntry).catch(error => {
+            auditService.log(auditEntry).catch((error) => {
               console.error('Failed to log audit entry:', error);
             });
           }
@@ -125,7 +113,7 @@ export class AuditMiddleware {
         }
         return req.params.id;
       },
-      extractChanges: (req: AuthRequest, _res: Response) => {
+      extractChanges: (req: Request, _res: Response) => {
         const changes: any = {};
 
         // For CREATE operations, include the created user data
@@ -145,7 +133,8 @@ export class AuditMiddleware {
           if (body.lastName) changes.lastName = body.lastName;
           if (body.role) changes.role = body.role;
           if (body.isActive !== undefined) changes.isActive = body.isActive;
-          if (body.emailVerified !== undefined) changes.emailVerified = body.emailVerified;
+          if (body.emailVerified !== undefined)
+            changes.emailVerified = body.emailVerified;
         }
 
         // For DELETE operations, just log the action
@@ -154,7 +143,7 @@ export class AuditMiddleware {
         }
 
         return changes;
-      }
+      },
     });
   }
 
@@ -170,23 +159,23 @@ export class AuditMiddleware {
     resourceType: string,
     extractAffectedIds: (req: Request, res: Response) => string[]
   ) {
-    return (req: AuthRequest, res: Response, next: NextFunction) => {
+    return (req: Request, res: Response, next: NextFunction) => {
       const originalSend = res.send;
       const originalJson = res.json;
       const originalStatus = res.status;
 
       let statusCode = 200;
 
-      res.status = function(code: number) {
+      res.status = function (code: number) {
         statusCode = code;
         return originalStatus.call(this, code);
       };
 
-      res.send = function(body: any) {
+      res.send = function (body: any) {
         return originalSend.call(this, body);
       };
 
-      res.json = function(body: any) {
+      res.json = function (body: any) {
         return originalJson.call(this, body);
       };
 
@@ -204,10 +193,10 @@ export class AuditMiddleware {
                 resourceId,
                 changes: { bulk: true, totalAffected: affectedIds.length },
                 ipAddress: AuditMiddleware.extractClientIp(req),
-                userAgent: req.get('User-Agent')
+                userAgent: req.get('User-Agent'),
               };
 
-              auditService.log(auditEntry).catch(error => {
+              auditService.log(auditEntry).catch((error) => {
                 console.error('Failed to log bulk audit entry:', error);
               });
             }
@@ -227,7 +216,7 @@ export class AuditMiddleware {
    * @returns Express middleware function
    */
   static auditAuthOperation(action: string) {
-    return (req: AuthRequest, res: Response, next: NextFunction) => {
+    return (req: Request, res: Response, next: NextFunction) => {
       const originalSend = res.send;
       const originalJson = res.json;
       const originalStatus = res.status;
@@ -236,17 +225,17 @@ export class AuditMiddleware {
       // @ts-ignore: Variable is used conditionally for audit logging
       let _responseData: any = null;
 
-      res.status = function(code: number) {
+      res.status = function (code: number) {
         statusCode = code;
         return originalStatus.call(this, code);
       };
 
-      res.send = function(body: any) {
+      res.send = function (body: any) {
         _responseData = body;
         return originalSend.call(this, body);
       };
 
-      res.json = function(body: any) {
+      res.json = function (body: any) {
         _responseData = body;
         return originalJson.call(this, body);
       };
@@ -260,12 +249,20 @@ export class AuditMiddleware {
           let changes: any = { success: isSuccess };
 
           // Extract user ID from different sources based on action
-          if (action === 'LOGIN' && isSuccess && _responseData?.data?.user?.id) {
+          if (
+            action === 'LOGIN' &&
+            isSuccess &&
+            _responseData?.data?.user?.id
+          ) {
             userId = _responseData.data.user.id;
             changes.email = req.body.email;
           } else if (action === 'LOGOUT' && req.user?.id) {
             userId = req.user.id;
-          } else if (action === 'REGISTER' && isSuccess && _responseData?.data?.user?.id) {
+          } else if (
+            action === 'REGISTER' &&
+            isSuccess &&
+            _responseData?.data?.user?.id
+          ) {
             userId = _responseData.data.user.id;
             changes.email = req.body.email;
           }
@@ -282,10 +279,10 @@ export class AuditMiddleware {
             resourceType: 'auth',
             changes,
             ipAddress: AuditMiddleware.extractClientIp(req),
-            userAgent: req.get('User-Agent')
+            userAgent: req.get('User-Agent'),
           };
 
-          auditService.log(auditEntry).catch(error => {
+          auditService.log(auditEntry).catch((error) => {
             console.error('Failed to log auth audit entry:', error);
           });
         } catch (error) {
@@ -322,7 +319,9 @@ export class AuditMiddleware {
     }
 
     // Fallback to connection remote address
-    return req.connection?.remoteAddress || req.socket?.remoteAddress || undefined;
+    return (
+      req.connection?.remoteAddress || req.socket?.remoteAddress || undefined
+    );
   }
 
   /**

@@ -1,6 +1,7 @@
 # NodeAngularFullStack
 
-A modern full-stack application built with Angular 20+ and Express.js, featuring TypeScript throughout, shared types, and a monorepo structure.
+A modern full-stack application built with Angular 20+ and Express.js, featuring TypeScript
+throughout, shared types, and a monorepo structure.
 
 ## Tech Stack
 
@@ -23,9 +24,8 @@ nodeangularfullstack/
 ├── packages/
 │   ├── shared/      # Shared types and utilities
 │   └── config/      # Shared configuration
-├── infrastructure/
-│   └── docker/      # Docker configurations
-├── scripts/         # Build and deployment scripts
+├── infrastructure/    # Deployment infrastructure definitions
+├── scripts/         # Build and development scripts
 └── docs/           # Documentation
 ```
 
@@ -34,30 +34,34 @@ nodeangularfullstack/
 ### Prerequisites
 
 - Node.js 18+ and npm 9+
-- Docker Desktop 24+ and Docker Compose 2.23+ (recommended)
-- PostgreSQL 15+ (if not using Docker)
-- Redis 7+ (if not using Docker)
+- PostgreSQL 14+ (Homebrew recommended on macOS)
+- pgweb CLI (optional database UI)
+- Redis 7+ (optional if you enable caching locally)
 
 ### Installation
 
 1. Clone the repository:
+
 ```bash
 git clone <repository-url>
 cd nodeangularfullstack
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 ```
 
 3. Set up environment variables:
+
 ```bash
 cp .env.example .env
 # Edit .env with your configuration
 ```
 
 4. Set up the database:
+
 ```bash
 # Create a PostgreSQL database named 'nodeangularfullstack'
 # Update DB credentials in .env file
@@ -66,8 +70,9 @@ cp .env.example .env
 ### Development
 
 #### ⚡ One-Command Startup (Recommended)
+
 ```bash
-# Start everything (Docker, Database, Backend, Frontend, pgAdmin)
+# Start local backend, frontend, and pgWeb (requires PostgreSQL running locally)
 ./start-dev.sh
 # OR
 npm start
@@ -76,6 +81,7 @@ npm run dev
 ```
 
 #### ⚡ One-Command Shutdown
+
 ```bash
 # Stop all services
 ./stop-dev.sh
@@ -84,7 +90,9 @@ npm stop
 ```
 
 #### Manual Development (Alternative)
+
 Run services separately:
+
 ```bash
 # Backend API
 npm run dev:api
@@ -94,6 +102,7 @@ npm run dev:web
 ```
 
 #### Service URLs
+
 - **Frontend (Angular)**: http://localhost:4200
 - **Backend API**: http://localhost:3000
 - **API Documentation (Swagger)**: http://localhost:3000/api-docs
@@ -101,11 +110,14 @@ npm run dev:web
 - **API Health Check**: http://localhost:3000/health
 
 #### Login Credentials
+
 **pgAdmin Database UI:**
+
 - Email: admin@admin.com
 - Password: admin
 
 **Test User Accounts:**
+
 - Admin: admin@example.com / password123
 - User: user@example.com / password123
 - ReadOnly: readonly@example.com / password123
@@ -113,11 +125,13 @@ npm run dev:web
 ### Building for Production
 
 Build all applications:
+
 ```bash
 npm run build
 ```
 
 Build specific apps:
+
 ```bash
 npm run build:api
 npm run build:web
@@ -126,11 +140,13 @@ npm run build:web
 ### Testing
 
 Run all tests:
+
 ```bash
 npm test
 ```
 
 Run tests for specific apps:
+
 ```bash
 npm run test:api
 npm run test:web
@@ -139,6 +155,7 @@ npm run test:web
 ### Linting
 
 Run linting for all apps:
+
 ```bash
 npm run lint
 ```
@@ -163,90 +180,75 @@ npm run lint
 
 See `.env.example` for all required environment variables.
 
-## Docker Support
+## Local Development (No Docker)
 
-### Quick Start with Docker
+### Prerequisites
 
-The easiest way to run the entire stack is with Docker Compose:
+- Node.js 20+ with npm
+- PostgreSQL 14 (recommended via Homebrew: `brew install postgresql@14`)
+- pgweb CLI (optional database UI: `brew install pgweb`)
+
+After installing PostgreSQL, start it with `brew services start postgresql@14` so that it runs in
+the background. Create the development databases and users:
 
 ```bash
-# Start all services in background
-npm run docker:up
+createdb nodeangularfullstack
+createuser --interactive dbuser          # set password (e.g. dbpassword)
+createdb -O dbuser nodeangularfullstack
+createuser --interactive testuser        # password suggestion: testpass
+createdb -O testuser nodeangularfullstack_test
+```
 
-# Or start with development hot-reload
-npm run docker:up:dev
+### Quick Start
 
-# View logs
-npm run docker:logs
+```bash
+# Install dependencies
+npm install
+
+# Copy the environment template and update secrets as needed
+cp .env.development .env.local
+# Edit .env.local to match your local credentials
+
+# Start everything (API, web, pgWeb)
+./start-dev.sh
 
 # Stop all services
-npm run docker:down
+./stop-dev.sh
 ```
 
-### Docker Services
-
-When running with Docker Compose, the following services are available:
-
-| Service | URL | Description |
-|---------|-----|-------------|
-| Frontend | http://localhost:4201 | Angular application (Docker) |
-| Backend API | http://localhost:3001 | Express.js API (Docker) |
-| PostgreSQL | localhost:5432 | Database (user: dbuser, pass: dbpassword) |
-| Redis | localhost:6379 | Cache server |
-| pgWeb | http://localhost:8080 | Database web interface |
-
-**Note on Port Configuration:**
-- Docker services use ports 3001 (API) and 4201 (Web) to avoid conflicts with local development
-- Local development (without Docker) uses ports 3000 (API) and 4200 (Web)
-- This allows running both Docker and local environments simultaneously
-
-### Docker Commands
+The startup script loads `.env.development` by default. Set `ENV_FILE=.env.local` to target a custom
+file:
 
 ```bash
-# Build images
-npm run docker:build
-
-# Start services
-npm run docker:up
-
-# Start with dev configuration (hot-reload)
-npm run docker:up:dev
-
-# View logs
-npm run docker:logs
-
-# Stop services
-npm run docker:down
-
-# Clean up (removes volumes)
-npm run docker:clean
-
-# Restart services
-npm run docker:restart
-
-# Run tests in containers
-npm run docker:test
-
-# Run tests for specific service
-npm run docker:test:api
-npm run docker:test:web
-
-# Run linting in containers
-npm run docker:lint
-
-# Run linting for specific service
-npm run docker:lint:api
-npm run docker:lint:web
+ENV_FILE=.env.local ./start-dev.sh
 ```
 
-### Docker Development
+### Running Individual Apps
 
-The development Docker setup includes:
-- Hot-reload for both Angular and Express.js
-- Volume mounting for live code updates
-- pgWeb for database inspection
-- Proper health checks for all services
-- Isolated network for security
+You can still run each workspace separately:
+
+```bash
+npm --workspace=apps/api run dev   # API server (requires PostgreSQL)
+npm --workspace=apps/web run dev   # Angular frontend
+```
+
+### Available Services
+
+| Service             | URL                            |
+| ------------------- | ------------------------------ |
+| Frontend (Angular)  | http://localhost:4200          |
+| Backend API         | http://localhost:3000          |
+| API Docs            | http://localhost:3000/api-docs |
+| pgWeb (database UI) | http://localhost:8080          |
+
+Logs are written to the `logs/` folder while services are running. Remove them safely with
+`./stop-dev.sh`.
+
+If PostgreSQL is running via Homebrew you can stop it with:
+
+```bash
+brew services stop postgresql@14
+```
 
 ## Contributing
 

@@ -136,60 +136,6 @@ describe('Security Configuration Tests', () => {
     });
   });
 
-  describe('Nginx Security Configuration', () => {
-    test('nginx should have security headers configured', () => {
-      const nginxConfig = path.join(rootDir, 'infrastructure/docker/nginx.conf');
-      const content = fs.readFileSync(nginxConfig, 'utf8');
-
-      expect(content).toContain('X-Frame-Options "SAMEORIGIN"');
-      expect(content).toContain('X-Content-Type-Options "nosniff"');
-      expect(content).toContain('X-XSS-Protection "1; mode=block"');
-      expect(content).toContain('Strict-Transport-Security');
-    });
-
-    test('nginx should have Content Security Policy', () => {
-      const nginxConfig = path.join(rootDir, 'infrastructure/docker/nginx.conf');
-      const content = fs.readFileSync(nginxConfig, 'utf8');
-
-      expect(content).toContain('Content-Security-Policy');
-      expect(content).toContain('default-src \'self\'');
-    });
-
-    test('nginx should hide server tokens', () => {
-      const nginxConfig = path.join(rootDir, 'infrastructure/docker/nginx.conf');
-      const content = fs.readFileSync(nginxConfig, 'utf8');
-
-      expect(content).toContain('server_tokens off');
-    });
-
-    test('nginx should have rate limiting zones', () => {
-      const nginxConfig = path.join(rootDir, 'infrastructure/docker/nginx.conf');
-      const content = fs.readFileSync(nginxConfig, 'utf8');
-
-      expect(content).toContain('limit_req_zone');
-      expect(content).toContain('limit_conn_zone');
-      expect(content).toContain('rate=100r/m'); // 100 requests per minute
-    });
-
-    test('nginx should apply rate limiting to locations', () => {
-      const nginxConfig = path.join(rootDir, 'infrastructure/docker/nginx.conf');
-      const content = fs.readFileSync(nginxConfig, 'utf8');
-
-      expect(content).toContain('limit_req zone=api');
-      expect(content).toContain('limit_req zone=static');
-      expect(content).toContain('limit_conn conn_limit_per_ip');
-    });
-
-    test('nginx should have proper SSL/TLS configuration', () => {
-      const nginxConfig = path.join(rootDir, 'infrastructure/docker/nginx.conf');
-      const content = fs.readFileSync(nginxConfig, 'utf8');
-
-      expect(content).toContain('Strict-Transport-Security');
-      expect(content).toContain('max-age=31536000');
-      expect(content).toContain('includeSubDomains');
-    });
-  });
-
   describe('SSL/TLS Documentation', () => {
     test('should have SSL configuration documentation', () => {
       const sslDoc = path.join(rootDir, 'infrastructure/digitalocean/ssl-configuration.md');

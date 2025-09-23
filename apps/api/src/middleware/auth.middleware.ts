@@ -44,7 +44,7 @@ export class AuthMiddleware {
    * });
    */
   static authenticate = async (
-    req: AuthRequest,
+    req: Request,
     res: Response,
     next: NextFunction
   ): Promise<void> => {
@@ -80,7 +80,7 @@ export class AuthMiddleware {
         const payload = JwtUtils.decodeToken(token);
 
         // Attach user information to request
-        req.user = {
+        (req as any).user = {
           id: user.id,
           email: user.email,
           role: user.role,
@@ -111,7 +111,7 @@ export class AuthMiddleware {
           }
 
           // Attach tenant information to request
-          req.tenant = {
+          (req as any).tenant = {
             id: tenant.id,
             slug: tenant.slug,
             plan: tenant.plan,
@@ -127,7 +127,7 @@ export class AuthMiddleware {
           };
 
           // Create tenant context for downstream middleware
-          req.tenantContext = {
+          (req as any).tenantContext = {
             id: tenant.id,
             slug: tenant.slug,
             plan: tenant.plan,
@@ -292,7 +292,7 @@ export class AuthMiddleware {
         // Decode token to check for tenant context
         const payload = JwtUtils.decodeToken(token);
 
-        req.user = {
+        (req as any).user = {
           id: user.id,
           email: user.email,
           role: user.role,
@@ -304,7 +304,7 @@ export class AuthMiddleware {
           try {
             const tenant = await tenantRepository.findById(payload.tenant.id);
             if (tenant && tenant.isActive && user.tenantId === tenant.id) {
-              req.tenant = {
+              (req as any).tenant = {
                 id: tenant.id,
                 slug: tenant.slug,
                 plan: tenant.plan,
@@ -319,7 +319,7 @@ export class AuthMiddleware {
                 status: tenant.isActive ? 'active' : 'inactive',
               };
 
-              req.tenantContext = {
+              (req as any).tenantContext = {
                 id: tenant.id,
                 slug: tenant.slug,
                 plan: tenant.plan,
@@ -450,7 +450,7 @@ export class AuthMiddleware {
    * app.use('/api/v1/auth', AuthMiddleware.logAuthEvents);
    */
   static logAuthEvents = (
-    req: AuthRequest,
+    req: Request,
     res: Response,
     next: NextFunction
   ): void => {

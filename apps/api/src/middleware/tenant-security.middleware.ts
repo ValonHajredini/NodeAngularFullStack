@@ -1,5 +1,4 @@
-import { Response, NextFunction } from 'express';
-import { AuthRequest } from './auth.middleware';
+import { Request, Response, NextFunction } from 'express';
 import { tenantConfig } from '../config/tenant.config';
 import { AuditService } from '../services/audit.service';
 
@@ -29,7 +28,7 @@ export class TenantSecurityMiddleware {
    * @param next - Express next function
    */
   static auditTenantAccess = (
-    req: AuthRequest,
+    req: Request,
     res: Response,
     next: NextFunction
   ): void => {
@@ -71,10 +70,10 @@ export class TenantSecurityMiddleware {
    * @returns Middleware function for cross-tenant access prevention
    */
   static preventCrossTenantAccess = (
-    resourceTenantIdExtractor: (req: AuthRequest) => string | Promise<string>
+    resourceTenantIdExtractor: (req: Request) => string | Promise<string>
   ) => {
     return async (
-      req: AuthRequest,
+      req: Request,
       res: Response,
       next: NextFunction
     ): Promise<void> => {
@@ -138,10 +137,10 @@ export class TenantSecurityMiddleware {
    * @returns Middleware function for resource ownership validation
    */
   static validateResourceOwnership = (
-    resourceOwnerIdExtractor: (req: AuthRequest) => string | Promise<string>
+    resourceOwnerIdExtractor: (req: Request) => string | Promise<string>
   ) => {
     return async (
-      req: AuthRequest,
+      req: Request,
       res: Response,
       next: NextFunction
     ): Promise<void> => {
@@ -201,7 +200,7 @@ export class TenantSecurityMiddleware {
    * @param next - Express next function
    */
   static validateTenantStatus = (
-    req: AuthRequest,
+    req: Request,
     res: Response,
     next: NextFunction
   ): void => {
@@ -248,7 +247,7 @@ export class TenantSecurityMiddleware {
    */
   static enforceTenantLimits = (limitType: string) => {
     return async (
-      req: AuthRequest,
+      req: Request,
       res: Response,
       next: NextFunction
     ): Promise<void> => {

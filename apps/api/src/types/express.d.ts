@@ -11,6 +11,15 @@ declare global {
 
     interface Request {
       user?: User;
+      tenant?: {
+        id: string;
+        slug: string;
+        plan: string;
+        features: string[];
+        limits: Record<string, number>;
+        status: string;
+      };
+      tenantContext?: any;
     }
   }
 }

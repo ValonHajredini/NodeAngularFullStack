@@ -2,6 +2,9 @@
  * Main application configuration module.
  * Centralizes all environment variable validation and configuration management.
  */
+import dotenv from 'dotenv';
+dotenv.config();
+
 import Joi from 'joi';
 import { tenantConfig, TenantConfig } from './tenant.config';
 
@@ -124,7 +127,9 @@ export interface AppConfig {
  */
 const appConfigSchema = Joi.object({
   // Application
-  NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
+  NODE_ENV: Joi.string()
+    .valid('development', 'production', 'test')
+    .default('development'),
   PORT: Joi.number().port().default(3000),
   FRONTEND_URL: Joi.string().uri().default('http://localhost:4200'),
 
@@ -139,8 +144,12 @@ const appConfigSchema = Joi.object({
   // JWT
   JWT_SECRET: Joi.string().min(32).required(),
   JWT_REFRESH_SECRET: Joi.string().min(32).required(),
-  JWT_EXPIRES_IN: Joi.number().positive().default(3600),
-  JWT_REFRESH_EXPIRES_IN: Joi.number().positive().default(604800),
+  JWT_EXPIRES_IN: Joi.alternatives()
+    .try(Joi.string().pattern(/^\d+[smhdw]$/), Joi.number().positive())
+    .default('1h'),
+  JWT_REFRESH_EXPIRES_IN: Joi.alternatives()
+    .try(Joi.string().pattern(/^\d+[smhdw]$/), Joi.number().positive())
+    .default('7d'),
 
   // Redis
   REDIS_HOST: Joi.string().default('localhost'),
@@ -169,7 +178,9 @@ const appConfigSchema = Joi.object({
   RATE_LIMIT_MAX_REQUESTS: Joi.number().positive().default(100),
 
   // CORS
-  CORS_ORIGINS: Joi.string().default('http://localhost:4200,http://localhost:3000'),
+  CORS_ORIGINS: Joi.string().default(
+    'http://localhost:4200,http://localhost:3000'
+  ),
 
   // API Keys
   API_KEY: Joi.string().required(),
@@ -200,7 +211,8 @@ export const validateAppConfig = (): AppConfig => {
   if (cachedResult) {
     performanceMetrics.cacheHits++;
     performanceMetrics.validationEndTime = performance.now();
-    performanceMetrics.validationDurationMs = performanceMetrics.validationEndTime - startTime;
+    performanceMetrics.validationDurationMs =
+      performanceMetrics.validationEndTime - startTime;
     return cachedResult;
   }
 
@@ -212,10 +224,13 @@ export const validateAppConfig = (): AppConfig => {
     stripUnknown: false,
   });
 
-  performanceMetrics.schemaValidationMs = performance.now() - schemaValidationStart;
+  performanceMetrics.schemaValidationMs =
+    performance.now() - schemaValidationStart;
 
   if (error) {
-    throw new Error(`Application configuration validation failed: ${error.message}`);
+    throw new Error(
+      `Application configuration validation failed: ${error.message}`
+    );
   }
 
   const consistencyCheckStart = performance.now();
@@ -267,7 +282,9 @@ export const validateAppConfig = (): AppConfig => {
       maxRequests: value.RATE_LIMIT_MAX_REQUESTS,
     },
     cors: {
-      origins: value.CORS_ORIGINS.split(',').map((origin: string) => origin.trim()),
+      origins: value.CORS_ORIGINS.split(',').map((origin: string) =>
+        origin.trim()
+      ),
     },
     api: {
       key: value.API_KEY,
@@ -283,15 +300,20 @@ export const validateAppConfig = (): AppConfig => {
     },
   };
 
-  performanceMetrics.consistencyCheckMs = performance.now() - consistencyCheckStart;
+  performanceMetrics.consistencyCheckMs =
+    performance.now() - consistencyCheckStart;
   performanceMetrics.validationEndTime = performance.now();
-  performanceMetrics.validationDurationMs = performanceMetrics.validationEndTime - startTime;
+  performanceMetrics.validationDurationMs =
+    performanceMetrics.validationEndTime - startTime;
 
   // Cache the result for performance optimization
   setCachedValidationResult(cacheKey, config);
 
   // Log performance metrics if enabled
-  if (process.env.NODE_ENV === 'development' || process.env.CONFIG_PERFORMANCE_LOGGING === 'true') {
+  if (
+    process.env.NODE_ENV === 'development' ||
+    process.env.CONFIG_PERFORMANCE_LOGGING === 'true'
+  ) {
     logConfigPerformanceMetrics();
   }
 
@@ -305,12 +327,16 @@ export const validateAppConfig = (): AppConfig => {
  */
 function generateConfigCacheKey(env: NodeJS.ProcessEnv): string {
   const criticalKeys = [
-    'NODE_ENV', 'DB_HOST', 'DB_PORT', 'JWT_SECRET',
-    'ENABLE_MULTI_TENANCY', 'TENANT_ISOLATION_LEVEL'
+    'NODE_ENV',
+    'DB_HOST',
+    'DB_PORT',
+    'JWT_SECRET',
+    'ENABLE_MULTI_TENANCY',
+    'TENANT_ISOLATION_LEVEL',
   ];
 
   const keyValues = criticalKeys
-    .map(key => `${key}=${env[key] || ''}`)
+    .map((key) => `${key}=${env[key] || ''}`)
     .join('|');
 
   return require('crypto').createHash('md5').update(keyValues).digest('hex');
@@ -346,7 +372,9 @@ function setCachedValidationResult(cacheKey: string, config: AppConfig): void {
   // Limit cache size to prevent memory leaks
   if (validationCache.size > 10) {
     const oldestKey = validationCache.keys().next().value;
-    validationCache.delete(oldestKey);
+    if (oldestKey) {
+      validationCache.delete(oldestKey);
+    }
   }
 
   validationCache.set(cacheKey, {
@@ -360,16 +388,24 @@ function setCachedValidationResult(cacheKey: string, config: AppConfig): void {
  */
 function logConfigPerformanceMetrics(): void {
   console.log('📊 Configuration Performance Metrics:');
-  console.log(`  Total validation time: ${performanceMetrics.validationDurationMs.toFixed(2)}ms`);
-  console.log(`  Schema validation: ${performanceMetrics.schemaValidationMs.toFixed(2)}ms`);
-  console.log(`  Consistency checks: ${performanceMetrics.consistencyCheckMs.toFixed(2)}ms`);
+  console.log(
+    `  Total validation time: ${performanceMetrics.validationDurationMs.toFixed(2)}ms`
+  );
+  console.log(
+    `  Schema validation: ${performanceMetrics.schemaValidationMs.toFixed(2)}ms`
+  );
+  console.log(
+    `  Consistency checks: ${performanceMetrics.consistencyCheckMs.toFixed(2)}ms`
+  );
   console.log(`  Total config keys: ${performanceMetrics.totalConfigKeys}`);
   console.log(`  Cache hits: ${performanceMetrics.cacheHits}`);
   console.log(`  Cache misses: ${performanceMetrics.cacheMisses}`);
 
   // Warn if validation is taking too long
   if (performanceMetrics.validationDurationMs > 100) {
-    console.warn('⚠️  Configuration validation is taking longer than expected (>100ms)');
+    console.warn(
+      '⚠️  Configuration validation is taking longer than expected (>100ms)'
+    );
   }
 }
 

@@ -1,7 +1,9 @@
 #!/bin/bash
 
 # NodeAngularFullStack Development Stop Script
-# This script stops all services
+# Stops locally running services started by start-dev.sh
+
+set -euo pipefail
 
 echo "🛑 Stopping NodeAngularFullStack Development Environment..."
 echo "=================================================="
@@ -13,21 +15,20 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Function to kill process by PID file
 kill_by_pid_file() {
     local pid_file=$1
     local service_name=$2
 
     if [ -f "$pid_file" ]; then
-        local pid=$(cat "$pid_file")
+        local pid
+        pid=$(cat "$pid_file")
         if kill -0 "$pid" 2>/dev/null; then
             echo -e "${BLUE}🛑 Stopping $service_name (PID: $pid)...${NC}"
-            kill "$pid"
+            kill "$pid" >/dev/null 2>&1 || true
             sleep 2
-            # Force kill if still running
             if kill -0 "$pid" 2>/dev/null; then
                 echo -e "${YELLOW}⚠️  Force killing $service_name...${NC}"
-                kill -9 "$pid"
+                kill -9 "$pid" >/dev/null 2>&1 || true
             fi
             echo -e "${GREEN}✅ $service_name stopped${NC}"
         else
@@ -39,21 +40,21 @@ kill_by_pid_file() {
     fi
 }
 
-# Function to kill processes by port
 kill_by_port() {
     local port=$1
     local service_name=$2
 
-    local pid=$(lsof -ti:$port)
+    local pid
+    pid=$(lsof -ti:"$port" || true)
     if [ -n "$pid" ]; then
         echo -e "${BLUE}🛑 Stopping $service_name on port $port (PID: $pid)...${NC}"
-        kill $pid 2>/dev/null
-        sleep 2
-        # Force kill if still running
-        local still_running=$(lsof -ti:$port)
+        kill "$pid" >/dev/null 2>&1 || true
+        sleep 1
+        local still_running
+        still_running=$(lsof -ti:"$port" || true)
         if [ -n "$still_running" ]; then
-            echo -e "${YELLOW}⚠️  Force killing $service_name...${NC}"
-            kill -9 $still_running 2>/dev/null
+            echo -e "${YELLOW}⚠️  Force killing remaining processes on port $port...${NC}"
+            kill -9 $still_running >/dev/null 2>&1 || true
         fi
         echo -e "${GREEN}✅ $service_name stopped${NC}"
     else
@@ -71,37 +72,26 @@ echo -e "${BLUE}🔧 Stopping backend...${NC}"
 kill_by_pid_file ".backend.pid" "Backend API"
 kill_by_port 3000 "Backend API (port 3000)"
 
-# Stop Docker containers
-echo -e "${BLUE}🐳 Stopping Docker containers...${NC}"
-if command -v docker-compose >/dev/null 2>&1; then
-    docker-compose down
-    if [ $? -eq 0 ]; then
-        echo -e "${GREEN}✅ Docker containers stopped${NC}"
-    else
-        echo -e "${YELLOW}⚠️  Docker containers might have already been stopped${NC}"
-    fi
-else
-    echo -e "${RED}❌ Docker Compose not found${NC}"
-fi
-
-# Clean up any remaining processes
-echo -e "${BLUE}🧹 Cleaning up remaining processes...${NC}"
-
-# Kill any remaining node processes that might be related to our project
-pkill -f "nodemon.*server.ts" 2>/dev/null || true
-pkill -f "ng serve" 2>/dev/null || true
-pkill -f "webpack-dev-server" 2>/dev/null || true
+# Stop pgWeb database UI
+echo -e "${BLUE}🗄️  Stopping pgWeb Database UI...${NC}"
+kill_by_pid_file ".pgweb.pid" "pgWeb"
+kill_by_port 8080 "pgWeb (port 8080)"
 
 # Clean up log files if they exist
+echo -e "${BLUE}🧹 Cleaning up runtime artifacts...${NC}"
 if [ -d "logs" ]; then
-    echo -e "${BLUE}🧹 Cleaning up log files...${NC}"
-    rm -rf logs/*.log
+    rm -f logs/*.log
+fi
+rm -f .frontend.pid .backend.pid .pgweb.pid
+
+# Provide reminder about PostgreSQL service
+if command -v brew >/dev/null 2>&1; then
+    echo ""
+    echo -e "${YELLOW}ℹ️  PostgreSQL continues to run via brew services.${NC}"
+    echo -e "${YELLOW}   Stop it with:${NC} brew services stop postgresql@14"
 fi
 
-# Clean up PID files
-rm -f .frontend.pid .backend.pid
-
 echo ""
-echo -e "${GREEN}✅ All services stopped successfully!${NC}"
+echo -e "${GREEN}✅ All local services stopped successfully!${NC}"
 echo -e "${BLUE}💡 To start again, run: ${NC}./start-dev.sh"
 echo ""

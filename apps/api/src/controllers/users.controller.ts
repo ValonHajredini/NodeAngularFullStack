@@ -1,13 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
-import { usersService, CreateUserRequest, UpdateUserRequest } from '../services/users.service';
-
-/**
- * Authenticated request interface with user data.
- */
-interface AuthRequest extends Request {
-  user?: Express.User;
-}
+import {
+  usersService,
+  CreateUserRequest,
+  UpdateUserRequest,
+} from '../services/users.service';
 
 /**
  * Users controller handling HTTP requests for user management operations.
@@ -36,7 +33,11 @@ export class UsersController {
    *   "role": "user"
    * }
    */
-  createUser = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  createUser = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       // Check validation results
       const errors = validationResult(req);
@@ -46,9 +47,9 @@ export class UsersController {
           error: {
             code: 'VALIDATION_ERROR',
             message: 'Invalid input data',
-            details: errors.array()
+            details: errors.array(),
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
         return;
       }
@@ -59,7 +60,7 @@ export class UsersController {
         firstName: req.body.firstName,
         lastName: req.body.lastName,
         role: req.body.role || 'user',
-        tenantId: req.user?.tenantId
+        tenantId: req.user?.tenantId,
       };
 
       const user = await usersService.createUser(userData);
@@ -68,7 +69,7 @@ export class UsersController {
         success: true,
         message: 'User created successfully',
         data: user,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     } catch (error: any) {
       if (error.message.includes('Email already exists')) {
@@ -76,9 +77,9 @@ export class UsersController {
           success: false,
           error: {
             code: 'CONFLICT',
-            message: 'Email already exists'
+            message: 'Email already exists',
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
         return;
       }
@@ -100,7 +101,11 @@ export class UsersController {
    * GET /api/v1/users?page=1&limit=20&search=john&role=user
    * Authorization: Bearer <admin-token>
    */
-  getUsers = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  getUsers = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
@@ -114,7 +119,7 @@ export class UsersController {
         search,
         role,
         status,
-        tenantId: req.user?.tenantId
+        tenantId: req.user?.tenantId,
       });
 
       res.status(200).json({
@@ -122,9 +127,9 @@ export class UsersController {
         message: 'Users retrieved successfully',
         data: {
           users: result.users,
-          pagination: result.pagination
+          pagination: result.pagination,
         },
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     } catch (error: any) {
       next(error);
@@ -145,7 +150,11 @@ export class UsersController {
    * GET /api/v1/users/user-uuid
    * Authorization: Bearer <token>
    */
-  getUserById = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  getUserById = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const { id } = req.params;
       const requestingUserId = req.user?.id;
@@ -157,23 +166,27 @@ export class UsersController {
           success: false,
           error: {
             code: 'UNAUTHORIZED',
-            message: 'Authentication required'
+            message: 'Authentication required',
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
         return;
       }
 
       // Validate access permissions
-      const hasAccess = usersService.validateUserAccess(requestingUserId, id, requestingUserRole);
+      const hasAccess = usersService.validateUserAccess(
+        requestingUserId,
+        id,
+        requestingUserRole
+      );
       if (!hasAccess) {
         res.status(403).json({
           success: false,
           error: {
             code: 'FORBIDDEN',
-            message: 'Insufficient permissions to access this user'
+            message: 'Insufficient permissions to access this user',
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
         return;
       }
@@ -185,9 +198,9 @@ export class UsersController {
           success: false,
           error: {
             code: 'NOT_FOUND',
-            message: 'User not found'
+            message: 'User not found',
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
         return;
       }
@@ -196,7 +209,7 @@ export class UsersController {
         success: true,
         message: 'User retrieved successfully',
         data: user,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     } catch (error: any) {
       next(error);
@@ -225,7 +238,11 @@ export class UsersController {
    *   "role": "admin"
    * }
    */
-  updateUser = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  updateUser = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       // Check validation results
       const errors = validationResult(req);
@@ -235,9 +252,9 @@ export class UsersController {
           error: {
             code: 'VALIDATION_ERROR',
             message: 'Invalid input data',
-            details: errors.array()
+            details: errors.array(),
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
         return;
       }
@@ -249,7 +266,7 @@ export class UsersController {
         lastName: req.body.lastName,
         role: req.body.role,
         isActive: req.body.isActive,
-        emailVerified: req.body.emailVerified
+        emailVerified: req.body.emailVerified,
       };
 
       const updatedUser = await usersService.updateUser(id, updateData);
@@ -258,7 +275,7 @@ export class UsersController {
         success: true,
         message: 'User updated successfully',
         data: updatedUser,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     } catch (error: any) {
       if (error.message.includes('User not found')) {
@@ -266,9 +283,9 @@ export class UsersController {
           success: false,
           error: {
             code: 'NOT_FOUND',
-            message: 'User not found'
+            message: 'User not found',
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
         return;
       }
@@ -278,9 +295,9 @@ export class UsersController {
           success: false,
           error: {
             code: 'CONFLICT',
-            message: 'Email already exists'
+            message: 'Email already exists',
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
         return;
       }
@@ -290,9 +307,9 @@ export class UsersController {
           success: false,
           error: {
             code: 'VALIDATION_ERROR',
-            message: 'No valid fields provided for update'
+            message: 'No valid fields provided for update',
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
         return;
       }
@@ -320,7 +337,11 @@ export class UsersController {
    *   "firstName": "Jane"
    * }
    */
-  patchUser = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  patchUser = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       // Check validation results
       const errors = validationResult(req);
@@ -330,9 +351,9 @@ export class UsersController {
           error: {
             code: 'VALIDATION_ERROR',
             message: 'Invalid input data',
-            details: errors.array()
+            details: errors.array(),
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
         return;
       }
@@ -347,23 +368,27 @@ export class UsersController {
           success: false,
           error: {
             code: 'UNAUTHORIZED',
-            message: 'Authentication required'
+            message: 'Authentication required',
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
         return;
       }
 
       // For non-admin users, only allow self-updates and limit fields
-      const hasAccess = usersService.validateUserAccess(requestingUserId, id, requestingUserRole);
+      const hasAccess = usersService.validateUserAccess(
+        requestingUserId,
+        id,
+        requestingUserRole
+      );
       if (!hasAccess) {
         res.status(403).json({
           success: false,
           error: {
             code: 'FORBIDDEN',
-            message: 'Insufficient permissions to update this user'
+            message: 'Insufficient permissions to update this user',
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
         return;
       }
@@ -372,17 +397,23 @@ export class UsersController {
 
       // Regular users can only update their own basic profile fields
       if (requestingUserRole !== 'admin' && requestingUserId === id) {
-        if (req.body.firstName !== undefined) updateData.firstName = req.body.firstName;
-        if (req.body.lastName !== undefined) updateData.lastName = req.body.lastName;
+        if (req.body.firstName !== undefined)
+          updateData.firstName = req.body.firstName;
+        if (req.body.lastName !== undefined)
+          updateData.lastName = req.body.lastName;
         if (req.body.email !== undefined) updateData.email = req.body.email;
       } else if (requestingUserRole === 'admin') {
         // Admin can update all fields
         if (req.body.email !== undefined) updateData.email = req.body.email;
-        if (req.body.firstName !== undefined) updateData.firstName = req.body.firstName;
-        if (req.body.lastName !== undefined) updateData.lastName = req.body.lastName;
+        if (req.body.firstName !== undefined)
+          updateData.firstName = req.body.firstName;
+        if (req.body.lastName !== undefined)
+          updateData.lastName = req.body.lastName;
         if (req.body.role !== undefined) updateData.role = req.body.role;
-        if (req.body.isActive !== undefined) updateData.isActive = req.body.isActive;
-        if (req.body.emailVerified !== undefined) updateData.emailVerified = req.body.emailVerified;
+        if (req.body.isActive !== undefined)
+          updateData.isActive = req.body.isActive;
+        if (req.body.emailVerified !== undefined)
+          updateData.emailVerified = req.body.emailVerified;
       }
 
       const updatedUser = await usersService.updateUser(id, updateData);
@@ -391,7 +422,7 @@ export class UsersController {
         success: true,
         message: 'User updated successfully',
         data: updatedUser,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     } catch (error: any) {
       if (error.message.includes('User not found')) {
@@ -399,9 +430,9 @@ export class UsersController {
           success: false,
           error: {
             code: 'NOT_FOUND',
-            message: 'User not found'
+            message: 'User not found',
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
         return;
       }
@@ -411,9 +442,9 @@ export class UsersController {
           success: false,
           error: {
             code: 'CONFLICT',
-            message: 'Email already exists'
+            message: 'Email already exists',
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
         return;
       }
@@ -423,9 +454,9 @@ export class UsersController {
           success: false,
           error: {
             code: 'VALIDATION_ERROR',
-            message: 'No valid fields provided for update'
+            message: 'No valid fields provided for update',
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
         return;
       }
@@ -448,7 +479,11 @@ export class UsersController {
    * DELETE /api/v1/users/user-uuid
    * Authorization: Bearer <admin-token>
    */
-  deleteUser = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  deleteUser = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const { id } = req.params;
 
@@ -459,9 +494,9 @@ export class UsersController {
           success: false,
           error: {
             code: 'NOT_FOUND',
-            message: 'User not found or already deleted'
+            message: 'User not found or already deleted',
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
         return;
       }
@@ -473,9 +508,9 @@ export class UsersController {
           success: false,
           error: {
             code: 'NOT_FOUND',
-            message: 'User not found'
+            message: 'User not found',
           },
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
         return;
       }

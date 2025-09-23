@@ -176,14 +176,14 @@ export class AuthService {
         tenantId: user.tenantId,
       },
       sessionId,
-      tenantContext
+      tenantContext as any
     );
 
     // Calculate refresh token expiration
     const refreshExpiresAt = new Date();
     refreshExpiresAt.setTime(
       refreshExpiresAt.getTime() +
-        this.parseExpirationTime(config.JWT_REFRESH_EXPIRES_IN)
+        this.parseExpirationTime(config.JWT_REFRESH_EXPIRES_IN as string)
     );
 
     // Create session
@@ -283,14 +283,14 @@ export class AuthService {
         tenantId: user.tenantId,
       },
       sessionId,
-      tenantContext
+      tenantContext as any
     );
 
     // Calculate refresh token expiration
     const refreshExpiresAt = new Date();
     refreshExpiresAt.setTime(
       refreshExpiresAt.getTime() +
-        this.parseExpirationTime(config.JWT_REFRESH_EXPIRES_IN)
+        this.parseExpirationTime(config.JWT_REFRESH_EXPIRES_IN as string)
     );
 
     // Create session
@@ -385,14 +385,14 @@ export class AuthService {
         tenantId: user.tenantId,
       },
       newSessionId,
-      tenantContext
+      tenantContext as any
     );
 
     // Calculate new refresh token expiration
     const newRefreshExpiresAt = new Date();
     newRefreshExpiresAt.setTime(
       newRefreshExpiresAt.getTime() +
-        this.parseExpirationTime(config.JWT_REFRESH_EXPIRES_IN)
+        this.parseExpirationTime(config.JWT_REFRESH_EXPIRES_IN as string)
     );
 
     // Update session with new refresh token (token rotation)

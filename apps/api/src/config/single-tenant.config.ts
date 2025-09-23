@@ -54,34 +54,48 @@ export const validateSingleTenantConfig = (): void => {
 
   // Check for unnecessary overhead in single-tenant mode
   if (tenantConfig.rlsEnabled) {
-    warnings.push('RLS is enabled in single-tenant mode, which may cause unnecessary overhead');
-    optimizations.push('Consider setting TENANT_RLS_ENABLED=false for better performance');
+    warnings.push(
+      'RLS is enabled in single-tenant mode, which may cause unnecessary overhead'
+    );
+    optimizations.push(
+      'Consider setting TENANT_RLS_ENABLED=false for better performance'
+    );
   }
 
   if (tenantConfig.crossAccessPrevention) {
-    warnings.push('Cross-access prevention is enabled but has no effect in single-tenant mode');
+    warnings.push(
+      'Cross-access prevention is enabled but has no effect in single-tenant mode'
+    );
     optimizations.push('Consider setting TENANT_CROSS_ACCESS_PREVENTION=false');
   }
 
   if (tenantConfig.tokenIsolation) {
-    warnings.push('Token isolation is enabled but unnecessary in single-tenant mode');
-    optimizations.push('Consider setting TENANT_TOKEN_ISOLATION=false for simpler tokens');
+    warnings.push(
+      'Token isolation is enabled but unnecessary in single-tenant mode'
+    );
+    optimizations.push(
+      'Consider setting TENANT_TOKEN_ISOLATION=false for simpler tokens'
+    );
   }
 
   if (tenantConfig.auditLogging) {
-    warnings.push('Tenant audit logging is enabled but may not provide value in single-tenant mode');
-    optimizations.push('Consider setting TENANT_AUDIT_LOGGING=false unless specifically needed');
+    warnings.push(
+      'Tenant audit logging is enabled but may not provide value in single-tenant mode'
+    );
+    optimizations.push(
+      'Consider setting TENANT_AUDIT_LOGGING=false unless specifically needed'
+    );
   }
 
   // Log warnings and optimizations
   if (warnings.length > 0) {
     console.warn('⚠️  Single-tenant configuration warnings:');
-    warnings.forEach(warning => console.warn(`   • ${warning}`));
+    warnings.forEach((warning) => console.warn(`   • ${warning}`));
   }
 
   if (optimizations.length > 0) {
     console.log('💡 Single-tenant optimization suggestions:');
-    optimizations.forEach(opt => console.log(`   • ${opt}`));
+    optimizations.forEach((opt) => console.log(`   • ${opt}`));
   }
 
   if (warnings.length === 0) {
@@ -105,11 +119,12 @@ export const getEffectiveTenantId = (): string => {
  * @returns {boolean} True if feature should be disabled
  */
 export const shouldDisableTenantFeature = (feature: string): boolean => {
-  const optimizations = getSingleTenantOptimizations();
   const shouldDisable = !tenantConfig.multiTenancyEnabled;
 
   if (shouldDisable && process.env.NODE_ENV === 'development') {
-    console.debug(`🔧 Disabling tenant feature '${feature}' in single-tenant mode`);
+    console.debug(
+      `🔧 Disabling tenant feature '${feature}' in single-tenant mode`
+    );
   }
 
   return shouldDisable;
@@ -122,15 +137,21 @@ export const shouldDisableTenantFeature = (feature: string): boolean => {
  * @param singleTenantValue - Value to use in single-tenant mode
  * @returns {T} Appropriate value based on tenancy mode
  */
-export const tenantFallback = <T>(multiTenantValue: T, singleTenantValue: T): T => {
-  return tenantConfig.multiTenancyEnabled ? multiTenantValue : singleTenantValue;
+export const tenantFallback = <T>(
+  multiTenantValue: T,
+  singleTenantValue: T
+): T => {
+  return tenantConfig.multiTenancyEnabled
+    ? multiTenantValue
+    : singleTenantValue;
 };
 
 /**
  * Single-tenant mode documentation and deployment guide.
  */
 export const SINGLE_TENANT_DEPLOYMENT_GUIDE = {
-  description: 'Single-tenant mode provides simplified deployment with optimized performance',
+  description:
+    'Single-tenant mode provides simplified deployment with optimized performance',
   benefits: [
     'Simplified configuration management',
     'Reduced complexity in database queries',
