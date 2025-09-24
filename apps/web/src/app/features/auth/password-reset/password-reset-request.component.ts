@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
+import { ThemeService } from '../../../core/services/theme.service';
 
 /**
  * Password reset request component for initial email submission.
@@ -13,17 +14,19 @@ import { AuthService } from '../../../core/auth/auth.service';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterLink],
   template: `
-    <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div
+      class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 auth-container"
+    >
       <div class="max-w-md w-full space-y-8">
         <!-- Header -->
         <div>
-          <div class="mx-auto h-12 w-12 flex items-center justify-center bg-primary-600 rounded-full">
+          <div
+            class="mx-auto h-12 w-12 flex items-center justify-center bg-primary-600 rounded-full"
+          >
             <i class="pi pi-key text-white text-xl"></i>
           </div>
-          <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Reset your password
-          </h2>
-          <p class="mt-2 text-center text-sm text-gray-600">
+          <h2 class="mt-6 text-center text-3xl font-extrabold auth-title">Reset your password</h2>
+          <p class="mt-2 text-center text-sm auth-subtitle">
             Enter your email address and we'll send you a link to reset your password.
           </p>
         </div>
@@ -39,9 +42,7 @@ import { AuthService } from '../../../core/auth/auth.service';
                     <i class="pi pi-exclamation-triangle text-error-400"></i>
                   </div>
                   <div class="ml-3">
-                    <h3 class="text-sm font-medium text-error-800">
-                      Error
-                    </h3>
+                    <h3 class="text-sm font-medium text-error-800">Error</h3>
                     <div class="mt-2 text-sm text-error-700">
                       {{ error() }}
                     </div>
@@ -52,7 +53,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 
             <!-- Email Field -->
             <div>
-              <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="email" class="block text-sm font-medium mb-1 auth-label">
                 Email Address
               </label>
               <input
@@ -60,14 +61,16 @@ import { AuthService } from '../../../core/auth/auth.service';
                 type="email"
                 formControlName="email"
                 placeholder="Enter your email address"
-                class="appearance-none relative block w-full px-3 py-2 border"
-                [class.border-gray-300]="!resetForm.get('email')?.invalid || !resetForm.get('email')?.touched"
-                [class.border-error-300]="resetForm.get('email')?.invalid && resetForm.get('email')?.touched"
-                [class.focus:border-primary-500]="!resetForm.get('email')?.invalid"
-                [class.focus:border-error-500]="resetForm.get('email')?.invalid"
-                class="rounded-md placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:z-10 sm:text-sm"
-                [attr.aria-invalid]="resetForm.get('email')?.invalid && resetForm.get('email')?.touched"
-                [attr.aria-describedby]="resetForm.get('email')?.invalid && resetForm.get('email')?.touched ? 'email-error' : null"
+                class="appearance-none relative block w-full px-3 py-2 border rounded-md focus:outline-none focus:z-10 sm:text-sm auth-input"
+                [class.error]="resetForm.get('email')?.invalid && resetForm.get('email')?.touched"
+                [attr.aria-invalid]="
+                  resetForm.get('email')?.invalid && resetForm.get('email')?.touched
+                "
+                [attr.aria-describedby]="
+                  resetForm.get('email')?.invalid && resetForm.get('email')?.touched
+                    ? 'email-error'
+                    : null
+                "
               />
               @if (resetForm.get('email')?.invalid && resetForm.get('email')?.touched) {
                 <div id="email-error" class="mt-1 text-sm text-error-600" role="alert">
@@ -90,12 +93,16 @@ import { AuthService } from '../../../core/auth/auth.service';
               >
                 @if (loading()) {
                   <div class="flex items-center">
-                    <div class="animate-spin -ml-1 mr-3 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                    <div
+                      class="animate-spin -ml-1 mr-3 h-4 w-4 border-2 border-white border-t-transparent rounded-full"
+                    ></div>
                     Sending Reset Link...
                   </div>
                 } @else {
                   <span class="absolute left-0 inset-y-0 flex items-center pl-3">
-                    <i class="pi pi-send text-primary-500 group-hover:text-primary-400 transition-colors"></i>
+                    <i
+                      class="pi pi-send text-primary-500 group-hover:text-primary-400 transition-colors"
+                    ></i>
                   </span>
                   Send Reset Link
                 }
@@ -104,8 +111,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 
             <!-- Back to Login -->
             <div class="text-center">
-              <a routerLink="/auth/login"
-                 class="font-medium text-primary-600 hover:text-primary-500 transition-colors">
+              <a routerLink="/auth/login" class="font-medium auth-link">
                 <i class="pi pi-arrow-left mr-2"></i>
                 Back to Sign In
               </a>
@@ -114,25 +120,27 @@ import { AuthService } from '../../../core/auth/auth.service';
         } @else {
           <!-- Success Message -->
           <div class="text-center">
-            <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-success-100 mb-4">
-              <i class="pi pi-check text-success-600 text-2xl"></i>
+            <div
+              class="mx-auto flex items-center justify-center h-16 w-16 rounded-full success-container mb-4"
+            >
+              <i class="pi pi-check success-icon text-2xl"></i>
             </div>
-            <h3 class="text-lg font-medium text-gray-900 mb-2">
-              Reset link sent!
-            </h3>
-            <p class="text-sm text-gray-600 mb-6">
-              We've sent a password reset link to <strong>{{ submittedEmail() }}</strong>.
-              Please check your email and follow the instructions to reset your password.
+            <h3 class="text-lg font-medium mb-2 success-title">Reset link sent!</h3>
+            <p class="text-sm mb-6 success-text">
+              We've sent a password reset link to <strong>{{ submittedEmail() }}</strong
+              >. Please check your email and follow the instructions to reset your password.
             </p>
             <div class="space-y-3">
               <button
                 (click)="resendEmail()"
                 [disabled]="loading()"
-                class="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                class="w-full flex justify-center py-2 px-4 border rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed resend-button"
               >
                 @if (loading()) {
                   <div class="flex items-center">
-                    <div class="animate-spin -ml-1 mr-3 h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full"></div>
+                    <div
+                      class="animate-spin -ml-1 mr-3 h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full"
+                    ></div>
                     Resending...
                   </div>
                 } @else {
@@ -140,8 +148,7 @@ import { AuthService } from '../../../core/auth/auth.service';
                   Resend Email
                 }
               </button>
-              <a routerLink="/auth/login"
-                 class="block text-center font-medium text-primary-600 hover:text-primary-500 transition-colors">
+              <a routerLink="/auth/login" class="block text-center font-medium auth-link">
                 Back to Sign In
               </a>
             </div>
@@ -150,22 +157,106 @@ import { AuthService } from '../../../core/auth/auth.service';
       </div>
     </div>
   `,
-  styles: [`
-    .animate-fade-in {
-      animation: fadeIn 0.3s ease-in-out;
-    }
+  styles: [
+    `
+      /* Theme-aware color overrides */
+      .auth-container {
+        background-color: var(--color-background);
+        color: var(--color-text-primary);
+      }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  `],
-  changeDetection: ChangeDetectionStrategy.OnPush
+      .auth-title {
+        color: var(--color-text-primary);
+      }
+
+      .auth-subtitle {
+        color: var(--color-text-secondary);
+      }
+
+      .auth-label {
+        color: var(--color-text-primary);
+      }
+
+      .auth-input {
+        background-color: var(--color-surface);
+        color: var(--color-text-primary);
+        border-color: var(--color-border);
+        transition: var(--transition-colors);
+      }
+
+      .auth-input::placeholder {
+        color: var(--color-text-muted);
+      }
+
+      .auth-input:focus {
+        border-color: var(--color-primary-500);
+        box-shadow: 0 0 0 3px var(--color-primary-100);
+      }
+
+      .auth-input.error {
+        border-color: var(--color-error-500);
+      }
+
+      .auth-link {
+        color: var(--color-primary-600);
+        transition: var(--transition-colors);
+      }
+
+      .auth-link:hover {
+        color: var(--color-primary-500);
+      }
+
+      .success-container {
+        background-color: var(--color-success-100);
+        border: var(--border-width-1) solid var(--color-success-200);
+      }
+
+      .success-icon {
+        color: var(--color-success-600);
+      }
+
+      .success-title {
+        color: var(--color-text-primary);
+      }
+
+      .success-text {
+        color: var(--color-text-secondary);
+      }
+
+      .resend-button {
+        background-color: var(--color-surface);
+        color: var(--color-text-primary);
+        border-color: var(--color-border);
+        transition: var(--transition-colors);
+      }
+
+      .resend-button:hover {
+        background-color: var(--color-gray-50);
+      }
+
+      .animate-fade-in {
+        animation: fadeIn 0.3s ease-in-out;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    `,
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PasswordResetRequestComponent {
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
+  readonly themeService = inject(ThemeService);
 
   protected readonly resetForm: FormGroup;
   protected readonly loading = signal(false);
@@ -175,7 +266,7 @@ export class PasswordResetRequestComponent {
 
   constructor() {
     this.resetForm = this.fb.group({
-      email: ['', [Validators.required, Validators.email]]
+      email: ['', [Validators.required, Validators.email]],
     });
   }
 
@@ -216,7 +307,7 @@ export class PasswordResetRequestComponent {
       error: (error) => {
         this.loading.set(false);
         this.handleError(error);
-      }
+      },
     });
   }
 

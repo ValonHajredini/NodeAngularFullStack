@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { AuthService, LoginCredentials } from '../../../core/auth/auth.service';
+import { ThemeService } from '../../../core/services/theme.service';
 import { environment } from '@env/environment';
 
 /**
@@ -14,12 +15,11 @@ import { environment } from '@env/environment';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterLink],
   template: `
-    <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 auth-container">
       <div class="max-w-md w-full space-y-8">
         <!-- Back button -->
         <div class="text-left">
-          <a routerLink="/welcome"
-             class="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 transition-colors">
+          <a routerLink="/welcome" class="inline-flex items-center text-sm auth-back-link">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
             </svg>
@@ -32,13 +32,12 @@ import { environment } from '@env/environment';
           <div class="mx-auto h-12 w-12 flex items-center justify-center bg-primary-600 rounded-full">
             <i class="pi pi-user text-white text-xl"></i>
           </div>
-          <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          <h2 class="mt-6 text-center text-3xl font-extrabold auth-title">
             Sign in to your account
           </h2>
-          <p class="mt-2 text-center text-sm text-gray-600">
+          <p class="mt-2 text-center text-sm auth-subtitle">
             Or
-            <a routerLink="/auth/register"
-               class="font-medium text-primary-600 hover:text-primary-500 transition-colors">
+            <a routerLink="/auth/register" class="font-medium auth-link">
               create a new account
             </a>
           </p>
@@ -68,7 +67,7 @@ import { environment } from '@env/environment';
           <div class="space-y-4">
             <!-- Email Field -->
             <div>
-              <label for="email" class="block text-sm font-medium text-gray-700">
+              <label for="email" class="block text-sm font-medium auth-label">
                 Email address
               </label>
               <div class="mt-1 relative">
@@ -78,8 +77,8 @@ import { environment } from '@env/environment';
                   type="email"
                   autocomplete="email"
                   formControlName="email"
-                  class="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm transition-colors"
-                  [class.border-error-500]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
+                  class="appearance-none relative block w-full px-3 py-2 border rounded-md focus:outline-none focus:z-10 sm:text-sm auth-input"
+                  [class.error]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
                   placeholder="Enter your email"
                   aria-describedby="email-error">
                 @if (loginForm.get('email')?.invalid && loginForm.get('email')?.touched) {
@@ -101,7 +100,7 @@ import { environment } from '@env/environment';
 
             <!-- Password Field -->
             <div>
-              <label for="password" class="block text-sm font-medium text-gray-700">
+              <label for="password" class="block text-sm font-medium auth-label">
                 Password
               </label>
               <div class="mt-1 relative">
@@ -111,8 +110,8 @@ import { environment } from '@env/environment';
                   [type]="showPassword() ? 'text' : 'password'"
                   autocomplete="current-password"
                   formControlName="password"
-                  class="appearance-none relative block w-full px-3 py-2 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm transition-colors"
-                  [class.border-error-500]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
+                  class="appearance-none relative block w-full px-3 py-2 pr-10 border rounded-md focus:outline-none focus:z-10 sm:text-sm auth-input"
+                  [class.error]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
                   placeholder="Enter your password"
                   aria-describedby="password-error">
                 <button
@@ -145,14 +144,13 @@ import { environment } from '@env/environment';
                 type="checkbox"
                 formControlName="rememberMe"
                 class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded">
-              <label for="remember-me" class="ml-2 block text-sm text-gray-900">
+              <label for="remember-me" class="ml-2 block text-sm auth-checkbox-label">
                 Remember me
               </label>
             </div>
 
             <div class="text-sm">
-              <a routerLink="/auth/password-reset"
-                 class="font-medium text-primary-600 hover:text-primary-500 transition-colors">
+              <a routerLink="/auth/password-reset" class="font-medium auth-link">
                 Forgot your password?
               </a>
             </div>
@@ -179,27 +177,27 @@ import { environment } from '@env/environment';
 
           <!-- Development Environment Test Users -->
           @if (isDevelopment()) {
-            <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
-              <h4 class="text-sm font-medium text-blue-800 mb-3">
+            <div class="mt-6 p-4 rounded-md demo-section">
+              <h4 class="text-sm font-medium mb-3 demo-title">
                 <i class="pi pi-users mr-1"></i>
                 Demo Users - Click email to auto-fill
               </h4>
               <div class="space-y-3">
                 <!-- Admin User -->
-                <div class="bg-white p-3 rounded border border-blue-100">
+                <div class="p-3 rounded border demo-card">
                   <div class="flex items-center justify-between">
                     <div class="flex-1">
-                      <div class="text-sm font-medium text-gray-900">
+                      <div class="text-sm font-medium demo-user-title">
                         <i class="pi pi-shield text-red-500 mr-1"></i>
                         Administrator
                       </div>
                       <button
                         type="button"
                         (click)="fillTestCredentials('admin')"
-                        class="text-xs text-blue-600 hover:text-blue-800 hover:underline transition-colors">
+                        class="text-xs hover:underline demo-email-button">
                         admin@example.com
                       </button>
-                      <div class="text-xs text-gray-500 mt-1">
+                      <div class="text-xs mt-1 demo-user-description">
                         Full system access • Can manage users and settings
                       </div>
                     </div>
@@ -213,20 +211,20 @@ import { environment } from '@env/environment';
                 </div>
 
                 <!-- Regular User -->
-                <div class="bg-white p-3 rounded border border-blue-100">
+                <div class="p-3 rounded border demo-card">
                   <div class="flex items-center justify-between">
                     <div class="flex-1">
-                      <div class="text-sm font-medium text-gray-900">
+                      <div class="text-sm font-medium demo-user-title">
                         <i class="pi pi-user text-green-500 mr-1"></i>
                         Regular User
                       </div>
                       <button
                         type="button"
                         (click)="fillTestCredentials('user')"
-                        class="text-xs text-blue-600 hover:text-blue-800 hover:underline transition-colors">
+                        class="text-xs hover:underline demo-email-button">
                         user@example.com
                       </button>
-                      <div class="text-xs text-gray-500 mt-1">
+                      <div class="text-xs mt-1 demo-user-description">
                         Standard access • Can view reports and manage own data
                       </div>
                     </div>
@@ -240,20 +238,20 @@ import { environment } from '@env/environment';
                 </div>
 
                 <!-- Readonly User -->
-                <div class="bg-white p-3 rounded border border-blue-100">
+                <div class="p-3 rounded border demo-card">
                   <div class="flex items-center justify-between">
                     <div class="flex-1">
-                      <div class="text-sm font-medium text-gray-900">
+                      <div class="text-sm font-medium demo-user-title">
                         <i class="pi pi-eye text-gray-500 mr-1"></i>
                         Read-Only User
                       </div>
                       <button
                         type="button"
                         (click)="fillTestCredentials('readonly')"
-                        class="text-xs text-blue-600 hover:text-blue-800 hover:underline transition-colors">
+                        class="text-xs hover:underline demo-email-button">
                         readonly@example.com
                       </button>
-                      <div class="text-xs text-gray-500 mt-1">
+                      <div class="text-xs mt-1 demo-user-description">
                         View-only access • Can browse data but cannot modify
                       </div>
                     </div>
@@ -267,7 +265,7 @@ import { environment } from '@env/environment';
                 </div>
               </div>
 
-              <div class="mt-3 text-xs text-blue-700 bg-blue-100 p-2 rounded">
+              <div class="mt-3 text-xs p-2 rounded demo-note">
                 <i class="pi pi-info-circle mr-1"></i>
                 All demo accounts use the same password format based on role + "123!@#"
               </div>
@@ -277,36 +275,127 @@ import { environment } from '@env/environment';
       </div>
     </div>
   `,
-  styles: [`
-    /* Custom animations */
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
+  styles: [
+    `
+      /* Theme-aware color overrides */
+      .auth-container {
+        background-color: var(--color-background);
+        color: var(--color-text-primary);
+      }
 
-    .animate-fade-in {
-      animation: fadeIn 0.3s ease-in-out;
-    }
+      .auth-back-link {
+        color: var(--color-text-secondary);
+        transition: var(--transition-colors);
+      }
 
-    /* Focus styles for accessibility */
-    input:focus {
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    }
+      .auth-back-link:hover {
+        color: var(--color-text-primary);
+      }
 
-    /* Smooth transitions */
-    * {
-      transition-property: color, background-color, border-color;
-      transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-      transition-duration: 150ms;
-    }
-  `],
-  changeDetection: ChangeDetectionStrategy.OnPush
+      .auth-title {
+        color: var(--color-text-primary);
+      }
+
+      .auth-subtitle {
+        color: var(--color-text-secondary);
+      }
+
+      .auth-label {
+        color: var(--color-text-primary);
+      }
+
+      .auth-input {
+        background-color: var(--color-surface);
+        color: var(--color-text-primary);
+        border-color: var(--color-border);
+        transition: var(--transition-colors);
+      }
+
+      .auth-input::placeholder {
+        color: var(--color-text-muted);
+      }
+
+      .auth-input:focus {
+        border-color: var(--color-primary-500);
+        box-shadow: 0 0 0 3px var(--color-primary-100);
+      }
+
+      .auth-input.error {
+        border-color: var(--color-error-500);
+      }
+
+      .auth-checkbox-label {
+        color: var(--color-text-primary);
+      }
+
+      .auth-link {
+        color: var(--color-primary-600);
+        transition: var(--transition-colors);
+      }
+
+      .auth-link:hover {
+        color: var(--color-primary-500);
+      }
+
+      .demo-section {
+        background-color: var(--color-info-50);
+        border-color: var(--color-info-200);
+      }
+
+      .demo-title {
+        color: var(--color-info-800);
+      }
+
+      .demo-card {
+        background-color: var(--color-surface);
+        border-color: var(--color-info-100);
+      }
+
+      .demo-user-title {
+        color: var(--color-text-primary);
+      }
+
+      .demo-email-button {
+        color: var(--color-info-600);
+        transition: var(--transition-colors);
+      }
+
+      .demo-email-button:hover {
+        color: var(--color-info-800);
+      }
+
+      .demo-user-description {
+        color: var(--color-text-muted);
+      }
+
+      .demo-note {
+        color: var(--color-info-700);
+        background-color: var(--color-info-100);
+      }
+
+      /* Custom animations */
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      .animate-fade-in {
+        animation: fadeIn 0.3s ease-in-out;
+      }
+    `,
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LoginComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly authService = inject(AuthService);
+  readonly themeService = inject(ThemeService);
 
   private returnUrl: string = '/dashboard';
 
@@ -319,7 +408,7 @@ export class LoginComponent implements OnInit {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(8)]],
-      rememberMe: [false]
+      rememberMe: [false],
     });
   }
 
@@ -340,7 +429,7 @@ export class LoginComponent implements OnInit {
     if (this.loginForm.valid && !this.loading()) {
       const credentials: LoginCredentials = {
         email: this.loginForm.value.email,
-        password: this.loginForm.value.password
+        password: this.loginForm.value.password,
       };
 
       this.loading.set(true);
@@ -355,11 +444,11 @@ export class LoginComponent implements OnInit {
         error: (error) => {
           this.loading.set(false);
           this.handleError(error);
-        }
+        },
       });
     } else {
       // Mark all fields as touched to show validation errors
-      Object.keys(this.loginForm.controls).forEach(key => {
+      Object.keys(this.loginForm.controls).forEach((key) => {
         this.loginForm.get(key)?.markAsTouched();
       });
     }
@@ -380,7 +469,7 @@ export class LoginComponent implements OnInit {
     const credentials = {
       admin: { email: 'admin@example.com', password: 'Admin123!@#' },
       user: { email: 'user@example.com', password: 'User123!@#' },
-      readonly: { email: 'readonly@example.com', password: 'Read123!@#' }
+      readonly: { email: 'readonly@example.com', password: 'Read123!@#' },
     };
 
     this.loginForm.patchValue(credentials[role]);
@@ -415,4 +504,3 @@ export class LoginComponent implements OnInit {
     }, 5000);
   }
 }
-

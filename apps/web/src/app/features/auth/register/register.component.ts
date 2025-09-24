@@ -1,8 +1,16 @@
 import { Component, ChangeDetectionStrategy, signal, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
+import {
+  ReactiveFormsModule,
+  FormBuilder,
+  FormGroup,
+  Validators,
+  AbstractControl,
+  ValidationErrors,
+} from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService, User } from '../../../core/auth/auth.service';
+import { ThemeService } from '../../../core/services/theme.service';
 import { environment } from '@env/environment';
 
 interface RegisterData {
@@ -23,14 +31,20 @@ interface RegisterData {
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterLink],
   template: `
-    <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div
+      class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 auth-container"
+    >
       <div class="max-w-md w-full space-y-8">
         <!-- Back button -->
         <div class="text-left">
-          <a routerLink="/welcome"
-             class="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 transition-colors">
+          <a routerLink="/welcome" class="inline-flex items-center text-sm auth-back-link">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 19l-7-7 7-7"
+              ></path>
             </svg>
             Back to home
           </a>
@@ -38,16 +52,15 @@ interface RegisterData {
 
         <!-- Header -->
         <div>
-          <div class="mx-auto h-12 w-12 flex items-center justify-center bg-primary-600 rounded-full">
+          <div
+            class="mx-auto h-12 w-12 flex items-center justify-center bg-primary-600 rounded-full"
+          >
             <i class="pi pi-user-plus text-white text-xl"></i>
           </div>
-          <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Create your account
-          </h2>
-          <p class="mt-2 text-center text-sm text-gray-600">
+          <h2 class="mt-6 text-center text-3xl font-extrabold auth-title">Create your account</h2>
+          <p class="mt-2 text-center text-sm auth-subtitle">
             Or
-            <a routerLink="/auth/login"
-               class="font-medium text-primary-600 hover:text-primary-500 transition-colors">
+            <a routerLink="/auth/login" class="font-medium auth-link">
               sign in to your existing account
             </a>
           </p>
@@ -63,9 +76,7 @@ interface RegisterData {
                   <i class="pi pi-exclamation-triangle text-error-400"></i>
                 </div>
                 <div class="ml-3">
-                  <h3 class="text-sm font-medium text-error-800">
-                    Registration Error
-                  </h3>
+                  <h3 class="text-sm font-medium text-error-800">Registration Error</h3>
                   <div class="mt-2 text-sm text-error-700">
                     {{ error() }}
                   </div>
@@ -79,7 +90,7 @@ interface RegisterData {
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <!-- First Name -->
               <div>
-                <label for="firstName" class="block text-sm font-medium text-gray-700">
+                <label for="firstName" class="block text-sm font-medium auth-label">
                   First Name
                 </label>
                 <div class="mt-1 relative">
@@ -89,17 +100,27 @@ interface RegisterData {
                     type="text"
                     autocomplete="given-name"
                     formControlName="firstName"
-                    class="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm transition-colors"
-                    [class.border-error-500]="registerForm.get('firstName')?.invalid && registerForm.get('firstName')?.touched"
+                    class="appearance-none relative block w-full px-3 py-2 border rounded-md focus:outline-none focus:z-10 sm:text-sm auth-input"
+                    [class.error]="
+                      registerForm.get('firstName')?.invalid &&
+                      registerForm.get('firstName')?.touched
+                    "
                     placeholder="First name"
-                    aria-describedby="firstName-error">
-                  @if (registerForm.get('firstName')?.invalid && registerForm.get('firstName')?.touched) {
-                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                    aria-describedby="firstName-error"
+                  />
+                  @if (
+                    registerForm.get('firstName')?.invalid && registerForm.get('firstName')?.touched
+                  ) {
+                    <div
+                      class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none"
+                    >
                       <i class="pi pi-exclamation-circle text-error-500"></i>
                     </div>
                   }
                 </div>
-                @if (registerForm.get('firstName')?.invalid && registerForm.get('firstName')?.touched) {
+                @if (
+                  registerForm.get('firstName')?.invalid && registerForm.get('firstName')?.touched
+                ) {
                   <p class="mt-2 text-sm text-error-600" id="firstName-error">
                     @if (registerForm.get('firstName')?.hasError('required')) {
                       First name is required
@@ -112,7 +133,7 @@ interface RegisterData {
 
               <!-- Last Name -->
               <div>
-                <label for="lastName" class="block text-sm font-medium text-gray-700">
+                <label for="lastName" class="block text-sm font-medium auth-label">
                   Last Name
                 </label>
                 <div class="mt-1 relative">
@@ -122,17 +143,26 @@ interface RegisterData {
                     type="text"
                     autocomplete="family-name"
                     formControlName="lastName"
-                    class="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm transition-colors"
-                    [class.border-error-500]="registerForm.get('lastName')?.invalid && registerForm.get('lastName')?.touched"
+                    class="appearance-none relative block w-full px-3 py-2 border rounded-md focus:outline-none focus:z-10 sm:text-sm auth-input"
+                    [class.error]="
+                      registerForm.get('lastName')?.invalid && registerForm.get('lastName')?.touched
+                    "
                     placeholder="Last name"
-                    aria-describedby="lastName-error">
-                  @if (registerForm.get('lastName')?.invalid && registerForm.get('lastName')?.touched) {
-                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                    aria-describedby="lastName-error"
+                  />
+                  @if (
+                    registerForm.get('lastName')?.invalid && registerForm.get('lastName')?.touched
+                  ) {
+                    <div
+                      class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none"
+                    >
                       <i class="pi pi-exclamation-circle text-error-500"></i>
                     </div>
                   }
                 </div>
-                @if (registerForm.get('lastName')?.invalid && registerForm.get('lastName')?.touched) {
+                @if (
+                  registerForm.get('lastName')?.invalid && registerForm.get('lastName')?.touched
+                ) {
                   <p class="mt-2 text-sm text-error-600" id="lastName-error">
                     @if (registerForm.get('lastName')?.hasError('required')) {
                       Last name is required
@@ -146,7 +176,7 @@ interface RegisterData {
 
             <!-- Email Field -->
             <div>
-              <label for="email" class="block text-sm font-medium text-gray-700">
+              <label for="email" class="block text-sm font-medium auth-label">
                 Email address
               </label>
               <div class="mt-1 relative">
@@ -156,12 +186,17 @@ interface RegisterData {
                   type="email"
                   autocomplete="email"
                   formControlName="email"
-                  class="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm transition-colors"
-                  [class.border-error-500]="registerForm.get('email')?.invalid && registerForm.get('email')?.touched"
+                  class="appearance-none relative block w-full px-3 py-2 border rounded-md focus:outline-none focus:z-10 sm:text-sm auth-input"
+                  [class.error]="
+                    registerForm.get('email')?.invalid && registerForm.get('email')?.touched
+                  "
                   placeholder="Enter your email"
-                  aria-describedby="email-error">
+                  aria-describedby="email-error"
+                />
                 @if (registerForm.get('email')?.invalid && registerForm.get('email')?.touched) {
-                  <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                  <div
+                    class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none"
+                  >
                     <i class="pi pi-exclamation-circle text-error-500"></i>
                   </div>
                 }
@@ -179,9 +214,7 @@ interface RegisterData {
 
             <!-- Password Field -->
             <div>
-              <label for="password" class="block text-sm font-medium text-gray-700">
-                Password
-              </label>
+              <label for="password" class="block text-sm font-medium auth-label"> Password </label>
               <div class="mt-1 relative">
                 <input
                   id="password"
@@ -190,16 +223,22 @@ interface RegisterData {
                   autocomplete="new-password"
                   formControlName="password"
                   class="appearance-none relative block w-full px-3 py-2 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm transition-colors"
-                  [class.border-error-500]="registerForm.get('password')?.invalid && registerForm.get('password')?.touched"
+                  [class.error]="
+                    registerForm.get('password')?.invalid && registerForm.get('password')?.touched
+                  "
                   placeholder="Create a strong password"
-                  aria-describedby="password-error password-strength">
+                  aria-describedby="password-error password-strength"
+                />
                 <button
                   type="button"
                   (click)="togglePasswordVisibility()"
                   class="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  aria-label="Toggle password visibility">
-                  <i [class]="showPassword() ? 'pi pi-eye-slash' : 'pi pi-eye'"
-                     class="text-gray-400 hover:text-gray-600 transition-colors"></i>
+                  aria-label="Toggle password visibility"
+                >
+                  <i
+                    [class]="showPassword() ? 'pi pi-eye-slash' : 'pi pi-eye'"
+                    class="text-gray-400 hover:text-gray-600 transition-colors"
+                  ></i>
                 </button>
               </div>
 
@@ -207,13 +246,13 @@ interface RegisterData {
               @if (registerForm.get('password')?.value) {
                 <div class="mt-2" id="password-strength">
                   <div class="flex items-center space-x-2 text-xs">
-                    <span class="text-gray-600">Strength:</span>
+                    <span style="color: var(--color-text-secondary)">Strength:</span>
                     <div class="flex space-x-1">
                       @for (level of passwordStrengthLevels; track level; let i = $index) {
                         <div
                           class="h-1.5 w-6 rounded-full transition-colors"
-                          [class]="getPasswordStrengthColor(i)">
-                        </div>
+                          [class]="getPasswordStrengthColor(i)"
+                        ></div>
                       }
                     </div>
                     <span [class]="getPasswordStrengthTextColor()">
@@ -224,32 +263,82 @@ interface RegisterData {
                   <!-- Password Requirements -->
                   <div class="mt-2 space-y-1">
                     <div class="flex items-center space-x-2 text-xs">
-                      <i [class]="hasMinLength() ? 'pi pi-check text-success-600' : 'pi pi-times text-error-500'"></i>
-                      <span [class]="hasMinLength() ? 'text-success-700' : 'text-gray-600'">
+                      <i
+                        [class]="
+                          hasMinLength()
+                            ? 'pi pi-check text-success-600'
+                            : 'pi pi-times text-error-500'
+                        "
+                      ></i>
+                      <span
+                        [class]="
+                          hasMinLength() ? 'password-requirement valid' : 'password-requirement'
+                        "
+                      >
                         At least 8 characters
                       </span>
                     </div>
                     <div class="flex items-center space-x-2 text-xs">
-                      <i [class]="hasUppercase() ? 'pi pi-check text-success-600' : 'pi pi-times text-error-500'"></i>
-                      <span [class]="hasUppercase() ? 'text-success-700' : 'text-gray-600'">
+                      <i
+                        [class]="
+                          hasUppercase()
+                            ? 'pi pi-check text-success-600'
+                            : 'pi pi-times text-error-500'
+                        "
+                      ></i>
+                      <span
+                        [class]="
+                          hasUppercase() ? 'password-requirement valid' : 'password-requirement'
+                        "
+                      >
                         One uppercase letter
                       </span>
                     </div>
                     <div class="flex items-center space-x-2 text-xs">
-                      <i [class]="hasLowercase() ? 'pi pi-check text-success-600' : 'pi pi-times text-error-500'"></i>
-                      <span [class]="hasLowercase() ? 'text-success-700' : 'text-gray-600'">
+                      <i
+                        [class]="
+                          hasLowercase()
+                            ? 'pi pi-check text-success-600'
+                            : 'pi pi-times text-error-500'
+                        "
+                      ></i>
+                      <span
+                        [class]="
+                          hasLowercase() ? 'password-requirement valid' : 'password-requirement'
+                        "
+                      >
                         One lowercase letter
                       </span>
                     </div>
                     <div class="flex items-center space-x-2 text-xs">
-                      <i [class]="hasNumber() ? 'pi pi-check text-success-600' : 'pi pi-times text-error-500'"></i>
-                      <span [class]="hasNumber() ? 'text-success-700' : 'text-gray-600'">
+                      <i
+                        [class]="
+                          hasNumber()
+                            ? 'pi pi-check text-success-600'
+                            : 'pi pi-times text-error-500'
+                        "
+                      ></i>
+                      <span
+                        [class]="
+                          hasNumber() ? 'password-requirement valid' : 'password-requirement'
+                        "
+                      >
                         One number
                       </span>
                     </div>
                     <div class="flex items-center space-x-2 text-xs">
-                      <i [class]="hasSpecialChar() ? 'pi pi-check text-success-600' : 'pi pi-times text-error-500'"></i>
-                      <span [class]="hasSpecialChar() ? 'text-success-700' : 'text-gray-600'">
+                      <i
+                        [class]="
+                          hasSpecialChar()
+                            ? 'pi pi-check text-success-600'
+                            : 'pi pi-times text-error-500'
+                        "
+                      ></i>
+                      <span
+                        [class]="
+                          hasSpecialChar() ? 'password-requirement valid' : 'password-requirement'
+                        "
+                      >
                         One special character
                       </span>
                     </div>
@@ -270,7 +359,7 @@ interface RegisterData {
 
             <!-- Confirm Password Field -->
             <div>
-              <label for="confirmPassword" class="block text-sm font-medium text-gray-700">
+              <label for="confirmPassword" class="block text-sm font-medium auth-label">
                 Confirm Password
               </label>
               <div class="mt-1 relative">
@@ -281,19 +370,29 @@ interface RegisterData {
                   autocomplete="new-password"
                   formControlName="confirmPassword"
                   class="appearance-none relative block w-full px-3 py-2 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm transition-colors"
-                  [class.border-error-500]="registerForm.get('confirmPassword')?.invalid && registerForm.get('confirmPassword')?.touched"
+                  [class.error]="
+                    registerForm.get('confirmPassword')?.invalid &&
+                    registerForm.get('confirmPassword')?.touched
+                  "
                   placeholder="Confirm your password"
-                  aria-describedby="confirmPassword-error">
+                  aria-describedby="confirmPassword-error"
+                />
                 <button
                   type="button"
                   (click)="toggleConfirmPasswordVisibility()"
                   class="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  aria-label="Toggle confirm password visibility">
-                  <i [class]="showConfirmPassword() ? 'pi pi-eye-slash' : 'pi pi-eye'"
-                     class="text-gray-400 hover:text-gray-600 transition-colors"></i>
+                  aria-label="Toggle confirm password visibility"
+                >
+                  <i
+                    [class]="showConfirmPassword() ? 'pi pi-eye-slash' : 'pi pi-eye'"
+                    class="text-gray-400 hover:text-gray-600 transition-colors"
+                  ></i>
                 </button>
               </div>
-              @if (registerForm.get('confirmPassword')?.invalid && registerForm.get('confirmPassword')?.touched) {
+              @if (
+                registerForm.get('confirmPassword')?.invalid &&
+                registerForm.get('confirmPassword')?.touched
+              ) {
                 <p class="mt-2 text-sm text-error-600" id="confirmPassword-error">
                   @if (registerForm.get('confirmPassword')?.hasError('required')) {
                     Please confirm your password
@@ -313,20 +412,20 @@ interface RegisterData {
                   type="checkbox"
                   formControlName="acceptTerms"
                   class="focus:ring-primary-500 h-4 w-4 text-primary-600 border-gray-300 rounded"
-                  aria-describedby="acceptTerms-error">
+                  aria-describedby="acceptTerms-error"
+                />
               </div>
               <div class="ml-3 text-sm">
-                <label for="acceptTerms" class="text-gray-600">
+                <label for="acceptTerms" class="terms-label">
                   I agree to the
-                  <a href="#" class="font-medium text-primary-600 hover:text-primary-500 transition-colors">
-                    Terms of Service
-                  </a>
+                  <a href="#" class="font-medium auth-link"> Terms of Service </a>
                   and
-                  <a href="#" class="font-medium text-primary-600 hover:text-primary-500 transition-colors">
-                    Privacy Policy
-                  </a>
+                  <a href="#" class="font-medium auth-link"> Privacy Policy </a>
                 </label>
-                @if (registerForm.get('acceptTerms')?.invalid && registerForm.get('acceptTerms')?.touched) {
+                @if (
+                  registerForm.get('acceptTerms')?.invalid &&
+                  registerForm.get('acceptTerms')?.touched
+                ) {
                   <p class="mt-1 text-sm text-error-600" id="acceptTerms-error">
                     You must accept the terms and conditions
                   </p>
@@ -340,11 +439,28 @@ interface RegisterData {
             <button
               type="submit"
               [disabled]="registerForm.invalid || loading()"
-              class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+              class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
               @if (loading()) {
-                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                <svg
+                  class="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  ></circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
                 </svg>
                 Creating account...
               } @else {
@@ -357,35 +473,103 @@ interface RegisterData {
       </div>
     </div>
   `,
-  styles: [`
-    /* Custom animations */
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
+  styles: [
+    `
+      /* Theme-aware color overrides */
+      .auth-container {
+        background-color: var(--color-background);
+        color: var(--color-text-primary);
+      }
 
-    .animate-fade-in {
-      animation: fadeIn 0.3s ease-in-out;
-    }
+      .auth-back-link {
+        color: var(--color-text-secondary);
+        transition: var(--transition-colors);
+      }
 
-    /* Focus styles for accessibility */
-    input:focus, button:focus {
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    }
+      .auth-back-link:hover {
+        color: var(--color-text-primary);
+      }
 
-    /* Smooth transitions */
-    * {
-      transition-property: color, background-color, border-color;
-      transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-      transition-duration: 150ms;
-    }
-  `],
-  changeDetection: ChangeDetectionStrategy.OnPush
+      .auth-title {
+        color: var(--color-text-primary);
+      }
+
+      .auth-subtitle {
+        color: var(--color-text-secondary);
+      }
+
+      .auth-label {
+        color: var(--color-text-primary);
+      }
+
+      .auth-input {
+        background-color: var(--color-surface);
+        color: var(--color-text-primary);
+        border-color: var(--color-border);
+        transition: var(--transition-colors);
+      }
+
+      .auth-input::placeholder {
+        color: var(--color-text-muted);
+      }
+
+      .auth-input:focus {
+        border-color: var(--color-primary-500);
+        box-shadow: 0 0 0 3px var(--color-primary-100);
+      }
+
+      .auth-input.error {
+        border-color: var(--color-error-500);
+      }
+
+      .auth-link {
+        color: var(--color-primary-600);
+        transition: var(--transition-colors);
+      }
+
+      .auth-link:hover {
+        color: var(--color-primary-500);
+      }
+
+      .terms-label {
+        color: var(--color-text-secondary);
+      }
+
+      .password-strength-text {
+        transition: var(--transition-colors);
+      }
+
+      .password-requirement {
+        color: var(--color-text-secondary);
+        transition: var(--transition-colors);
+      }
+
+      .password-requirement.valid {
+        color: var(--color-success-700);
+      }
+
+      /* Custom animations */
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      .animate-fade-in {
+        animation: fadeIn 0.3s ease-in-out;
+      }
+    `,
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RegisterComponent {
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
+  readonly themeService = inject(ThemeService);
 
   protected readonly registerForm: FormGroup;
   protected readonly loading = signal(false);
@@ -442,14 +626,17 @@ export class RegisterComponent {
   });
 
   constructor() {
-    this.registerForm = this.fb.group({
-      firstName: ['', [Validators.required, Validators.minLength(2)]],
-      lastName: ['', [Validators.required, Validators.minLength(2)]],
-      email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, this.passwordStrengthValidator]],
-      confirmPassword: ['', [Validators.required]],
-      acceptTerms: [false, [Validators.requiredTrue]]
-    }, { validators: this.passwordMatchValidator });
+    this.registerForm = this.fb.group(
+      {
+        firstName: ['', [Validators.required, Validators.minLength(2)]],
+        lastName: ['', [Validators.required, Validators.minLength(2)]],
+        email: ['', [Validators.required, Validators.email]],
+        password: ['', [Validators.required, this.passwordStrengthValidator]],
+        confirmPassword: ['', [Validators.required]],
+        acceptTerms: [false, [Validators.requiredTrue]],
+      },
+      { validators: this.passwordMatchValidator },
+    );
   }
 
   /**
@@ -464,7 +651,7 @@ export class RegisterComponent {
         confirmPassword: formData.confirmPassword,
         firstName: formData.firstName,
         lastName: formData.lastName,
-        acceptTerms: formData.acceptTerms
+        acceptTerms: formData.acceptTerms,
       };
 
       this.loading.set(true);
@@ -478,11 +665,11 @@ export class RegisterComponent {
         error: (error) => {
           this.loading.set(false);
           this.handleError(error);
-        }
+        },
       });
     } else {
       // Mark all fields as touched to show validation errors
-      Object.keys(this.registerForm.controls).forEach(key => {
+      Object.keys(this.registerForm.controls).forEach((key) => {
         this.registerForm.get(key)?.markAsTouched();
       });
     }
@@ -567,7 +754,9 @@ export class RegisterComponent {
    */
   private handleError(error: any): void {
     if (error.status === 409) {
-      this.error.set('An account with this email already exists. Please use a different email or try signing in.');
+      this.error.set(
+        'An account with this email already exists. Please use a different email or try signing in.',
+      );
     } else if (error.status === 400) {
       this.error.set('Please check your information and try again.');
     } else if (error.status === 0) {

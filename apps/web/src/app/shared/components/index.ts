@@ -23,3 +23,25 @@ export {
   type SectionContainerVariant,
   type SectionContainerSize,
 } from './section-container';
+
+// Welcome Page Components
+export {
+  WelcomePageComponent,
+  WelcomeHeroComponent,
+  WelcomeFeaturesComponent,
+  WelcomeApiDocsComponent,
+  FeatureShowcaseCardComponent,
+  WelcomeCTAButtonComponent,
+  type WelcomePageConfig,
+  type WelcomePageProps,
+  type WelcomeHeroConfig,
+  type WelcomeFeaturesConfig,
+  type WelcomeApiDocsConfig,
+  type WelcomeFeature,
+  type WelcomeCTAButton,
+  type WelcomeColorVariant,
+  type WelcomeButtonSize,
+  type WelcomeThemeConfig,
+  type WelcomeFooterConfig,
+  type WelcomeNavConfig,
+} from './welcome-page';

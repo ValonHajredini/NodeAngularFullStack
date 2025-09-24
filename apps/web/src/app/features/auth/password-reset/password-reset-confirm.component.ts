@@ -1,8 +1,15 @@
 import { Component, ChangeDetectionStrategy, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl } from '@angular/forms';
+import {
+  ReactiveFormsModule,
+  FormBuilder,
+  FormGroup,
+  Validators,
+  AbstractControl,
+} from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
+import { ThemeService } from '../../../core/services/theme.service';
 
 /**
  * Password reset confirmation component for token-based password reset.
@@ -13,17 +20,19 @@ import { AuthService } from '../../../core/auth/auth.service';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterLink],
   template: `
-    <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div
+      class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 auth-container"
+    >
       <div class="max-w-md w-full space-y-8">
         <!-- Header -->
         <div>
-          <div class="mx-auto h-12 w-12 flex items-center justify-center bg-primary-600 rounded-full">
+          <div
+            class="mx-auto h-12 w-12 flex items-center justify-center bg-primary-600 rounded-full"
+          >
             <i class="pi pi-lock text-white text-xl"></i>
           </div>
-          <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Set new password
-          </h2>
-          <p class="mt-2 text-center text-sm text-gray-600">
+          <h2 class="mt-6 text-center text-3xl font-extrabold auth-title">Set new password</h2>
+          <p class="mt-2 text-center text-sm auth-subtitle">
             Enter your new password below to complete the reset process.
           </p>
         </div>
@@ -39,9 +48,7 @@ import { AuthService } from '../../../core/auth/auth.service';
                     <i class="pi pi-exclamation-triangle text-error-400"></i>
                   </div>
                   <div class="ml-3">
-                    <h3 class="text-sm font-medium text-error-800">
-                      Reset Failed
-                    </h3>
+                    <h3 class="text-sm font-medium text-error-800">Reset Failed</h3>
                     <div class="mt-2 text-sm text-error-700">
                       {{ error() }}
                     </div>
@@ -52,7 +59,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 
             <!-- New Password Field -->
             <div>
-              <label for="password" class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="password" class="block text-sm font-medium mb-1 auth-label">
                 New Password
               </label>
               <input
@@ -60,14 +67,18 @@ import { AuthService } from '../../../core/auth/auth.service';
                 type="password"
                 formControlName="password"
                 placeholder="Enter your new password"
-                class="appearance-none relative block w-full px-3 py-2 border"
-                [class.border-gray-300]="!confirmForm.get('password')?.invalid || !confirmForm.get('password')?.touched"
-                [class.border-error-300]="confirmForm.get('password')?.invalid && confirmForm.get('password')?.touched"
-                [class.focus:border-primary-500]="!confirmForm.get('password')?.invalid"
-                [class.focus:border-error-500]="confirmForm.get('password')?.invalid"
-                class="rounded-md placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:z-10 sm:text-sm"
-                [attr.aria-invalid]="confirmForm.get('password')?.invalid && confirmForm.get('password')?.touched"
-                [attr.aria-describedby]="confirmForm.get('password')?.invalid && confirmForm.get('password')?.touched ? 'password-error' : null"
+                class="appearance-none relative block w-full px-3 py-2 border rounded-md focus:outline-none focus:z-10 sm:text-sm auth-input"
+                [class.error]="
+                  confirmForm.get('password')?.invalid && confirmForm.get('password')?.touched
+                "
+                [attr.aria-invalid]="
+                  confirmForm.get('password')?.invalid && confirmForm.get('password')?.touched
+                "
+                [attr.aria-describedby]="
+                  confirmForm.get('password')?.invalid && confirmForm.get('password')?.touched
+                    ? 'password-error'
+                    : null
+                "
               />
               @if (confirmForm.get('password')?.invalid && confirmForm.get('password')?.touched) {
                 <div id="password-error" class="mt-1 text-sm text-error-600" role="alert">
@@ -78,7 +89,8 @@ import { AuthService } from '../../../core/auth/auth.service';
                     Password must be at least 8 characters long.
                   }
                   @if (confirmForm.get('password')?.hasError('pattern')) {
-                    Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.
+                    Password must contain at least one uppercase letter, one lowercase letter, one
+                    number, and one special character.
                   }
                 </div>
               }
@@ -89,18 +101,28 @@ import { AuthService } from '../../../core/auth/auth.service';
                   <div class="flex items-center space-x-2">
                     <div class="flex space-x-1 flex-1">
                       @for (strength of [1, 2, 3, 4]; track strength) {
-                        <div class="h-2 flex-1 rounded-full"
-                             [class.bg-gray-200]="passwordStrength() < strength"
-                             [class.bg-error-400]="passwordStrength() >= strength && passwordStrength() <= 2"
-                             [class.bg-warning-400]="passwordStrength() >= strength && passwordStrength() === 3"
-                             [class.bg-success-400]="passwordStrength() >= strength && passwordStrength() === 4">
-                        </div>
+                        <div
+                          class="h-2 flex-1 rounded-full"
+                          [class.bg-gray-200]="passwordStrength() < strength"
+                          [class.bg-error-400]="
+                            passwordStrength() >= strength && passwordStrength() <= 2
+                          "
+                          [class.bg-warning-400]="
+                            passwordStrength() >= strength && passwordStrength() === 3
+                          "
+                          [class.bg-success-400]="
+                            passwordStrength() >= strength && passwordStrength() === 4
+                          "
+                        ></div>
                       }
                     </div>
-                    <span class="text-xs font-medium"
-                          [class.text-error-600]="passwordStrength() <= 2"
-                          [class.text-warning-600]="passwordStrength() === 3"
-                          [class.text-success-600]="passwordStrength() === 4">
+                    <span
+                      class="text-xs font-medium strength-text"
+                      [class.weak]="passwordStrength() <= 1"
+                      [class.fair]="passwordStrength() === 2"
+                      [class.good]="passwordStrength() === 3"
+                      [class.strong]="passwordStrength() === 4"
+                    >
                       {{ getStrengthText() }}
                     </span>
                   </div>
@@ -110,7 +132,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 
             <!-- Confirm Password Field -->
             <div>
-              <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="confirmPassword" class="block text-sm font-medium mb-1 auth-label">
                 Confirm New Password
               </label>
               <input
@@ -118,16 +140,26 @@ import { AuthService } from '../../../core/auth/auth.service';
                 type="password"
                 formControlName="confirmPassword"
                 placeholder="Confirm your new password"
-                class="appearance-none relative block w-full px-3 py-2 border"
-                [class.border-gray-300]="!confirmForm.get('confirmPassword')?.invalid || !confirmForm.get('confirmPassword')?.touched"
-                [class.border-error-300]="confirmForm.get('confirmPassword')?.invalid && confirmForm.get('confirmPassword')?.touched"
-                [class.focus:border-primary-500]="!confirmForm.get('confirmPassword')?.invalid"
-                [class.focus:border-error-500]="confirmForm.get('confirmPassword')?.invalid"
-                class="rounded-md placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:z-10 sm:text-sm"
-                [attr.aria-invalid]="confirmForm.get('confirmPassword')?.invalid && confirmForm.get('confirmPassword')?.touched"
-                [attr.aria-describedby]="confirmForm.get('confirmPassword')?.invalid && confirmForm.get('confirmPassword')?.touched ? 'confirm-password-error' : null"
+                class="appearance-none relative block w-full px-3 py-2 border rounded-md focus:outline-none focus:z-10 sm:text-sm auth-input"
+                [class.error]="
+                  confirmForm.get('confirmPassword')?.invalid &&
+                  confirmForm.get('confirmPassword')?.touched
+                "
+                [attr.aria-invalid]="
+                  confirmForm.get('confirmPassword')?.invalid &&
+                  confirmForm.get('confirmPassword')?.touched
+                "
+                [attr.aria-describedby]="
+                  confirmForm.get('confirmPassword')?.invalid &&
+                  confirmForm.get('confirmPassword')?.touched
+                    ? 'confirm-password-error'
+                    : null
+                "
               />
-              @if (confirmForm.get('confirmPassword')?.invalid && confirmForm.get('confirmPassword')?.touched) {
+              @if (
+                confirmForm.get('confirmPassword')?.invalid &&
+                confirmForm.get('confirmPassword')?.touched
+              ) {
                 <div id="confirm-password-error" class="mt-1 text-sm text-error-600" role="alert">
                   @if (confirmForm.get('confirmPassword')?.hasError('required')) {
                     Password confirmation is required.
@@ -148,12 +180,16 @@ import { AuthService } from '../../../core/auth/auth.service';
               >
                 @if (loading()) {
                   <div class="flex items-center">
-                    <div class="animate-spin -ml-1 mr-3 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                    <div
+                      class="animate-spin -ml-1 mr-3 h-4 w-4 border-2 border-white border-t-transparent rounded-full"
+                    ></div>
                     Resetting Password...
                   </div>
                 } @else {
                   <span class="absolute left-0 inset-y-0 flex items-center pl-3">
-                    <i class="pi pi-check text-primary-500 group-hover:text-primary-400 transition-colors"></i>
+                    <i
+                      class="pi pi-check text-primary-500 group-hover:text-primary-400 transition-colors"
+                    ></i>
                   </span>
                   Reset Password
                 }
@@ -162,8 +198,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 
             <!-- Back to Login -->
             <div class="text-center">
-              <a routerLink="/auth/login"
-                 class="font-medium text-primary-600 hover:text-primary-500 transition-colors">
+              <a routerLink="/auth/login" class="font-medium auth-link">
                 <i class="pi pi-arrow-left mr-2"></i>
                 Back to Sign In
               </a>
@@ -172,17 +207,19 @@ import { AuthService } from '../../../core/auth/auth.service';
         } @else {
           <!-- Success Message -->
           <div class="text-center">
-            <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-success-100 mb-4">
-              <i class="pi pi-check text-success-600 text-2xl"></i>
+            <div
+              class="mx-auto flex items-center justify-center h-16 w-16 rounded-full success-container mb-4"
+            >
+              <i class="pi pi-check success-icon text-2xl"></i>
             </div>
-            <h3 class="text-lg font-medium text-gray-900 mb-2">
-              Password reset successful!
-            </h3>
-            <p class="text-sm text-gray-600 mb-6">
+            <h3 class="text-lg font-medium mb-2 success-title">Password reset successful!</h3>
+            <p class="text-sm mb-6 success-text">
               Your password has been successfully reset. You can now sign in with your new password.
             </p>
-            <a routerLink="/auth/login"
-               class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200">
+            <a
+              routerLink="/auth/login"
+              class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200"
+            >
               <i class="pi pi-sign-in mr-2"></i>
               Sign In Now
             </a>
@@ -191,23 +228,116 @@ import { AuthService } from '../../../core/auth/auth.service';
       </div>
     </div>
   `,
-  styles: [`
-    .animate-fade-in {
-      animation: fadeIn 0.3s ease-in-out;
-    }
+  styles: [
+    `
+      /* Theme-aware color overrides */
+      .auth-container {
+        background-color: var(--color-background);
+        color: var(--color-text-primary);
+      }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  `],
-  changeDetection: ChangeDetectionStrategy.OnPush
+      .auth-title {
+        color: var(--color-text-primary);
+      }
+
+      .auth-subtitle {
+        color: var(--color-text-secondary);
+      }
+
+      .auth-label {
+        color: var(--color-text-primary);
+      }
+
+      .auth-input {
+        background-color: var(--color-surface);
+        color: var(--color-text-primary);
+        border-color: var(--color-border);
+        transition: var(--transition-colors);
+      }
+
+      .auth-input::placeholder {
+        color: var(--color-text-muted);
+      }
+
+      .auth-input:focus {
+        border-color: var(--color-primary-500);
+        box-shadow: 0 0 0 3px var(--color-primary-100);
+      }
+
+      .auth-input.error {
+        border-color: var(--color-error-500);
+      }
+
+      .auth-link {
+        color: var(--color-primary-600);
+        transition: var(--transition-colors);
+      }
+
+      .auth-link:hover {
+        color: var(--color-primary-500);
+      }
+
+      .strength-text {
+        transition: var(--transition-colors);
+      }
+
+      .strength-text.weak {
+        color: var(--color-error-600);
+      }
+
+      .strength-text.fair {
+        color: var(--color-warning-600);
+      }
+
+      .strength-text.good {
+        color: var(--color-warning-600);
+      }
+
+      .strength-text.strong {
+        color: var(--color-success-600);
+      }
+
+      .success-container {
+        background-color: var(--color-success-100);
+        border: var(--border-width-1) solid var(--color-success-200);
+      }
+
+      .success-icon {
+        color: var(--color-success-600);
+      }
+
+      .success-title {
+        color: var(--color-text-primary);
+      }
+
+      .success-text {
+        color: var(--color-text-secondary);
+      }
+
+      .animate-fade-in {
+        animation: fadeIn 0.3s ease-in-out;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    `,
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PasswordResetConfirmComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
+  readonly themeService = inject(ThemeService);
 
   protected readonly confirmForm: FormGroup;
   protected readonly loading = signal(false);
@@ -218,17 +348,23 @@ export class PasswordResetConfirmComponent implements OnInit {
   private resetToken: string = '';
 
   constructor() {
-    this.confirmForm = this.fb.group({
-      password: ['', [
-        Validators.required,
-        Validators.minLength(8),
-        Validators.pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
-      ]],
-      confirmPassword: ['', [Validators.required]]
-    }, { validators: this.passwordMatchValidator });
+    this.confirmForm = this.fb.group(
+      {
+        password: [
+          '',
+          [
+            Validators.required,
+            Validators.minLength(8),
+            Validators.pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/),
+          ],
+        ],
+        confirmPassword: ['', [Validators.required]],
+      },
+      { validators: this.passwordMatchValidator },
+    );
 
     // Monitor password changes for strength calculation
-    this.confirmForm.get('password')?.valueChanges.subscribe(password => {
+    this.confirmForm.get('password')?.valueChanges.subscribe((password) => {
       this.passwordStrength.set(this.calculatePasswordStrength(password));
     });
   }
@@ -260,11 +396,16 @@ export class PasswordResetConfirmComponent implements OnInit {
    */
   protected getStrengthText(): string {
     switch (this.passwordStrength()) {
-      case 1: return 'Weak';
-      case 2: return 'Fair';
-      case 3: return 'Good';
-      case 4: return 'Strong';
-      default: return '';
+      case 1:
+        return 'Weak';
+      case 2:
+        return 'Fair';
+      case 3:
+        return 'Good';
+      case 4:
+        return 'Strong';
+      default:
+        return '';
     }
   }
 
@@ -282,7 +423,7 @@ export class PasswordResetConfirmComponent implements OnInit {
       error: (error) => {
         this.loading.set(false);
         this.handleTokenError(error);
-      }
+      },
     });
   }
 
@@ -303,7 +444,7 @@ export class PasswordResetConfirmComponent implements OnInit {
       error: (error) => {
         this.loading.set(false);
         this.handleResetError(error);
-      }
+      },
     });
   }
 

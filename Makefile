@@ -55,3 +55,5 @@ pgweb:
 logs:
 	@echo "=> Tailing backend and frontend logs (Ctrl+C to exit)"
 	@tail -f logs/backend.log logs/frontend.log
+
+
