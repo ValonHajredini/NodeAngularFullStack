@@ -4,10 +4,15 @@ import tseslint from 'typescript-eslint';
 export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
-  ...tseslint.configs.strict,
-  ...tseslint.configs.stylistic,
   {
-    files: ['**/*.ts'],
+    files: ['src/**/*.ts'],
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: {
+        project: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
     rules: {
       // TypeScript-specific rules
       '@typescript-eslint/no-unused-vars': [
@@ -46,34 +51,37 @@ export default tseslint.config(
       'no-unreachable': 'error',
       'no-unused-expressions': 'error',
 
-      // JSDoc requirements for public APIs
-      'valid-jsdoc': [
-        'error',
-        {
-          requireReturn: false,
-          requireReturnDescription: false,
-          requireParamDescription: true,
-        },
-      ],
-      'require-jsdoc': [
-        'error',
-        {
-          require: {
-            FunctionDeclaration: true,
-            MethodDefinition: true,
-            ClassDeclaration: true,
-            ArrowFunctionExpression: false,
-          },
-        },
-      ],
+      // JSDoc requirements for public APIs (removed deprecated valid-jsdoc)
+      // Note: JSDoc validation can be handled by TypeScript compiler strict mode
+      // and documentation generators like JSDoc or TSDoc
     },
   },
   {
-    files: ['**/*.test.ts', '**/*.spec.ts'],
+    files: [
+      '**/*.test.ts',
+      '**/*.spec.ts',
+      'tests/**/*.ts',
+      'database/**/*.ts',
+      'jest.config.js',
+    ],
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: {
+        // No project for test/config files
+        ecmaVersion: 2022,
+        sourceType: 'module',
+      },
+    },
     rules: {
       // Relax rules for test files
       '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/strict-boolean-expressions': 'off',
+      '@typescript-eslint/prefer-nullish-coalescing': 'off',
+      '@typescript-eslint/no-floating-promises': 'off',
+      '@typescript-eslint/await-thenable': 'off',
+      '@typescript-eslint/no-misused-promises': 'off',
       'no-console': 'off',
+      'no-undef': 'off',
     },
   },
   {

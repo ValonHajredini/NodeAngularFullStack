@@ -60,7 +60,7 @@ export class UsersController {
         firstName: req.body.firstName,
         lastName: req.body.lastName,
         role: req.body.role || 'user',
-        tenantId: req.user?.tenantId,
+        tenantId: (req.user as any)?.tenantId,
       };
 
       const user = await usersService.createUser(userData);
@@ -119,7 +119,7 @@ export class UsersController {
         search,
         role,
         status,
-        tenantId: req.user?.tenantId,
+        tenantId: (req.user as any)?.tenantId,
       });
 
       res.status(200).json({
@@ -157,8 +157,8 @@ export class UsersController {
   ): Promise<void> => {
     try {
       const { id } = req.params;
-      const requestingUserId = req.user?.id;
-      const requestingUserRole = req.user?.role;
+      const requestingUserId = (req.user as any)?.id;
+      const requestingUserRole = (req.user as any)?.role;
 
       // Check access permissions
       if (!requestingUserId || !requestingUserRole) {
@@ -359,8 +359,8 @@ export class UsersController {
       }
 
       const { id } = req.params;
-      const requestingUserId = req.user?.id;
-      const requestingUserRole = req.user?.role;
+      const requestingUserId = (req.user as any)?.id;
+      const requestingUserRole = (req.user as any)?.role;
 
       // Check access permissions
       if (!requestingUserId || !requestingUserRole) {

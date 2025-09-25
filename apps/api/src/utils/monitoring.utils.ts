@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import { config } from './config.utils';
+import { databaseService } from '../services/database.service';
 
 /**
  * Monitoring and error tracking utilities for production deployment.
@@ -398,6 +399,140 @@ export const BusinessMetrics = {
       HealthMetrics.recordMetric('file_size', size, { operation });
     }
   },
+
+  /**
+   * Track API token usage events.
+   */
+  trackApiTokenUsage(
+    tokenId: string,
+    endpoint: string,
+    method: string,
+    statusCode: number,
+    duration: number,
+    ipAddress?: string,
+    userAgent?: string
+  ): void {
+    HealthMetrics.recordMetric('api_token_requests', 1, {
+      endpoint,
+      method,
+      status: statusCode.toString(),
+      tokenType: 'api_token',
+    });
+
+    HealthMetrics.recordMetric('api_token_response_time', duration, {
+      endpoint,
+      method,
+      tokenType: 'api_token',
+    });
+
+    // Add breadcrumb for token usage tracking
+    Sentry.addBreadcrumb({
+      category: 'api_token',
+      message: `API token used: ${method} ${endpoint}`,
+      level: statusCode >= 400 ? 'warning' : 'info',
+      data: {
+        tokenId,
+        endpoint,
+        method,
+        statusCode,
+        duration,
+        ipAddress,
+        userAgent: userAgent?.substring(0, 200), // Truncate user agent
+      },
+    });
+  },
+
+  /**
+   * Track API token authentication events.
+   */
+  trackApiTokenAuthEvent(
+    event: 'token_validated' | 'token_invalid' | 'token_expired',
+    tokenId?: string,
+    endpoint?: string
+  ): void {
+    HealthMetrics.recordMetric('api_token_auth_events', 1, {
+      event,
+      tokenId: tokenId || 'unknown',
+    });
+
+    Sentry.addBreadcrumb({
+      category: 'api_token_auth',
+      message: `API token authentication: ${event}`,
+      level: event !== 'token_validated' ? 'warning' : 'info',
+      data: { event, tokenId, endpoint },
+    });
+  },
+};
+
+/**
+ * Log API token usage to database for tracking and analytics.
+ * Performs async database insert with proper error handling.
+ */
+export const logApiTokenUsage = async (
+  tokenId: string,
+  endpoint: string,
+  method: string,
+  responseStatus: number,
+  processingTime: number,
+  ipAddress?: string,
+  userAgent?: string,
+  tenantId?: string
+): Promise<void> => {
+  try {
+    const query = `
+      INSERT INTO api_token_usage (
+        token_id, endpoint, method, response_status, processing_time,
+        ip_address, user_agent, tenant_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `;
+
+    const values = [
+      tokenId,
+      endpoint.substring(0, 512), // Ensure endpoint fits in VARCHAR(512)
+      method.substring(0, 10), // Ensure method fits in VARCHAR(10)
+      responseStatus,
+      processingTime,
+      ipAddress || null,
+      userAgent ? userAgent.substring(0, 1000) : null, // Truncate user agent
+      tenantId || null,
+    ];
+
+    // Execute async - don't block the response
+    setImmediate(async () => {
+      try {
+        // Check connection pool health before attempting database operation
+        const poolStatus = databaseService.getStatus();
+        if (!poolStatus.isConnected) {
+          console.warn(
+            'Skipping API token usage logging - database not connected'
+          );
+          return;
+        }
+
+        // Check if pool has available connections
+        if (poolStatus.totalConnections && poolStatus.totalConnections > 0) {
+          await databaseService.query(query, values);
+        } else {
+          console.warn(
+            'Skipping API token usage logging - no database connections available'
+          );
+        }
+      } catch (dbError) {
+        // Log database error but don't throw - usage logging should never break API responses
+        console.error('Failed to log API token usage to database:', dbError);
+        captureError(
+          new MonitoredError(
+            'Failed to log API token usage',
+            ErrorCategory.DATABASE,
+            { tokenId, endpoint, method, responseStatus, error: dbError }
+          )
+        );
+      }
+    });
+  } catch (error) {
+    // Log error but don't throw - usage logging should never break API responses
+    console.error('Error in logApiTokenUsage:', error);
+  }
 };
 
 /**
@@ -418,12 +553,40 @@ export const monitoringMiddleware = (req: any, res: any, next: any): void => {
   // Track the request
   res.on('finish', () => {
     const duration = Date.now() - startTime;
+
+    // Standard API usage tracking
     BusinessMetrics.trackApiUsage(
       req.route?.path || req.path,
       req.method,
       res.statusCode,
       duration
     );
+
+    // Enhanced API token usage tracking and database logging
+    if (req.user && req.authTokenType === 'api_token' && req.apiTokenId) {
+      // Track API token specific metrics
+      BusinessMetrics.trackApiTokenUsage(
+        req.apiTokenId,
+        req.route?.path || req.path,
+        req.method,
+        res.statusCode,
+        duration,
+        req.ip,
+        req.get('User-Agent')
+      );
+
+      // Log to database for analytics
+      logApiTokenUsage(
+        req.apiTokenId,
+        req.route?.path || req.path,
+        req.method,
+        res.statusCode,
+        duration,
+        req.ip,
+        req.get('User-Agent'),
+        req.user.tenantId
+      );
+    }
 
     // Log slow requests
     if (duration > 5000) {
@@ -433,6 +596,7 @@ export const monitoringMiddleware = (req: any, res: any, next: any): void => {
         method: req.method,
         duration,
         correlationId,
+        tokenType: req.authTokenType,
       });
     }
   });

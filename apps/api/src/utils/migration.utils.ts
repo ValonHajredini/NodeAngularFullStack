@@ -41,7 +41,9 @@ export class MigrationUtils {
       if (inFunction && trimmedLine.includes(functionDelimiter)) {
         currentStatement += line + '\n';
         // Check if this closes the function
-        const endMatch = line.match(new RegExp(`\\${functionDelimiter}\\s*(?:language|LANGUAGE)`));
+        const endMatch = line.match(
+          new RegExp(`\\${functionDelimiter}\\s*(?:language|LANGUAGE)`)
+        );
         if (endMatch) {
           inFunction = false;
           functionDelimiter = '';
@@ -72,14 +74,17 @@ export class MigrationUtils {
       statements.push(currentStatement.trim());
     }
 
-    return statements.filter(stmt => stmt.length > 0);
+    return statements.filter((stmt) => stmt.length > 0);
   }
 
   /**
    * Builds the database connection URL from environment variables.
    */
   private static getDatabaseUrl(): string {
-    if (process.env.DATABASE_URL && process.env.DATABASE_URL.trim().length > 0) {
+    if (
+      process.env.DATABASE_URL &&
+      process.env.DATABASE_URL.trim().length > 0
+    ) {
       return process.env.DATABASE_URL;
     }
 
@@ -105,7 +110,12 @@ export class MigrationUtils {
       // Ensure database connection is ready
       await this.ensureDatabaseConnection();
 
-      const migrationPath = join(process.cwd(), 'database', 'migrations', migrationFile);
+      const migrationPath = join(
+        process.cwd(),
+        'database',
+        'migrations',
+        migrationFile
+      );
       console.log(`🔧 Running migration: ${migrationFile}`);
       console.log(`📁 Migration path: ${migrationPath}`);
 
@@ -116,7 +126,9 @@ export class MigrationUtils {
 
       for (const statement of statements) {
         if (statement.trim()) {
-          console.log(`🔍 Executing statement: ${statement.substring(0, 100)}${statement.length > 100 ? '...' : ''}`);
+          console.log(
+            `🔍 Executing statement: ${statement.substring(0, 100)}${statement.length > 100 ? '...' : ''}`
+          );
           await databaseService.query(statement);
         }
       }
@@ -124,7 +136,9 @@ export class MigrationUtils {
       console.log(`✅ Migration ${migrationFile} completed successfully`);
     } catch (error) {
       console.error(`❌ Migration ${migrationFile} failed:`, error);
-      throw new Error(`Migration failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Migration failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -141,7 +155,12 @@ export class MigrationUtils {
       // For now, we'll manually specify the migration order
       // In a production app, you'd want to read the directory and sort files
       const migrations = [
-        '001_create_auth_tables.sql'
+        '001_create_auth_tables.sql',
+        '002_add_audit_logging.sql',
+        '003_enhance_multi_tenancy.sql',
+        '004_add_tenant_rls_policies.sql',
+        '005_create_api_tokens_table.sql',
+        '006_create_api_token_usage_table.sql',
       ];
 
       for (const migration of migrations) {
@@ -165,7 +184,9 @@ export class MigrationUtils {
       const status = databaseService.getStatus();
       if (!status.isConnected) {
         console.log('🔄 Initializing database connection...');
-        const dbConfig = DatabaseService.parseConnectionUrl(this.getDatabaseUrl());
+        const dbConfig = DatabaseService.parseConnectionUrl(
+          this.getDatabaseUrl()
+        );
         await databaseService.initialize(dbConfig);
         console.log('✅ Database connection initialized');
       }
@@ -203,7 +224,12 @@ export class MigrationUtils {
     try {
       // Ensure database connection is ready
       await this.ensureDatabaseConnection();
-      const requiredTables = ['users', 'sessions', 'password_resets', 'tenants'];
+      const requiredTables = [
+        'users',
+        'sessions',
+        'password_resets',
+        'tenants',
+      ];
 
       for (const table of requiredTables) {
         const result = await databaseService.query(
@@ -272,13 +298,15 @@ export class MigrationUtils {
 
       return {
         isValid: issues.length === 0,
-        issues
+        issues,
       };
     } catch (error) {
-      issues.push(`Schema validation error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      issues.push(
+        `Schema validation error: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
       return {
         isValid: false,
-        issues
+        issues,
       };
     }
   }
