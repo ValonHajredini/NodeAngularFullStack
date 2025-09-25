@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { JwtUtils } from '../utils/jwt.utils';
 import { authService } from '../services/auth.service';
+import { apiTokenService } from '../services/api-token.service';
 import { tenantRepository, Tenant } from '../repositories/tenant.repository';
 import { tenantConfig } from '../config/tenant.config';
 import { TenantContext } from '../utils/tenant.utils';
@@ -17,15 +18,16 @@ export interface AuthRequest extends Request {
   };
   tenant?: Tenant;
   tenantContext?: TenantContext;
+  tokenType?: 'jwt' | 'api_token';
 }
 
 /**
- * Authentication middleware for protecting routes with JWT tokens.
- * Validates access tokens and attaches user and tenant information to the request.
+ * Authentication middleware for protecting routes with JWT tokens and API tokens.
+ * Validates access tokens or API tokens and attaches user and tenant information to the request.
  */
 export class AuthMiddleware {
   /**
-   * Middleware to authenticate JWT access tokens.
+   * Middleware to authenticate JWT access tokens or API tokens.
    * Extracts token from Authorization header, validates it, and attaches user to request.
    * @param req - Express request object
    * @param res - Express response object
@@ -53,37 +55,89 @@ export class AuthMiddleware {
         return;
       }
 
-      let token: string;
-      try {
-        token = JwtUtils.extractTokenFromHeader(authHeader);
-      } catch (error: any) {
+      // Check if this is a Bearer token
+      if (!authHeader.startsWith('Bearer ')) {
         res.status(401).json({
           error: 'Unauthorized',
-          message: error.message,
+          message: 'Authorization header must use Bearer scheme',
           timestamp: new Date().toISOString(),
         });
         return;
       }
 
-      // Validate token and get user information
-      try {
-        const user = await authService.validateAccessToken(token);
+      const token = authHeader.slice(7); // Remove 'Bearer ' prefix
 
-        // Decode token to check for tenant context
-        const payload = JwtUtils.decodeToken(token);
+      // Try to determine token type and validate accordingly
+      try {
+        // First, try JWT validation
+        let authResult: {
+          user: any;
+          tenant?: any;
+          tokenType: 'jwt' | 'api_token';
+        } | null = null;
+
+        // Try JWT validation first (existing flow)
+        try {
+          const user = await authService.validateAccessToken(token);
+          authResult = { user, tokenType: 'jwt' };
+
+          // Decode JWT token to check for tenant context
+          const payload = JwtUtils.decodeToken(token);
+          if (payload?.tenant) {
+            authResult.tenant = payload.tenant;
+          }
+        } catch (jwtError) {
+          // If JWT validation fails, try API token validation
+          try {
+            const apiTokenValidation =
+              await apiTokenService.validateToken(token);
+            if (
+              apiTokenValidation.isValid &&
+              apiTokenValidation.user &&
+              apiTokenValidation.token
+            ) {
+              authResult = {
+                user: apiTokenValidation.user,
+                tenant: apiTokenValidation.tenant,
+                tokenType: 'api_token',
+              };
+            }
+          } catch (apiTokenError) {
+            // Both validations failed
+            res.status(401).json({
+              error: 'Unauthorized',
+              message: 'Invalid or expired token',
+              timestamp: new Date().toISOString(),
+            });
+            return;
+          }
+        }
+
+        if (!authResult) {
+          res.status(401).json({
+            error: 'Unauthorized',
+            message: 'Invalid or expired token',
+            timestamp: new Date().toISOString(),
+          });
+          return;
+        }
 
         // Attach user information to request
         (req as any).user = {
-          id: user.id,
-          email: user.email,
-          role: user.role,
-          tenantId: user.tenantId,
+          id: authResult.user.id,
+          email: authResult.user.email,
+          role: authResult.user.role,
+          tenantId: authResult.user.tenantId,
         };
 
-        // Handle tenant context if present in token
-        if (payload?.tenant && tenantConfig.tokenIsolation) {
+        // Attach token type to request
+        (req as any).tokenType = authResult.tokenType;
+
+        // Handle tenant context if present in token or from API token
+        const tenantId = authResult.tenant?.id || authResult.user.tenantId;
+        if (tenantId && tenantConfig.tokenIsolation) {
           // Verify tenant still exists and is active
-          const tenant = await tenantRepository.findById(payload.tenant.id);
+          const tenant = await tenantRepository.findById(tenantId);
           if (!tenant || !tenant.isActive) {
             res.status(401).json({
               error: 'Unauthorized',
@@ -94,7 +148,10 @@ export class AuthMiddleware {
           }
 
           // Validate user still belongs to tenant
-          if (user.tenantId && user.tenantId !== tenant.id) {
+          if (
+            authResult.user.tenantId &&
+            authResult.user.tenantId !== tenant.id
+          ) {
             res.status(403).json({
               error: 'Forbidden',
               message: 'User no longer belongs to this tenant',
@@ -140,7 +197,7 @@ export class AuthMiddleware {
       } catch (error: any) {
         res.status(401).json({
           error: 'Unauthorized',
-          message: 'Invalid or expired access token',
+          message: 'Invalid or expired token',
           timestamp: new Date().toISOString(),
         });
         return;

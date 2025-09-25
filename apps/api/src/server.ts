@@ -15,6 +15,7 @@ import swaggerSpec from './config/swagger.config';
 import healthRoutes from './routes/health.routes';
 import authRoutes from './routes/auth.routes';
 import { usersRoutes } from './routes/users.routes';
+import tokensRoutes from './routes/tokens.routes';
 
 /**
  * Express application server for the API.
@@ -118,6 +119,7 @@ class Server {
     this.app.use('/api/v1', healthRoutes);
     this.app.use('/api/v1/auth', authRoutes);
     this.app.use('/api/v1/users', usersRoutes);
+    this.app.use('/api/v1/tokens', tokensRoutes);
 
     // API root endpoint
     this.app.get('/api', (_req, res: Response) => {
@@ -256,6 +258,22 @@ class Server {
               '  PATCH  /api/v1/users/:id    - Partial update user (protected)'
             );
             console.log('  DELETE /api/v1/users/:id    - Delete user (admin)');
+            console.log('\n🔑 API token endpoints:');
+            console.log(
+              '  POST   /api/v1/tokens      - Create API token (protected)'
+            );
+            console.log(
+              '  GET    /api/v1/tokens      - List user tokens (protected)'
+            );
+            console.log(
+              '  GET    /api/v1/tokens/:id  - Get token info (protected)'
+            );
+            console.log(
+              '  PATCH  /api/v1/tokens/:id  - Update token (protected)'
+            );
+            console.log(
+              '  DELETE /api/v1/tokens/:id  - Revoke token (protected)'
+            );
 
             resolve();
           })

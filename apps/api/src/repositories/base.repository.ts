@@ -35,7 +35,9 @@ export abstract class BaseRepository<T> {
    * @returns boolean indicating if table has tenant_id column
    */
   protected supportsTenancy(): boolean {
-    return ['users', 'audit_logs', 'sessions'].includes(this.tableName);
+    return ['users', 'audit_logs', 'sessions', 'api_tokens'].includes(
+      this.tableName
+    );
   }
 
   /**
@@ -63,7 +65,9 @@ export abstract class BaseRepository<T> {
       const result = await client.query(query, params);
       return result.rows.length > 0 ? (result.rows[0] as T) : null;
     } catch (error: any) {
-      throw new Error(`Failed to find ${this.tableName} by ID: ${error.message}`);
+      throw new Error(
+        `Failed to find ${this.tableName} by ID: ${error.message}`
+      );
     } finally {
       client.release();
     }
@@ -132,7 +136,9 @@ export abstract class BaseRepository<T> {
       const result = await client.query(query, params);
       return result.rows as T[];
     } catch (error: any) {
-      throw new Error(`Failed to find ${this.tableName} records: ${error.message}`);
+      throw new Error(
+        `Failed to find ${this.tableName} records: ${error.message}`
+      );
     } finally {
       client.release();
     }
@@ -273,7 +279,9 @@ export abstract class BaseRepository<T> {
         WHERE table_name = $1 AND column_name = 'is_active'
       `;
 
-      const columnResult = await client.query(hasIsActiveQuery, [this.tableName]);
+      const columnResult = await client.query(hasIsActiveQuery, [
+        this.tableName,
+      ]);
 
       let query: string;
       if (columnResult.rows.length > 0) {
@@ -334,7 +342,9 @@ export abstract class BaseRepository<T> {
       const result = await client.query(query, params);
       return parseInt(result.rows[0].count, 10);
     } catch (error: any) {
-      throw new Error(`Failed to count ${this.tableName} records: ${error.message}`);
+      throw new Error(
+        `Failed to count ${this.tableName} records: ${error.message}`
+      );
     } finally {
       client.release();
     }
@@ -347,7 +357,10 @@ export abstract class BaseRepository<T> {
    * @returns Promise containing boolean indicating access allowed
    * @throws {Error} When validation fails
    */
-  async validateTenantAccess(id: string, tenantContext: TenantContext): Promise<boolean> {
+  async validateTenantAccess(
+    id: string,
+    tenantContext: TenantContext
+  ): Promise<boolean> {
     if (!this.supportsTenancy()) {
       return true; // No tenant isolation needed
     }
