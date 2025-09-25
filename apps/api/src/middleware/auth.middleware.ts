@@ -7,18 +7,15 @@ import { tenantConfig } from '../config/tenant.config';
 import { TenantContext } from '../utils/tenant.utils';
 
 /**
- * Extended request interface with tenant context.
+ * Extended request interface with tenant context and authentication details.
  */
 export interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-    role: string;
-    tenantId?: string;
-  };
+  user?: any;
   tenant?: Tenant;
   tenantContext?: TenantContext;
-  tokenType?: 'jwt' | 'api_token';
+  authTokenType?: 'jwt' | 'api_token';
+  apiTokenId?: string;
+  token?: any;
 }
 
 /**
@@ -39,7 +36,7 @@ export class AuthMiddleware {
    * });
    */
   static authenticate = async (
-    req: Request,
+    req: any,
     res: Response,
     next: NextFunction
   ): Promise<void> => {
@@ -69,22 +66,20 @@ export class AuthMiddleware {
 
       // Try to determine token type and validate accordingly
       try {
-        // First, try JWT validation
-        let authResult: {
-          user: any;
-          tenant?: any;
-          tokenType: 'jwt' | 'api_token';
-        } | null = null;
+        let user: any = null;
+        let tenant: any = null;
+        let tokenType: 'jwt' | 'api_token' = 'jwt';
+        let apiTokenData: any = null;
 
         // Try JWT validation first (existing flow)
         try {
-          const user = await authService.validateAccessToken(token);
-          authResult = { user, tokenType: 'jwt' };
+          user = await authService.validateAccessToken(token);
+          tokenType = 'jwt';
 
           // Decode JWT token to check for tenant context
           const payload = JwtUtils.decodeToken(token);
           if (payload?.tenant) {
-            authResult.tenant = payload.tenant;
+            tenant = payload.tenant;
           }
         } catch (jwtError) {
           // If JWT validation fails, try API token validation
@@ -96,11 +91,10 @@ export class AuthMiddleware {
               apiTokenValidation.user &&
               apiTokenValidation.token
             ) {
-              authResult = {
-                user: apiTokenValidation.user,
-                tenant: apiTokenValidation.tenant,
-                tokenType: 'api_token',
-              };
+              user = apiTokenValidation.user;
+              tenant = apiTokenValidation.tenant;
+              tokenType = 'api_token';
+              apiTokenData = apiTokenValidation.token;
             }
           } catch (apiTokenError) {
             // Both validations failed
@@ -113,7 +107,7 @@ export class AuthMiddleware {
           }
         }
 
-        if (!authResult) {
+        if (!user) {
           res.status(401).json({
             error: 'Unauthorized',
             message: 'Invalid or expired token',
@@ -124,21 +118,27 @@ export class AuthMiddleware {
 
         // Attach user information to request
         (req as any).user = {
-          id: authResult.user.id,
-          email: authResult.user.email,
-          role: authResult.user.role,
-          tenantId: authResult.user.tenantId,
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          tenantId: user.tenantId,
         };
 
         // Attach token type to request
-        (req as any).tokenType = authResult.tokenType;
+        (req as any).authTokenType = tokenType;
+
+        // For API tokens, also attach the token ID for usage tracking
+        if (tokenType === 'api_token' && apiTokenData) {
+          (req as any).apiTokenId = apiTokenData.id;
+          (req as any).token = apiTokenData;
+        }
 
         // Handle tenant context if present in token or from API token
-        const tenantId = authResult.tenant?.id || authResult.user.tenantId;
+        const tenantId = tenant?.id || user.tenantId;
         if (tenantId && tenantConfig.tokenIsolation) {
           // Verify tenant still exists and is active
-          const tenant = await tenantRepository.findById(tenantId);
-          if (!tenant || !tenant.isActive) {
+          const tenantRecord = await tenantRepository.findById(tenantId);
+          if (!tenantRecord || !tenantRecord.isActive) {
             res.status(401).json({
               error: 'Unauthorized',
               message: 'Tenant account is inactive or not found',
@@ -148,10 +148,7 @@ export class AuthMiddleware {
           }
 
           // Validate user still belongs to tenant
-          if (
-            authResult.user.tenantId &&
-            authResult.user.tenantId !== tenant.id
-          ) {
+          if (user.tenantId && user.tenantId !== tenantRecord.id) {
             res.status(403).json({
               error: 'Forbidden',
               message: 'User no longer belongs to this tenant',
@@ -162,34 +159,34 @@ export class AuthMiddleware {
 
           // Attach tenant information to request
           (req as any).tenant = {
-            id: tenant.id,
-            slug: tenant.slug,
-            plan: tenant.plan,
-            features: Object.keys(tenant.settings.features).filter(
-              (key) => tenant.settings.features[key]
+            id: tenantRecord.id,
+            slug: tenantRecord.slug,
+            plan: tenantRecord.plan,
+            features: Object.keys(tenantRecord.settings.features).filter(
+              (key) => tenantRecord.settings.features[key]
             ),
             limits: {
-              maxUsers: tenant.maxUsers,
-              maxStorage: tenant.settings.limits.maxStorage,
-              maxApiCalls: tenant.settings.limits.maxApiCalls,
+              maxUsers: tenantRecord.maxUsers,
+              maxStorage: tenantRecord.settings.limits.maxStorage,
+              maxApiCalls: tenantRecord.settings.limits.maxApiCalls,
             },
-            status: tenant.isActive ? 'active' : 'inactive',
+            status: tenantRecord.isActive ? 'active' : 'inactive',
           };
 
           // Create tenant context for downstream middleware
           (req as any).tenantContext = {
-            id: tenant.id,
-            slug: tenant.slug,
-            plan: tenant.plan,
-            features: Object.keys(tenant.settings.features).filter(
-              (key) => tenant.settings.features[key]
+            id: tenantRecord.id,
+            slug: tenantRecord.slug,
+            plan: tenantRecord.plan,
+            features: Object.keys(tenantRecord.settings.features).filter(
+              (key) => tenantRecord.settings.features[key]
             ),
             limits: {
-              maxUsers: tenant.maxUsers,
-              maxStorage: tenant.settings.limits.maxStorage,
-              maxApiCalls: tenant.settings.limits.maxApiCalls,
+              maxUsers: tenantRecord.maxUsers,
+              maxStorage: tenantRecord.settings.limits.maxStorage,
+              maxApiCalls: tenantRecord.settings.limits.maxApiCalls,
             },
-            status: tenant.isActive ? 'active' : 'inactive',
+            status: tenantRecord.isActive ? 'active' : 'inactive',
           };
         }
 
@@ -224,7 +221,7 @@ export class AuthMiddleware {
    * );
    */
   static requireRole = (requiredRoles: string[]) => {
-    return (req: AuthRequest, res: Response, next: NextFunction): void => {
+    return (req: any, res: Response, next: NextFunction): void => {
       if (!req.user) {
         res.status(401).json({
           error: 'Unauthorized',
@@ -260,11 +257,7 @@ export class AuthMiddleware {
    *   adminDashboardController
    * );
    */
-  static requireAdmin = (
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction
-  ): void => {
+  static requireAdmin = (req: any, res: Response, next: NextFunction): void => {
     AuthMiddleware.requireRole(['admin'])(req, res, next);
   };
 
@@ -282,7 +275,7 @@ export class AuthMiddleware {
    * );
    */
   static ensureTenantIsolation = (
-    req: AuthRequest,
+    req: any,
     res: Response,
     next: NextFunction
   ): void => {
@@ -324,7 +317,7 @@ export class AuthMiddleware {
    * );
    */
   static optionalAuth = async (
-    req: AuthRequest,
+    req: any,
     _res: Response,
     next: NextFunction
   ): Promise<void> => {
@@ -411,7 +404,7 @@ export class AuthMiddleware {
    * );
    */
   static requireOwnership = (userIdParam: string = 'userId') => {
-    return (req: AuthRequest, res: Response, next: NextFunction): void => {
+    return (req: any, res: Response, next: NextFunction): void => {
       if (!req.user) {
         res.status(401).json({
           error: 'Unauthorized',
@@ -461,7 +454,7 @@ export class AuthMiddleware {
    * );
    */
   static validateApiKey = (
-    req: AuthRequest,
+    req: any,
     res: Response,
     next: NextFunction
   ): void => {
@@ -500,7 +493,7 @@ export class AuthMiddleware {
    * app.use('/api/v1/auth', AuthMiddleware.logAuthEvents);
    */
   static logAuthEvents = (
-    req: Request,
+    req: any,
     res: Response,
     next: NextFunction
   ): void => {

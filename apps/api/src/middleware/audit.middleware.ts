@@ -76,8 +76,8 @@ export class AuditMiddleware {
             const changes = extractChanges(req, res);
 
             const auditEntry: AuditLogEntry = {
-              userId: req.user?.id,
-              tenantId: req.user?.tenantId,
+              userId: (req.user as any)?.id,
+              tenantId: (req.user as any)?.tenantId,
               action,
               resourceType,
               resourceId,
@@ -186,8 +186,8 @@ export class AuditMiddleware {
 
             for (const resourceId of affectedIds) {
               const auditEntry: AuditLogEntry = {
-                userId: req.user?.id,
-                tenantId: req.user?.tenantId,
+                userId: (req.user as any)?.id,
+                tenantId: (req.user as any)?.tenantId,
                 action,
                 resourceType,
                 resourceId,
@@ -256,8 +256,8 @@ export class AuditMiddleware {
           ) {
             userId = _responseData.data.user.id;
             changes.email = req.body.email;
-          } else if (action === 'LOGOUT' && req.user?.id) {
-            userId = req.user.id;
+          } else if (action === 'LOGOUT' && (req.user as any)?.id) {
+            userId = (req.user as any).id;
           } else if (
             action === 'REGISTER' &&
             isSuccess &&
@@ -274,7 +274,7 @@ export class AuditMiddleware {
 
           const auditEntry: AuditLogEntry = {
             userId,
-            tenantId: req.user?.tenantId,
+            tenantId: (req.user as any)?.tenantId,
             action,
             resourceType: 'auth',
             changes,

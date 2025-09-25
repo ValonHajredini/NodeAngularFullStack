@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 import { apiTokenService } from '../services/api-token.service';
+import { TokenUsageService } from '../services/token-usage.service';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { AsyncHandler } from '../utils/async-handler.utils';
 
@@ -9,6 +10,11 @@ import { AsyncHandler } from '../utils/async-handler.utils';
  * Manages CRUD operations for API tokens with proper authentication and authorization.
  */
 export class TokenController {
+  private tokenUsageService: TokenUsageService;
+
+  constructor() {
+    this.tokenUsageService = new TokenUsageService();
+  }
   /**
    * Creates a new API token for the authenticated user.
    * @route POST /api/v1/tokens
@@ -400,6 +406,304 @@ export class TokenController {
           timestamp: new Date().toISOString(),
         });
       } catch (error) {
+        next(error);
+      }
+    }
+  );
+
+  /**
+   * Gets usage history for a specific token.
+   * @route GET /api/v1/tokens/:id/usage
+   * @param req - Express request object with token ID
+   * @param res - Express response object
+   * @param next - Express next function
+   * @returns HTTP response with paginated usage data
+   * @throws {ApiError} 401 - Authentication required
+   * @throws {ApiError} 404 - Token not found or access denied
+   * @example
+   * GET /api/v1/tokens/token-uuid/usage?page=1&limit=50&from=2024-01-01&to=2024-12-31
+   * Authorization: Bearer <jwt-token>
+   */
+  getTokenUsage = AsyncHandler(
+    async (
+      req: AuthRequest,
+      res: Response,
+      next: NextFunction
+    ): Promise<void> => {
+      try {
+        const tokenId = req.params.id;
+        const userId = req.user!.id;
+        const tenantContext = req.tenantContext;
+
+        // Parse query parameters
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = Math.min(parseInt(req.query.limit as string) || 50, 100); // Cap at 100
+        const from = req.query.from
+          ? new Date(req.query.from as string)
+          : undefined;
+        const to = req.query.to ? new Date(req.query.to as string) : undefined;
+        const status = req.query.status
+          ? (req.query.status as string)
+              .split(',')
+              .map((s) => parseInt(s.trim()))
+          : undefined;
+        const endpoint = req.query.endpoint as string;
+        const method = req.query.method as string;
+
+        // Validate date parameters
+        if (from && isNaN(from.getTime())) {
+          res.status(400).json({
+            success: false,
+            error: {
+              code: 'INVALID_DATE',
+              message: 'Invalid from date parameter',
+            },
+            timestamp: new Date().toISOString(),
+          });
+          return;
+        }
+
+        if (to && isNaN(to.getTime())) {
+          res.status(400).json({
+            success: false,
+            error: {
+              code: 'INVALID_DATE',
+              message: 'Invalid to date parameter',
+            },
+            timestamp: new Date().toISOString(),
+          });
+          return;
+        }
+
+        const filters = {
+          from,
+          to,
+          status,
+          endpoint,
+          method,
+        };
+
+        const usage = await this.tokenUsageService.getTokenUsage(
+          tokenId,
+          userId,
+          filters,
+          { page, limit },
+          tenantContext
+        );
+
+        res.status(200).json({
+          success: true,
+          data: usage,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (error: any) {
+        if (
+          error.message.includes('not found') ||
+          error.message.includes('access denied')
+        ) {
+          res.status(404).json({
+            success: false,
+            error: {
+              code: 'TOKEN_NOT_FOUND',
+              message: 'Token not found or access denied',
+            },
+            timestamp: new Date().toISOString(),
+          });
+          return;
+        }
+        next(error);
+      }
+    }
+  );
+
+  /**
+   * Gets usage statistics for a specific token.
+   * @route GET /api/v1/tokens/:id/usage/stats
+   * @param req - Express request object with token ID
+   * @param res - Express response object
+   * @param next - Express next function
+   * @returns HTTP response with usage statistics
+   * @throws {ApiError} 401 - Authentication required
+   * @throws {ApiError} 404 - Token not found or access denied
+   * @example
+   * GET /api/v1/tokens/token-uuid/usage/stats?from=2024-01-01&to=2024-12-31
+   * Authorization: Bearer <jwt-token>
+   */
+  getTokenUsageStats = AsyncHandler(
+    async (
+      req: AuthRequest,
+      res: Response,
+      next: NextFunction
+    ): Promise<void> => {
+      try {
+        const tokenId = req.params.id;
+        const userId = req.user!.id;
+        const tenantContext = req.tenantContext;
+
+        // Parse date range parameters
+        const from = req.query.from
+          ? new Date(req.query.from as string)
+          : undefined;
+        const to = req.query.to ? new Date(req.query.to as string) : undefined;
+
+        // Validate date parameters
+        if (from && isNaN(from.getTime())) {
+          res.status(400).json({
+            success: false,
+            error: {
+              code: 'INVALID_DATE',
+              message: 'Invalid from date parameter',
+            },
+            timestamp: new Date().toISOString(),
+          });
+          return;
+        }
+
+        if (to && isNaN(to.getTime())) {
+          res.status(400).json({
+            success: false,
+            error: {
+              code: 'INVALID_DATE',
+              message: 'Invalid to date parameter',
+            },
+            timestamp: new Date().toISOString(),
+          });
+          return;
+        }
+
+        const dateRange = from && to ? { from, to } : undefined;
+
+        const stats = await this.tokenUsageService.getTokenUsageStats(
+          tokenId,
+          userId,
+          tenantContext,
+          dateRange
+        );
+
+        res.status(200).json({
+          success: true,
+          data: stats,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (error: any) {
+        if (
+          error.message.includes('not found') ||
+          error.message.includes('access denied')
+        ) {
+          res.status(404).json({
+            success: false,
+            error: {
+              code: 'TOKEN_NOT_FOUND',
+              message: 'Token not found or access denied',
+            },
+            timestamp: new Date().toISOString(),
+          });
+          return;
+        }
+        next(error);
+      }
+    }
+  );
+
+  /**
+   * Gets time-series usage data for a specific token.
+   * @route GET /api/v1/tokens/:id/usage/timeseries
+   * @param req - Express request object with token ID
+   * @param res - Express response object
+   * @param next - Express next function
+   * @returns HTTP response with time-series usage data
+   * @throws {ApiError} 401 - Authentication required
+   * @throws {ApiError} 404 - Token not found or access denied
+   * @example
+   * GET /api/v1/tokens/token-uuid/usage/timeseries?period=day&from=2024-01-01&to=2024-12-31
+   * Authorization: Bearer <jwt-token>
+   */
+  getTokenUsageTimeSeries = AsyncHandler(
+    async (
+      req: AuthRequest,
+      res: Response,
+      next: NextFunction
+    ): Promise<void> => {
+      try {
+        const tokenId = req.params.id;
+        const userId = req.user!.id;
+        const tenantContext = req.tenantContext;
+
+        // Parse parameters
+        const period = (req.query.period as 'hour' | 'day') || 'day';
+        const from = req.query.from
+          ? new Date(req.query.from as string)
+          : undefined;
+        const to = req.query.to ? new Date(req.query.to as string) : undefined;
+
+        // Validate period parameter
+        if (!['hour', 'day'].includes(period)) {
+          res.status(400).json({
+            success: false,
+            error: {
+              code: 'INVALID_PERIOD',
+              message: 'Period must be either "hour" or "day"',
+            },
+            timestamp: new Date().toISOString(),
+          });
+          return;
+        }
+
+        // Validate date parameters
+        if (from && isNaN(from.getTime())) {
+          res.status(400).json({
+            success: false,
+            error: {
+              code: 'INVALID_DATE',
+              message: 'Invalid from date parameter',
+            },
+            timestamp: new Date().toISOString(),
+          });
+          return;
+        }
+
+        if (to && isNaN(to.getTime())) {
+          res.status(400).json({
+            success: false,
+            error: {
+              code: 'INVALID_DATE',
+              message: 'Invalid to date parameter',
+            },
+            timestamp: new Date().toISOString(),
+          });
+          return;
+        }
+
+        const dateRange = from && to ? { from, to } : undefined;
+
+        const timeSeries = await this.tokenUsageService.getTokenUsageTimeSeries(
+          tokenId,
+          userId,
+          period,
+          tenantContext,
+          dateRange
+        );
+
+        res.status(200).json({
+          success: true,
+          data: timeSeries,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (error: any) {
+        if (
+          error.message.includes('not found') ||
+          error.message.includes('access denied')
+        ) {
+          res.status(404).json({
+            success: false,
+            error: {
+              code: 'TOKEN_NOT_FOUND',
+              message: 'Token not found or access denied',
+            },
+            timestamp: new Date().toISOString(),
+          });
+          return;
+        }
         next(error);
       }
     }

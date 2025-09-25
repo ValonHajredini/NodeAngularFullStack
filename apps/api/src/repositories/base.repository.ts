@@ -35,9 +35,13 @@ export abstract class BaseRepository<T> {
    * @returns boolean indicating if table has tenant_id column
    */
   protected supportsTenancy(): boolean {
-    return ['users', 'audit_logs', 'sessions', 'api_tokens'].includes(
-      this.tableName
-    );
+    return [
+      'users',
+      'audit_logs',
+      'sessions',
+      'api_tokens',
+      'api_token_usage',
+    ].includes(this.tableName);
   }
 
   /**

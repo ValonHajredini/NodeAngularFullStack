@@ -445,6 +445,82 @@ export class ApiTokenService {
   }
 
   /**
+   * Finds a token by ID that belongs to a specific user.
+   * Used for authorization checks before showing token usage data.
+   * @param tokenId - Token ID to find
+   * @param userId - User ID that should own the token
+   * @param tenantContext - Optional tenant context for filtering
+   * @returns Promise containing token entity or null if not found/authorized
+   * @example
+   * const token = await apiTokenService.findByIdForUser('token-uuid', 'user-uuid');
+   * if (token) {
+   *   // User owns this token, proceed with usage data
+   * }
+   */
+  async findByIdForUser(
+    tokenId: string,
+    userId: string,
+    tenantContext?: { id: string }
+  ): Promise<ApiTokenEntity | null> {
+    try {
+      const token = await this.apiTokenRepository.findById(
+        tokenId,
+        tenantContext?.id
+      );
+
+      // Check if token exists and belongs to the user
+      if (!token || token.userId !== userId) {
+        return null;
+      }
+
+      return token;
+    } catch (error) {
+      console.error('Error finding token for user:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Finds all tokens for a specific user.
+   * Used for usage summaries and analytics.
+   * @param userId - User ID to find tokens for
+   * @param tenantContext - Optional tenant context for filtering
+   * @returns Promise containing array of token entities
+   */
+  async findByUserId(
+    userId: string,
+    tenantContext?: { id: string }
+  ): Promise<ApiTokenEntity[]> {
+    try {
+      return await this.apiTokenRepository.findByUserId(
+        userId,
+        tenantContext?.id
+      );
+    } catch (error) {
+      console.error('Error finding tokens for user:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Updates the last_used_at timestamp for a token.
+   * Called when token usage is logged.
+   * @param tokenId - Token ID to update
+   * @param lastUsedAt - Timestamp of last usage
+   * @returns Promise<void>
+   */
+  async updateLastUsedAt(tokenId: string, lastUsedAt: Date): Promise<void> {
+    try {
+      await this.apiTokenRepository.update(tokenId, {
+        lastUsedAt,
+      } as UpdateApiTokenData);
+    } catch (error) {
+      // Log but don't throw - this is a background operation
+      console.error('Failed to update token last used at:', error);
+    }
+  }
+
+  /**
    * Checks if a token has the required scope for an operation.
    * @param token - Token entity to check
    * @param requiredScope - Required scope ('read' or 'write')

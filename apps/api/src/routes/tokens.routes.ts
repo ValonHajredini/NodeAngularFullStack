@@ -377,4 +377,306 @@ router.delete(
   tokenController.deleteToken
 );
 
+/**
+ * @swagger
+ * /api/v1/tokens/{id}/usage:
+ *   get:
+ *     summary: Get token usage history
+ *     description: Returns paginated usage history for a specific API token
+ *     tags: [API Tokens]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Token ID
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 50
+ *         description: Number of records per page
+ *       - in: query
+ *         name: from
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Start date for filtering usage records
+ *       - in: query
+ *         name: to
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: End date for filtering usage records
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *         description: Comma-separated HTTP status codes to filter by
+ *         example: "200,201,400"
+ *       - in: query
+ *         name: endpoint
+ *         schema:
+ *           type: string
+ *         description: Filter by endpoint (partial match)
+ *       - in: query
+ *         name: method
+ *         schema:
+ *           type: string
+ *           enum: [GET, POST, PUT, DELETE, PATCH]
+ *         description: Filter by HTTP method
+ *     responses:
+ *       200:
+ *         description: Usage history retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     usage:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                           endpoint:
+ *                             type: string
+ *                             example: "/api/v1/users"
+ *                           method:
+ *                             type: string
+ *                             example: "GET"
+ *                           timestamp:
+ *                             type: string
+ *                             format: date-time
+ *                           responseStatus:
+ *                             type: integer
+ *                             example: 200
+ *                           processingTime:
+ *                             type: integer
+ *                             example: 125
+ *                           ipAddress:
+ *                             type: string
+ *                             example: "192.168.1.100"
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         page:
+ *                           type: integer
+ *                         limit:
+ *                           type: integer
+ *                         total:
+ *                           type: integer
+ *                         totalPages:
+ *                           type: integer
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *       400:
+ *         description: Invalid query parameters
+ *       401:
+ *         description: Authentication required
+ *       404:
+ *         description: Token not found or access denied
+ */
+router.get(
+  '/:id/usage',
+  AuthMiddleware.authenticate,
+  getTokenValidator,
+  tokenController.getTokenUsage
+);
+
+/**
+ * @swagger
+ * /api/v1/tokens/{id}/usage/stats:
+ *   get:
+ *     summary: Get token usage statistics
+ *     description: Returns usage statistics for a specific API token
+ *     tags: [API Tokens]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Token ID
+ *       - in: query
+ *         name: from
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Start date for statistics calculation
+ *       - in: query
+ *         name: to
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: End date for statistics calculation
+ *     responses:
+ *       200:
+ *         description: Usage statistics retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     totalRequests:
+ *                       type: integer
+ *                       example: 1250
+ *                     successfulRequests:
+ *                       type: integer
+ *                       example: 1180
+ *                     failedRequests:
+ *                       type: integer
+ *                       example: 70
+ *                     averageResponseTime:
+ *                       type: number
+ *                       example: 145.5
+ *                     topEndpoints:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           endpoint:
+ *                             type: string
+ *                           count:
+ *                             type: integer
+ *                     requestsByStatus:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           status:
+ *                             type: integer
+ *                           count:
+ *                             type: integer
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *       400:
+ *         description: Invalid query parameters
+ *       401:
+ *         description: Authentication required
+ *       404:
+ *         description: Token not found or access denied
+ */
+router.get(
+  '/:id/usage/stats',
+  AuthMiddleware.authenticate,
+  getTokenValidator,
+  tokenController.getTokenUsageStats
+);
+
+/**
+ * @swagger
+ * /api/v1/tokens/{id}/usage/timeseries:
+ *   get:
+ *     summary: Get token usage time-series data
+ *     description: Returns time-series usage data for analytics and charts
+ *     tags: [API Tokens]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Token ID
+ *       - in: query
+ *         name: period
+ *         schema:
+ *           type: string
+ *           enum: [hour, day]
+ *           default: day
+ *         description: Aggregation period for time series
+ *       - in: query
+ *         name: from
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Start date for time series
+ *       - in: query
+ *         name: to
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: End date for time series
+ *     responses:
+ *       200:
+ *         description: Time-series data retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     period:
+ *                       type: string
+ *                       enum: [hour, day]
+ *                       example: day
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           period:
+ *                             type: string
+ *                             format: date-time
+ *                           requests:
+ *                             type: integer
+ *                           averageResponseTime:
+ *                             type: number
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *       400:
+ *         description: Invalid query parameters
+ *       401:
+ *         description: Authentication required
+ *       404:
+ *         description: Token not found or access denied
+ */
+router.get(
+  '/:id/usage/timeseries',
+  AuthMiddleware.authenticate,
+  getTokenValidator,
+  tokenController.getTokenUsageTimeSeries
+);
+
 export default router;
