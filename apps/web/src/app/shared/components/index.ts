@@ -25,6 +25,7 @@ export {
   type SectionContainerVariant,
   type SectionContainerSize,
 } from './section-container';
+export { ApiTokenGeneratorComponent } from './api-token-generator';
 
 // Welcome Page Components
 export {
