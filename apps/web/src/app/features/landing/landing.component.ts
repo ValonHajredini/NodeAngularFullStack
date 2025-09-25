@@ -1,7 +1,8 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, computed } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { ThemeService } from '../../core/services/theme.service';
+import { AuthService } from '../../core/auth/auth.service';
 import {
   WelcomePageComponent,
   WelcomePageConfig,
@@ -15,7 +16,7 @@ import {
   imports: [CommonModule, WelcomePageComponent],
   template: `
     <app-welcome-page
-      [config]="welcomeConfig"
+      [config]="welcomeConfig()"
       (heroButtonClicked)="onHeroButtonClick($event)"
       (featureClicked)="onFeatureClick($event)"
       (apiDocsButtonClicked)="onApiDocsButtonClick($event)"
@@ -25,74 +26,94 @@ import {
 })
 export class LandingComponent {
   readonly themeService = inject(ThemeService);
+  readonly authService = inject(AuthService);
 
   constructor(private router: Router) {}
 
   /**
-   * Welcome page configuration
+   * Welcome page configuration - computed to adapt to authentication state
    */
-  welcomeConfig: WelcomePageConfig = {
-    hero: {
-      title: 'Welcome to',
-      accentText: 'NodeAngularStack',
-      subtitle: 'A modern full-stack application built with Node.js, Angular, and PostgreSQL.',
-      description:
-        'Experience seamless authentication, robust API management, and beautiful user interfaces.',
-      primaryButton: {
-        label: 'Create Account',
-        variant: 'primary',
-        size: 'lg',
-        action: () => this.navigateToRegister(),
+  welcomeConfig = computed((): WelcomePageConfig => {
+    const isAuthenticated = this.authService.isAuthenticated();
+    const user = this.authService.user();
+
+    return {
+      hero: {
+        title: isAuthenticated ? `Welcome back to` : 'Welcome to',
+        accentText: 'NodeAngularStack',
+        subtitle: isAuthenticated
+          ? `Hello ${user?.firstName || 'User'}! Ready to continue your journey?`
+          : 'A modern full-stack application built with Node.js, Angular, and PostgreSQL.',
+        description: isAuthenticated
+          ? 'Access your dashboard, manage your projects, and explore all the features available to you.'
+          : 'Experience seamless authentication, robust API management, and beautiful user interfaces.',
+        primaryButton: isAuthenticated
+          ? undefined
+          : {
+              label: 'Create Account',
+              variant: 'primary',
+              size: 'lg',
+              action: () => this.navigateToRegister(),
+            },
+        secondaryButton: isAuthenticated
+          ? undefined
+          : {
+              label: 'Sign In',
+              variant: 'secondary',
+              size: 'lg',
+              action: () => this.navigateToLogin(),
+            },
+        showThemeToggle: true,
       },
-      secondaryButton: {
-        label: 'Sign In',
-        variant: 'secondary',
-        size: 'lg',
-        action: () => this.navigateToLogin(),
+      features: {
+        title: 'Features',
+        description: 'Everything you need for a modern web application',
+        items: [
+          {
+            title: 'Secure Authentication',
+            description:
+              'JWT-based authentication with password reset, email verification, and account lockout protection.',
+            icon: 'pi pi-lock',
+            iconColor: 'primary',
+          },
+          {
+            title: 'High Performance',
+            description:
+              'Optimized Angular frontend with lazy loading and efficient Node.js backend with connection pooling.',
+            icon: 'pi pi-bolt',
+            iconColor: 'success',
+          },
+          {
+            title: 'Production Ready',
+            description:
+              'Docker containerization, comprehensive testing, API documentation, and monitoring capabilities.',
+            icon: 'pi pi-check-circle',
+            iconColor: 'purple',
+          },
+          {
+            title: 'Comprehensive Documentation',
+            description:
+              'Complete development guide, API reference, setup instructions, and troubleshooting resources.',
+            icon: 'pi pi-book',
+            iconColor: 'info',
+          },
+        ],
+        columns: 4,
       },
-      showThemeToggle: true,
-    },
-    features: {
-      title: 'Features',
-      description: 'Everything you need for a modern web application',
-      items: [
-        {
-          title: 'Secure Authentication',
-          description:
-            'JWT-based authentication with password reset, email verification, and account lockout protection.',
-          icon: 'pi pi-lock',
-          iconColor: 'primary',
-        },
-        {
-          title: 'High Performance',
-          description:
-            'Optimized Angular frontend with lazy loading and efficient Node.js backend with connection pooling.',
-          icon: 'pi pi-bolt',
-          iconColor: 'success',
-        },
-        {
-          title: 'Production Ready',
-          description:
-            'Docker containerization, comprehensive testing, API documentation, and monitoring capabilities.',
-          icon: 'pi pi-check-circle',
-          iconColor: 'purple',
-        },
-      ],
-      columns: 3,
-    },
-    apiDocs: {
-      title: 'API Documentation',
-      description: 'Explore our comprehensive API documentation',
-      docTitle: 'Swagger API Docs',
-      docDescription: 'Interactive API documentation with live testing capabilities',
-      docUrl: 'http://localhost:3000/api-docs',
-      docButtonLabel: 'View API Docs',
-      docButtonIcon: 'pi pi-external-link',
-    },
-    footer: {
-      copyrightText: '© 2025 NodeAngularStack. Built with Node.js, Angular, and PostgreSQL.',
-    },
-  };
+      apiDocs: {
+        title: 'API Documentation',
+        description: 'Explore our comprehensive API documentation',
+        docTitle: 'Swagger API Docs',
+        docDescription: 'Interactive API documentation with live testing capabilities',
+        docUrl: 'http://localhost:3000/api-docs',
+        docButtonLabel: 'View API Docs',
+        docButtonIcon: 'pi pi-external-link',
+      },
+      footer: {
+        copyrightText: '© 2025 NodeAngularStack. Built with Node.js, Angular, and PostgreSQL.',
+      },
+    };
+  });
 
   /**
    * Handle hero button clicks
@@ -108,7 +129,11 @@ export class LandingComponent {
    */
   onFeatureClick(feature: WelcomeFeature): void {
     console.log('Feature clicked:', feature.title);
-    // Add any feature-specific navigation or actions here
+    // Navigate to documentation when documentation feature is clicked
+    if (feature.title === 'Comprehensive Documentation') {
+      this.router.navigate(['/app/documentation']);
+    }
+    // Add any other feature-specific navigation or actions here
   }
 
   /**

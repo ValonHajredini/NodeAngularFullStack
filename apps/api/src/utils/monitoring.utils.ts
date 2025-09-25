@@ -20,32 +20,21 @@ export const initializeSentry = (): void => {
   }
 
   Sentry.init({
-    dsn: config.SENTRY_DSN,
-    environment: config.NODE_ENV,
-    release: config.APP_VERSION || '1.0.0',
+    dsn: String(config.SENTRY_DSN),
+    environment: String(config.NODE_ENV),
+    release: String(config.APP_VERSION) || '1.0.0',
 
     // Performance monitoring
-    tracesSampleRate: config.NODE_ENV === 'production' ? 0.1 : 1.0,
-    profilesSampleRate: config.NODE_ENV === 'production' ? 0.1 : 1.0,
+    tracesSampleRate: String(config.NODE_ENV) === 'production' ? 0.1 : 1.0,
+    profilesSampleRate: String(config.NODE_ENV) === 'production' ? 0.1 : 1.0,
 
     // Integrations
     integrations: [
       // Enable profiling
       nodeProfilingIntegration(),
-
-      // Database monitoring
-      new Sentry.Integrations.Postgres(),
-
-      // HTTP requests monitoring
-      new Sentry.Integrations.Http({
-        tracing: true,
-        breadcrumbs: true,
-      }),
-
-      // Console logs as breadcrumbs
-      new Sentry.Integrations.Console({
-        levels: ['error', 'warn'],
-      }),
+      // Note: Using newer integration imports, some integrations might not be available
+      // Database monitoring would be configured here if available
+      // HTTP and Console integrations are typically included by default
     ],
 
     // Sampling configuration
@@ -153,7 +142,7 @@ export const captureError = (
     },
   });
 
-  return eventId;
+  return eventId || 'unknown';
 };
 
 /**
@@ -168,7 +157,7 @@ export const captureMessage = (
 
   Sentry.setContext('message_context', context);
 
-  return eventId;
+  return eventId || 'unknown';
 };
 
 /**
@@ -183,9 +172,17 @@ export const setUserContext = (user: {
   Sentry.setUser({
     id: user.id,
     email: user.email,
-    role: user.role,
-    tenantId: user.tenantId,
-  });
+    username: user.role, // Using username field for role compatibility
+    // Additional user data can be added to extras
+  } as any);
+
+  // Set additional context for role and tenant
+  if (user.role || user.tenantId) {
+    Sentry.setContext('user_details', {
+      role: user.role,
+      tenantId: user.tenantId,
+    });
+  }
 };
 
 /**

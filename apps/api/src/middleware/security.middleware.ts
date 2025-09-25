@@ -111,17 +111,7 @@ export const createHelmetConfig = () => {
       policy: 'strict-origin-when-cross-origin',
     },
 
-    // Permissions Policy
-    permissionsPolicy: {
-      camera: [],
-      microphone: [],
-      geolocation: [],
-      payment: [],
-      usb: [],
-      magnetometer: [],
-      gyroscope: [],
-      accelerometer: [],
-    },
+    // Note: Permissions Policy configuration would go here if supported by this version of Helmet
 
     // Cross-Origin Embedder Policy
     crossOriginEmbedderPolicy: false, // May interfere with some APIs
@@ -198,7 +188,7 @@ export const configureTrustProxy = (app: any) => {
   app.set('trust proxy', 1);
 
   // Custom middleware to ensure proper IP detection
-  app.use((req: Request, res: Response, next: NextFunction) => {
+  app.use((req: Request, _res: Response, next: NextFunction) => {
     // Get real IP from various headers
     const realIp =
       req.headers['x-forwarded-for'] ||
@@ -206,8 +196,14 @@ export const configureTrustProxy = (app: any) => {
       req.connection.remoteAddress ||
       req.ip;
 
-    // Set IP for rate limiting and logging
-    req.ip = Array.isArray(realIp) ? realIp[0] : (realIp as string);
+    // Set IP for rate limiting and logging (using Object.defineProperty to avoid read-only error)
+    const ipToSet = Array.isArray(realIp) ? realIp[0] : (realIp as string);
+    Object.defineProperty(req, 'ip', {
+      value: ipToSet,
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
 
     next();
   });
@@ -221,7 +217,7 @@ export const securityHeaders = (
   req: Request,
   res: Response,
   next: NextFunction
-) => {
+): void => {
   // Server identification
   res.removeHeader('X-Powered-By');
   res.setHeader('Server', 'NodeAngularFullStack');
@@ -255,16 +251,17 @@ export const requestSizeLimiter = (
   req: Request,
   res: Response,
   next: NextFunction
-) => {
+): void => {
   const maxSize = 10 * 1024 * 1024; // 10MB
 
   if (req.headers['content-length']) {
     const contentLength = parseInt(req.headers['content-length'], 10);
     if (contentLength > maxSize) {
-      return res.status(413).json({
+      res.status(413).json({
         error: 'Request entity too large',
         maxSize: '10MB',
       });
+      return;
     }
   }
 

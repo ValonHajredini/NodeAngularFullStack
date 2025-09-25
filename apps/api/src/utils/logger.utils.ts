@@ -27,7 +27,7 @@ const logFormat = winston.format.combine(
   winston.format.errors({ stack: true }),
   winston.format.json(),
   winston.format.printf(({ timestamp, level, message, stack, ...meta }) => {
-    const logEntry = {
+    const logEntry: any = {
       timestamp,
       level,
       message,
@@ -50,16 +50,15 @@ const logFormat = winston.format.combine(
  */
 const createConsoleTransport = () => {
   return new winston.transports.Console({
-    level: config.LOG_LEVEL || 'info',
+    level: String(config.LOG_LEVEL) || 'info',
     format: winston.format.combine(
       winston.format.colorize(),
       winston.format.timestamp({
         format: 'HH:mm:ss',
       }),
       winston.format.printf(({ timestamp, level, message, ...meta }) => {
-        const metaStr = Object.keys(meta).length
-          ? JSON.stringify(meta, null, 2)
-          : '';
+        const metaStr =
+          Object.keys(meta).length > 0 ? JSON.stringify(meta, null, 2) : '';
         return `${timestamp} ${level}: ${message} ${metaStr}`;
       })
     ),
@@ -72,7 +71,7 @@ const createConsoleTransport = () => {
 const createFileTransport = () => {
   return new winston.transports.File({
     filename: 'logs/app.log',
-    level: config.LOG_LEVEL || 'info',
+    level: String(config.LOG_LEVEL) || 'info',
     format: logFormat,
     maxsize: 10485760, // 10MB
     maxFiles: 5,
@@ -107,9 +106,9 @@ const createLogtailTransport = () => {
     return null;
   }
 
-  const logtail = new Logtail(config.LOGTAIL_TOKEN);
+  const logtail = new Logtail(String(config.LOGTAIL_TOKEN));
   return new LogtailTransport(logtail, {
-    level: config.LOG_LEVEL || 'info',
+    level: String(config.LOG_LEVEL) || 'info',
   });
 };
 
@@ -136,7 +135,7 @@ const createLogger = (): winston.Logger => {
 
   return winston.createLogger({
     levels: LOG_LEVELS,
-    level: config.LOG_LEVEL || 'info',
+    level: String(config.LOG_LEVEL) || 'info',
     format: logFormat,
     transports,
     exitOnError: false,
@@ -264,7 +263,7 @@ export const LogHelpers = {
         event: 'db.error',
         error: error.message,
         query,
-        stack: error.stack,
+        stack: error.stack || '',
       });
     },
 
@@ -308,7 +307,7 @@ export const LogHelpers = {
         method,
         url,
         error: error.message,
-        stack: error.stack,
+        stack: error.stack || '',
       });
     },
 
@@ -372,7 +371,7 @@ export const LogHelpers = {
         operation,
         fileName,
         error: error.message,
-        stack: error.stack,
+        stack: error.stack || '',
       });
     },
   },

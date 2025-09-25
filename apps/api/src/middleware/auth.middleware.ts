@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { JwtUtils } from '../utils/jwt.utils';
 import { authService } from '../services/auth.service';
-import { tenantRepository } from '../repositories/tenant.repository';
+import { tenantRepository, Tenant } from '../repositories/tenant.repository';
 import { tenantConfig } from '../config/tenant.config';
 import { TenantContext } from '../utils/tenant.utils';
 
@@ -15,14 +15,7 @@ export interface AuthRequest extends Request {
     role: string;
     tenantId?: string;
   };
-  tenant?: {
-    id: string;
-    slug: string;
-    plan: string;
-    features: string[];
-    limits: Record<string, number>;
-    status: string;
-  };
+  tenant?: Tenant;
   tenantContext?: TenantContext;
 }
 

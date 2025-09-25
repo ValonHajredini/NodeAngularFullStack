@@ -4,6 +4,7 @@ import { Router, RouterOutlet, RouterLink, NavigationEnd } from '@angular/router
 import { filter } from 'rxjs/operators';
 import { AuthService, User } from '../../core/auth/auth.service';
 import { ThemeToggleComponent } from '../../shared/components';
+import { UserDropdownMenuComponent } from '../../shared/components/user-dropdown-menu/user-dropdown-menu.component';
 
 /**
  * Interface for navigation menu items.
@@ -25,7 +26,13 @@ export interface NavigationItem {
 @Component({
   selector: 'app-main-layout',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, ThemeToggleComponent],
+  imports: [
+    CommonModule,
+    RouterOutlet,
+    RouterLink,
+    ThemeToggleComponent,
+    UserDropdownMenuComponent,
+  ],
   template: `
     <div class="min-h-screen main-container">
       <!-- Navigation Header -->
@@ -36,7 +43,7 @@ export interface NavigationItem {
             <div class="flex">
               <!-- Logo -->
               <div class="flex-shrink-0 flex items-center">
-                <a routerLink="/dashboard" class="flex items-center">
+                <a routerLink="/app/dashboard" class="flex items-center">
                   <div class="h-8 w-8 bg-primary-600 rounded-lg flex items-center justify-center">
                     <i class="pi pi-home text-white text-lg"></i>
                   </div>
@@ -78,70 +85,7 @@ export interface NavigationItem {
               </button>
 
               <!-- User Menu Dropdown -->
-              <div class="ml-3 relative">
-                <button
-                  type="button"
-                  (click)="toggleUserMenu()"
-                  class="nav-button rounded-full flex text-sm transition-colors"
-                  [attr.aria-expanded]="userMenuOpen()"
-                  aria-haspopup="true"
-                >
-                  <span class="sr-only">Open user menu</span>
-                  @if (user()) {
-                    <div
-                      class="h-8 w-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center"
-                    >
-                      <span class="text-sm font-medium text-white">
-                        {{ getUserInitials() }}
-                      </span>
-                    </div>
-                  }
-                </button>
-
-                <!-- User Dropdown Menu -->
-                @if (userMenuOpen()) {
-                  <div
-                    class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 dropdown-menu ring-1 ring-black ring-opacity-5 focus:outline-none z-50 animate-fade-in"
-                  >
-                    <!-- User Info -->
-                    @if (user()) {
-                      <div class="px-4 py-3 dropdown-divider">
-                        <p class="text-sm font-medium dropdown-text-primary">
-                          {{ user()!.firstName }} {{ user()!.lastName }}
-                        </p>
-                        <p class="text-sm dropdown-text-secondary">{{ user()!.email }}</p>
-                        <span
-                          class="inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs font-medium"
-                          [class.bg-blue-100]="user()!.role === 'admin'"
-                          [class.text-blue-800]="user()!.role === 'admin'"
-                          [class.bg-green-100]="user()!.role === 'user'"
-                          [class.text-green-800]="user()!.role === 'user'"
-                          [class.bg-gray-100]="user()!.role === 'readonly'"
-                          [class.text-gray-800]="user()!.role === 'readonly'"
-                        >
-                          {{ getRoleDisplayName(user()!.role) }}
-                        </span>
-                      </div>
-                    }
-
-                    <!-- Menu Items -->
-                    @for (item of userMenuItems; track item.label) {
-                      @if (item.separator) {
-                        <div class="dropdown-divider my-1"></div>
-                      } @else {
-                        <a
-                          [routerLink]="item.route"
-                          (click)="handleUserMenuClick(item)"
-                          class="dropdown-item"
-                        >
-                          <i [class]="item.icon" class="mr-2 dropdown-icon"></i>
-                          {{ item.label }}
-                        </a>
-                      }
-                    }
-                  </div>
-                }
-              </div>
+              <app-user-dropdown-menu />
             </div>
 
             <!-- Mobile Menu Button -->
@@ -184,41 +128,14 @@ export interface NavigationItem {
             <!-- Mobile User Section -->
             @if (user()) {
               <div class="pt-4 pb-3 mobile-user-section">
-                <div class="flex items-center px-4">
-                  <div class="flex-shrink-0">
-                    <div
-                      class="h-10 w-10 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center"
-                    >
-                      <span class="text-sm font-medium text-white">
-                        {{ getUserInitials() }}
-                      </span>
-                    </div>
-                  </div>
-                  <div class="ml-3">
-                    <div class="text-base font-medium mobile-text-primary">
-                      {{ user()!.firstName }} {{ user()!.lastName }}
-                    </div>
-                    <div class="text-sm mobile-text-secondary">{{ user()!.email }}</div>
-                  </div>
+                <!-- Theme Toggle for Mobile -->
+                <div class="px-4 py-2">
+                  <app-theme-toggle [showAllOptions]="true" />
                 </div>
-                <div class="mt-3 space-y-1">
-                  <!-- Theme Toggle for Mobile -->
-                  <div class="px-4 py-2">
-                    <app-theme-toggle [showAllOptions]="true" />
-                  </div>
 
-                  @for (item of userMenuItems; track item.label) {
-                    @if (!item.separator) {
-                      <a
-                        [routerLink]="item.route"
-                        (click)="handleUserMenuClick(item)"
-                        class="mobile-user-menu-item"
-                      >
-                        <i [class]="item.icon" class="mr-3"></i>
-                        {{ item.label }}
-                      </a>
-                    }
-                  }
+                <!-- User Dropdown for Mobile -->
+                <div class="px-4 py-2">
+                  <app-user-dropdown-menu />
                 </div>
               </div>
             }
@@ -446,7 +363,6 @@ export class MainLayoutComponent implements OnInit {
 
   protected readonly user = this.authService.user;
   protected readonly mobileMenuOpen = signal(false);
-  protected readonly userMenuOpen = signal(false);
   protected readonly currentRoute = signal('');
 
   /**
@@ -456,65 +372,40 @@ export class MainLayoutComponent implements OnInit {
   protected readonly navigationItems: NavigationItem[] = [
     {
       label: 'Dashboard',
-      route: '/dashboard',
+      route: '/app/dashboard',
       icon: 'pi pi-home',
     },
     {
       label: 'Projects',
-      route: '/projects',
+      route: '/app/projects',
       icon: 'pi pi-folder',
     },
     {
       label: 'Tasks',
-      route: '/tasks',
+      route: '/app/tasks',
       icon: 'pi pi-check-square',
     },
     {
       label: 'Team',
-      route: '/team',
+      route: '/app/team',
       icon: 'pi pi-users',
     },
     {
       label: 'Reports',
-      route: '/reports',
+      route: '/app/reports',
       icon: 'pi pi-chart-bar',
       roles: ['admin', 'user'],
     },
     {
       label: 'Admin',
-      route: '/admin',
+      route: '/app/admin',
       icon: 'pi pi-cog',
       roles: ['admin'],
     },
-  ];
-
-  /**
-   * User menu dropdown items.
-   */
-  protected readonly userMenuItems = [
     {
-      label: 'Your Profile',
-      route: '/profile',
-      icon: 'pi pi-user',
-    },
-    {
-      label: 'Settings',
-      route: '/settings',
-      icon: 'pi pi-cog',
-    },
-    {
-      label: 'Help & Support',
-      route: '/support',
-      icon: 'pi pi-question-circle',
-    },
-    {
-      separator: true,
-    },
-    {
-      label: 'Sign Out',
-      route: '/logout',
-      icon: 'pi pi-sign-out',
-      action: 'logout',
+      label: 'Documentation',
+      route: '/app/documentation',
+      icon: 'pi pi-book',
     },
   ];
 
@@ -526,19 +417,10 @@ export class MainLayoutComponent implements OnInit {
         this.currentRoute.set(event.urlAfterRedirects);
         // Close mobile menu on navigation
         this.mobileMenuOpen.set(false);
-        this.userMenuOpen.set(false);
       });
 
     // Set initial route
     this.currentRoute.set(this.router.url);
-
-    // Close menus when clicking outside
-    document.addEventListener('click', (event) => {
-      const target = event.target as HTMLElement;
-      if (!target.closest('.relative')) {
-        this.userMenuOpen.set(false);
-      }
-    });
   }
 
   /**
@@ -563,38 +445,10 @@ export class MainLayoutComponent implements OnInit {
   }
 
   /**
-   * Gets user initials for avatar display.
-   */
-  public getUserInitials(): string {
-    const currentUser = this.user();
-    if (!currentUser) return '';
-    return `${currentUser.firstName.charAt(0)}${currentUser.lastName.charAt(0)}`.toUpperCase();
-  }
-
-  /**
-   * Gets display name for user role.
-   */
-  public getRoleDisplayName(role: string): string {
-    switch (role) {
-      case 'admin':
-        return 'Administrator';
-      case 'user':
-        return 'User';
-      case 'readonly':
-        return 'Read Only';
-      default:
-        return role;
-    }
-  }
-
-  /**
    * Toggles the mobile menu visibility.
    */
   public toggleMobileMenu(): void {
     this.mobileMenuOpen.update((open) => !open);
-    if (this.mobileMenuOpen()) {
-      this.userMenuOpen.set(false);
-    }
   }
 
   /**
@@ -602,36 +456,5 @@ export class MainLayoutComponent implements OnInit {
    */
   public closeMobileMenu(): void {
     this.mobileMenuOpen.set(false);
-  }
-
-  /**
-   * Toggles the user menu dropdown visibility.
-   */
-  public toggleUserMenu(): void {
-    this.userMenuOpen.update((open) => !open);
-    if (this.userMenuOpen()) {
-      this.mobileMenuOpen.set(false);
-    }
-  }
-
-  /**
-   * Handles user menu item clicks.
-   */
-  public handleUserMenuClick(item: any): void {
-    this.userMenuOpen.set(false);
-    this.mobileMenuOpen.set(false);
-
-    if (item.action === 'logout') {
-      this.authService.logout().subscribe({
-        next: () => {
-          // Navigation handled by AuthService
-        },
-        error: (error) => {
-          console.error('Logout failed:', error);
-          // Force navigation to login even if server logout fails
-          this.router.navigate(['/auth/login']);
-        },
-      });
-    }
   }
 }

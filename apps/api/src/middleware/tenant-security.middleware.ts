@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { tenantConfig } from '../config/tenant.config';
-import { AuditService } from '../services/audit.service';
 
 /**
  * Security audit entry interface for cross-tenant access attempts.
@@ -29,7 +28,7 @@ export class TenantSecurityMiddleware {
    */
   static auditTenantAccess = (
     req: Request,
-    res: Response,
+    _res: Response,
     next: NextFunction
   ): void => {
     try {

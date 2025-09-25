@@ -5,6 +5,8 @@ export {
   type ErrorSeverity,
 } from './error-feedback.component';
 export { ThemeToggleComponent } from './theme-toggle';
+export { UserDropdownMenuComponent } from './user-dropdown-menu/user-dropdown-menu.component';
+export { NavigationBarComponent } from './navigation-bar/navigation-bar.component';
 export {
   ActionCardComponent,
   type ActionCardData,

@@ -14,7 +14,7 @@ import { ProfileService } from './profile.service';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterLink],
   template: `
-    <div class="min-h-screen bg-gray-50 py-8">
+    <div class="py-8">
       <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Header -->
         <div class="mb-8">
@@ -30,7 +30,9 @@ import { ProfileService } from './profile.service';
                 <!-- Avatar Section -->
                 <div class="flex flex-col items-center">
                   <div class="relative">
-                    <div class="h-24 w-24 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
+                    <div
+                      class="h-24 w-24 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center"
+                    >
                       @if (user()?.firstName && user()?.lastName) {
                         <span class="text-2xl font-bold text-white">
                           {{ getInitials(user()!.firstName, user()!.lastName) }}
@@ -42,7 +44,8 @@ import { ProfileService } from './profile.service';
                     <button
                       type="button"
                       class="absolute bottom-0 right-0 bg-white rounded-full p-1 shadow-lg border border-gray-200 hover:bg-gray-50 transition-colors"
-                      title="Upload avatar (coming soon)">
+                      title="Upload avatar (coming soon)"
+                    >
                       <i class="pi pi-camera text-gray-600 text-sm"></i>
                     </button>
                   </div>
@@ -52,18 +55,22 @@ import { ProfileService } from './profile.service';
                       {{ user()!.firstName }} {{ user()!.lastName }}
                     </h3>
                     <p class="text-sm text-gray-500">{{ user()!.email }}</p>
-                    <span class="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                          [class.bg-blue-100]="user()!.role === 'admin'"
-                          [class.text-blue-800]="user()!.role === 'admin'"
-                          [class.bg-green-100]="user()!.role === 'user'"
-                          [class.text-green-800]="user()!.role === 'user'"
-                          [class.bg-gray-100]="user()!.role === 'readonly'"
-                          [class.text-gray-800]="user()!.role === 'readonly'">
-                      <i class="pi"
-                         [class.pi-shield]="user()!.role === 'admin'"
-                         [class.pi-user]="user()!.role === 'user'"
-                         [class.pi-eye]="user()!.role === 'readonly'"
-                         class="mr-1 text-xs"></i>
+                    <span
+                      class="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                      [class.bg-blue-100]="user()!.role === 'admin'"
+                      [class.text-blue-800]="user()!.role === 'admin'"
+                      [class.bg-green-100]="user()!.role === 'user'"
+                      [class.text-green-800]="user()!.role === 'user'"
+                      [class.bg-gray-100]="user()!.role === 'readonly'"
+                      [class.text-gray-800]="user()!.role === 'readonly'"
+                    >
+                      <i
+                        class="pi"
+                        [class.pi-shield]="user()!.role === 'admin'"
+                        [class.pi-user]="user()!.role === 'user'"
+                        [class.pi-eye]="user()!.role === 'readonly'"
+                        class="mr-1 text-xs"
+                      ></i>
                       {{ getRoleDisplayName(user()!.role) }}
                     </span>
                   }
@@ -75,7 +82,9 @@ import { ProfileService } from './profile.service';
                   <div class="space-y-3">
                     <div class="flex items-center justify-between">
                       <span class="text-sm text-gray-600">Account Status</span>
-                      <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      <span
+                        class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                      >
                         <i class="pi pi-check-circle mr-1"></i>
                         Active
                       </span>
@@ -83,17 +92,23 @@ import { ProfileService } from './profile.service';
                     @if (user()) {
                       <div class="flex items-center justify-between">
                         <span class="text-sm text-gray-600">Member Since</span>
-                        <span class="text-sm text-gray-900">{{ formatDate(user()!.createdAt) }}</span>
+                        <span class="text-sm text-gray-900">{{
+                          formatDate(user()!.createdAt)
+                        }}</span>
                       </div>
                       <div class="flex items-center justify-between">
                         <span class="text-sm text-gray-600">Last Updated</span>
-                        <span class="text-sm text-gray-900">{{ formatDate(user()!.updatedAt) }}</span>
+                        <span class="text-sm text-gray-900">{{
+                          formatDate(user()!.updatedAt)
+                        }}</span>
                       </div>
                     }
                     @if (lastLoginDate()) {
                       <div class="flex items-center justify-between">
                         <span class="text-sm text-gray-600">Last Login</span>
-                        <span class="text-sm text-gray-900">{{ formatDate(lastLoginDate()!) }}</span>
+                        <span class="text-sm text-gray-900">{{
+                          formatDate(lastLoginDate()!)
+                        }}</span>
                       </div>
                     }
                   </div>
@@ -126,7 +141,8 @@ import { ProfileService } from './profile.service';
                         <button
                           type="button"
                           (click)="successMessage.set(null)"
-                          class="text-success-400 hover:text-success-600">
+                          class="text-success-400 hover:text-success-600"
+                        >
                           <i class="pi pi-times"></i>
                         </button>
                       </div>
@@ -142,9 +158,7 @@ import { ProfileService } from './profile.service';
                         <i class="pi pi-exclamation-triangle text-error-400"></i>
                       </div>
                       <div class="ml-3">
-                        <h3 class="text-sm font-medium text-error-800">
-                          Update Failed
-                        </h3>
+                        <h3 class="text-sm font-medium text-error-800">Update Failed</h3>
                         <div class="mt-2 text-sm text-error-700">
                           {{ error() }}
                         </div>
@@ -153,7 +167,8 @@ import { ProfileService } from './profile.service';
                         <button
                           type="button"
                           (click)="error.set(null)"
-                          class="text-error-400 hover:text-error-600">
+                          class="text-error-400 hover:text-error-600"
+                        >
                           <i class="pi pi-times"></i>
                         </button>
                       </div>
@@ -161,7 +176,12 @@ import { ProfileService } from './profile.service';
                   </div>
                 }
 
-                <form [formGroup]="profileForm" (ngSubmit)="onSubmit()" class="space-y-6" novalidate>
+                <form
+                  [formGroup]="profileForm"
+                  (ngSubmit)="onSubmit()"
+                  class="space-y-6"
+                  novalidate
+                >
                   <!-- Personal Details Grid -->
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <!-- First Name -->
@@ -174,15 +194,32 @@ import { ProfileService } from './profile.service';
                         type="text"
                         formControlName="firstName"
                         class="appearance-none block w-full px-3 py-2 border"
-                        [class.border-gray-300]="!profileForm.get('firstName')?.invalid || !profileForm.get('firstName')?.touched"
-                        [class.border-error-300]="profileForm.get('firstName')?.invalid && profileForm.get('firstName')?.touched"
+                        [class.border-gray-300]="
+                          !profileForm.get('firstName')?.invalid ||
+                          !profileForm.get('firstName')?.touched
+                        "
+                        [class.border-error-300]="
+                          profileForm.get('firstName')?.invalid &&
+                          profileForm.get('firstName')?.touched
+                        "
                         [class.focus:border-primary-500]="!profileForm.get('firstName')?.invalid"
                         [class.focus:border-error-500]="profileForm.get('firstName')?.invalid"
                         class="rounded-md placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:z-10 sm:text-sm"
-                        [attr.aria-invalid]="profileForm.get('firstName')?.invalid && profileForm.get('firstName')?.touched"
-                        [attr.aria-describedby]="profileForm.get('firstName')?.invalid && profileForm.get('firstName')?.touched ? 'firstName-error' : null"
+                        [attr.aria-invalid]="
+                          profileForm.get('firstName')?.invalid &&
+                          profileForm.get('firstName')?.touched
+                        "
+                        [attr.aria-describedby]="
+                          profileForm.get('firstName')?.invalid &&
+                          profileForm.get('firstName')?.touched
+                            ? 'firstName-error'
+                            : null
+                        "
                       />
-                      @if (profileForm.get('firstName')?.invalid && profileForm.get('firstName')?.touched) {
+                      @if (
+                        profileForm.get('firstName')?.invalid &&
+                        profileForm.get('firstName')?.touched
+                      ) {
                         <div id="firstName-error" class="mt-1 text-sm text-error-600" role="alert">
                           @if (profileForm.get('firstName')?.hasError('required')) {
                             First name is required.
@@ -204,15 +241,31 @@ import { ProfileService } from './profile.service';
                         type="text"
                         formControlName="lastName"
                         class="appearance-none block w-full px-3 py-2 border"
-                        [class.border-gray-300]="!profileForm.get('lastName')?.invalid || !profileForm.get('lastName')?.touched"
-                        [class.border-error-300]="profileForm.get('lastName')?.invalid && profileForm.get('lastName')?.touched"
+                        [class.border-gray-300]="
+                          !profileForm.get('lastName')?.invalid ||
+                          !profileForm.get('lastName')?.touched
+                        "
+                        [class.border-error-300]="
+                          profileForm.get('lastName')?.invalid &&
+                          profileForm.get('lastName')?.touched
+                        "
                         [class.focus:border-primary-500]="!profileForm.get('lastName')?.invalid"
                         [class.focus:border-error-500]="profileForm.get('lastName')?.invalid"
                         class="rounded-md placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:z-10 sm:text-sm"
-                        [attr.aria-invalid]="profileForm.get('lastName')?.invalid && profileForm.get('lastName')?.touched"
-                        [attr.aria-describedby]="profileForm.get('lastName')?.invalid && profileForm.get('lastName')?.touched ? 'lastName-error' : null"
+                        [attr.aria-invalid]="
+                          profileForm.get('lastName')?.invalid &&
+                          profileForm.get('lastName')?.touched
+                        "
+                        [attr.aria-describedby]="
+                          profileForm.get('lastName')?.invalid &&
+                          profileForm.get('lastName')?.touched
+                            ? 'lastName-error'
+                            : null
+                        "
                       />
-                      @if (profileForm.get('lastName')?.invalid && profileForm.get('lastName')?.touched) {
+                      @if (
+                        profileForm.get('lastName')?.invalid && profileForm.get('lastName')?.touched
+                      ) {
                         <div id="lastName-error" class="mt-1 text-sm text-error-600" role="alert">
                           @if (profileForm.get('lastName')?.hasError('required')) {
                             Last name is required.
@@ -235,11 +288,12 @@ import { ProfileService } from './profile.service';
                       type="email"
                       formControlName="email"
                       readonly
-                      class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500 sm:text-sm cursor-not-allowed"
+                      class="appearance-none block w-full px-3 py-2 border border-primary rounded-md bg-gray-100 text-muted sm:text-sm cursor-not-allowed"
                     />
                     <p class="mt-1 text-sm text-gray-500">
                       <i class="pi pi-info-circle mr-1"></i>
-                      Email address cannot be changed. Contact support if you need to update your email.
+                      Email address cannot be changed. Contact support if you need to update your
+                      email.
                     </p>
                   </div>
 
@@ -249,7 +303,8 @@ import { ProfileService } from './profile.service';
                       type="button"
                       (click)="resetForm()"
                       [disabled]="!hasChanges() || loading()"
-                      class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200">
+                      class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                    >
                       <i class="pi pi-refresh mr-2"></i>
                       Reset Changes
                     </button>
@@ -257,10 +312,13 @@ import { ProfileService } from './profile.service';
                     <button
                       type="submit"
                       [disabled]="profileForm.invalid || !hasChanges() || loading()"
-                      class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200">
+                      class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                    >
                       @if (loading()) {
                         <div class="flex items-center">
-                          <div class="animate-spin -ml-1 mr-3 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                          <div
+                            class="animate-spin -ml-1 mr-3 h-4 w-4 border-2 border-white border-t-transparent rounded-full"
+                          ></div>
                           Updating...
                         </div>
                       } @else {
@@ -276,17 +334,17 @@ import { ProfileService } from './profile.service';
             <!-- Security Section -->
             <div class="mt-8 bg-white shadow rounded-lg">
               <div class="px-4 py-5 sm:p-6">
-                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
-                  Security & Privacy
-                </h3>
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Security & Privacy</h3>
                 <div class="space-y-4">
                   <div class="flex items-center justify-between">
                     <div>
                       <h4 class="text-sm font-medium text-gray-900">Password</h4>
                       <p class="text-sm text-gray-500">Change your account password</p>
                     </div>
-                    <a routerLink="/auth/password-reset"
-                       class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors">
+                    <a
+                      routerLink="/auth/password-reset"
+                      class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+                    >
                       <i class="pi pi-key mr-2"></i>
                       Change Password
                     </a>
@@ -299,17 +357,25 @@ import { ProfileService } from './profile.service';
       </div>
     </div>
   `,
-  styles: [`
-    .animate-fade-in {
-      animation: fadeIn 0.3s ease-in-out;
-    }
+  styles: [
+    `
+      .animate-fade-in {
+        animation: fadeIn 0.3s ease-in-out;
+      }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  `],
-  changeDetection: ChangeDetectionStrategy.OnPush
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    `,
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProfileComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
@@ -330,7 +396,7 @@ export class ProfileComponent implements OnInit {
     this.profileForm = this.fb.group({
       firstName: ['', [Validators.required, Validators.minLength(2)]],
       lastName: ['', [Validators.required, Validators.minLength(2)]],
-      email: ['']
+      email: [''],
     });
   }
 
@@ -376,10 +442,14 @@ export class ProfileComponent implements OnInit {
    */
   public getRoleDisplayName(role: string): string {
     switch (role) {
-      case 'admin': return 'Administrator';
-      case 'user': return 'User';
-      case 'readonly': return 'Read Only';
-      default: return role;
+      case 'admin':
+        return 'Administrator';
+      case 'user':
+        return 'User';
+      case 'readonly':
+        return 'Read Only';
+      default:
+        return role;
     }
   }
 
@@ -390,7 +460,7 @@ export class ProfileComponent implements OnInit {
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     });
   }
 
@@ -403,7 +473,7 @@ export class ProfileComponent implements OnInit {
       const formData = {
         firstName: currentUser.firstName,
         lastName: currentUser.lastName,
-        email: currentUser.email
+        email: currentUser.email,
       };
 
       this.profileForm.patchValue(formData);
@@ -421,7 +491,7 @@ export class ProfileComponent implements OnInit {
     const formValue = this.profileForm.value;
     const updateData = {
       firstName: formValue.firstName,
-      lastName: formValue.lastName
+      lastName: formValue.lastName,
     };
 
     this.loading.set(true);
@@ -437,7 +507,7 @@ export class ProfileComponent implements OnInit {
         this.originalFormValue = {
           firstName: updatedUser.firstName,
           lastName: updatedUser.lastName,
-          email: updatedUser.email
+          email: updatedUser.email,
         };
 
         // Clear success message after 5 seconds
@@ -448,7 +518,7 @@ export class ProfileComponent implements OnInit {
       error: (error) => {
         this.loading.set(false);
         this.handleError(error);
-      }
+      },
     });
   }
 

@@ -1,7 +1,22 @@
 import { Request, Response, NextFunction } from 'express';
 import { tenantRepository, Tenant } from '../repositories/tenant.repository';
-import { isMultiTenancyEnabled, validateTenantContext, TenantContext } from '../utils/tenant.utils';
+import {
+  isMultiTenancyEnabled,
+  validateTenantContext,
+  TenantContext,
+} from '../utils/tenant.utils';
 import { databaseService } from '../services/database.service';
+
+// Extend the Express Request interface globally
+declare global {
+  namespace Express {
+    interface Request {
+      tenant?: Tenant;
+      tenantContext?: TenantContext;
+      user?: any;
+    }
+  }
+}
 
 /**
  * Extended request interface with tenant context.
@@ -40,8 +55,8 @@ export class TenantMiddleware {
           error: {
             code: 'TENANT_REQUIRED',
             message: 'Tenant identifier is required in multi-tenant mode',
-            timestamp: new Date().toISOString()
-          }
+            timestamp: new Date().toISOString(),
+          },
         });
         return;
       }
@@ -54,8 +69,8 @@ export class TenantMiddleware {
           error: {
             code: 'TENANT_NOT_FOUND',
             message: 'Tenant not found or inactive',
-            timestamp: new Date().toISOString()
-          }
+            timestamp: new Date().toISOString(),
+          },
         });
         return;
       }
@@ -66,8 +81,8 @@ export class TenantMiddleware {
           error: {
             code: 'TENANT_INACTIVE',
             message: 'Tenant account is inactive or suspended',
-            timestamp: new Date().toISOString()
-          }
+            timestamp: new Date().toISOString(),
+          },
         });
         return;
       }
@@ -77,11 +92,11 @@ export class TenantMiddleware {
         id: tenant.id,
         slug: tenant.slug,
         features: Object.keys(tenant.settings.features).filter(
-          key => tenant.settings.features[key]
+          (key) => tenant.settings.features[key]
         ),
         limits: tenant.settings.limits,
         plan: tenant.plan,
-        status: tenant.status
+        status: tenant.status,
       };
 
       // Validate tenant context
@@ -100,8 +115,8 @@ export class TenantMiddleware {
         error: {
           code: 'TENANT_CONTEXT_ERROR',
           message: `Failed to process tenant context: ${error.message}`,
-          timestamp: new Date().toISOString()
-        }
+          timestamp: new Date().toISOString(),
+        },
       });
       return;
     }
@@ -129,8 +144,8 @@ export class TenantMiddleware {
           error: {
             code: 'USER_REQUIRED',
             message: 'User authentication required',
-            timestamp: new Date().toISOString()
-          }
+            timestamp: new Date().toISOString(),
+          },
         });
         return;
       }
@@ -140,8 +155,8 @@ export class TenantMiddleware {
           error: {
             code: 'TENANT_CONTEXT_REQUIRED',
             message: 'Tenant context is required',
-            timestamp: new Date().toISOString()
-          }
+            timestamp: new Date().toISOString(),
+          },
         });
         return;
       }
@@ -152,8 +167,8 @@ export class TenantMiddleware {
           error: {
             code: 'TENANT_ACCESS_DENIED',
             message: 'User does not belong to this tenant',
-            timestamp: new Date().toISOString()
-          }
+            timestamp: new Date().toISOString(),
+          },
         });
         return;
       }
@@ -164,8 +179,8 @@ export class TenantMiddleware {
         error: {
           code: 'TENANT_VALIDATION_ERROR',
           message: `Tenant access validation failed: ${error.message}`,
-          timestamp: new Date().toISOString()
-        }
+          timestamp: new Date().toISOString(),
+        },
       });
       return;
     }
@@ -189,21 +204,22 @@ export class TenantMiddleware {
             error: {
               code: 'TENANT_CONTEXT_REQUIRED',
               message: 'Tenant context is required',
-              timestamp: new Date().toISOString()
-            }
+              timestamp: new Date().toISOString(),
+            },
           });
           return;
         }
 
-        const hasFeature = req.tenantContext.features?.includes(featureName) || false;
+        const hasFeature =
+          req.tenantContext.features?.includes(featureName) || false;
 
         if (!hasFeature) {
           res.status(403).json({
             error: {
               code: 'FEATURE_NOT_AVAILABLE',
               message: `Feature '${featureName}' is not available for this tenant plan`,
-              timestamp: new Date().toISOString()
-            }
+              timestamp: new Date().toISOString(),
+            },
           });
           return;
         }
@@ -214,8 +230,8 @@ export class TenantMiddleware {
           error: {
             code: 'FEATURE_VALIDATION_ERROR',
             message: `Feature validation failed: ${error.message}`,
-            timestamp: new Date().toISOString()
-          }
+            timestamp: new Date().toISOString(),
+          },
         });
         return;
       }
@@ -228,8 +244,15 @@ export class TenantMiddleware {
    * @param currentUsage - Current usage count (optional, will be calculated if not provided)
    * @returns Middleware function
    */
-  static checkTenantLimit(limitType: 'users' | 'storage' | 'api_calls', currentUsage?: number) {
-    return async (req: TenantRequest, res: Response, next: NextFunction): Promise<void> => {
+  static checkTenantLimit(
+    limitType: 'users' | 'storage' | 'api_calls',
+    currentUsage?: number
+  ) {
+    return async (
+      req: TenantRequest,
+      res: Response,
+      next: NextFunction
+    ): Promise<void> => {
       try {
         // Skip limit checks in single-tenant mode
         if (!isMultiTenancyEnabled()) {
@@ -241,8 +264,8 @@ export class TenantMiddleware {
             error: {
               code: 'TENANT_CONTEXT_REQUIRED',
               message: 'Tenant context is required',
-              timestamp: new Date().toISOString()
-            }
+              timestamp: new Date().toISOString(),
+            },
           });
           return;
         }
@@ -250,7 +273,10 @@ export class TenantMiddleware {
         // Get current usage if not provided
         let usage = currentUsage;
         if (usage === undefined) {
-          usage = await TenantMiddleware.getCurrentUsage(req.tenantContext.id, limitType);
+          usage = await TenantMiddleware.getCurrentUsage(
+            req.tenantContext.id,
+            limitType
+          );
         }
 
         // Get tenant limits
@@ -276,8 +302,8 @@ export class TenantMiddleware {
             error: {
               code: 'TENANT_LIMIT_EXCEEDED',
               message: `Tenant ${limitType} limit exceeded (${usage}/${limit})`,
-              timestamp: new Date().toISOString()
-            }
+              timestamp: new Date().toISOString(),
+            },
           });
           return;
         }
@@ -288,8 +314,8 @@ export class TenantMiddleware {
           error: {
             code: 'LIMIT_CHECK_ERROR',
             message: `Limit validation failed: ${error.message}`,
-            timestamp: new Date().toISOString()
-          }
+            timestamp: new Date().toISOString(),
+          },
         });
         return;
       }
@@ -302,7 +328,11 @@ export class TenantMiddleware {
    * @returns Middleware function
    */
   static auditTenantOperation(operation: string) {
-    return (req: TenantRequest & { user?: any }, _res: Response, next: NextFunction): void => {
+    return (
+      req: TenantRequest & { user?: any },
+      _res: Response,
+      next: NextFunction
+    ): void => {
       try {
         // Skip audit logging in single-tenant mode for performance
         if (!isMultiTenancyEnabled()) {
@@ -396,7 +426,9 @@ export class TenantMiddleware {
    * Sets tenant context in database session for RLS.
    * @param tenantId - Tenant UUID
    */
-  private static async setDatabaseTenantContext(tenantId: string): Promise<void> {
+  private static async setDatabaseTenantContext(
+    tenantId: string
+  ): Promise<void> {
     try {
       const pool = databaseService.getPool();
       await pool.query(`SELECT set_tenant_context($1)`, [tenantId]);
@@ -467,18 +499,15 @@ export class TenantMiddleware {
   ): Promise<void> {
     try {
       const pool = databaseService.getPool();
-      await pool.query(
-        `SELECT log_tenant_access($1, $2, $3, $4, $5, $6, $7)`,
-        [
-          tenantContext.id,
-          userId,
-          operation,
-          'api_request',
-          null, // resource_id
-          ipAddress || null,
-          userAgent || null
-        ]
-      );
+      await pool.query(`SELECT log_tenant_access($1, $2, $3, $4, $5, $6, $7)`, [
+        tenantContext.id,
+        userId,
+        operation,
+        'api_request',
+        null, // resource_id
+        ipAddress || null,
+        userAgent || null,
+      ]);
     } catch (error: any) {
       console.error('Failed to log tenant operation:', error.message);
     }
@@ -487,7 +516,8 @@ export class TenantMiddleware {
 
 // Export commonly used middleware functions
 export const extractTenantContext = TenantMiddleware.extractTenantContext;
-export const validateUserTenantAccess = TenantMiddleware.validateUserTenantAccess;
+export const validateUserTenantAccess =
+  TenantMiddleware.validateUserTenantAccess;
 export const requireTenantFeature = TenantMiddleware.requireTenantFeature;
 export const checkTenantLimit = TenantMiddleware.checkTenantLimit;
 export const auditTenantOperation = TenantMiddleware.auditTenantOperation;

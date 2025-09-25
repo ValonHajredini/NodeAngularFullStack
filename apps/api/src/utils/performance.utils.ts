@@ -2,6 +2,7 @@
  * Performance optimization utilities for single-tenant mode.
  * Provides zero-overhead optimizations when multi-tenancy is disabled.
  */
+import { performance } from 'perf_hooks';
 import { tenantConfig } from '../config/tenant.config';
 import { TenantContext } from './tenant.utils';
 
@@ -52,7 +53,7 @@ export class PerformanceUtils {
         return middleware(req, res, next);
       }
       next(); // Skip middleware entirely
-    }) as T;
+    }) as unknown as T;
   }
 
   /**
@@ -182,7 +183,7 @@ export class PerformanceUtils {
   static logPerformanceMetric(
     operation: string,
     startTime: number,
-    tenantContext?: TenantContext
+    _tenantContext?: TenantContext // Prefixed with underscore to indicate intentionally unused
   ): void {
     const duration = Date.now() - startTime;
     const mode = tenantConfig.multiTenancyEnabled
@@ -194,7 +195,7 @@ export class PerformanceUtils {
       operation,
       mode,
       duration,
-      hasTenantContext: !!tenantContext,
+      hasTenantContext: !!_tenantContext,
     });
 
     // In production, this would integrate with metrics collection system
@@ -236,7 +237,7 @@ export class PerformanceUtils {
    */
   static runOptimizedValidations(
     validations: Array<() => boolean | Promise<boolean>>,
-    tenantContext?: TenantContext
+    _tenantContext?: TenantContext
   ): Promise<boolean[]> {
     // Single-tenant mode: run basic validations only
     if (!tenantConfig.multiTenancyEnabled) {
@@ -348,8 +349,9 @@ export class TenantPerformanceBenchmark {
       const min = Math.min(...durations);
       const max = Math.max(...durations);
       const avg = durations.reduce((a, b) => a + b, 0) / count;
+      const mode = key.includes('_multi') ? 'multi-tenant' : 'single-tenant';
 
-      stats[key] = { count, min, max, avg };
+      stats[key] = { count, min, max, avg, mode };
     }
 
     return stats;

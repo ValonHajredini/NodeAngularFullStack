@@ -1,8 +1,10 @@
-import { Component, input, output } from '@angular/core';
+import { Component, input, output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ThemeToggleComponent } from '../theme-toggle/theme-toggle.component';
+import { NavigationBarComponent } from '../navigation-bar/navigation-bar.component';
 import { WelcomeCTAButtonComponent } from './welcome-cta-button.component';
 import { WelcomeHeroConfig, WelcomeCTAButton } from './welcome-page.interface';
+import { AuthService } from '../../../core/auth/auth.service';
 
 /**
  * Welcome Hero Component
@@ -32,21 +34,27 @@ import { WelcomeHeroConfig, WelcomeCTAButton } from './welcome-page.interface';
 @Component({
   selector: 'app-welcome-hero',
   standalone: true,
-  imports: [CommonModule, ThemeToggleComponent, WelcomeCTAButtonComponent],
+  imports: [CommonModule, ThemeToggleComponent, NavigationBarComponent, WelcomeCTAButtonComponent],
   template: `
     <div class="hero-container">
-      <!-- Navigation Bar (if showThemeToggle is true) -->
+      <!-- Navigation Bar - Show different content based on authentication -->
       @if (config().showThemeToggle) {
-        <nav class="hero-nav">
-          <div class="nav-content">
-            <div class="nav-brand">
-              <h1 class="brand-title">{{ brandName() || 'Welcome' }}</h1>
+        @if (isAuthenticated()) {
+          <!-- Authenticated Navigation -->
+          <app-navigation-bar [brandName]="brandName() || 'Welcome'" />
+        } @else {
+          <!-- Public Navigation -->
+          <nav class="hero-nav">
+            <div class="nav-content">
+              <div class="nav-brand">
+                <h1 class="brand-title">{{ brandName() || 'Welcome' }}</h1>
+              </div>
+              <div class="nav-actions">
+                <app-theme-toggle />
+              </div>
             </div>
-            <div class="nav-actions">
-              <app-theme-toggle />
-            </div>
-          </div>
-        </nav>
+          </nav>
+        }
       }
 
       <!-- Hero Content -->
@@ -71,21 +79,32 @@ import { WelcomeHeroConfig, WelcomeCTAButton } from './welcome-page.interface';
               <p class="hero-description">{{ config().description }}</p>
             }
 
-            <!-- CTA Buttons -->
-            <div class="hero-actions">
-              @if (config().primaryButton) {
-                <app-welcome-cta-button
-                  [config]="config().primaryButton!"
-                  (clicked)="onButtonClick($event)"
-                />
-              }
-              @if (config().secondaryButton) {
-                <app-welcome-cta-button
-                  [config]="config().secondaryButton!"
-                  (clicked)="onButtonClick($event)"
-                />
-              }
-            </div>
+            <!-- CTA Buttons - Only show when not authenticated -->
+            @if (!isAuthenticated()) {
+              <div class="hero-actions">
+                @if (config().primaryButton) {
+                  <app-welcome-cta-button
+                    [config]="config().primaryButton!"
+                    (clicked)="onButtonClick($event)"
+                  />
+                }
+                @if (config().secondaryButton) {
+                  <app-welcome-cta-button
+                    [config]="config().secondaryButton!"
+                    (clicked)="onButtonClick($event)"
+                  />
+                }
+              </div>
+            } @else {
+              <!-- Welcome message for authenticated users -->
+              <div class="hero-actions authenticated-welcome">
+                <p class="welcome-message">
+                  Welcome back, <strong>{{ authService.user()?.firstName || 'User' }}</strong
+                  >!
+                </p>
+                <p class="welcome-subtitle">Ready to continue where you left off?</p>
+              </div>
+            }
           </div>
         </div>
       </div>
@@ -312,6 +331,35 @@ import { WelcomeHeroConfig, WelcomeCTAButton } from './welcome-page.interface';
         }
       }
 
+      /* Authenticated Welcome Styling */
+      .authenticated-welcome {
+        text-align: center;
+        padding: var(--spacing-6) 0;
+      }
+
+      .welcome-message {
+        font-size: var(--font-size-xl);
+        color: var(--color-text-primary);
+        margin-bottom: var(--spacing-2);
+        font-weight: var(--font-weight-medium);
+      }
+
+      .welcome-message strong {
+        color: var(--color-primary-600);
+        font-weight: var(--font-weight-semibold);
+      }
+
+      .welcome-subtitle {
+        font-size: var(--font-size-lg);
+        color: var(--color-text-secondary);
+        margin: 0;
+      }
+
+      /* Dark theme adjustments for welcome message */
+      [data-theme='dark'] .welcome-message strong {
+        color: var(--color-primary-400);
+      }
+
       /* Accessibility */
       @media (prefers-reduced-motion: reduce) {
         .hero-accent::after {
@@ -340,6 +388,11 @@ import { WelcomeHeroConfig, WelcomeCTAButton } from './welcome-page.interface';
 })
 export class WelcomeHeroComponent {
   /**
+   * Inject AuthService for authentication state
+   */
+  readonly authService = inject(AuthService);
+
+  /**
    * Hero configuration
    */
   config = input.required<WelcomeHeroConfig>();
@@ -353,6 +406,11 @@ export class WelcomeHeroComponent {
    * Button click event emitter
    */
   buttonClicked = output<WelcomeCTAButton>();
+
+  /**
+   * Check if user is authenticated
+   */
+  readonly isAuthenticated = this.authService.isAuthenticated;
 
   /**
    * Handle button click events

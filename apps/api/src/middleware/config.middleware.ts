@@ -24,7 +24,11 @@ export class ConfigError extends Error {
   public statusCode: number;
   public code: string;
 
-  constructor(message: string, statusCode: number = 500, code: string = 'CONFIG_ERROR') {
+  constructor(
+    message: string,
+    statusCode: number = 500,
+    code: string = 'CONFIG_ERROR'
+  ) {
     super(message);
     this.name = 'ConfigError';
     this.statusCode = statusCode;
@@ -38,7 +42,7 @@ export class ConfigError extends Error {
  */
 export const validateTenantConfiguration = (
   req: ConfigRequest,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): void => {
   try {
@@ -47,7 +51,7 @@ export const validateTenantConfiguration = (
 
     // Log any warnings
     if (validationResult.warnings.length > 0) {
-      validationResult.warnings.forEach(warning => {
+      validationResult.warnings.forEach((warning) => {
         console.warn(`⚠️  Configuration Warning: ${warning}`);
       });
     }
@@ -75,8 +79,8 @@ export const validateTenantConfiguration = (
  * Returns 404 for multi-tenancy features when disabled.
  */
 export const requireMultiTenancy = (
-  req: Request,
-  res: Response,
+  _req: Request,
+  _res: Response,
   next: NextFunction
 ): void => {
   if (!isMultiTenancyEnabled()) {
@@ -94,8 +98,8 @@ export const requireMultiTenancy = (
  * Returns 404 for single-tenant only features when multi-tenancy is enabled.
  */
 export const requireSingleTenant = (
-  req: Request,
-  res: Response,
+  _req: Request,
+  _res: Response,
   next: NextFunction
 ): void => {
   if (isMultiTenancyEnabled()) {
@@ -114,7 +118,7 @@ export const requireSingleTenant = (
  */
 export const validateTenantIsolation = (
   req: ConfigRequest,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): void => {
   try {
@@ -134,7 +138,9 @@ export const validateTenantIsolation = (
 
     // Check cross-access prevention settings
     if (tenantConfig.crossAccessPrevention && !tenantConfig.tokenIsolation) {
-      console.warn('⚠️  Cross-access prevention enabled without token isolation. Consider enabling token isolation for better security.');
+      console.warn(
+        '⚠️  Cross-access prevention enabled without token isolation. Consider enabling token isolation for better security.'
+      );
     }
 
     // Add tenant isolation context to request
@@ -153,8 +159,8 @@ export const validateTenantIsolation = (
  * Warns about configuration changes that require application restart.
  */
 export const validateConfigurationHash = (
-  req: Request,
-  res: Response,
+  _req: Request,
+  _res: Response,
   next: NextFunction
 ): void => {
   try {
@@ -174,7 +180,9 @@ export const validateConfigurationHash = (
     const storedHash = process.env.CONFIG_HASH;
 
     if (storedHash && currentConfigHash !== storedHash) {
-      console.warn('⚠️  Configuration change detected. Application restart required for changes to take effect.');
+      console.warn(
+        '⚠️  Configuration change detected. Application restart required for changes to take effect.'
+      );
       console.warn('   Current hash:', currentConfigHash);
       console.warn('   Stored hash:', storedHash);
     }
@@ -191,15 +199,18 @@ export const validateConfigurationHash = (
  * Provides a summary of current configuration for debugging.
  */
 export const logConfigurationSummary = (
-  req: Request,
-  res: Response,
+  _req: Request,
+  _res: Response,
   next: NextFunction
 ): void => {
   // Only log on first request or in development
   if (process.env.NODE_ENV === 'development' || !global.configLogged) {
     console.log('📋 Configuration Summary:');
     console.log('  Environment:', appConfig.app.nodeEnv);
-    console.log('  Multi-tenancy:', tenantConfig.multiTenancyEnabled ? 'Enabled' : 'Disabled');
+    console.log(
+      '  Multi-tenancy:',
+      tenantConfig.multiTenancyEnabled ? 'Enabled' : 'Disabled'
+    );
 
     if (tenantConfig.multiTenancyEnabled) {
       console.log('  Isolation Level:', tenantConfig.isolationLevel);
@@ -211,7 +222,10 @@ export const logConfigurationSummary = (
     }
 
     console.log('  Database SSL:', appConfig.database.ssl);
-    console.log('  Rate Limiting:', `${appConfig.rateLimit.maxRequests} requests/${appConfig.rateLimit.windowMs}ms`);
+    console.log(
+      '  Rate Limiting:',
+      `${appConfig.rateLimit.maxRequests} requests/${appConfig.rateLimit.windowMs}ms`
+    );
 
     global.configLogged = true;
   }
@@ -225,7 +239,7 @@ export const logConfigurationSummary = (
  */
 export const handleConfigurationErrors = (
   error: Error,
-  req: Request,
+  _req: Request,
   res: Response,
   next: NextFunction
 ): void => {
@@ -253,11 +267,15 @@ export const handleConfigurationErrors = (
 function generateConfigHash(configKeys: string[]): string {
   const crypto = require('crypto');
   const configString = configKeys
-    .map(key => `${key}=${process.env[key] || ''}`)
+    .map((key) => `${key}=${process.env[key] || ''}`)
     .sort()
     .join('|');
 
-  return crypto.createHash('sha256').update(configString).digest('hex').substring(0, 16);
+  return crypto
+    .createHash('sha256')
+    .update(configString)
+    .digest('hex')
+    .substring(0, 16);
 }
 
 /**
