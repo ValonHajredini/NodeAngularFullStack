@@ -3,7 +3,11 @@
  * Provides middleware functions for runtime configuration validation and consistency checks.
  */
 import { Request, Response, NextFunction } from 'express';
-import { appConfig, tenantConfig, isMultiTenancyEnabled } from '../config';
+import {
+  appConfig,
+  tenantConfig,
+  isMultiTenancyEnabled,
+} from '../config/index';
 import { validateTenantConfigConsistency } from '../validators/config.validators';
 
 /**

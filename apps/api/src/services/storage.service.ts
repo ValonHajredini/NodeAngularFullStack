@@ -16,7 +16,7 @@ import {
   FileValidationResult,
   UploadOptions,
 } from '@nodeangularfullstack/shared';
-import { appConfig } from '../config';
+import { appConfig } from '../config/index';
 
 /**
  * File signature constants for magic byte detection.

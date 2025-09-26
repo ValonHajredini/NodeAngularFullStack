@@ -3,7 +3,7 @@
  * Provides helper functions for configuration management, validation, and monitoring.
  */
 import crypto from 'crypto';
-import { tenantConfig, appConfig } from '../config';
+import { tenantConfig, appConfig } from '../config/index';
 import {
   validateCompleteConfig,
   ConfigValidationResult,
