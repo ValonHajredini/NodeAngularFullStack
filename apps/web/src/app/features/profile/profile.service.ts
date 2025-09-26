@@ -88,16 +88,24 @@ export class ProfileService {
     const formData = new FormData();
     formData.append('avatar', avatarFile);
 
-    return this.apiClient.post<User>('/users/avatar', formData).pipe(
-      tap((updatedUser: User) => {
-        // Update the user data in the authentication service
-        this.updateAuthUserData(updatedUser);
-      }),
-      catchError((error) => {
-        console.error('Avatar upload failed:', error);
-        return throwError(() => error);
-      }),
-    );
+    return this.apiClient
+      .post<{
+        success: boolean;
+        message: string;
+        data: { user: User; avatarUrl: string };
+        timestamp: string;
+      }>('/users/avatar', formData)
+      .pipe(
+        map((response) => response.data.user),
+        tap((updatedUser: User) => {
+          // Update the user data in the authentication service
+          this.updateAuthUserData(updatedUser);
+        }),
+        catchError((error) => {
+          console.error('Avatar upload failed:', error);
+          return throwError(() => error);
+        }),
+      );
   }
 
   /**
@@ -106,16 +114,24 @@ export class ProfileService {
    * @throws {HttpErrorResponse} When avatar deletion fails
    */
   deleteAvatar(): Observable<User> {
-    return this.apiClient.delete<User>('/users/avatar').pipe(
-      tap((updatedUser: User) => {
-        // Update the user data in the authentication service
-        this.updateAuthUserData(updatedUser);
-      }),
-      catchError((error) => {
-        console.error('Avatar deletion failed:', error);
-        return throwError(() => error);
-      }),
-    );
+    return this.apiClient
+      .delete<{
+        success: boolean;
+        message: string;
+        data: { user: User };
+        timestamp: string;
+      }>('/users/avatar')
+      .pipe(
+        map((response) => response.data.user),
+        tap((updatedUser: User) => {
+          // Update the user data in the authentication service
+          this.updateAuthUserData(updatedUser);
+        }),
+        catchError((error) => {
+          console.error('Avatar deletion failed:', error);
+          return throwError(() => error);
+        }),
+      );
   }
 
   /**
