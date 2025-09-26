@@ -26,6 +26,7 @@ export {
   type SectionContainerSize,
 } from './section-container';
 export { ApiTokenGeneratorComponent } from './api-token-generator';
+export { SettingsSidebarComponent } from './settings-sidebar';
 
 // Welcome Page Components
 export {

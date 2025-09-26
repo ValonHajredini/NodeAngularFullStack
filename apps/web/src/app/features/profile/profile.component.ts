@@ -11,7 +11,6 @@ import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angula
 import { Router, RouterLink } from '@angular/router';
 import { AuthService, User } from '@core/auth/auth.service';
 import { ProfileService } from './profile.service';
-import { ApiTokenGeneratorComponent } from '@shared/components';
 
 /**
  * User profile management component for displaying and editing user information.
@@ -20,10 +19,10 @@ import { ApiTokenGeneratorComponent } from '@shared/components';
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, ApiTokenGeneratorComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
   template: `
     <div class="py-8">
-      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Header -->
         <div class="mb-8">
           <h1 class="text-3xl font-bold text-gray-900">Profile Settings</h1>
@@ -359,11 +358,6 @@ import { ApiTokenGeneratorComponent } from '@shared/components';
                   </div>
                 </div>
               </div>
-            </div>
-
-            <!-- API Tokens Section -->
-            <div class="mt-8">
-              <app-api-token-generator></app-api-token-generator>
             </div>
           </div>
         </div>

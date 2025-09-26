@@ -237,7 +237,7 @@ export class UserDropdownMenuComponent implements OnInit, OnDestroy {
     },
     {
       label: 'Settings',
-      route: '/settings',
+      route: '/app/settings',
       icon: 'pi pi-cog',
     },
     {
