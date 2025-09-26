@@ -8,6 +8,7 @@ import morgan from 'morgan';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import swaggerUi from 'swagger-ui-express';
+import path from 'path';
 
 import { config } from './utils/config.utils';
 import { databaseService, DatabaseService } from './services/database.service';
@@ -78,7 +79,17 @@ class Server {
 
     // Body parsing and compression
     this.app.use(compression());
-    this.app.use(express.json({ limit: '10mb' }));
+
+    // Apply JSON parsing to all routes except avatar uploads
+    this.app.use((req, res, next) => {
+      if (req.path === '/api/v1/users/avatar' && req.method === 'POST') {
+        // Skip JSON parsing for avatar uploads
+        next();
+      } else {
+        express.json({ limit: '10mb' })(req, res, next);
+      }
+    });
+
     this.app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
     // Logging
@@ -111,6 +122,14 @@ class Server {
         },
       })
     );
+
+    // Serve uploaded files statically in development
+    if (config.NODE_ENV === 'development') {
+      this.app.use(
+        '/uploads',
+        express.static(path.join(process.cwd(), 'uploads'))
+      );
+    }
 
     // Legacy health check endpoint
     this.app.use('/health', healthRoutes);

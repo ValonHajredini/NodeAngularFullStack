@@ -158,8 +158,29 @@ export class StorageService implements IStorageService {
     options?: UploadOptions
   ): Promise<string> {
     try {
-      // Validate file before upload
-      await this.validateFile(file, fileName, contentType);
+      // Validate file before upload and get the validated content type
+      const validationResult = await this.performFileValidation(
+        file,
+        fileName,
+        contentType
+      );
+      if (!validationResult.isValid) {
+        throw new StorageError(
+          validationResult.error ?? 'File validation failed',
+          HTTP_STATUS_CODES.BAD_REQUEST,
+          'FILE_VALIDATION_FAILED',
+          {
+            fileName,
+            contentType,
+            fileSize: validationResult.fileSize,
+            detectedType: validationResult.fileType,
+          }
+        );
+      }
+
+      // Use the validated content type for upload
+      const finalContentType =
+        validationResult.validatedContentType || contentType;
 
       // Generate unique file name if requested
       const finalFileName =
@@ -172,12 +193,14 @@ export class StorageService implements IStorageService {
         Bucket: this.config.bucketName,
         Key: finalFileName,
         Body: file,
-        ContentType: contentType,
+        ContentType: finalContentType,
         ContentLength: file.length,
         ACL: 'public-read', // Make files publicly accessible
         Metadata: {
           'upload-timestamp': new Date().toISOString(),
           'original-name': fileName,
+          'original-content-type': contentType,
+          'validated-content-type': finalContentType,
           ...options?.metadata,
         },
       });
@@ -379,33 +402,53 @@ export class StorageService implements IStorageService {
 
     // Validate file header/magic bytes for additional security
     const detectedType = this.detectFileTypeFromHeader(file);
-    if (
-      detectedType === null ||
-      !this.ALLOWED_MIME_TYPES.includes(detectedType)
-    ) {
+
+    // If we can't detect the type from magic bytes, but the declared type is allowed,
+    // we'll trust the browser's detection (with additional validation elsewhere)
+    if (detectedType === null) {
+      if (!this.ALLOWED_MIME_TYPES.includes(contentType)) {
+        return {
+          isValid: false,
+          error: `Cannot verify file type. Declared type '${contentType}' is not allowed`,
+          fileType: undefined,
+          fileSize: file.length,
+        };
+      }
+      // Log warning but allow the upload
+      console.warn(
+        `Could not detect file type from magic bytes for file type: ${contentType}. Trusting browser detection.`
+      );
+    } else if (!this.ALLOWED_MIME_TYPES.includes(detectedType)) {
       return {
         isValid: false,
-        error: 'File content does not match declared type',
-        fileType: detectedType ?? undefined,
+        error: `File content indicates unsupported type: ${detectedType}`,
+        fileType: detectedType,
         fileSize: file.length,
       };
+    } else if (detectedType !== contentType) {
+      // If detected type differs from declared type, use the detected type
+      console.warn(
+        `File type mismatch: declared '${contentType}', detected '${detectedType}'. Using detected type.`
+      );
     }
 
-    // Validate file extension matches content type
+    // Validate file extension matches content type (use detected type if available)
     const fileExtension = fileName.toLowerCase().split('.').pop();
-    if (!this.isValidExtensionForType(fileExtension, contentType)) {
+    const typeToValidate = detectedType || contentType;
+    if (!this.isValidExtensionForType(fileExtension, typeToValidate)) {
       return {
         isValid: false,
-        error: 'File extension does not match content type',
-        fileType: contentType,
+        error: `File extension '${fileExtension}' does not match content type '${typeToValidate}'`,
+        fileType: typeToValidate,
         fileSize: file.length,
       };
     }
 
     return {
       isValid: true,
-      fileType: detectedType ?? undefined,
+      fileType: detectedType ?? contentType,
       fileSize: file.length,
+      validatedContentType: detectedType || contentType, // Return the type we should use for upload
     };
   }
 
@@ -618,5 +661,6 @@ export class StorageService implements IStorageService {
 /**
  * Default storage service instance.
  * Pre-configured singleton for use across the application.
+ * Uses DigitalOcean Spaces for cloud storage in all environments.
  */
 export const storageService = new StorageService();

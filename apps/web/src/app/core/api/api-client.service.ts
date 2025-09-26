@@ -87,10 +87,10 @@ export class ApiClientService {
     method: string,
     endpoint: string,
     body: any,
-    options?: ApiRequestOptions
+    options?: ApiRequestOptions,
   ): Observable<T> {
     const url = `${this.baseUrl}${endpoint}`;
-    const requestOptions = this.buildRequestOptions(options);
+    const requestOptions = this.buildRequestOptions(options, body);
 
     let request: Observable<T>;
 
@@ -117,30 +117,34 @@ export class ApiClientService {
     return request.pipe(
       timeout(environment.api.timeout),
       retry({ count: environment.api.retryAttempts, delay: environment.api.retryDelay }),
-      catchError(error => {
+      catchError((error) => {
         console.error(`API Error [${method} ${url}]:`, error);
         return throwError(() => error);
-      })
+      }),
     );
   }
 
   /**
    * Builds HTTP request options from the provided configuration.
    */
-  private buildRequestOptions(options?: ApiRequestOptions): any {
-    let headers = new HttpHeaders({
-      'Content-Type': 'application/json'
-    });
+  private buildRequestOptions(options?: ApiRequestOptions, body?: any): any {
+    let headers = new HttpHeaders();
+
+    // Only set Content-Type for non-FormData requests
+    // FormData requires the browser to set its own Content-Type with boundary
+    if (!(body instanceof FormData)) {
+      headers = headers.set('Content-Type', 'application/json');
+    }
 
     if (options?.headers) {
-      Object.keys(options.headers).forEach(key => {
+      Object.keys(options.headers).forEach((key) => {
         headers = headers.set(key, options.headers![key]);
       });
     }
 
     let params = new HttpParams();
     if (options?.params) {
-      Object.keys(options.params).forEach(key => {
+      Object.keys(options.params).forEach((key) => {
         params = params.set(key, options.params![key]);
       });
     }
@@ -148,7 +152,7 @@ export class ApiClientService {
     return {
       headers,
       params,
-      ...options
+      ...options,
     };
   }
 }
