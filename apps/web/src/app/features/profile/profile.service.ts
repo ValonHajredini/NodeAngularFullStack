@@ -35,11 +35,11 @@ export class ProfileService {
    *   });
    */
   getProfile(): Observable<User> {
-    return this.apiClient.get<User>('/users/profile').pipe(
-      catchError(error => {
+    return this.apiClient.get<User>('/auth/profile').pipe(
+      catchError((error) => {
         console.error('Profile retrieval failed:', error);
         return throwError(() => error);
-      })
+      }),
     );
   }
 
@@ -57,16 +57,19 @@ export class ProfileService {
    *   });
    */
   updateProfile(profileData: ProfileUpdateRequest): Observable<User> {
-    return this.apiClient.patch<User>('/users/profile', profileData).pipe(
-      tap((updatedUser: User) => {
-        // Update the user data in the authentication service
-        this.updateAuthUserData(updatedUser);
-      }),
-      catchError(error => {
-        console.error('Profile update failed:', error);
-        return throwError(() => error);
-      })
-    );
+    return this.apiClient
+      .patch<{ message: string; data: User; timestamp: string }>('/auth/profile', profileData)
+      .pipe(
+        map((response) => response.data),
+        tap((updatedUser: User) => {
+          // Update the user data in the authentication service
+          this.updateAuthUserData(updatedUser);
+        }),
+        catchError((error) => {
+          console.error('Profile update failed:', error);
+          return throwError(() => error);
+        }),
+      );
   }
 
   /**
@@ -85,15 +88,15 @@ export class ProfileService {
     const formData = new FormData();
     formData.append('avatar', avatarFile);
 
-    return this.apiClient.post<User>('/users/profile/avatar', formData).pipe(
+    return this.apiClient.post<User>('/users/avatar', formData).pipe(
       tap((updatedUser: User) => {
         // Update the user data in the authentication service
         this.updateAuthUserData(updatedUser);
       }),
-      catchError(error => {
+      catchError((error) => {
         console.error('Avatar upload failed:', error);
         return throwError(() => error);
-      })
+      }),
     );
   }
 
@@ -103,15 +106,15 @@ export class ProfileService {
    * @throws {HttpErrorResponse} When avatar deletion fails
    */
   deleteAvatar(): Observable<User> {
-    return this.apiClient.delete<User>('/users/profile/avatar').pipe(
+    return this.apiClient.delete<User>('/users/avatar').pipe(
       tap((updatedUser: User) => {
         // Update the user data in the authentication service
         this.updateAuthUserData(updatedUser);
       }),
-      catchError(error => {
+      catchError((error) => {
         console.error('Avatar deletion failed:', error);
         return throwError(() => error);
-      })
+      }),
     );
   }
 
@@ -121,11 +124,11 @@ export class ProfileService {
    * @throws {HttpErrorResponse} When activity retrieval fails
    */
   getAccountActivity(): Observable<AccountActivity> {
-    return this.apiClient.get<AccountActivity>('/users/profile/activity').pipe(
-      catchError(error => {
+    return this.apiClient.get<AccountActivity>('/auth/profile/activity').pipe(
+      catchError((error) => {
         console.error('Account activity retrieval failed:', error);
         return throwError(() => error);
-      })
+      }),
     );
   }
 
@@ -136,11 +139,11 @@ export class ProfileService {
    * @throws {HttpErrorResponse} When preferences update fails
    */
   updatePreferences(preferences: UserPreferences): Observable<UserPreferences> {
-    return this.apiClient.patch<UserPreferences>('/users/profile/preferences', preferences).pipe(
-      catchError(error => {
+    return this.apiClient.patch<UserPreferences>('/auth/profile/preferences', preferences).pipe(
+      catchError((error) => {
         console.error('Preferences update failed:', error);
         return throwError(() => error);
-      })
+      }),
     );
   }
 
@@ -163,19 +166,22 @@ export class ProfileService {
     const optimisticUser: User = {
       ...currentUser,
       ...profileData,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
 
-    const serverRequest$ = this.apiClient.patch<User>('/users/profile', profileData).pipe(
-      tap((updatedUser: User) => {
-        // Update with actual server response
-        this.updateAuthUserData(updatedUser);
-      }),
-      catchError(error => {
-        console.error('Profile update failed:', error);
-        return throwError(() => error);
-      })
-    );
+    const serverRequest$ = this.apiClient
+      .patch<{ message: string; data: User; timestamp: string }>('/auth/profile', profileData)
+      .pipe(
+        map((response) => response.data),
+        tap((updatedUser: User) => {
+          // Update with actual server response
+          this.updateAuthUserData(updatedUser);
+        }),
+        catchError((error) => {
+          console.error('Profile update failed:', error);
+          return throwError(() => error);
+        }),
+      );
 
     return this.networkErrorService.withOptimisticUpdate(
       () => this.updateAuthUserData(optimisticUser),
@@ -183,8 +189,8 @@ export class ProfileService {
       () => this.updateAuthUserData(originalUser),
       {
         maxRetries: 3,
-        delayMs: 1500
-      }
+        delayMs: 1500,
+      },
     );
   }
 

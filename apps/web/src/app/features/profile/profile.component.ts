@@ -11,6 +11,7 @@ import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angula
 import { Router, RouterLink } from '@angular/router';
 import { AuthService, User } from '@core/auth/auth.service';
 import { ProfileService } from './profile.service';
+import { AvatarUploadComponent } from '@shared/components/avatar-upload/avatar-upload.component';
 
 /**
  * User profile management component for displaying and editing user information.
@@ -19,7 +20,7 @@ import { ProfileService } from './profile.service';
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, AvatarUploadComponent],
   template: `
     <div class="py-8">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -34,36 +35,14 @@ import { ProfileService } from './profile.service';
           <div class="lg:col-span-1">
             <div class="bg-white overflow-hidden shadow rounded-lg">
               <div class="px-4 py-5 sm:p-6">
-                <!-- Avatar Section -->
-                <div class="flex flex-col items-center">
-                  <div class="relative">
-                    <div
-                      class="h-24 w-24 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center"
-                    >
-                      @if (user()?.firstName && user()?.lastName) {
-                        <span class="text-2xl font-bold text-white">
-                          {{ getInitials(user()!.firstName, user()!.lastName) }}
-                        </span>
-                      } @else {
-                        <i class="pi pi-user text-2xl text-white"></i>
-                      }
-                    </div>
-                    <button
-                      type="button"
-                      class="absolute bottom-0 right-0 bg-white rounded-full p-1 shadow-lg border border-gray-200 hover:bg-gray-50 transition-colors"
-                      title="Upload avatar (coming soon)"
-                    >
-                      <i class="pi pi-camera text-gray-600 text-sm"></i>
-                    </button>
-                  </div>
+                <!-- Avatar Upload Section -->
+                <app-avatar-upload></app-avatar-upload>
 
-                  @if (user()) {
-                    <h3 class="mt-4 text-lg font-medium text-gray-900">
-                      {{ user()!.firstName }} {{ user()!.lastName }}
-                    </h3>
-                    <p class="text-sm text-gray-500">{{ user()!.email }}</p>
+                <!-- User Role Badge -->
+                @if (user()) {
+                  <div class="mt-4 flex justify-center">
                     <span
-                      class="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                       [class.bg-blue-100]="user()!.role === 'admin'"
                       [class.text-blue-800]="user()!.role === 'admin'"
                       [class.bg-green-100]="user()!.role === 'user'"
@@ -80,8 +59,8 @@ import { ProfileService } from './profile.service';
                       ></i>
                       {{ getRoleDisplayName(user()!.role) }}
                     </span>
-                  }
-                </div>
+                  </div>
+                }
 
                 <!-- Account Status -->
                 <div class="mt-6 border-t border-gray-200 pt-6">

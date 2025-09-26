@@ -278,7 +278,7 @@ export class UserDropdownMenuComponent implements OnInit, OnDestroy {
    */
   public getUserInitials(): string {
     const currentUser = this.user();
-    if (!currentUser) return '';
+    if (!currentUser || !currentUser.firstName || !currentUser.lastName) return '';
     return `${currentUser.firstName.charAt(0)}${currentUser.lastName.charAt(0)}`.toUpperCase();
   }
 

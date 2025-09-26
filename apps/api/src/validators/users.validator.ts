@@ -9,7 +9,8 @@ import { usersService } from '../services/users.service';
  * - At least one digit
  * - At least one special character
  */
-const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/;
+const PASSWORD_REGEX =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/;
 
 /**
  * Validation rules for creating a new user.
@@ -35,22 +36,28 @@ export const createUserValidator = [
     .isLength({ min: 8, max: 128 })
     .withMessage('Password must be between 8 and 128 characters')
     .matches(PASSWORD_REGEX)
-    .withMessage('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
+    .withMessage(
+      'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
+    ),
 
   body('firstName')
     .trim()
     .isLength({ min: 1, max: 50 })
     .withMessage('First name must be between 1 and 50 characters')
-    .matches(/^[a-zA-Z\s\-'\.]+$/)
-    .withMessage('First name can only contain letters, spaces, hyphens, apostrophes, and periods')
+    .matches(/^[a-zA-Z0-9\s\-'\.]+$/)
+    .withMessage(
+      'First name can only contain letters, numbers, spaces, hyphens, apostrophes, and periods'
+    )
     .escape(),
 
   body('lastName')
     .trim()
     .isLength({ min: 1, max: 50 })
     .withMessage('Last name must be between 1 and 50 characters')
-    .matches(/^[a-zA-Z\s\-'\.]+$/)
-    .withMessage('Last name can only contain letters, spaces, hyphens, apostrophes, and periods')
+    .matches(/^[a-zA-Z0-9\s\-'\.]+$/)
+    .withMessage(
+      'Last name can only contain letters, numbers, spaces, hyphens, apostrophes, and periods'
+    )
     .escape(),
 
   body('role')
@@ -61,7 +68,7 @@ export const createUserValidator = [
   body('tenantId')
     .optional()
     .isUUID()
-    .withMessage('Tenant ID must be a valid UUID')
+    .withMessage('Tenant ID must be a valid UUID'),
 ];
 
 /**
@@ -69,9 +76,7 @@ export const createUserValidator = [
  * All fields except password are required for full replacement.
  */
 export const updateUserValidator = [
-  param('id')
-    .isUUID()
-    .withMessage('User ID must be a valid UUID'),
+  param('id').isUUID().withMessage('User ID must be a valid UUID'),
 
   body('email')
     .isEmail()
@@ -96,16 +101,20 @@ export const updateUserValidator = [
     .trim()
     .isLength({ min: 1, max: 50 })
     .withMessage('First name must be between 1 and 50 characters')
-    .matches(/^[a-zA-Z\s\-'\.]+$/)
-    .withMessage('First name can only contain letters, spaces, hyphens, apostrophes, and periods')
+    .matches(/^[a-zA-Z0-9\s\-'\.]+$/)
+    .withMessage(
+      'First name can only contain letters, numbers, spaces, hyphens, apostrophes, and periods'
+    )
     .escape(),
 
   body('lastName')
     .trim()
     .isLength({ min: 1, max: 50 })
     .withMessage('Last name must be between 1 and 50 characters')
-    .matches(/^[a-zA-Z\s\-'\.]+$/)
-    .withMessage('Last name can only contain letters, spaces, hyphens, apostrophes, and periods')
+    .matches(/^[a-zA-Z0-9\s\-'\.]+$/)
+    .withMessage(
+      'Last name can only contain letters, numbers, spaces, hyphens, apostrophes, and periods'
+    )
     .escape(),
 
   body('role')
@@ -120,7 +129,7 @@ export const updateUserValidator = [
   body('emailVerified')
     .optional()
     .isBoolean()
-    .withMessage('emailVerified must be a boolean value')
+    .withMessage('emailVerified must be a boolean value'),
 ];
 
 /**
@@ -128,9 +137,7 @@ export const updateUserValidator = [
  * All fields are optional but at least one must be provided.
  */
 export const patchUserValidator = [
-  param('id')
-    .isUUID()
-    .withMessage('User ID must be a valid UUID'),
+  param('id').isUUID().withMessage('User ID must be a valid UUID'),
 
   body('email')
     .optional()
@@ -157,8 +164,10 @@ export const patchUserValidator = [
     .trim()
     .isLength({ min: 1, max: 50 })
     .withMessage('First name must be between 1 and 50 characters')
-    .matches(/^[a-zA-Z\s\-'\.]+$/)
-    .withMessage('First name can only contain letters, spaces, hyphens, apostrophes, and periods')
+    .matches(/^[a-zA-Z0-9\s\-'\.]+$/)
+    .withMessage(
+      'First name can only contain letters, numbers, spaces, hyphens, apostrophes, and periods'
+    )
     .escape(),
 
   body('lastName')
@@ -166,8 +175,10 @@ export const patchUserValidator = [
     .trim()
     .isLength({ min: 1, max: 50 })
     .withMessage('Last name must be between 1 and 50 characters')
-    .matches(/^[a-zA-Z\s\-'\.]+$/)
-    .withMessage('Last name can only contain letters, spaces, hyphens, apostrophes, and periods')
+    .matches(/^[a-zA-Z0-9\s\-'\.]+$/)
+    .withMessage(
+      'Last name can only contain letters, numbers, spaces, hyphens, apostrophes, and periods'
+    )
     .escape(),
 
   body('role')
@@ -186,26 +197,32 @@ export const patchUserValidator = [
     .withMessage('emailVerified must be a boolean value'),
 
   // Custom validator to ensure at least one field is provided
-  body()
-    .custom((_value, { req }) => {
-      const allowedFields = ['email', 'firstName', 'lastName', 'role', 'isActive', 'emailVerified'];
-      const providedFields = Object.keys(req.body).filter(key => allowedFields.includes(key));
+  body().custom((_value, { req }) => {
+    const allowedFields = [
+      'email',
+      'firstName',
+      'lastName',
+      'role',
+      'isActive',
+      'emailVerified',
+    ];
+    const providedFields = Object.keys(req.body).filter((key) =>
+      allowedFields.includes(key)
+    );
 
-      if (providedFields.length === 0) {
-        throw new Error('At least one field must be provided for update');
-      }
+    if (providedFields.length === 0) {
+      throw new Error('At least one field must be provided for update');
+    }
 
-      return true;
-    })
+    return true;
+  }),
 ];
 
 /**
  * Validation rules for user ID parameter.
  */
 export const userIdValidator = [
-  param('id')
-    .isUUID()
-    .withMessage('User ID must be a valid UUID')
+  param('id').isUUID().withMessage('User ID must be a valid UUID'),
 ];
 
 /**
@@ -242,27 +259,27 @@ export const getUsersValidator = [
   query('status')
     .optional()
     .isIn(['active', 'inactive', 'all'])
-    .withMessage('Status filter must be one of: active, inactive, all')
+    .withMessage('Status filter must be one of: active, inactive, all'),
 ];
 
 /**
  * Validation rules for password update.
  */
 export const updatePasswordValidator = [
-  param('id')
-    .isUUID()
-    .withMessage('User ID must be a valid UUID'),
+  param('id').isUUID().withMessage('User ID must be a valid UUID'),
 
   body('newPassword')
     .isLength({ min: 8, max: 128 })
     .withMessage('Password must be between 8 and 128 characters')
     .matches(PASSWORD_REGEX)
-    .withMessage('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
+    .withMessage(
+      'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
+    ),
 
   body('currentPassword')
     .optional()
     .isLength({ min: 1 })
-    .withMessage('Current password is required for password changes')
+    .withMessage('Current password is required for password changes'),
 ];
 
 /**
@@ -271,9 +288,15 @@ export const updatePasswordValidator = [
  */
 export const sanitizeUserInput = (req: any, _res: any, next: any) => {
   // Remove sensitive/internal fields that users shouldn't be able to set
-  const sensitiveFields = ['id', 'passwordHash', 'createdAt', 'updatedAt', 'lastLogin'];
+  const sensitiveFields = [
+    'id',
+    'passwordHash',
+    'createdAt',
+    'updatedAt',
+    'lastLogin',
+  ];
 
-  sensitiveFields.forEach(field => {
+  sensitiveFields.forEach((field) => {
     delete req.body[field];
   });
 
@@ -296,11 +319,11 @@ export const xssProtection = (req: any, res: any, next: any) => {
     /on\w+\s*=/gi,
     /<iframe/gi,
     /<object/gi,
-    /<embed/gi
+    /<embed/gi,
   ];
 
   const checkForXSS = (value: string): boolean => {
-    return xssPatterns.some(pattern => pattern.test(value));
+    return xssPatterns.some((pattern) => pattern.test(value));
   };
 
   const validateObject = (obj: any): void => {
@@ -323,9 +346,9 @@ export const xssProtection = (req: any, res: any, next: any) => {
       success: false,
       error: {
         code: 'SECURITY_ERROR',
-        message: error.message
+        message: error.message,
       },
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   }
 };

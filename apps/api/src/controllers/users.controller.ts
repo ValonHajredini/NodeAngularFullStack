@@ -1,5 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
+
+/**
+ * Extended Request interface for multer file uploads.
+ */
+interface MulterRequest extends Request {
+  file?: Express.Multer.File;
+}
 import {
   usersService,
   CreateUserRequest,
@@ -502,6 +509,200 @@ export class UsersController {
       }
 
       res.status(204).send();
+    } catch (error: any) {
+      if (error.message.includes('User not found')) {
+        res.status(404).json({
+          success: false,
+          error: {
+            code: 'NOT_FOUND',
+            message: 'User not found',
+          },
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      next(error);
+    }
+  };
+
+  /**
+   * Uploads a user's avatar image.
+   * @route POST /api/v1/users/avatar
+   * @param req - Express request object with multipart file upload
+   * @param res - Express response object
+   * @param next - Express next function
+   * @returns HTTP response with updated user data and avatar URL
+   * @throws {ApiError} 400 - Invalid file or validation errors
+   * @throws {ApiError} 401 - Authentication required
+   * @throws {ApiError} 413 - File too large
+   * @throws {ApiError} 415 - Unsupported media type
+   * @example
+   * POST /api/v1/users/avatar
+   * Authorization: Bearer <token>
+   * Content-Type: multipart/form-data
+   * Form field: avatar (file)
+   */
+  uploadAvatar = async (
+    req: MulterRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const userId = (req.user as any)?.id;
+
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Authentication required',
+          },
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      // Check if file was uploaded
+      const file = req.file;
+      if (!file) {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: 'BAD_REQUEST',
+            message: 'No file uploaded',
+          },
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      // Validate file type and size (multer middleware handles this, but double-check)
+      const allowedMimeTypes = [
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+      ];
+      if (!allowedMimeTypes.includes(file.mimetype)) {
+        res.status(415).json({
+          success: false,
+          error: {
+            code: 'UNSUPPORTED_MEDIA_TYPE',
+            message:
+              'File type not allowed. Allowed types: jpg, png, gif, webp',
+          },
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      // Update user avatar
+      const updatedUser = await usersService.updateAvatar(
+        userId,
+        file.buffer,
+        file.originalname,
+        file.mimetype
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Avatar uploaded successfully',
+        data: {
+          user: updatedUser,
+          avatarUrl: updatedUser.avatarUrl,
+        },
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      if (error.message.includes('User not found')) {
+        res.status(404).json({
+          success: false,
+          error: {
+            code: 'NOT_FOUND',
+            message: 'User not found',
+          },
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      if (
+        error.message.includes('File validation failed') ||
+        error.message.includes('File type not allowed') ||
+        error.message.includes('File size exceeds')
+      ) {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: 'FILE_VALIDATION_ERROR',
+            message: error.message,
+          },
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      if (error.message.includes('File too large')) {
+        res.status(413).json({
+          success: false,
+          error: {
+            code: 'FILE_TOO_LARGE',
+            message: 'File size exceeds 5MB limit',
+          },
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      next(error);
+    }
+  };
+
+  /**
+   * Deletes a user's avatar image.
+   * @route DELETE /api/v1/users/avatar
+   * @param req - Express request object
+   * @param res - Express response object
+   * @param next - Express next function
+   * @returns HTTP response with updated user data
+   * @throws {ApiError} 401 - Authentication required
+   * @throws {ApiError} 404 - User not found or no avatar to delete
+   * @example
+   * DELETE /api/v1/users/avatar
+   * Authorization: Bearer <token>
+   */
+  deleteAvatar = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const userId = (req.user as any)?.id;
+
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Authentication required',
+          },
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      // Remove user avatar
+      const updatedUser = await usersService.removeAvatar(userId);
+
+      res.status(200).json({
+        success: true,
+        message: 'Avatar deleted successfully',
+        data: {
+          user: updatedUser,
+        },
+        timestamp: new Date().toISOString(),
+      });
     } catch (error: any) {
       if (error.message.includes('User not found')) {
         res.status(404).json({

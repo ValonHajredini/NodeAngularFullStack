@@ -1,5 +1,11 @@
 import * as bcrypt from 'bcryptjs';
-import { usersRepository, User, CreateUserData, UpdateUserData } from '../repositories/users.repository';
+import {
+  usersRepository,
+  User,
+  CreateUserData,
+  UpdateUserData,
+} from '../repositories/users.repository';
+import { storageService } from './storage.service';
 
 /**
  * User creation request interface.
@@ -44,7 +50,9 @@ export class UsersService {
    *   role: 'user'
    * });
    */
-  async createUser(userData: CreateUserRequest): Promise<Omit<User, 'passwordHash'>> {
+  async createUser(
+    userData: CreateUserRequest
+  ): Promise<Omit<User, 'passwordHash'>> {
     const { password, ...restData } = userData;
 
     // Hash password
@@ -54,7 +62,7 @@ export class UsersService {
     const createData: CreateUserData = {
       ...restData,
       passwordHash,
-      role: userData.role || 'user'
+      role: userData.role || 'user',
     };
 
     const user = await usersRepository.create(createData);
@@ -90,7 +98,10 @@ export class UsersService {
    * @example
    * const user = await usersService.getUserByEmail('user@example.com');
    */
-  async getUserByEmail(email: string, tenantId?: string): Promise<Omit<User, 'passwordHash'> | null> {
+  async getUserByEmail(
+    email: string,
+    tenantId?: string
+  ): Promise<Omit<User, 'passwordHash'> | null> {
     const user = await usersRepository.findByEmail(email, tenantId);
 
     if (!user) {
@@ -113,10 +124,22 @@ export class UsersService {
    *   lastName: 'Smith'
    * });
    */
-  async updateUser(id: string, updateData: UpdateUserRequest): Promise<Omit<User, 'passwordHash'>> {
+  async updateUser(
+    id: string,
+    updateData: UpdateUserRequest
+  ): Promise<Omit<User, 'passwordHash'>> {
     // Validate that at least one field is being updated
-    const validFields = ['email', 'firstName', 'lastName', 'role', 'isActive', 'emailVerified'];
-    const hasValidUpdate = validFields.some(field => updateData[field as keyof UpdateUserRequest] !== undefined);
+    const validFields = [
+      'email',
+      'firstName',
+      'lastName',
+      'role',
+      'isActive',
+      'emailVerified',
+    ];
+    const hasValidUpdate = validFields.some(
+      (field) => updateData[field as keyof UpdateUserRequest] !== undefined
+    );
 
     if (!hasValidUpdate) {
       throw new Error('No valid fields provided for update');
@@ -191,11 +214,11 @@ export class UsersService {
     const result = await usersRepository.findWithPagination({
       ...options,
       page,
-      limit
+      limit,
     });
 
     // Remove password hashes from all users
-    const users = result.users.map(user => {
+    const users = result.users.map((user) => {
       const { passwordHash: _, ...userWithoutPassword } = user;
       return userWithoutPassword;
     });
@@ -208,8 +231,8 @@ export class UsersService {
         total: result.total,
         pages: result.pages,
         hasNext: result.hasNext,
-        hasPrev: result.hasPrev
-      }
+        hasPrev: result.hasPrev,
+      },
     };
   }
 
@@ -250,7 +273,11 @@ export class UsersService {
    * @example
    * const hasAccess = usersService.validateUserAccess('user1', 'user2', 'admin');
    */
-  validateUserAccess(userId: string, targetUserId: string, userRole: string): boolean {
+  validateUserAccess(
+    userId: string,
+    targetUserId: string,
+    userRole: string
+  ): boolean {
     // Admin users can access any user
     if (userRole === 'admin') {
       return true;
@@ -258,6 +285,136 @@ export class UsersService {
 
     // Regular users can only access their own data
     return userId === targetUserId;
+  }
+
+  /**
+   * Updates a user's avatar by uploading a new image to cloud storage.
+   * @param userId - User ID to update avatar for
+   * @param file - File buffer containing the avatar image
+   * @param originalName - Original filename of the uploaded file
+   * @param mimeType - MIME type of the file
+   * @param tenantId - Optional tenant ID for multi-tenant mode
+   * @returns Promise containing the updated user with new avatar URL
+   * @throws {Error} When user not found, file upload fails, or validation fails
+   * @example
+   * const updatedUser = await usersService.updateAvatar(
+   *   'user-uuid',
+   *   fileBuffer,
+   *   'avatar.jpg',
+   *   'image/jpeg'
+   * );
+   */
+  async updateAvatar(
+    userId: string,
+    file: Buffer,
+    originalName: string,
+    mimeType: string
+  ): Promise<Omit<User, 'passwordHash'>> {
+    // Check if user exists
+    const existingUser = await usersRepository.findById(userId);
+    if (!existingUser) {
+      throw new Error('User not found');
+    }
+
+    try {
+      // Generate unique filename for avatar
+      const timestamp = Date.now();
+      const extension = originalName.split('.').pop() || 'jpg';
+      const fileName = `avatars/${userId}/${timestamp}-${userId}.${extension}`;
+
+      // Upload file to storage
+      const avatarUrl = await storageService.uploadFile(
+        file,
+        fileName,
+        mimeType
+      );
+
+      // Delete old avatar if it exists
+      if (existingUser.avatarUrl) {
+        try {
+          // Extract filename from old avatar URL
+          const oldFileName = this.extractFileNameFromUrl(
+            existingUser.avatarUrl
+          );
+          if (oldFileName) {
+            await storageService.deleteFile(oldFileName);
+          }
+        } catch (error) {
+          // Log error but don't fail the entire operation
+          console.warn(
+            `Failed to delete old avatar for user ${userId}:`,
+            error
+          );
+        }
+      }
+
+      // Update user record with new avatar URL
+      const updatedUser = await usersRepository.updateAvatar(userId, avatarUrl);
+
+      // Return user without password hash
+      const { passwordHash: _, ...userWithoutPassword } = updatedUser;
+      return userWithoutPassword;
+    } catch (error) {
+      throw new Error(
+        `Avatar update failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  /**
+   * Removes a user's avatar by deleting the image from cloud storage.
+   * @param userId - User ID to remove avatar for
+   * @returns Promise containing the updated user with null avatar URL
+   * @throws {Error} When user not found or deletion fails
+   * @example
+   * const updatedUser = await usersService.removeAvatar('user-uuid');
+   */
+  async removeAvatar(userId: string): Promise<Omit<User, 'passwordHash'>> {
+    // Check if user exists
+    const existingUser = await usersRepository.findById(userId);
+    if (!existingUser) {
+      throw new Error('User not found');
+    }
+
+    try {
+      // Delete avatar from storage if it exists
+      if (existingUser.avatarUrl) {
+        const fileName = this.extractFileNameFromUrl(existingUser.avatarUrl);
+        if (fileName) {
+          await storageService.deleteFile(fileName);
+        }
+      }
+
+      // Update user record to remove avatar URL
+      const updatedUser = await usersRepository.updateAvatar(userId, null);
+
+      // Return user without password hash
+      const { passwordHash: _, ...userWithoutPassword } = updatedUser;
+      return userWithoutPassword;
+    } catch (error) {
+      throw new Error(
+        `Avatar removal failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  /**
+   * Extracts the filename from a storage URL for deletion purposes.
+   * @param url - Full URL to the stored file
+   * @returns Filename or null if extraction fails
+   * @private
+   */
+  private extractFileNameFromUrl(url: string): string | null {
+    try {
+      // Extract filename from DigitalOcean Spaces URL
+      // Format: https://bucketname.region.digitaloceanspaces.com/path/to/file.ext
+      const urlParts = url.split('/');
+      const pathParts = urlParts.slice(3); // Remove https, empty, and domain parts
+      return pathParts.join('/');
+    } catch (error) {
+      console.warn('Failed to extract filename from URL:', url, error);
+      return null;
+    }
   }
 }
 
