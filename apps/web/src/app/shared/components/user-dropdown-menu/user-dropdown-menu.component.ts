@@ -22,12 +22,13 @@ export interface UserMenuItem {
  *
  * Features:
  * - Theme-aware styling with CSS variables
- * - User avatar with initials
+ * - User avatar image with initials fallback
  * - Role badge display
  * - Menu items with icons
  * - Logout functionality
  * - Responsive design
  * - Click-outside-to-close functionality
+ * - Image error handling with graceful degradation
  *
  * @example
  * ```html
@@ -50,12 +51,24 @@ export interface UserMenuItem {
       >
         <span class="sr-only">Open user menu</span>
         @if (user()) {
-          <div
-            class="h-8 w-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center"
-          >
-            <span class="text-sm font-medium text-white">
-              {{ getUserInitials() }}
-            </span>
+          <div class="h-8 w-8 rounded-full overflow-hidden">
+            @if (user()!.avatarUrl && !imageLoadError()) {
+              <img
+                [src]="user()!.avatarUrl"
+                [alt]="user()!.firstName + ' ' + user()!.lastName + ' avatar'"
+                class="h-full w-full object-cover"
+                (error)="onImageError()"
+                (load)="onImageLoad()"
+              />
+            } @else {
+              <div
+                class="h-full w-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center"
+              >
+                <span class="text-sm font-medium text-white">
+                  {{ getUserInitials() }}
+                </span>
+              </div>
+            }
           </div>
         }
       </button>
@@ -223,6 +236,7 @@ export class UserDropdownMenuComponent implements OnInit, OnDestroy {
 
   protected readonly user = this.authService.user;
   protected readonly userMenuOpen = signal(false);
+  protected readonly imageLoadError = signal(false);
 
   private clickOutsideHandler: ((event: Event) => void) | null = null;
 
@@ -258,7 +272,7 @@ export class UserDropdownMenuComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     // Close menu when clicking outside
-    this.clickOutsideHandler = (event: Event) => {
+    this.clickOutsideHandler = (event: Event): void => {
       const target = event.target as HTMLElement;
       if (!target.closest('.relative')) {
         this.userMenuOpen.set(false);
@@ -278,8 +292,14 @@ export class UserDropdownMenuComponent implements OnInit, OnDestroy {
    */
   public getUserInitials(): string {
     const currentUser = this.user();
-    if (!currentUser || !currentUser.firstName || !currentUser.lastName) return '';
-    return `${currentUser.firstName.charAt(0)}${currentUser.lastName.charAt(0)}`.toUpperCase();
+    if (!currentUser) return '';
+
+    const firstName = currentUser.firstName?.trim();
+    const lastName = currentUser.lastName?.trim();
+
+    if (!firstName || firstName === '' || !lastName || lastName === '') return '';
+
+    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   }
 
   /**
@@ -306,6 +326,20 @@ export class UserDropdownMenuComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Handles image load errors and falls back to initials.
+   */
+  public onImageError(): void {
+    this.imageLoadError.set(true);
+  }
+
+  /**
+   * Handles successful image load and resets error state.
+   */
+  public onImageLoad(): void {
+    this.imageLoadError.set(false);
+  }
+
+  /**
    * Handles user menu item clicks.
    */
   public handleUserMenuClick(item: UserMenuItem): void {
@@ -317,9 +351,10 @@ export class UserDropdownMenuComponent implements OnInit, OnDestroy {
           // Navigation handled by AuthService
         },
         error: (error) => {
+          // eslint-disable-next-line no-console
           console.error('Logout failed:', error);
           // Force navigation to login even if server logout fails
-          this.router.navigate(['/auth/login']);
+          void this.router.navigate(['/auth/login']);
         },
       });
     }
