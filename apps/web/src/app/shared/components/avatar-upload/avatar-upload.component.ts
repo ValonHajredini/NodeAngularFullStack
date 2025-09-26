@@ -116,7 +116,7 @@ export interface AvatarUploadState {
         [modal]="true"
         [visible]="uploadState().showModal"
         (onHide)="closeModal()"
-        [style]="{ width: '450px' }"
+        [style]="{ width: '540px' }"
         [draggable]="false"
         [resizable]="false"
         styleClass="avatar-modal"
@@ -186,7 +186,7 @@ export interface AvatarUploadState {
               accept="image/jpeg,image/png,image/gif"
               [maxFileSize]="maxFileSize"
               [auto]="true"
-              chooseLabel="Choose Avatar"
+              chooseLabel=""
               uploadLabel=""
               cancelLabel=""
               [showUploadButton]="false"
@@ -202,51 +202,37 @@ export interface AvatarUploadState {
                 @if (files && files.length > 0) {
                   <div class="space-y-3">
                     @for (file of files; track file.name) {
-                      <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div class="flex items-center space-x-3">
-                          <i class="pi pi-file text-primary-600"></i>
-                          <div>
-                            <div class="text-sm font-medium text-gray-900">{{ file.name }}</div>
-                            <div class="text-xs text-gray-500">{{ formatFileSize(file.size) }}</div>
-                          </div>
+                      <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                        <i class="pi pi-file text-primary-600"></i>
+                        <div class="flex-1">
+                          <div class="text-sm font-medium text-gray-900">{{ file.name }}</div>
+                          <div class="text-xs text-gray-500">{{ formatFileSize(file.size) }}</div>
                         </div>
-                        <button
-                          type="button"
-                          (click)="uploadAvatar()"
-                          [disabled]="uploadState().uploading"
-                          class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                          @if (uploadState().uploading) {
-                            <div class="flex items-center">
-                              <div
-                                class="animate-spin -ml-1 mr-1 h-3 w-3 border border-white border-t-transparent rounded-full"
-                              ></div>
-                              Uploading...
-                            </div>
-                          } @else {
-                            <i class="pi pi-upload mr-1"></i>
-                            Upload
-                          }
-                        </button>
                       </div>
                     }
                   </div>
                 } @else {
                   <div
-                    class="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-200 cursor-pointer"
+                    class="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:bg-primary-50 hover:border-primary-400 transition-all duration-200 cursor-pointer group"
+                    (click)="fileUpload.choose()"
                   >
-                    <i class="pi pi-cloud-upload text-3xl text-gray-400 mb-3"></i>
-                    <p class="text-sm text-gray-600 mb-1">
-                      <span
-                        class="font-semibold text-primary-600 hover:text-primary-500 cursor-pointer"
+                    <div class="flex flex-col items-center">
+                      <div
+                        class="mb-4 p-3 bg-primary-100 rounded-full group-hover:bg-primary-200 transition-colors"
                       >
-                        Click to upload
-                      </span>
-                      or drag and drop
-                    </p>
-                    <p class="text-xs text-gray-500">
-                      JPG, PNG or GIF (max {{ formatFileSize(maxFileSize) }})
-                    </p>
+                        <i class="pi pi-cloud-upload text-2xl text-primary-600"></i>
+                      </div>
+                      <h3 class="text-lg font-medium text-gray-900 mb-2">Choose Avatar</h3>
+                      <p class="text-sm text-gray-600 mb-1">
+                        <span class="font-semibold text-primary-600 group-hover:text-primary-700">
+                          Click here to select
+                        </span>
+                        or drag and drop your image
+                      </p>
+                      <p class="text-xs text-gray-500">
+                        JPG, PNG or GIF (max {{ formatFileSize(maxFileSize) }})
+                      </p>
+                    </div>
                   </div>
                 }
               </ng-template>
@@ -257,6 +243,7 @@ export interface AvatarUploadState {
         <!-- Modal Footer -->
         <ng-template pTemplate="footer">
           <div class="flex justify-between w-full">
+            <!-- Left side - Remove Avatar button -->
             @if (currentAvatarUrl() && !uploadState().uploading) {
               <button
                 type="button"
@@ -270,13 +257,40 @@ export interface AvatarUploadState {
               <div></div>
             }
 
-            <button
-              type="button"
-              (click)="closeModal()"
-              class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-            >
-              Close
-            </button>
+            <!-- Right side - Upload and Close buttons -->
+            <div class="flex space-x-3">
+              @if (uploadState().selectedFile && !uploadState().uploading) {
+                <button
+                  type="button"
+                  (click)="uploadAvatar()"
+                  class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors shadow-sm"
+                >
+                  <i class="pi pi-upload mr-2"></i>
+                  Upload
+                </button>
+              }
+
+              @if (uploadState().uploading) {
+                <button
+                  type="button"
+                  disabled
+                  class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 opacity-50 cursor-not-allowed shadow-sm"
+                >
+                  <div
+                    class="animate-spin -ml-1 mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"
+                  ></div>
+                  Uploading...
+                </button>
+              }
+
+              <button
+                type="button"
+                (click)="closeModal()"
+                class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </ng-template>
       </p-dialog>
@@ -301,24 +315,45 @@ export interface AvatarUploadState {
         backdrop-filter: blur(10px);
       }
 
-      /* Enhanced file upload styling */
+      /* Hide the choose button */
+      ::ng-deep .p-fileupload .p-fileupload-buttonbar .p-fileupload-choose {
+        display: none !important;
+      }
+
+      ::ng-deep .p-fileupload .p-fileupload-choose {
+        display: none !important;
+      }
+
+      ::ng-deep .p-fileupload-choose {
+        display: none !important;
+      }
+
+      /* Enhanced unified file upload styling */
       ::ng-deep .p-fileupload-dragdrop {
-        border: 2px dashed #d1d5db !important;
+        border: none !important;
         background: transparent !important;
-        transition: all 0.3s ease-in-out;
-        border-radius: 12px !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
       }
 
       ::ng-deep .p-fileupload-dragdrop:hover {
-        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%) !important;
-        border-color: #3b82f6 !important;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        background: transparent !important;
+        border: none !important;
+        transform: none !important;
+        box-shadow: none !important;
       }
 
       ::ng-deep .p-fileupload-dragdrop.p-fileupload-dragover {
-        border-color: #2563eb !important;
+        border: none !important;
+        background: transparent !important;
+        transform: none !important;
+        box-shadow: none !important;
+      }
+
+      /* Custom drag-over styling */
+      ::ng-deep .p-fileupload-dragdrop.p-fileupload-dragover .text-center {
         background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+        border-color: #2563eb !important;
         transform: translateY(-2px);
         box-shadow: 0 8px 25px rgba(59, 130, 246, 0.25);
       }

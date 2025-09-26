@@ -8,6 +8,7 @@ import morgan from 'morgan';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import swaggerUi from 'swagger-ui-express';
+import path from 'path';
 
 import { config } from './utils/config.utils';
 import { databaseService, DatabaseService } from './services/database.service';
@@ -121,6 +122,14 @@ class Server {
         },
       })
     );
+
+    // Serve uploaded files statically in development
+    if (config.NODE_ENV === 'development') {
+      this.app.use(
+        '/uploads',
+        express.static(path.join(process.cwd(), 'uploads'))
+      );
+    }
 
     // Legacy health check endpoint
     this.app.use('/health', healthRoutes);

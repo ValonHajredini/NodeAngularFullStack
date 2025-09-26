@@ -661,5 +661,6 @@ export class StorageService implements IStorageService {
 /**
  * Default storage service instance.
  * Pre-configured singleton for use across the application.
+ * Uses DigitalOcean Spaces for cloud storage in all environments.
  */
 export const storageService = new StorageService();
