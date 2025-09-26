@@ -11,7 +11,10 @@ import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angula
 import { Router, RouterLink } from '@angular/router';
 import { AuthService, User } from '@core/auth/auth.service';
 import { ProfileService } from './profile.service';
-import { AvatarUploadComponent } from '@shared/components/avatar-upload/avatar-upload.component';
+import {
+  AvatarUploaderComponent,
+  AvatarUploaderConfig,
+} from '@shared/components/avatar-uploader/avatar-uploader.component';
 
 /**
  * User profile management component for displaying and editing user information.
@@ -20,7 +23,7 @@ import { AvatarUploadComponent } from '@shared/components/avatar-upload/avatar-u
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, AvatarUploadComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, AvatarUploaderComponent],
   template: `
     <div class="py-8">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -36,7 +39,25 @@ import { AvatarUploadComponent } from '@shared/components/avatar-upload/avatar-u
             <div class="bg-white overflow-hidden shadow rounded-lg">
               <div class="px-4 py-5 sm:p-6">
                 <!-- Avatar Upload Section -->
-                <app-avatar-upload></app-avatar-upload>
+                <div class="text-center">
+                  <app-avatar-uploader
+                    [currentAvatarUrl]="user()?.avatarUrl"
+                    [config]="avatarConfig()"
+                    (onUploadSuccess)="handleAvatarSuccess($event)"
+                    (onUploadError)="handleAvatarError($event)"
+                    (onDeleteSuccess)="handleAvatarSuccess($event)"
+                  >
+                  </app-avatar-uploader>
+
+                  @if (user()) {
+                    <div class="mt-3">
+                      <h3 class="text-lg font-medium text-gray-900">
+                        {{ user()!.firstName }} {{ user()!.lastName }}
+                      </h3>
+                      <p class="text-sm text-gray-500">{{ user()!.email }}</p>
+                    </div>
+                  }
+                </div>
 
                 <!-- User Role Badge -->
                 @if (user()) {
@@ -414,6 +435,46 @@ export class ProfileComponent implements OnInit {
   public hasChanges(): boolean {
     const currentValue = this.profileForm.value;
     return JSON.stringify(currentValue) !== JSON.stringify(this.originalFormValue);
+  }
+
+  /**
+   * Avatar uploader configuration
+   */
+  public avatarConfig = computed<AvatarUploaderConfig>(() => ({
+    modalTitle: 'Update Profile Picture',
+    modalWidth: '600px',
+    avatarSize: '120px',
+    borderRadius: '50%',
+    maxFileSize: 5242880, // 5MB
+    acceptedFormats: ['.jpg', '.jpeg', '.png', '.gif', '.webp'],
+    confirmDelete: true,
+    autoUpload: false,
+  }));
+
+  /**
+   * Handles successful avatar upload/deletion
+   */
+  public handleAvatarSuccess(user: User): void {
+    // The user data is automatically updated through the ProfileService
+    // which updates the AuthService user state
+    this.successMessage.set('Avatar updated successfully!');
+
+    // Clear success message after 3 seconds
+    setTimeout(() => {
+      this.successMessage.set(null);
+    }, 3000);
+  }
+
+  /**
+   * Handles avatar upload/deletion errors
+   */
+  public handleAvatarError(errorMessage: string): void {
+    this.error.set(errorMessage);
+
+    // Clear error message after 5 seconds
+    setTimeout(() => {
+      this.error.set(null);
+    }, 5000);
   }
 
   /**
