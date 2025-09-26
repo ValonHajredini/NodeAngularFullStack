@@ -75,6 +75,8 @@ export interface FileValidationResult {
   fileType?: string;
   /** File size in bytes */
   fileSize?: number;
+  /** The validated content type to use for upload (detected type or declared type) */
+  validatedContentType?: string;
 }
 
 /**
