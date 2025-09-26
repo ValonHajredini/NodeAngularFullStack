@@ -25,6 +25,12 @@ export {
   type SectionContainerVariant,
   type SectionContainerSize,
 } from './section-container';
+export { ApiTokenGeneratorComponent } from './api-token-generator';
+export { SettingsSidebarComponent } from './settings-sidebar';
+export {
+  AvatarUploadComponent,
+  type AvatarUploadState,
+} from './avatar-upload/avatar-upload.component';
 
 // Welcome Page Components
 export {

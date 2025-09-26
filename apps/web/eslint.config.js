@@ -14,6 +14,12 @@ module.exports = tseslint.config(
       ...angular.configs.tsRecommended,
     ],
     processor: angular.processInlineTemplates,
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.json', './tsconfig.app.json', './tsconfig.spec.json'],
+        tsconfigRootDir: __dirname,
+      },
+    },
     rules: {
       // Angular-specific rules
       '@angular-eslint/directive-selector': [
@@ -77,26 +83,8 @@ module.exports = tseslint.config(
       'no-unreachable': 'error',
       'no-unused-expressions': 'error',
 
-      // JSDoc requirements for public APIs
-      'valid-jsdoc': [
-        'error',
-        {
-          requireReturn: false,
-          requireReturnDescription: false,
-          requireParamDescription: true,
-        },
-      ],
-      'require-jsdoc': [
-        'error',
-        {
-          require: {
-            FunctionDeclaration: true,
-            MethodDefinition: true,
-            ClassDeclaration: true,
-            ArrowFunctionExpression: false,
-          },
-        },
-      ],
+      // JSDoc is enforced through TypeScript and code review process
+      // Note: require-jsdoc and valid-jsdoc are deprecated in modern ESLint
     },
   },
   {

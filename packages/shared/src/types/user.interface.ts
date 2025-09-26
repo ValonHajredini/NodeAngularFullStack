@@ -15,6 +15,8 @@ export interface User {
   role: 'admin' | 'user' | 'readonly';
   /** Optional tenant ID for multi-tenant mode */
   tenantId?: string;
+  /** User's avatar image URL stored in cloud storage */
+  avatarUrl?: string;
   /** Account creation timestamp */
   createdAt: Date;
   /** Last modification timestamp */
@@ -43,4 +45,37 @@ export interface AuthResponse {
   refreshToken: string;
   /** Access token expiration time in seconds */
   expiresIn: number;
+}
+
+/**
+ * Avatar upload request containing the file to be uploaded.
+ * Note: On backend, this will be cast to Express.Multer.File
+ */
+export interface AvatarUploadRequest {
+  /** The uploaded file from multipart/form-data */
+  file: {
+    /** Original filename */
+    originalname: string;
+    /** File MIME type */
+    mimetype: string;
+    /** File size in bytes */
+    size: number;
+    /** File buffer data */
+    buffer: Buffer;
+  };
+}
+
+/**
+ * Avatar upload response containing the uploaded avatar URL and updated user data.
+ */
+export interface AvatarUploadResponse {
+  /** Success status of the upload operation */
+  success: boolean;
+  /** Response data containing avatar URL and updated user */
+  data: {
+    /** The URL of the uploaded avatar in cloud storage */
+    avatarUrl: string;
+    /** The updated user object with the new avatar URL */
+    user: User;
+  };
 }

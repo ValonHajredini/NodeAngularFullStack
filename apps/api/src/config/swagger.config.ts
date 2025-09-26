@@ -4,31 +4,33 @@ const swaggerSpec = {
   info: {
     title: 'Node Angular Full Stack API',
     version: '1.0.0',
-    description: 'A comprehensive API for the Node Angular Full Stack application',
+    description:
+      'A comprehensive API for the Node Angular Full Stack application',
     contact: {
       name: 'API Support',
-      email: 'support@example.com'
+      email: 'support@example.com',
     },
     license: {
       name: 'MIT',
-      url: 'https://opensource.org/licenses/MIT'
-    }
+      url: 'https://opensource.org/licenses/MIT',
+    },
   },
   servers: [
     {
       url: 'http://localhost:3000/api/v1',
-      description: 'Development server'
+      description: 'Development server',
     },
     {
       url: 'https://api.example.com/v1',
-      description: 'Production server'
-    }
+      description: 'Production server',
+    },
   ],
   paths: {
     '/health': {
       get: {
         summary: 'Comprehensive health check',
-        description: 'Returns detailed health status including database connectivity and system metrics',
+        description:
+          'Returns detailed health status including database connectivity and system metrics',
         tags: ['Health'],
         responses: {
           '200': {
@@ -40,27 +42,34 @@ const swaggerSpec = {
                   properties: {
                     status: { type: 'string', example: 'healthy' },
                     timestamp: { type: 'string', format: 'date-time' },
-                    uptime: { type: 'number', description: 'Process uptime in seconds' },
+                    uptime: {
+                      type: 'number',
+                      description: 'Process uptime in seconds',
+                    },
                     database: {
                       type: 'object',
                       properties: {
                         status: { type: 'string', example: 'connected' },
-                        responseTime: { type: 'number', description: 'Database response time in ms' }
-                      }
+                        responseTime: {
+                          type: 'number',
+                          description: 'Database response time in ms',
+                        },
+                      },
                     },
-                    environment: { type: 'string', example: 'development' }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+                    environment: { type: 'string', example: 'development' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     },
     '/health/readiness': {
       get: {
         summary: 'Kubernetes readiness probe',
-        description: 'Returns 200 if service is ready to accept traffic, 503 otherwise',
+        description:
+          'Returns 200 if service is ready to accept traffic, 503 otherwise',
         tags: ['Health'],
         responses: {
           '200': {
@@ -71,19 +80,20 @@ const swaggerSpec = {
                   type: 'object',
                   properties: {
                     status: { type: 'string', example: 'ready' },
-                    timestamp: { type: 'string', format: 'date-time' }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     },
     '/health/liveness': {
       get: {
         summary: 'Kubernetes liveness probe',
-        description: 'Returns 200 if service is alive, used to determine if container should be restarted',
+        description:
+          'Returns 200 if service is alive, used to determine if container should be restarted',
         tags: ['Health'],
         responses: {
           '200': {
@@ -94,14 +104,14 @@ const swaggerSpec = {
                   type: 'object',
                   properties: {
                     status: { type: 'string', example: 'alive' },
-                    timestamp: { type: 'string', format: 'date-time' }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     },
     '/auth/register': {
       post: {
@@ -117,38 +127,59 @@ const swaggerSpec = {
                 email: 'user@example.com',
                 password: 'SecurePass123!',
                 firstName: 'John',
-                lastName: 'Doe'
-              }
-            }
-          }
+                lastName: 'Doe',
+              },
+            },
+          },
         },
         responses: {
           '201': {
             description: 'Registration successful',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/AuthResponse' }
-              }
-            }
+                schema: { $ref: '#/components/schemas/AuthResponse' },
+                example: {
+                  message: 'User registered successfully',
+                  data: {
+                    accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+                    refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+                    user: {
+                      id: '123e4567-e89b-12d3-a456-426614174000',
+                      email: 'user@example.com',
+                      firstName: 'John',
+                      lastName: 'Doe',
+                      role: 'user',
+                      tenantId: null,
+                      avatarUrl: null,
+                      isActive: true,
+                      emailVerified: false,
+                      createdAt: '2024-01-21T15:30:00.000Z',
+                      updatedAt: '2024-01-21T15:30:00.000Z',
+                    },
+                  },
+                  timestamp: '2024-01-21T15:30:00.000Z',
+                },
+              },
+            },
           },
           '400': {
             description: 'Validation error',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/ValidationError' }
-              }
-            }
+                schema: { $ref: '#/components/schemas/ValidationError' },
+              },
+            },
           },
           '409': {
             description: 'Email already exists',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/auth/login': {
       post: {
@@ -162,30 +193,52 @@ const swaggerSpec = {
               schema: { $ref: '#/components/schemas/UserLogin' },
               example: {
                 email: 'user@example.com',
-                password: 'SecurePass123!'
-              }
-            }
-          }
+                password: 'SecurePass123!',
+              },
+            },
+          },
         },
         responses: {
           '200': {
             description: 'Login successful',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/AuthResponse' }
-              }
-            }
+                schema: { $ref: '#/components/schemas/AuthResponse' },
+                example: {
+                  message: 'Login successful',
+                  data: {
+                    accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+                    refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+                    user: {
+                      id: '123e4567-e89b-12d3-a456-426614174000',
+                      email: 'user@example.com',
+                      firstName: 'John',
+                      lastName: 'Doe',
+                      role: 'user',
+                      tenantId: null,
+                      avatarUrl:
+                        'https://cdn.example.com/avatars/user-123/avatar.jpg',
+                      isActive: true,
+                      emailVerified: true,
+                      createdAt: '2024-01-01T00:00:00.000Z',
+                      updatedAt: '2024-01-21T15:30:00.000Z',
+                    },
+                  },
+                  timestamp: '2024-01-21T15:30:00.000Z',
+                },
+              },
+            },
           },
           '401': {
             description: 'Invalid credentials',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/auth/refresh': {
       post: {
@@ -196,29 +249,29 @@ const swaggerSpec = {
           required: true,
           content: {
             'application/json': {
-              schema: { $ref: '#/components/schemas/RefreshTokenRequest' }
-            }
-          }
+              schema: { $ref: '#/components/schemas/RefreshTokenRequest' },
+            },
+          },
         },
         responses: {
           '200': {
             description: 'Token refresh successful',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/AuthResponse' }
-              }
-            }
+                schema: { $ref: '#/components/schemas/AuthResponse' },
+              },
+            },
           },
           '401': {
             description: 'Invalid or expired refresh token',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/auth/logout': {
       post: {
@@ -233,19 +286,23 @@ const swaggerSpec = {
                 schema: {
                   type: 'object',
                   properties: {
-                    message: { type: 'string', example: 'Logged out successfully' }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+                    message: {
+                      type: 'string',
+                      example: 'Logged out successfully',
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     },
     '/auth/logout-all': {
       post: {
         summary: 'Logout from all devices',
-        description: 'Logout user from all devices by invalidating all refresh tokens',
+        description:
+          'Logout user from all devices by invalidating all refresh tokens',
         tags: ['Authentication'],
         security: [{ bearerAuth: [] }],
         responses: {
@@ -256,27 +313,30 @@ const swaggerSpec = {
                 schema: {
                   type: 'object',
                   properties: {
-                    message: { type: 'string', example: 'Logged out from all devices successfully' }
-                  }
-                }
-              }
-            }
+                    message: {
+                      type: 'string',
+                      example: 'Logged out from all devices successfully',
+                    },
+                  },
+                },
+              },
+            },
           },
           '401': {
             description: 'Authentication required',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/auth/profile': {
       get: {
         summary: 'Get user profile',
-        description: 'Get authenticated user\'s profile information',
+        description: "Get authenticated user's profile information",
         tags: ['Authentication'],
         security: [{ bearerAuth: [] }],
         responses: {
@@ -284,65 +344,66 @@ const swaggerSpec = {
             description: 'User profile retrieved successfully',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/UserProfile' }
-              }
-            }
+                schema: { $ref: '#/components/schemas/UserProfile' },
+              },
+            },
           },
           '401': {
             description: 'Authentication required',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
       },
       patch: {
         summary: 'Update user profile',
-        description: 'Update authenticated user\'s profile information',
+        description: "Update authenticated user's profile information",
         tags: ['Authentication'],
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
             'application/json': {
-              schema: { $ref: '#/components/schemas/UserUpdateRequest' }
-            }
-          }
+              schema: { $ref: '#/components/schemas/UserUpdateRequest' },
+            },
+          },
         },
         responses: {
           '200': {
             description: 'Profile updated successfully',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/UserProfile' }
-              }
-            }
+                schema: { $ref: '#/components/schemas/UserProfile' },
+              },
+            },
           },
           '401': {
             description: 'Authentication required',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/auth/password-reset': {
       post: {
         summary: 'Request password reset',
-        description: 'Request password reset email (always returns success for security)',
+        description:
+          'Request password reset email (always returns success for security)',
         tags: ['Authentication'],
         requestBody: {
           required: true,
           content: {
             'application/json': {
-              schema: { $ref: '#/components/schemas/PasswordResetRequest' }
-            }
-          }
+              schema: { $ref: '#/components/schemas/PasswordResetRequest' },
+            },
+          },
         },
         responses: {
           '200': {
@@ -352,14 +413,17 @@ const swaggerSpec = {
                 schema: {
                   type: 'object',
                   properties: {
-                    message: { type: 'string', example: 'Password reset email sent if account exists' }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+                    message: {
+                      type: 'string',
+                      example: 'Password reset email sent if account exists',
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     },
     '/auth/password-reset/confirm': {
       post: {
@@ -370,9 +434,9 @@ const swaggerSpec = {
           required: true,
           content: {
             'application/json': {
-              schema: { $ref: '#/components/schemas/PasswordResetConfirm' }
-            }
-          }
+              schema: { $ref: '#/components/schemas/PasswordResetConfirm' },
+            },
+          },
         },
         responses: {
           '200': {
@@ -382,14 +446,17 @@ const swaggerSpec = {
                 schema: {
                   type: 'object',
                   properties: {
-                    message: { type: 'string', example: 'Password reset successful' }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+                    message: {
+                      type: 'string',
+                      example: 'Password reset successful',
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     },
     '/auth/password-reset/validate/{token}': {
       get: {
@@ -402,8 +469,8 @@ const swaggerSpec = {
             name: 'token',
             required: true,
             schema: { type: 'string' },
-            description: 'Password reset token to validate'
-          }
+            description: 'Password reset token to validate',
+          },
         ],
         responses: {
           '200': {
@@ -414,14 +481,14 @@ const swaggerSpec = {
                   type: 'object',
                   properties: {
                     valid: { type: 'boolean', example: true },
-                    expiresAt: { type: 'string', format: 'date-time' }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+                    expiresAt: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     },
     '/auth/test-credentials': {
       get: {
@@ -443,17 +510,20 @@ const swaggerSpec = {
                         properties: {
                           email: { type: 'string', format: 'email' },
                           password: { type: 'string' },
-                          role: { type: 'string', enum: ['admin', 'user', 'readonly'] }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+                          role: {
+                            type: 'string',
+                            enum: ['admin', 'user', 'readonly'],
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     },
     '/auth/me': {
       get: {
@@ -474,16 +544,16 @@ const swaggerSpec = {
                       type: 'object',
                       properties: {
                         issuedAt: { type: 'string', format: 'date-time' },
-                        expiresAt: { type: 'string', format: 'date-time' }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+                        expiresAt: { type: 'string', format: 'date-time' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     },
     '/users': {
       post: {
@@ -505,8 +575,8 @@ const swaggerSpec = {
                   role: { type: 'string', enum: ['admin', 'user', 'readonly'] },
                   password: { type: 'string', minLength: 8 },
                   isActive: { type: 'boolean', default: true },
-                  emailVerified: { type: 'boolean', default: false }
-                }
+                  emailVerified: { type: 'boolean', default: false },
+                },
               },
               example: {
                 email: 'newuser@example.com',
@@ -515,33 +585,34 @@ const swaggerSpec = {
                 role: 'user',
                 password: 'TempPassword123!',
                 isActive: true,
-                emailVerified: false
-              }
-            }
-          }
+                emailVerified: false,
+              },
+            },
+          },
         },
         responses: {
           '201': {
             description: 'User created successfully',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/User' }
-              }
-            }
+                schema: { $ref: '#/components/schemas/User' },
+              },
+            },
           },
           '403': {
             description: 'Admin access required',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
       },
       get: {
         summary: 'Get paginated list of users',
-        description: 'Get paginated list of users with search and filtering (admin only)',
+        description:
+          'Get paginated list of users with search and filtering (admin only)',
         tags: ['Users'],
         security: [{ bearerAuth: [] }],
         parameters: [
@@ -549,32 +620,36 @@ const swaggerSpec = {
             in: 'query',
             name: 'page',
             schema: { type: 'integer', minimum: 1, default: 1 },
-            description: 'Page number for pagination'
+            description: 'Page number for pagination',
           },
           {
             in: 'query',
             name: 'limit',
             schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
-            description: 'Number of items per page'
+            description: 'Number of items per page',
           },
           {
             in: 'query',
             name: 'search',
             schema: { type: 'string' },
-            description: 'Search term for email, firstName, or lastName'
+            description: 'Search term for email, firstName, or lastName',
           },
           {
             in: 'query',
             name: 'role',
             schema: { type: 'string', enum: ['admin', 'user', 'readonly'] },
-            description: 'Filter by user role'
+            description: 'Filter by user role',
           },
           {
             in: 'query',
             name: 'status',
-            schema: { type: 'string', enum: ['active', 'inactive', 'all'], default: 'all' },
-            description: 'Filter by user status'
-          }
+            schema: {
+              type: 'string',
+              enum: ['active', 'inactive', 'all'],
+              default: 'all',
+            },
+            description: 'Filter by user status',
+          },
         ],
         responses: {
           '200': {
@@ -589,22 +664,744 @@ const swaggerSpec = {
                       properties: {
                         data: {
                           type: 'array',
-                          items: { $ref: '#/components/schemas/User' }
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
+                          items: { $ref: '#/components/schemas/User' },
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/tokens': {
+      post: {
+        summary: 'Create a new API token',
+        description: 'Creates a new API token for the authenticated user',
+        tags: ['API Tokens'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ApiTokenRequest' },
+              example: {
+                name: 'Production API Access',
+                scopes: ['read', 'write'],
+                expiresAt: '2025-12-31T23:59:59.999Z',
+              },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Token created successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { $ref: '#/components/schemas/ApiTokenResponse' },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'Invalid input data',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ValidationError' },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '409': {
+            description: 'Token name already exists for user',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+      get: {
+        summary: "List user's API tokens",
+        description:
+          'Returns all API tokens for the authenticated user (without token values)',
+        tags: ['API Tokens'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Tokens retrieved successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/ApiTokenInfo' },
+                    },
+                    meta: {
+                      type: 'object',
+                      properties: {
+                        total: { type: 'number', example: 3 },
+                      },
+                    },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+                example: {
+                  success: true,
+                  data: [
+                    {
+                      id: '123e4567-e89b-12d3-a456-426614174000',
+                      name: 'Production API Access',
+                      scopes: ['read', 'write'],
+                      expiresAt: '2025-12-31T23:59:59.999Z',
+                      createdAt: '2024-01-15T10:30:00.000Z',
+                      lastUsedAt: '2024-01-20T14:45:30.000Z',
+                      isActive: true,
+                    },
+                  ],
+                  meta: { total: 3 },
+                  timestamp: '2024-01-21T15:30:00.000Z',
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/tokens/{id}': {
+      get: {
+        summary: 'Get API token information',
+        description:
+          'Returns information about a specific API token (without token value)',
+        tags: ['API Tokens'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'id',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Token ID',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Token information retrieved successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { $ref: '#/components/schemas/ApiTokenInfo' },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'Invalid token ID format',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ValidationError' },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '404': {
+            description: 'Token not found or access denied',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+      patch: {
+        summary: 'Update API token metadata',
+        description: "Updates an API token's name, scopes, or active status",
+        tags: ['API Tokens'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'id',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Token ID',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ApiTokenUpdateRequest' },
+              example: {
+                name: 'Updated Token Name',
+                scopes: ['read'],
+                isActive: false,
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Token updated successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { $ref: '#/components/schemas/ApiTokenInfo' },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'Invalid input data or token ID format',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ValidationError' },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '404': {
+            description: 'Token not found or access denied',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '409': {
+            description: 'Token name already exists for user',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+      delete: {
+        summary: 'Revoke API token',
+        description: 'Permanently revokes an API token by deleting it',
+        tags: ['API Tokens'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'id',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Token ID',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Token revoked successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        message: {
+                          type: 'string',
+                          example: 'Token revoked successfully',
+                        },
+                      },
+                    },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'Invalid token ID format',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ValidationError' },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '404': {
+            description: 'Token not found or access denied',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/tokens/{id}/usage': {
+      get: {
+        summary: 'Get token usage history',
+        description: 'Returns paginated usage history for a specific API token',
+        tags: ['API Tokens'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'id',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Token ID',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+          {
+            in: 'query',
+            name: 'page',
+            schema: { type: 'integer', minimum: 1, default: 1 },
+            description: 'Page number for pagination',
+          },
+          {
+            in: 'query',
+            name: 'limit',
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 50 },
+            description: 'Number of records per page',
+          },
+          {
+            in: 'query',
+            name: 'from',
+            schema: { type: 'string', format: 'date-time' },
+            description: 'Start date for filtering usage records',
+            example: '2024-01-01T00:00:00.000Z',
+          },
+          {
+            in: 'query',
+            name: 'to',
+            schema: { type: 'string', format: 'date-time' },
+            description: 'End date for filtering usage records',
+            example: '2024-01-31T23:59:59.999Z',
+          },
+          {
+            in: 'query',
+            name: 'status',
+            schema: { type: 'string' },
+            description: 'Comma-separated HTTP status codes to filter by',
+            example: '200,201,400',
+          },
+          {
+            in: 'query',
+            name: 'endpoint',
+            schema: { type: 'string' },
+            description: 'Filter by endpoint (partial match)',
+            example: '/users',
+          },
+          {
+            in: 'query',
+            name: 'method',
+            schema: {
+              type: 'string',
+              enum: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+            },
+            description: 'Filter by HTTP method',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Usage history retrieved successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { $ref: '#/components/schemas/TokenUsageResponse' },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'Invalid query parameters',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ValidationError' },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '404': {
+            description: 'Token not found or access denied',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/tokens/{id}/usage/stats': {
+      get: {
+        summary: 'Get token usage statistics',
+        description: 'Returns usage statistics for a specific API token',
+        tags: ['API Tokens'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'id',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Token ID',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+          {
+            in: 'query',
+            name: 'from',
+            schema: { type: 'string', format: 'date-time' },
+            description: 'Start date for statistics calculation',
+            example: '2024-01-01T00:00:00.000Z',
+          },
+          {
+            in: 'query',
+            name: 'to',
+            schema: { type: 'string', format: 'date-time' },
+            description: 'End date for statistics calculation',
+            example: '2024-01-31T23:59:59.999Z',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Usage statistics retrieved successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { $ref: '#/components/schemas/TokenUsageStats' },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'Invalid query parameters',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ValidationError' },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '404': {
+            description: 'Token not found or access denied',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/tokens/{id}/usage/timeseries': {
+      get: {
+        summary: 'Get token usage time-series data',
+        description: 'Returns time-series usage data for analytics and charts',
+        tags: ['API Tokens'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'id',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Token ID',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+          {
+            in: 'query',
+            name: 'period',
+            schema: { type: 'string', enum: ['hour', 'day'], default: 'day' },
+            description: 'Aggregation period for time series',
+          },
+          {
+            in: 'query',
+            name: 'from',
+            schema: { type: 'string', format: 'date-time' },
+            description: 'Start date for time series',
+            example: '2024-01-01T00:00:00.000Z',
+          },
+          {
+            in: 'query',
+            name: 'to',
+            schema: { type: 'string', format: 'date-time' },
+            description: 'End date for time series',
+            example: '2024-01-31T23:59:59.999Z',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Time-series data retrieved successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { $ref: '#/components/schemas/TokenUsageTimeSeries' },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'Invalid query parameters',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ValidationError' },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '404': {
+            description: 'Token not found or access denied',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/users/avatar': {
+      post: {
+        summary: 'Upload user avatar',
+        description: "Upload and update the authenticated user's avatar image",
+        tags: ['Users'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['avatar'],
+                properties: {
+                  avatar: {
+                    type: 'string',
+                    format: 'binary',
+                    description:
+                      'Avatar image file (jpg, png, gif, webp - max 5MB)',
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Avatar uploaded successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Avatar uploaded successfully',
+                    },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        user: { $ref: '#/components/schemas/User' },
+                        avatarUrl: {
+                          type: 'string',
+                          format: 'uri',
+                          example:
+                            'https://cdn.example.com/avatars/user-123/avatar.jpg',
+                        },
+                      },
+                    },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'Bad request - no file uploaded or validation error',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '413': {
+            description: 'File too large (exceeds 5MB)',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '415': {
+            description: 'Unsupported media type',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+      delete: {
+        summary: 'Delete user avatar',
+        description: "Delete the authenticated user's avatar image",
+        tags: ['Users'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Avatar deleted successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Avatar deleted successfully',
+                    },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        user: { $ref: '#/components/schemas/User' },
+                      },
+                    },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '404': {
+            description: 'User not found or no avatar to delete',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
     },
     '/users/{id}': {
       get: {
         summary: 'Get user by ID',
-        description: 'Get user by ID with role-based access control (admin can access any user, users can only access their own profile)',
+        description:
+          'Get user by ID with role-based access control (admin can access any user, users can only access their own profile)',
         tags: ['Users'],
         security: [{ bearerAuth: [] }],
         parameters: [
@@ -614,27 +1411,27 @@ const swaggerSpec = {
             required: true,
             schema: { type: 'string', format: 'uuid' },
             description: 'User ID (UUID)',
-            example: '123e4567-e89b-12d3-a456-426614174000'
-          }
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
         ],
         responses: {
           '200': {
             description: 'User retrieved successfully',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/User' }
-              }
-            }
+                schema: { $ref: '#/components/schemas/User' },
+              },
+            },
           },
           '404': {
             description: 'User not found',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
       },
       put: {
         summary: 'Update user (full replacement)',
@@ -647,8 +1444,8 @@ const swaggerSpec = {
             name: 'id',
             required: true,
             schema: { type: 'string', format: 'uuid' },
-            description: 'User ID (UUID)'
-          }
+            description: 'User ID (UUID)',
+          },
         ],
         requestBody: {
           required: true,
@@ -663,34 +1460,35 @@ const swaggerSpec = {
                   lastName: { type: 'string', minLength: 1, maxLength: 50 },
                   role: { type: 'string', enum: ['admin', 'user', 'readonly'] },
                   isActive: { type: 'boolean' },
-                  emailVerified: { type: 'boolean' }
-                }
-              }
-            }
-          }
+                  emailVerified: { type: 'boolean' },
+                },
+              },
+            },
+          },
         },
         responses: {
           '200': {
             description: 'User updated successfully',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/User' }
-              }
-            }
+                schema: { $ref: '#/components/schemas/User' },
+              },
+            },
           },
           '403': {
             description: 'Admin access required',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
       },
       patch: {
         summary: 'Partially update user',
-        description: 'Partially update user data (admin can update all fields, users can only update their own profile with limited fields)',
+        description:
+          'Partially update user data (admin can update all fields, users can only update their own profile with limited fields)',
         tags: ['Users'],
         security: [{ bearerAuth: [] }],
         parameters: [
@@ -699,8 +1497,8 @@ const swaggerSpec = {
             name: 'id',
             required: true,
             schema: { type: 'string', format: 'uuid' },
-            description: 'User ID (UUID)'
-          }
+            description: 'User ID (UUID)',
+          },
         ],
         requestBody: {
           required: true,
@@ -715,26 +1513,27 @@ const swaggerSpec = {
                   lastName: { type: 'string', minLength: 1, maxLength: 50 },
                   role: { type: 'string', enum: ['admin', 'user', 'readonly'] },
                   isActive: { type: 'boolean' },
-                  emailVerified: { type: 'boolean' }
-                }
-              }
-            }
-          }
+                  emailVerified: { type: 'boolean' },
+                },
+              },
+            },
+          },
         },
         responses: {
           '200': {
             description: 'User updated successfully',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/User' }
-              }
-            }
-          }
-        }
+                schema: { $ref: '#/components/schemas/User' },
+              },
+            },
+          },
+        },
       },
       delete: {
         summary: 'Delete user (soft delete)',
-        description: 'Soft delete user account (admin only) - marks user as inactive rather than permanently deleting',
+        description:
+          'Soft delete user account (admin only) - marks user as inactive rather than permanently deleting',
         tags: ['Users'],
         security: [{ bearerAuth: [] }],
         parameters: [
@@ -743,24 +1542,24 @@ const swaggerSpec = {
             name: 'id',
             required: true,
             schema: { type: 'string', format: 'uuid' },
-            description: 'User ID (UUID)'
-          }
+            description: 'User ID (UUID)',
+          },
         ],
         responses: {
           '204': {
-            description: 'User deleted successfully (no content)'
+            description: 'User deleted successfully (no content)',
           },
           '403': {
             description: 'Admin access required',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Error' }
-              }
-            }
-          }
-        }
-      }
-    }
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+    },
   },
   components: {
     securitySchemes: {
@@ -768,8 +1567,8 @@ const swaggerSpec = {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        description: 'JWT Authorization header using the Bearer scheme'
-      }
+        description: 'JWT Authorization header using the Bearer scheme',
+      },
     },
     schemas: {
       User: {
@@ -779,42 +1578,68 @@ const swaggerSpec = {
           id: {
             type: 'string',
             format: 'uuid',
-            description: 'Unique identifier (UUID v4)'
+            description: 'Unique identifier (UUID v4)',
+            example: '123e4567-e89b-12d3-a456-426614174000',
           },
           email: {
             type: 'string',
             format: 'email',
-            description: 'User\'s email address (unique per tenant)'
+            description: "User's email address (unique per tenant)",
+            example: 'user@example.com',
           },
           firstName: {
             type: 'string',
-            description: 'User\'s first name'
+            description: "User's first name",
+            example: 'John',
           },
           lastName: {
             type: 'string',
-            description: 'User\'s last name'
+            description: "User's last name",
+            example: 'Doe',
           },
           role: {
             type: 'string',
             enum: ['admin', 'user', 'readonly'],
-            description: 'User role determining permissions'
+            description: 'User role determining permissions',
+            example: 'user',
           },
           tenantId: {
             type: 'string',
             format: 'uuid',
-            description: 'Optional tenant ID for multi-tenant mode'
+            nullable: true,
+            description: 'Optional tenant ID for multi-tenant mode',
+            example: null,
+          },
+          avatarUrl: {
+            type: 'string',
+            format: 'uri',
+            nullable: true,
+            description: "URL to user's avatar image",
+            example: 'https://cdn.example.com/avatars/user-123/avatar.jpg',
+          },
+          isActive: {
+            type: 'boolean',
+            description: 'Whether the user account is active',
+            example: true,
+          },
+          emailVerified: {
+            type: 'boolean',
+            description: "Whether the user's email address has been verified",
+            example: true,
           },
           createdAt: {
             type: 'string',
             format: 'date-time',
-            description: 'Account creation timestamp'
+            description: 'Account creation timestamp',
+            example: '2024-01-01T00:00:00.000Z',
           },
           updatedAt: {
             type: 'string',
             format: 'date-time',
-            description: 'Last modification timestamp'
-          }
-        }
+            description: 'Last modification timestamp',
+            example: '2024-01-15T10:30:00.000Z',
+          },
+        },
       },
       UserRegistration: {
         type: 'object',
@@ -823,22 +1648,22 @@ const swaggerSpec = {
           email: {
             type: 'string',
             format: 'email',
-            description: 'User email address'
+            description: 'User email address',
           },
           password: {
             type: 'string',
             minLength: 8,
-            description: 'User password (min 8 characters)'
+            description: 'User password (min 8 characters)',
           },
           firstName: {
             type: 'string',
-            description: 'User first name'
+            description: 'User first name',
           },
           lastName: {
             type: 'string',
-            description: 'User last name'
-          }
-        }
+            description: 'User last name',
+          },
+        },
       },
       UserLogin: {
         type: 'object',
@@ -847,29 +1672,29 @@ const swaggerSpec = {
           email: {
             type: 'string',
             format: 'email',
-            description: 'User email address'
+            description: 'User email address',
           },
           password: {
             type: 'string',
-            description: 'User password'
-          }
-        }
+            description: 'User password',
+          },
+        },
       },
       AuthResponse: {
         type: 'object',
         properties: {
           accessToken: {
             type: 'string',
-            description: 'JWT access token'
+            description: 'JWT access token',
           },
           refreshToken: {
             type: 'string',
-            description: 'JWT refresh token'
+            description: 'JWT refresh token',
           },
           user: {
-            $ref: '#/components/schemas/UserProfile'
-          }
-        }
+            $ref: '#/components/schemas/UserProfile',
+          },
+        },
       },
       UserProfile: {
         type: 'object',
@@ -877,42 +1702,68 @@ const swaggerSpec = {
           id: {
             type: 'string',
             format: 'uuid',
-            description: 'Unique identifier (UUID v4)'
+            description: 'Unique identifier (UUID v4)',
+            example: '123e4567-e89b-12d3-a456-426614174000',
           },
           email: {
             type: 'string',
             format: 'email',
-            description: 'User\'s email address (unique per tenant)'
+            description: "User's email address (unique per tenant)",
+            example: 'user@example.com',
           },
           firstName: {
             type: 'string',
-            description: 'User\'s first name'
+            description: "User's first name",
+            example: 'John',
           },
           lastName: {
             type: 'string',
-            description: 'User\'s last name'
+            description: "User's last name",
+            example: 'Doe',
           },
           role: {
             type: 'string',
             enum: ['admin', 'user', 'readonly'],
-            description: 'User role determining permissions'
+            description: 'User role determining permissions',
+            example: 'user',
           },
           tenantId: {
             type: 'string',
             format: 'uuid',
-            description: 'Optional tenant ID for multi-tenant mode'
+            nullable: true,
+            description: 'Optional tenant ID for multi-tenant mode',
+            example: null,
+          },
+          avatarUrl: {
+            type: 'string',
+            format: 'uri',
+            nullable: true,
+            description: "URL to user's avatar image",
+            example: 'https://cdn.example.com/avatars/user-123/avatar.jpg',
+          },
+          isActive: {
+            type: 'boolean',
+            description: 'Whether the user account is active',
+            example: true,
+          },
+          emailVerified: {
+            type: 'boolean',
+            description: "Whether the user's email address has been verified",
+            example: true,
           },
           createdAt: {
             type: 'string',
             format: 'date-time',
-            description: 'Account creation timestamp'
+            description: 'Account creation timestamp',
+            example: '2024-01-01T00:00:00.000Z',
           },
           updatedAt: {
             type: 'string',
             format: 'date-time',
-            description: 'Last modification timestamp'
-          }
-        }
+            description: 'Last modification timestamp',
+            example: '2024-01-15T10:30:00.000Z',
+          },
+        },
       },
       Error: {
         type: 'object',
@@ -922,35 +1773,35 @@ const swaggerSpec = {
             properties: {
               code: {
                 type: 'string',
-                description: 'Error code identifier'
+                description: 'Error code identifier',
               },
               message: {
                 type: 'string',
-                description: 'Human-readable error message'
+                description: 'Human-readable error message',
               },
               details: {
                 type: 'object',
-                description: 'Additional error details'
+                description: 'Additional error details',
               },
               timestamp: {
                 type: 'string',
                 format: 'date-time',
-                description: 'Error occurrence timestamp'
+                description: 'Error occurrence timestamp',
               },
               requestId: {
                 type: 'string',
-                description: 'Unique request identifier for tracking'
-              }
-            }
-          }
-        }
+                description: 'Unique request identifier for tracking',
+              },
+            },
+          },
+        },
       },
       ValidationError: {
         type: 'object',
         properties: {
           error: {
             type: 'string',
-            description: 'Validation error message'
+            description: 'Validation error message',
           },
           details: {
             type: 'array',
@@ -959,16 +1810,16 @@ const swaggerSpec = {
               properties: {
                 field: {
                   type: 'string',
-                  description: 'Field name with validation error'
+                  description: 'Field name with validation error',
                 },
                 message: {
                   type: 'string',
-                  description: 'Validation error message'
-                }
-              }
-            }
-          }
-        }
+                  description: 'Validation error message',
+                },
+              },
+            },
+          },
+        },
       },
       RefreshTokenRequest: {
         type: 'object',
@@ -976,27 +1827,27 @@ const swaggerSpec = {
         properties: {
           refreshToken: {
             type: 'string',
-            description: 'Valid JWT refresh token'
-          }
-        }
+            description: 'Valid JWT refresh token',
+          },
+        },
       },
       UserUpdateRequest: {
         type: 'object',
         properties: {
           firstName: {
             type: 'string',
-            description: 'Updated first name'
+            description: 'Updated first name',
           },
           lastName: {
             type: 'string',
-            description: 'Updated last name'
+            description: 'Updated last name',
           },
           email: {
             type: 'string',
             format: 'email',
-            description: 'Updated email address'
-          }
-        }
+            description: 'Updated email address',
+          },
+        },
       },
       PasswordResetRequest: {
         type: 'object',
@@ -1005,9 +1856,9 @@ const swaggerSpec = {
           email: {
             type: 'string',
             format: 'email',
-            description: 'Email address for password reset'
-          }
-        }
+            description: 'Email address for password reset',
+          },
+        },
       },
       PasswordResetConfirm: {
         type: 'object',
@@ -1015,14 +1866,14 @@ const swaggerSpec = {
         properties: {
           token: {
             type: 'string',
-            description: 'Password reset token'
+            description: 'Password reset token',
           },
           newPassword: {
             type: 'string',
             minLength: 8,
-            description: 'New password meeting security requirements'
-          }
-        }
+            description: 'New password meeting security requirements',
+          },
+        },
       },
       PaginationResponse: {
         type: 'object',
@@ -1030,38 +1881,333 @@ const swaggerSpec = {
           data: {
             type: 'array',
             items: {},
-            description: 'Array of data items'
+            description: 'Array of data items',
           },
           pagination: {
             type: 'object',
             properties: {
               page: {
                 type: 'integer',
-                description: 'Current page number'
+                description: 'Current page number',
               },
               limit: {
                 type: 'integer',
-                description: 'Items per page'
+                description: 'Items per page',
               },
               total: {
                 type: 'integer',
-                description: 'Total number of items'
+                description: 'Total number of items',
               },
               totalPages: {
                 type: 'integer',
-                description: 'Total number of pages'
-              }
-            }
-          }
-        }
-      }
-    }
+                description: 'Total number of pages',
+              },
+            },
+          },
+        },
+      },
+      ApiTokenRequest: {
+        type: 'object',
+        required: ['name', 'scopes'],
+        properties: {
+          name: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 100,
+            description: 'User-friendly name for the API token',
+            example: 'Production API Access',
+          },
+          scopes: {
+            type: 'array',
+            items: {
+              type: 'string',
+              enum: ['read', 'write'],
+            },
+            minItems: 1,
+            description: 'Array of permissions for the token',
+            example: ['read', 'write'],
+          },
+          expiresAt: {
+            type: 'string',
+            format: 'date-time',
+            description: 'Optional expiration date (defaults to 1 year)',
+            example: '2025-12-31T23:59:59.999Z',
+          },
+        },
+      },
+      ApiTokenResponse: {
+        type: 'object',
+        properties: {
+          token: {
+            type: 'string',
+            description:
+              'The plaintext API token (only shown once on creation)',
+            example:
+              'a1b2c3d4e5f6789012345678901234567890123456789012345678901234567890123456',
+          },
+          id: {
+            type: 'string',
+            format: 'uuid',
+            description: 'Unique identifier for the token',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+          name: {
+            type: 'string',
+            description: 'User-friendly name for the token',
+            example: 'Production API Access',
+          },
+          scopes: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Array of permissions for the token',
+            example: ['read', 'write'],
+          },
+          expiresAt: {
+            type: 'string',
+            format: 'date-time',
+            description: 'Token expiration timestamp',
+            example: '2025-12-31T23:59:59.999Z',
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time',
+            description: 'Token creation timestamp',
+            example: '2024-01-15T10:30:00.000Z',
+          },
+          isActive: {
+            type: 'boolean',
+            description: 'Whether the token is active',
+            example: true,
+          },
+        },
+      },
+      ApiTokenInfo: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            format: 'uuid',
+            description: 'Unique identifier for the token',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+          name: {
+            type: 'string',
+            description: 'User-friendly name for the token',
+            example: 'Production API Access',
+          },
+          scopes: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Array of permissions for the token',
+            example: ['read', 'write'],
+          },
+          expiresAt: {
+            type: 'string',
+            format: 'date-time',
+            description: 'Token expiration timestamp',
+            example: '2025-12-31T23:59:59.999Z',
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time',
+            description: 'Token creation timestamp',
+            example: '2024-01-15T10:30:00.000Z',
+          },
+          lastUsedAt: {
+            type: 'string',
+            format: 'date-time',
+            nullable: true,
+            description: 'Last time token was used for authentication',
+            example: '2024-01-20T14:45:30.000Z',
+          },
+          isActive: {
+            type: 'boolean',
+            description: 'Whether the token is active',
+            example: true,
+          },
+        },
+      },
+      ApiTokenUpdateRequest: {
+        type: 'object',
+        properties: {
+          name: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 100,
+            description: 'Updated user-friendly name for the token',
+            example: 'Updated Token Name',
+          },
+          scopes: {
+            type: 'array',
+            items: {
+              type: 'string',
+              enum: ['read', 'write'],
+            },
+            minItems: 1,
+            description: 'Updated array of permissions for the token',
+            example: ['read'],
+          },
+          isActive: {
+            type: 'boolean',
+            description: 'Updated active status for the token',
+            example: false,
+          },
+        },
+      },
+      TokenUsageResponse: {
+        type: 'object',
+        properties: {
+          usage: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id: {
+                  type: 'string',
+                  format: 'uuid',
+                  example: '456e7890-e12b-34c5-d678-901234567890',
+                },
+                endpoint: {
+                  type: 'string',
+                  example: '/api/v1/users',
+                },
+                method: {
+                  type: 'string',
+                  example: 'GET',
+                },
+                timestamp: {
+                  type: 'string',
+                  format: 'date-time',
+                  example: '2024-01-20T14:30:00.000Z',
+                },
+                responseStatus: {
+                  type: 'integer',
+                  example: 200,
+                },
+                processingTime: {
+                  type: 'integer',
+                  description: 'Processing time in milliseconds',
+                  example: 125,
+                },
+                ipAddress: {
+                  type: 'string',
+                  example: '192.168.1.100',
+                },
+              },
+            },
+          },
+          pagination: {
+            type: 'object',
+            properties: {
+              page: { type: 'integer', example: 1 },
+              limit: { type: 'integer', example: 50 },
+              total: { type: 'integer', example: 247 },
+              totalPages: { type: 'integer', example: 5 },
+            },
+          },
+        },
+      },
+      TokenUsageStats: {
+        type: 'object',
+        properties: {
+          totalRequests: {
+            type: 'integer',
+            description: 'Total number of requests made with this token',
+            example: 1250,
+          },
+          successfulRequests: {
+            type: 'integer',
+            description: 'Number of successful requests (2xx status)',
+            example: 1180,
+          },
+          failedRequests: {
+            type: 'integer',
+            description: 'Number of failed requests (4xx, 5xx status)',
+            example: 70,
+          },
+          averageResponseTime: {
+            type: 'number',
+            description: 'Average response time in milliseconds',
+            example: 145.5,
+          },
+          topEndpoints: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                endpoint: {
+                  type: 'string',
+                  example: '/api/v1/users',
+                },
+                count: {
+                  type: 'integer',
+                  example: 487,
+                },
+              },
+            },
+            description: 'Most frequently accessed endpoints',
+          },
+          requestsByStatus: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                status: {
+                  type: 'integer',
+                  example: 200,
+                },
+                count: {
+                  type: 'integer',
+                  example: 1180,
+                },
+              },
+            },
+            description: 'Request count by HTTP status code',
+          },
+        },
+      },
+      TokenUsageTimeSeries: {
+        type: 'object',
+        properties: {
+          period: {
+            type: 'string',
+            enum: ['hour', 'day'],
+            description: 'Time period for aggregation',
+            example: 'day',
+          },
+          data: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                period: {
+                  type: 'string',
+                  format: 'date-time',
+                  description: 'Start of the time period',
+                  example: '2024-01-20T00:00:00.000Z',
+                },
+                requests: {
+                  type: 'integer',
+                  description: 'Number of requests in this period',
+                  example: 42,
+                },
+                averageResponseTime: {
+                  type: 'number',
+                  description: 'Average response time for this period in ms',
+                  example: 138.5,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
   },
   security: [
     {
-      bearerAuth: []
-    }
-  ]
+      bearerAuth: [],
+    },
+  ],
 };
 
 export { swaggerSpec };

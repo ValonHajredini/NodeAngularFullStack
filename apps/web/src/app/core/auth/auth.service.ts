@@ -17,6 +17,7 @@ export interface User {
   lastName: string;
   role: 'admin' | 'user' | 'readonly';
   tenantId?: string;
+  avatarUrl?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -82,12 +83,12 @@ export class AuthService {
         this.setAuthData(authData);
         this.router.navigate(['/app/dashboard']);
       }),
-      catchError(error => {
+      catchError((error) => {
         this.errorSignal.set(error.error?.message || 'Login failed');
         this.loadingSignal.set(false);
         return throwError(() => error);
       }),
-      tap(() => this.loadingSignal.set(false))
+      tap(() => this.loadingSignal.set(false)),
     );
   }
 
@@ -107,12 +108,12 @@ export class AuthService {
         this.setAuthData(authData);
         this.router.navigate(['/app/dashboard']);
       }),
-      catchError(error => {
+      catchError((error) => {
         this.errorSignal.set(error.error?.message || 'Registration failed');
         this.loadingSignal.set(false);
         return throwError(() => error);
       }),
-      tap(() => this.loadingSignal.set(false))
+      tap(() => this.loadingSignal.set(false)),
     );
   }
 
@@ -130,7 +131,7 @@ export class AuthService {
           // Even if the server logout fails, clear local data
           this.clearAuthData();
           return of(undefined);
-        })
+        }),
       );
     } else {
       this.clearAuthData();
@@ -159,10 +160,10 @@ export class AuthService {
         }
         this.saveTokensToStorage();
       }),
-      catchError(error => {
+      catchError((error) => {
         this.clearAuthData();
         return throwError(() => error);
-      })
+      }),
     );
   }
 
@@ -196,7 +197,7 @@ export class AuthService {
       const currentTime = Date.now();
       const buffer = environment.jwt.tokenExpirationBuffer;
 
-      return currentTime >= (expirationTime - buffer);
+      return currentTime >= expirationTime - buffer;
     } catch (error) {
       console.error('Error parsing token:', error);
       return true;
@@ -217,10 +218,10 @@ export class AuthService {
    */
   requestPasswordReset(email: string): Observable<void> {
     return this.apiClient.post<void>('/auth/password-reset-request', { email }).pipe(
-      catchError(error => {
+      catchError((error) => {
         console.error('Password reset request failed:', error);
         return throwError(() => error);
-      })
+      }),
     );
   }
 
@@ -232,10 +233,10 @@ export class AuthService {
    */
   validatePasswordResetToken(token: string): Observable<void> {
     return this.apiClient.post<void>('/auth/password-reset-validate', { token }).pipe(
-      catchError(error => {
+      catchError((error) => {
         console.error('Token validation failed:', error);
         return throwError(() => error);
-      })
+      }),
     );
   }
 
@@ -253,15 +254,17 @@ export class AuthService {
    *   });
    */
   confirmPasswordReset(token: string, newPassword: string): Observable<void> {
-    return this.apiClient.post<void>('/auth/password-reset-confirm', {
-      token,
-      newPassword
-    }).pipe(
-      catchError(error => {
-        console.error('Password reset confirmation failed:', error);
-        return throwError(() => error);
+    return this.apiClient
+      .post<void>('/auth/password-reset-confirm', {
+        token,
+        newPassword,
       })
-    );
+      .pipe(
+        catchError((error) => {
+          console.error('Password reset confirmation failed:', error);
+          return throwError(() => error);
+        }),
+      );
   }
 
   /**

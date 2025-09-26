@@ -1,11 +1,12 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { usersController } from '../controllers/users.controller';
 import { AuthMiddleware } from '../middleware/auth.middleware';
 import {
   auditUserCreate,
   auditUserUpdate,
   auditUserPatch,
-  auditUserDelete
+  auditUserDelete,
 } from '../middleware/audit.middleware';
 import {
   createUserValidator,
@@ -14,7 +15,7 @@ import {
   userIdValidator,
   getUsersValidator,
   sanitizeUserInput,
-  xssProtection
+  xssProtection,
 } from '../validators/users.validator';
 
 /**
@@ -22,6 +23,40 @@ import {
  * Defines all CRUD endpoints for user management with proper validation and middleware.
  */
 const router = Router();
+
+/**
+ * Multer configuration for avatar file uploads.
+ * Handles multipart/form-data file uploads with validation.
+ */
+const avatarUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+    files: 1, // Single file only
+  },
+  fileFilter: (
+    _req: Express.Request,
+    file: Express.Multer.File,
+    cb: multer.FileFilterCallback
+  ) => {
+    // Accept only image files
+    const allowedMimeTypes = [
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+    ];
+    if (allowedMimeTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(
+        new Error(
+          'Invalid file type. Only jpg, png, gif, and webp files are allowed.'
+        )
+      );
+    }
+  },
+});
 
 /**
  * @swagger
@@ -553,6 +588,138 @@ router.delete(
   userIdValidator,
   auditUserDelete,
   usersController.deleteUser
+);
+
+/**
+ * @swagger
+ * /api/v1/users/avatar:
+ *   post:
+ *     summary: Upload user avatar
+ *     description: Upload and update the authenticated user's avatar image
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - avatar
+ *             properties:
+ *               avatar:
+ *                 type: string
+ *                 format: binary
+ *                 description: Avatar image file (jpg, png, gif, webp - max 5MB)
+ *           example:
+ *             avatar: "[binary file data]"
+ *     responses:
+ *       200:
+ *         description: Avatar uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Avatar uploaded successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       $ref: '#/components/schemas/User'
+ *                     avatarUrl:
+ *                       type: string
+ *                       format: uri
+ *                       example: "https://cdn.example.com/avatars/user-123/avatar.jpg"
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *       400:
+ *         description: Bad request - no file uploaded or validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       413:
+ *         description: File too large (exceeds 5MB)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       415:
+ *         description: Unsupported media type
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.post(
+  '/avatar',
+  AuthMiddleware.authenticate,
+  avatarUpload.single('avatar'),
+  usersController.uploadAvatar
+);
+
+/**
+ * @swagger
+ * /api/v1/users/avatar:
+ *   delete:
+ *     summary: Delete user avatar
+ *     description: Delete the authenticated user's avatar image
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Avatar deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Avatar deleted successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       $ref: '#/components/schemas/User'
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: User not found or no avatar to delete
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.delete(
+  '/avatar',
+  AuthMiddleware.authenticate,
+  usersController.deleteAvatar
 );
 
 export { router as usersRoutes };

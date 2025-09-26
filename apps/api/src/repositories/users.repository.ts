@@ -12,6 +12,7 @@ export interface User {
   firstName: string;
   lastName: string;
   role: string;
+  avatarUrl?: string;
   createdAt: Date;
   updatedAt: Date;
   lastLogin?: Date;
@@ -38,6 +39,7 @@ export interface UpdateUserData {
   email?: string;
   firstName?: string;
   lastName?: string;
+  avatarUrl?: string;
   lastLogin?: Date;
   isActive?: boolean;
   emailVerified?: boolean;
@@ -75,7 +77,7 @@ export class UsersRepository {
         firstName,
         lastName,
         tenantId,
-        role = 'user'
+        role = 'user',
       } = userData;
 
       const query = `
@@ -87,12 +89,19 @@ export class UsersRepository {
         RETURNING
           id, tenant_id as "tenantId", email, password_hash as "passwordHash",
           first_name as "firstName", last_name as "lastName", role,
-          created_at as "createdAt", updated_at as "updatedAt",
+          avatar_url as "avatarUrl", created_at as "createdAt", updated_at as "updatedAt",
           last_login as "lastLogin", is_active as "isActive",
           email_verified as "emailVerified"
       `;
 
-      const values = [tenantId || null, email, passwordHash, firstName, lastName, role];
+      const values = [
+        tenantId || null,
+        email,
+        passwordHash,
+        firstName,
+        lastName,
+        role,
+      ];
       const result = await client.query(query, values);
 
       if (result.rows.length === 0) {
@@ -131,7 +140,7 @@ export class UsersRepository {
         SELECT
           id, tenant_id as "tenantId", email, password_hash as "passwordHash",
           first_name as "firstName", last_name as "lastName", role,
-          created_at as "createdAt", updated_at as "updatedAt",
+          avatar_url as "avatarUrl", created_at as "createdAt", updated_at as "updatedAt",
           last_login as "lastLogin", is_active as "isActive",
           email_verified as "emailVerified"
         FROM users
@@ -176,7 +185,7 @@ export class UsersRepository {
         SELECT
           id, tenant_id as "tenantId", email, password_hash as "passwordHash",
           first_name as "firstName", last_name as "lastName", role,
-          created_at as "createdAt", updated_at as "updatedAt",
+          avatar_url as "avatarUrl", created_at as "createdAt", updated_at as "updatedAt",
           last_login as "lastLogin", is_active as "isActive",
           email_verified as "emailVerified"
         FROM users
@@ -229,6 +238,11 @@ export class UsersRepository {
         values.push(updateData.lastName);
       }
 
+      if (updateData.avatarUrl !== undefined) {
+        updateFields.push(`avatar_url = $${paramIndex++}`);
+        values.push(updateData.avatarUrl);
+      }
+
       if (updateData.lastLogin !== undefined) {
         updateFields.push(`last_login = $${paramIndex++}`);
         values.push(updateData.lastLogin);
@@ -259,7 +273,7 @@ export class UsersRepository {
         RETURNING
           id, tenant_id as "tenantId", email, password_hash as "passwordHash",
           first_name as "firstName", last_name as "lastName", role,
-          created_at as "createdAt", updated_at as "updatedAt",
+          avatar_url as "avatarUrl", created_at as "createdAt", updated_at as "updatedAt",
           last_login as "lastLogin", is_active as "isActive",
           email_verified as "emailVerified"
       `;
@@ -383,7 +397,11 @@ export class UsersRepository {
    * @example
    * const users = await usersRepository.findByTenant('tenant-uuid', 10, 0);
    */
-  async findByTenant(tenantId: string, limit: number = 50, offset: number = 0): Promise<User[]> {
+  async findByTenant(
+    tenantId: string,
+    limit: number = 50,
+    offset: number = 0
+  ): Promise<User[]> {
     const client = await this.pool.connect();
 
     try {
@@ -391,7 +409,7 @@ export class UsersRepository {
         SELECT
           id, tenant_id as "tenantId", email, password_hash as "passwordHash",
           first_name as "firstName", last_name as "lastName", role,
-          created_at as "createdAt", updated_at as "updatedAt",
+          avatar_url as "avatarUrl", created_at as "createdAt", updated_at as "updatedAt",
           last_login as "lastLogin", is_active as "isActive",
           email_verified as "emailVerified"
         FROM users
@@ -503,7 +521,7 @@ export class UsersRepository {
         search,
         role,
         tenantId,
-        status = 'active'
+        status = 'active',
       } = options;
 
       const offset = (page - 1) * limit;
@@ -545,7 +563,8 @@ export class UsersRepository {
         paramIndex++;
       }
 
-      const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+      const whereClause =
+        conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
       // Count query
       const countQuery = `
@@ -559,7 +578,7 @@ export class UsersRepository {
         SELECT
           id, tenant_id as "tenantId", email, password_hash as "passwordHash",
           first_name as "firstName", last_name as "lastName", role,
-          created_at as "createdAt", updated_at as "updatedAt",
+          avatar_url as "avatarUrl", created_at as "createdAt", updated_at as "updatedAt",
           last_login as "lastLogin", is_active as "isActive",
           email_verified as "emailVerified"
         FROM users
@@ -573,7 +592,7 @@ export class UsersRepository {
 
       const [countResult, dataResult] = await Promise.all([
         client.query(countQuery, countValues),
-        client.query(dataQuery, dataValues)
+        client.query(dataQuery, dataValues),
       ]);
 
       const total = parseInt(countResult.rows[0].count, 10);
@@ -586,7 +605,7 @@ export class UsersRepository {
         limit,
         pages,
         hasNext: page < pages,
-        hasPrev: page > 1
+        hasPrev: page > 1,
       };
     } catch (error: any) {
       throw new Error(`Failed to find users with pagination: ${error.message}`);
@@ -617,6 +636,45 @@ export class UsersRepository {
       return result.rowCount !== null && result.rowCount > 0;
     } catch (error: any) {
       throw new Error(`User soft deletion failed: ${error.message}`);
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Updates a user's avatar URL.
+   * @param userId - User ID to update
+   * @param avatarUrl - New avatar URL or null to remove
+   * @returns Promise containing the updated user
+   * @throws {Error} When user update fails or user not found
+   * @example
+   * const user = await usersRepository.updateAvatar('user-uuid', 'https://cdn.example.com/avatar.jpg');
+   */
+  async updateAvatar(userId: string, avatarUrl: string | null): Promise<User> {
+    const client = await this.pool.connect();
+
+    try {
+      const query = `
+        UPDATE users
+        SET avatar_url = $1, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2 AND is_active = true
+        RETURNING
+          id, tenant_id as "tenantId", email, password_hash as "passwordHash",
+          first_name as "firstName", last_name as "lastName", role,
+          avatar_url as "avatarUrl", created_at as "createdAt", updated_at as "updatedAt",
+          last_login as "lastLogin", is_active as "isActive",
+          email_verified as "emailVerified"
+      `;
+
+      const result = await client.query(query, [avatarUrl, userId]);
+
+      if (result.rows.length === 0) {
+        throw new Error('User not found or inactive');
+      }
+
+      return result.rows[0] as User;
+    } catch (error: any) {
+      throw new Error(`Avatar update failed: ${error.message}`);
     } finally {
       client.release();
     }

@@ -51,11 +51,11 @@ Create Spaces API keys:
 Add these environment variables to your Digital Ocean App:
 
 ```bash
-DO_SPACES_KEY=your_spaces_access_key
-DO_SPACES_SECRET=your_spaces_secret_key
-DO_SPACES_ENDPOINT=nyc3.digitaloceanspaces.com
-DO_SPACES_BUCKET=nodeangularfullstack-storage
-DO_SPACES_REGION=nyc3
+DO_SPACES_ENDPOINT=https://lon1.digitaloceanspaces.com
+DO_SPACES_KEY=DO00LZ22KQG9RLBMBNFE
+DO_SPACES_SECRET=pwyJ8Xt+eUJTbJFLwDQxdVJr8KKWbJML6PdlP0n6ir8
+DO_SPACES_BUCKET=my-pdfs
+DO_SPACES_REGION=lon1
 ```
 
 ## Folder Structure
