@@ -6,6 +6,7 @@ import { GeneralSettingsComponent } from './components/general-settings/general-
 import { SecuritySettingsComponent } from './components/security-settings/security-settings.component';
 import { ApiTokensSettingsComponent } from './components/api-tokens-settings/api-tokens-settings.component';
 import { AppearanceSettingsComponent } from './components/appearance-settings/appearance-settings.component';
+import { ToolsSettingsPage } from '../admin/pages/tools-settings/tools-settings.page';
 import { SettingsSection } from './types/settings.types';
 
 /**
@@ -22,6 +23,7 @@ import { SettingsSection } from './types/settings.types';
     SecuritySettingsComponent,
     ApiTokensSettingsComponent,
     AppearanceSettingsComponent,
+    ToolsSettingsPage,
   ],
   template: `
     <div class="settings-page">
@@ -138,23 +140,7 @@ import { SettingsSection } from './types/settings.types';
                   </div>
                 }
                 @case ('admin') {
-                  <div class="max-w-4xl">
-                    <div class="mb-8">
-                      <h2 class="text-2xl font-bold text-gray-900">Administration</h2>
-                      <p class="mt-1 text-sm text-gray-600">
-                        System settings and user management for administrators.
-                      </p>
-                    </div>
-                    <div class="bg-white shadow rounded-lg p-8 text-center">
-                      <div class="text-gray-400 mb-4">
-                        <i class="pi pi-crown text-4xl"></i>
-                      </div>
-                      <h3 class="text-lg font-medium text-gray-900 mb-2">Coming Soon</h3>
-                      <p class="text-gray-500">
-                        Administrative settings will be available in a future update.
-                      </p>
-                    </div>
-                  </div>
+                  <app-tools-settings />
                 }
                 @default {
                   <app-general-settings />

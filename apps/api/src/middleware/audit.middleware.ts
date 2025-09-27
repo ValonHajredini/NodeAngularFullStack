@@ -349,3 +349,41 @@ export const auditUserDelete = AuditMiddleware.auditUserOperation('DELETE');
 export const auditLogin = AuditMiddleware.auditAuthOperation('LOGIN');
 export const auditLogout = AuditMiddleware.auditAuthOperation('LOGOUT');
 export const auditRegister = AuditMiddleware.auditAuthOperation('REGISTER');
+
+// Tools audit operations
+export const auditToolCreate = AuditMiddleware.auditOperation(
+  'CREATE',
+  'tools',
+  {
+    extractResourceId: (req: Request) => req.body.key,
+    extractChanges: (req: Request) => ({
+      key: req.body.key,
+      name: req.body.name,
+      description: req.body.description,
+      active: req.body.active ?? true,
+    }),
+  }
+);
+
+export const auditToolUpdate = AuditMiddleware.auditOperation(
+  'UPDATE',
+  'tools',
+  {
+    extractResourceId: (req: Request) => req.params.key,
+    extractChanges: (req: Request) => ({
+      key: req.params.key,
+      active: req.body.active,
+    }),
+  }
+);
+
+export const auditToolDelete = AuditMiddleware.auditOperation(
+  'DELETE',
+  'tools',
+  {
+    extractResourceId: (req: Request) => req.params.key,
+    extractChanges: (req: Request) => ({
+      key: req.params.key,
+    }),
+  }
+);

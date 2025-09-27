@@ -4,18 +4,24 @@
 -- 2. deleted_at column to users table for soft deletion
 -- 3. Indexes for performance optimization
 
--- Add deleted_at column to users table for soft deletion
-ALTER TABLE users ADD COLUMN deleted_at TIMESTAMP WITH TIME ZONE;
+-- Add deleted_at column to users table for soft deletion (only if it doesn't exist)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='users' AND column_name='deleted_at') THEN
+        ALTER TABLE users ADD COLUMN deleted_at TIMESTAMP WITH TIME ZONE;
+    END IF;
+END $$;
 
--- Add performance indexes to users table
-CREATE INDEX idx_users_email ON users(email) WHERE deleted_at IS NULL;
-CREATE INDEX idx_users_role ON users(role);
-CREATE INDEX idx_users_tenant_id ON users(tenant_id);
-CREATE INDEX idx_users_created_at ON users(created_at);
-CREATE INDEX idx_users_deleted_at ON users(deleted_at);
+-- Add performance indexes to users table (only if they don't exist)
+CREATE INDEX IF NOT EXISTS idx_users_email_not_deleted ON users(email) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_users_tenant_id ON users(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at);
+CREATE INDEX IF NOT EXISTS idx_users_deleted_at ON users(deleted_at);
 
--- Create audit_logs table
-CREATE TABLE audit_logs (
+-- Create audit_logs table (only if it doesn't exist)
+CREATE TABLE IF NOT EXISTS audit_logs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   tenant_id UUID REFERENCES tenants(id),
   user_id UUID REFERENCES users(id),
@@ -28,12 +34,12 @@ CREATE TABLE audit_logs (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Add indexes for audit_logs table
-CREATE INDEX idx_audit_logs_user_id ON audit_logs(user_id);
-CREATE INDEX idx_audit_logs_resource ON audit_logs(resource_type, resource_id);
-CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at);
-CREATE INDEX idx_audit_logs_tenant_id ON audit_logs(tenant_id);
-CREATE INDEX idx_audit_logs_action ON audit_logs(action);
+-- Add indexes for audit_logs table (only if they don't exist)
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_resource ON audit_logs(resource_type, resource_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_tenant_id ON audit_logs(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
 
 -- Add comments for documentation
 COMMENT ON TABLE audit_logs IS 'Tracks all user modifications for security and debugging purposes';

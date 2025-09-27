@@ -397,12 +397,6 @@ export class MainLayoutComponent implements OnInit {
       roles: ['admin', 'user'],
     },
     {
-      label: 'Admin',
-      route: '/app/admin',
-      icon: 'pi pi-cog',
-      roles: ['admin'],
-    },
-    {
       label: 'Documentation',
       route: '/app/documentation',
       icon: 'pi pi-book',

@@ -3,9 +3,12 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { NavigationService } from '../../layouts/main-layout/navigation.service';
+import { ToolsService } from '../../core/services/tools.service';
 import { ActionCardComponent, type ActionCardData } from '../../shared/components/action-card';
 import { StatsCardComponent, type StatsCardData } from '../../shared/components/stats-card';
 import { SectionContainerComponent } from '../../shared/components/section-container';
+import { ToolGateDirective } from '../../shared/directives/tool-gate.directive';
+import { ToolLoadingComponent } from '../../shared/components/tool-loading/tool-loading.component';
 
 /**
  * Dashboard component providing overview of user's workspace.
@@ -20,6 +23,8 @@ import { SectionContainerComponent } from '../../shared/components/section-conta
     ActionCardComponent,
     StatsCardComponent,
     SectionContainerComponent,
+    ToolGateDirective,
+    ToolLoadingComponent,
   ],
   template: `
     <div class="dashboard-container">
@@ -124,6 +129,141 @@ import { SectionContainerComponent } from '../../shared/components/section-conta
             </div>
           </app-section-container>
         </div>
+
+        <!-- Tools Demo Section -->
+        <div class="mt-8">
+          <app-section-container
+            [title]="'Available Tools'"
+            [variant]="'default'"
+            [size]="'lg'"
+            [ariaLabel]="'Tools and features available in your workspace'"
+          >
+            <div class="space-y-6">
+              <!-- Tool Gate Demo: Show different content based on tool availability -->
+
+              <!-- Short Link Tool Demo -->
+              <div class="tool-demo-item">
+                <div *appToolGate="'short-link'; loading: shortLinkLoading" class="tool-enabled">
+                  <div class="tool-card">
+                    <div class="tool-header">
+                      <i class="pi pi-link tool-icon"></i>
+                      <div>
+                        <h4 class="tool-title">Short Link Generator</h4>
+                        <p class="tool-description">
+                          Create shortened URLs for better link management
+                        </p>
+                      </div>
+                    </div>
+                    <div class="tool-actions">
+                      <button class="tool-button" [routerLink]="'/tools/short-link'">
+                        <i class="pi pi-external-link"></i>
+                        Open Tool
+                      </button>
+                      <span class="tool-status tool-status-enabled">
+                        <i class="pi pi-check-circle"></i>
+                        Enabled
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <ng-template #shortLinkLoading>
+                  <app-tool-loading
+                    message="Checking Short Link tool availability..."
+                    [compact]="false"
+                  >
+                  </app-tool-loading>
+                </ng-template>
+              </div>
+
+              <!-- QR Generator Tool Demo -->
+              <div class="tool-demo-item">
+                <div *appToolGate="'qr-generator'; loading: qrLoading" class="tool-enabled">
+                  <div class="tool-card">
+                    <div class="tool-header">
+                      <i class="pi pi-qrcode tool-icon"></i>
+                      <div>
+                        <h4 class="tool-title">QR Code Generator</h4>
+                        <p class="tool-description">
+                          Generate QR codes for various types of content
+                        </p>
+                      </div>
+                    </div>
+                    <div class="tool-actions">
+                      <button class="tool-button" [routerLink]="'/tools/qr-generator'">
+                        <i class="pi pi-external-link"></i>
+                        Open Tool
+                      </button>
+                      <span class="tool-status tool-status-enabled">
+                        <i class="pi pi-check-circle"></i>
+                        Enabled
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <ng-template #qrLoading>
+                  <app-tool-loading
+                    message="Checking QR Generator tool availability..."
+                    [compact]="false"
+                  >
+                  </app-tool-loading>
+                </ng-template>
+              </div>
+
+              <!-- Disabled Tool Demo (Inverted Logic) -->
+              <div class="tool-demo-item">
+                <div *appToolGate="'analytics'; invert: true" class="tool-disabled">
+                  <div class="tool-card disabled">
+                    <div class="tool-header">
+                      <i class="pi pi-chart-bar tool-icon"></i>
+                      <div>
+                        <h4 class="tool-title">Advanced Analytics</h4>
+                        <p class="tool-description">View detailed analytics and insights</p>
+                      </div>
+                    </div>
+                    <div class="tool-actions">
+                      <span class="tool-status tool-status-disabled">
+                        <i class="pi pi-times-circle"></i>
+                        Currently Disabled
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tool Status Summary -->
+              <div class="tool-summary">
+                <div class="summary-card">
+                  <div class="summary-header">
+                    <i class="pi pi-cog"></i>
+                    <span>Tool Status Summary</span>
+                  </div>
+                  <div class="summary-stats">
+                    <div class="summary-stat">
+                      <span class="stat-label">Enabled Tools:</span>
+                      <span class="stat-value">{{ enabledToolsCount() }}</span>
+                    </div>
+                    <div class="summary-stat">
+                      <span class="stat-label">Loading State:</span>
+                      <span class="stat-value" [class.loading]="toolsLoading()">
+                        {{ toolsLoading() ? 'Checking...' : 'Ready' }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="summary-actions">
+                    <button
+                      class="refresh-button"
+                      (click)="refreshTools()"
+                      [disabled]="toolsLoading()"
+                    >
+                      <i class="pi pi-refresh" [class.spinning]="toolsLoading()"></i>
+                      Refresh Tools
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </app-section-container>
+        </div>
       </div>
     </div>
   `,
@@ -224,6 +364,253 @@ import { SectionContainerComponent } from '../../shared/components/section-conta
           line-height: 2.5rem;
         }
       }
+
+      /* Tools Demo Section Styles */
+      .tool-demo-item {
+        margin-bottom: 1rem;
+      }
+
+      .tool-card {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1.5rem;
+        background-color: var(--surface-0);
+        border: 1px solid var(--surface-border);
+        border-radius: 0.5rem;
+        transition: all 0.2s;
+
+        &:hover {
+          border-color: var(--primary-300);
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        &.disabled {
+          opacity: 0.6;
+          border-color: var(--surface-300);
+          background-color: var(--surface-50);
+        }
+      }
+
+      .tool-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex: 1;
+      }
+
+      .tool-icon {
+        font-size: 1.5rem;
+        color: var(--primary-500);
+        width: 2rem;
+        text-align: center;
+      }
+
+      .tool-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--text-color);
+        margin: 0 0 0.25rem 0;
+      }
+
+      .tool-description {
+        font-size: 0.875rem;
+        color: var(--text-color-secondary);
+        margin: 0;
+      }
+
+      .tool-actions {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+
+      .tool-button {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background-color: var(--primary-500);
+        color: white;
+        border: none;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.2s;
+
+        &:hover {
+          background-color: var(--primary-600);
+        }
+
+        i {
+          font-size: 0.75rem;
+        }
+      }
+
+      .tool-status {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.375rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+
+        &.tool-status-enabled {
+          background-color: rgba(34, 197, 94, 0.1);
+          color: var(--green-600);
+        }
+
+        &.tool-status-disabled {
+          background-color: rgba(239, 68, 68, 0.1);
+          color: var(--red-600);
+        }
+
+        i {
+          font-size: 0.75rem;
+        }
+      }
+
+      /* Tool Summary Section */
+      .tool-summary {
+        margin-top: 2rem;
+        padding-top: 2rem;
+        border-top: 1px solid var(--surface-border);
+      }
+
+      .summary-card {
+        padding: 1.5rem;
+        background-color: var(--surface-50);
+        border-radius: 0.5rem;
+        border: 1px solid var(--surface-border);
+      }
+
+      .summary-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 600;
+        color: var(--text-color);
+        margin-bottom: 1rem;
+
+        i {
+          color: var(--primary-500);
+        }
+      }
+
+      .summary-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .summary-stat {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .stat-label {
+        font-size: 0.875rem;
+        color: var(--text-color-secondary);
+      }
+
+      .stat-value {
+        font-weight: 600;
+        color: var(--text-color);
+
+        &.loading {
+          color: var(--primary-500);
+        }
+      }
+
+      .summary-actions {
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      .refresh-button {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background-color: var(--surface-0);
+        color: var(--primary-500);
+        border: 1px solid var(--primary-500);
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &:hover:not(:disabled) {
+          background-color: var(--primary-50);
+          border-color: var(--primary-600);
+        }
+
+        &:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        i.spinning {
+          animation: spin 1s linear infinite;
+        }
+      }
+
+      @keyframes spin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* Dark mode adjustments */
+      [data-theme='dark'] {
+        .tool-card.disabled {
+          background-color: var(--surface-100);
+        }
+
+        .summary-card {
+          background-color: var(--surface-100);
+        }
+
+        .tool-status-enabled {
+          background-color: rgba(34, 197, 94, 0.2);
+          color: var(--green-400);
+        }
+
+        .tool-status-disabled {
+          background-color: rgba(239, 68, 68, 0.2);
+          color: var(--red-400);
+        }
+
+        .refresh-button:hover:not(:disabled) {
+          background-color: var(--surface-200);
+        }
+      }
+
+      /* Responsive adjustments for tools */
+      @media (max-width: 768px) {
+        .tool-card {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 1rem;
+        }
+
+        .tool-actions {
+          width: 100%;
+          justify-content: space-between;
+        }
+
+        .summary-stats {
+          grid-template-columns: 1fr;
+        }
+      }
     `,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -231,8 +618,13 @@ import { SectionContainerComponent } from '../../shared/components/section-conta
 export class DashboardComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly navigationService = inject(NavigationService);
+  private readonly toolsService = inject(ToolsService);
 
   protected readonly user = this.authService.user;
+
+  // Tools service reactive state
+  protected readonly enabledToolsCount = this.toolsService.enabledToolsCount;
+  protected readonly toolsLoading = this.toolsService.loading;
 
   /**
    * Configuration for statistics cards displayed in the dashboard
@@ -327,6 +719,21 @@ export class DashboardComponent implements OnInit {
     this.navigationService.setNavigationContext({
       title: 'Dashboard',
       breadcrumbs: [{ label: 'Dashboard', icon: 'pi pi-home' }],
+    });
+  }
+
+  /**
+   * Refreshes the tools status from the API.
+   * Demonstrates programmatic usage of the ToolsService.
+   */
+  protected refreshTools(): void {
+    this.toolsService.refreshAllTools().subscribe({
+      next: (tools) => {
+        console.log(`Dashboard: Refreshed ${tools.length} tools`);
+      },
+      error: (error) => {
+        console.error('Dashboard: Failed to refresh tools:', error);
+      },
     });
   }
 }

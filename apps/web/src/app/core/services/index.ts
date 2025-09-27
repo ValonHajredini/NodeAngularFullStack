@@ -13,3 +13,4 @@ export {
   type TokenListResponse,
   type DeleteTokenResponse,
 } from './token.service';
+export { ToolsService, type ToolsApiResponse, type ToolsServiceConfig } from './tools.service';

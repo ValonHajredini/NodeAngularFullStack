@@ -91,7 +91,7 @@ export class SettingsService {
         id: 'admin',
         label: 'Administration',
         icon: 'pi-crown',
-        description: 'System settings and user management',
+        description: 'Tools management and system settings',
         requiresRole: 'admin',
       });
     }

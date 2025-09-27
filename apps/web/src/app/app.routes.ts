@@ -84,12 +84,6 @@ export const routes: Routes = [
         canActivate: [userGuard], // Only users and admins can access reports
       },
       {
-        path: 'admin',
-        loadComponent: () =>
-          import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent), // Placeholder
-        canActivate: [adminGuard], // Only admins can access admin section
-      },
-      {
         path: 'settings',
         loadComponent: () =>
           import('./features/settings/settings.component').then((m) => m.SettingsComponent),

@@ -17,6 +17,11 @@ import healthRoutes from './routes/health.routes';
 import authRoutes from './routes/auth.routes';
 import { usersRoutes } from './routes/users.routes';
 import tokensRoutes from './routes/tokens.routes';
+import toolsRoutes from './routes/tools.routes';
+import publicToolsRoutes from './routes/public-tools.routes';
+import shortLinksRoutes from './routes/short-links.routes';
+import { shortLinksController } from './controllers/short-links.controller';
+import { resolveShortLinkValidator } from './validators/url.validators';
 
 /**
  * Express application server for the API.
@@ -134,11 +139,21 @@ class Server {
     // Legacy health check endpoint
     this.app.use('/health', healthRoutes);
 
+    // Public redirect route (must be before API routes)
+    this.app.get(
+      '/s/:code',
+      resolveShortLinkValidator,
+      shortLinksController.redirectToOriginalUrl
+    );
+
     // API v1 routes
     this.app.use('/api/v1', healthRoutes);
     this.app.use('/api/v1/auth', authRoutes);
     this.app.use('/api/v1/users', usersRoutes);
     this.app.use('/api/v1/tokens', tokensRoutes);
+    this.app.use('/api/v1/tools', publicToolsRoutes);
+    this.app.use('/api/v1/admin/tools', toolsRoutes);
+    this.app.use('/api/tools/short-links', shortLinksRoutes);
 
     // API root endpoint
     this.app.get('/api', (_req, res: Response) => {

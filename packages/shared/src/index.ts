@@ -7,4 +7,5 @@ export * from './types/api-response.interface';
 export * from './types/api-token.interface';
 export * from './types/token-usage.interface';
 export * from './types/storage.interface';
+export * from './types/tools.interface';
 export * from './utils/validation';
