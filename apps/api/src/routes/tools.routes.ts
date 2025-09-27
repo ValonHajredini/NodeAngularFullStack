@@ -1,0 +1,150 @@
+import { Router } from 'express';
+import { toolsController } from '../controllers/tools.controller';
+import { AuthMiddleware } from '../middleware/auth.middleware';
+import {
+  auditToolCreate,
+  auditToolUpdate,
+  auditToolDelete,
+} from '../middleware/audit.middleware';
+import {
+  toolKeyValidator,
+  createToolValidator,
+  updateToolStatusValidator,
+  sanitizeToolInput,
+  xssProtection,
+} from '../validators/tools.validator';
+
+/**
+ * Tools routes configuration.
+ * Defines all endpoints for tools management with proper validation and middleware.
+ * All routes require super admin authentication.
+ */
+const router = Router();
+
+/**
+ * Apply authentication middleware to all routes.
+ * Only authenticated super admin users can access tools management.
+ */
+router.use(AuthMiddleware.authenticate);
+router.use(AuthMiddleware.requireSuperAdmin);
+
+/**
+ * Apply XSS protection to all routes.
+ */
+router.use(xssProtection);
+
+/**
+ * @route GET /api/admin/tools
+ * @description Retrieve all tools in the registry
+ * @access Super Admin only
+ * @headers ETag - Cache validation
+ * @headers Cache-Control - Cache policy
+ * @response 200 - Tools list with ETag header
+ * @response 304 - Not Modified (cached response)
+ * @response 401 - Authentication required
+ * @response 403 - Super admin access required
+ * @response 500 - Internal server error
+ */
+router.get('/', toolsController.getTools);
+
+/**
+ * @route GET /api/admin/tools/active
+ * @description Retrieve only active tools
+ * @access Super Admin only
+ * @response 200 - Active tools list
+ * @response 401 - Authentication required
+ * @response 403 - Super admin access required
+ * @response 500 - Internal server error
+ */
+router.get('/active', toolsController.getActiveTools);
+
+/**
+ * @route GET /api/admin/tools/slug/:slug
+ * @description Retrieve a specific tool by slug
+ * @access Super Admin only
+ * @param slug - Tool slug (URL-friendly identifier)
+ * @response 200 - Tool data
+ * @response 400 - Invalid tool slug
+ * @response 401 - Authentication required
+ * @response 403 - Super admin access required
+ * @response 404 - Tool not found
+ * @response 500 - Internal server error
+ */
+router.get('/slug/:slug', toolsController.getToolBySlug);
+
+/**
+ * @route GET /api/admin/tools/:key
+ * @description Retrieve a specific tool by key
+ * @access Super Admin only
+ * @param key - Tool key (kebab-case)
+ * @response 200 - Tool data
+ * @response 400 - Invalid tool key
+ * @response 401 - Authentication required
+ * @response 403 - Super admin access required
+ * @response 404 - Tool not found
+ * @response 500 - Internal server error
+ */
+router.get('/:key', toolKeyValidator, toolsController.getToolByKey);
+
+/**
+ * @route POST /api/admin/tools
+ * @description Create a new tool
+ * @access Super Admin only
+ * @body CreateToolRequest - Tool creation data
+ * @response 201 - Created tool data
+ * @response 400 - Invalid input data
+ * @response 401 - Authentication required
+ * @response 403 - Super admin access required
+ * @response 409 - Tool key already exists
+ * @response 500 - Internal server error
+ */
+router.post(
+  '/',
+  sanitizeToolInput,
+  createToolValidator,
+  auditToolCreate,
+  toolsController.createTool
+);
+
+/**
+ * @route PATCH /api/admin/tools/:key
+ * @description Update tool status (enable/disable)
+ * @access Super Admin only
+ * @param key - Tool key (kebab-case)
+ * @body UpdateToolStatusRequest - Status update data
+ * @response 200 - Updated tool data
+ * @response 400 - Invalid input data
+ * @response 401 - Authentication required
+ * @response 403 - Super admin access required
+ * @response 404 - Tool not found
+ * @response 500 - Internal server error
+ */
+router.patch(
+  '/:key',
+  toolKeyValidator,
+  sanitizeToolInput,
+  updateToolStatusValidator,
+  auditToolUpdate,
+  toolsController.updateToolStatus
+);
+
+/**
+ * @route DELETE /api/admin/tools/:key
+ * @description Delete a tool from the registry
+ * @access Super Admin only
+ * @param key - Tool key (kebab-case)
+ * @response 200 - Deletion confirmation
+ * @response 400 - Invalid tool key
+ * @response 401 - Authentication required
+ * @response 403 - Super admin access required
+ * @response 404 - Tool not found
+ * @response 500 - Internal server error
+ */
+router.delete(
+  '/:key',
+  toolKeyValidator,
+  auditToolDelete,
+  toolsController.deleteTool
+);
+
+export default router;

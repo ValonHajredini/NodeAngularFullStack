@@ -31,6 +31,7 @@ export {
   AvatarUploadComponent,
   type AvatarUploadState,
 } from './avatar-upload/avatar-upload.component';
+export { ToolLoadingComponent } from './tool-loading/tool-loading.component';
 
 // Welcome Page Components
 export {

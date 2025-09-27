@@ -262,6 +262,27 @@ export class AuthMiddleware {
   };
 
   /**
+   * Convenience middleware to check if user has super admin role.
+   * Super admin is required for system-wide configuration changes like tools management.
+   * @param req - Express request object with authenticated user
+   * @param res - Express response object
+   * @param next - Express next function
+   * @example
+   * app.post('/admin/tools',
+   *   AuthMiddleware.authenticate,
+   *   AuthMiddleware.requireSuperAdmin,
+   *   toolsController.createTool
+   * );
+   */
+  static requireSuperAdmin = (
+    req: any,
+    res: Response,
+    next: NextFunction
+  ): void => {
+    AuthMiddleware.requireRole(['admin'])(req, res, next);
+  };
+
+  /**
    * Middleware to ensure tenant isolation in multi-tenant mode.
    * Validates that user can only access their own tenant's data.
    * @param req - Express request object

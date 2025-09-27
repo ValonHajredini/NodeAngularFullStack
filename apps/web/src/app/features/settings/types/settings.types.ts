@@ -21,7 +21,8 @@ export type SettingsSection =
   | 'appearance'
   | 'privacy'
   | 'advanced'
-  | 'admin';
+  | 'admin'
+  | 'admin-tools';
 
 /**
  * General settings configuration
