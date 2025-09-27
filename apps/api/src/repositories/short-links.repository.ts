@@ -1,6 +1,7 @@
 import { Pool } from 'pg';
 import { databaseService } from '../services/database.service';
 import { BaseRepository } from './base.repository';
+import { CreateShortLinkData } from '@nodeangularfullstack/shared';
 
 /**
  * Short link database entity interface matching the database schema.
@@ -9,22 +10,12 @@ export interface ShortLinkEntity {
   id: string;
   code: string;
   originalUrl: string;
-  expiresAt?: Date;
-  createdBy?: string;
+  expiresAt?: Date | null;
+  createdBy?: string | null;
   clickCount: number;
-  lastAccessed?: Date;
+  lastAccessedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
-}
-
-/**
- * Short link creation interface for new short links.
- */
-export interface CreateShortLinkData {
-  code: string;
-  originalUrl: string;
-  expiresAt?: Date;
-  createdBy?: string;
 }
 
 /**
@@ -54,7 +45,12 @@ export class ShortLinksRepository extends BaseRepository<ShortLinkEntity> {
    *   createdBy: 'user-id'
    * });
    */
-  async create(shortLinkData: CreateShortLinkData): Promise<ShortLinkEntity> {
+  async create(
+    data: CreateShortLinkData | Partial<ShortLinkEntity>,
+    _tenantContext?: any
+  ): Promise<ShortLinkEntity> {
+    // Handle both CreateShortLinkData and Partial<ShortLinkEntity> for backward compatibility
+    const shortLinkData = data as CreateShortLinkData;
     const client = await this.pool.connect();
 
     try {
@@ -73,7 +69,7 @@ export class ShortLinksRepository extends BaseRepository<ShortLinkEntity> {
           expires_at as "expiresAt",
           created_by as "createdBy",
           click_count as "clickCount",
-          last_accessed as "lastAccessed",
+          last_accessed as "lastAccessedAt",
           created_at as "createdAt",
           updated_at as "updatedAt"
       `;
@@ -116,7 +112,7 @@ export class ShortLinksRepository extends BaseRepository<ShortLinkEntity> {
           expires_at as "expiresAt",
           created_by as "createdBy",
           click_count as "clickCount",
-          last_accessed as "lastAccessed",
+          last_accessed as "lastAccessedAt",
           created_at as "createdAt",
           updated_at as "updatedAt"
         FROM short_links
@@ -154,7 +150,7 @@ export class ShortLinksRepository extends BaseRepository<ShortLinkEntity> {
           expires_at as "expiresAt",
           created_by as "createdBy",
           click_count as "clickCount",
-          last_accessed as "lastAccessed",
+          last_accessed as "lastAccessedAt",
           created_at as "createdAt",
           updated_at as "updatedAt"
         FROM short_links
@@ -199,7 +195,7 @@ export class ShortLinksRepository extends BaseRepository<ShortLinkEntity> {
           expires_at as "expiresAt",
           created_by as "createdBy",
           click_count as "clickCount",
-          last_accessed as "lastAccessed",
+          last_accessed as "lastAccessedAt",
           created_at as "createdAt",
           updated_at as "updatedAt"
       `;
@@ -328,7 +324,7 @@ export class ShortLinksRepository extends BaseRepository<ShortLinkEntity> {
           expires_at as "expiresAt",
           created_by as "createdBy",
           click_count as "clickCount",
-          last_accessed as "lastAccessed",
+          last_accessed as "lastAccessedAt",
           created_at as "createdAt",
           updated_at as "updatedAt"
         FROM short_links

@@ -2,12 +2,12 @@ import { customAlphabet } from 'nanoid';
 import {
   ShortLinksRepository,
   ShortLinkEntity,
-  CreateShortLinkData,
 } from '../repositories/short-links.repository';
 import {
   ShortLink,
   CreateShortLinkRequest,
   CreateShortLinkResponse,
+  CreateShortLinkData,
   ResolveShortLinkResponse,
   ExpiredShortLinkError,
   NotFoundShortLinkError,
@@ -59,7 +59,7 @@ export class ShortLinksService {
       expiresAt: entity.expiresAt,
       createdBy: entity.createdBy,
       clickCount: entity.clickCount,
-      lastAccessedAt: entity.lastAccessed,
+      lastAccessedAt: entity.lastAccessedAt,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
     };
@@ -175,7 +175,7 @@ export class ShortLinksService {
       const createData: CreateShortLinkData = {
         code,
         originalUrl: sanitizedUrl,
-        expiresAt: request.expiresAt || undefined,
+        expiresAt: request.expiresAt,
         createdBy: userId,
       };
 
@@ -269,11 +269,11 @@ export class ShortLinksService {
   }
 
   /**
-   * Retrieves short links created by a specific user.
+   * Retrieves short links created by a specific user with complete URLs.
    * @param userId - User ID to filter by
    * @param limit - Maximum number of results (default: 20)
    * @param offset - Number of results to skip (default: 0)
-   * @returns Promise containing array of user's short links
+   * @returns Promise containing array of user's short links with complete URLs
    * @throws {Error} When retrieval fails
    * @example
    * const userLinks = await shortLinksService.getUserShortLinks('user-id', 10, 0);
@@ -283,14 +283,20 @@ export class ShortLinksService {
     userId: string,
     limit: number = 20,
     offset: number = 0
-  ): Promise<ShortLink[]> {
+  ): Promise<Array<ShortLink & { shortUrl: string }>> {
     try {
       const entities = await this.shortLinksRepository.findByUser(
         userId,
         limit,
         offset
       );
-      return entities.map((entity) => this.entityToShortLink(entity));
+      return entities.map((entity) => {
+        const shortLink = this.entityToShortLink(entity);
+        return {
+          ...shortLink,
+          shortUrl: `${ShortLinksService.BASE_URL}/s/${entity.code}`,
+        };
+      });
     } catch (error) {
       console.error(`Error retrieving short links for user ${userId}:`, error);
       throw new Error('Failed to retrieve user short links');

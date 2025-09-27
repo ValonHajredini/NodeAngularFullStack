@@ -9,6 +9,8 @@ export interface Tool {
   key: string;
   /** Human-readable tool name */
   name: string;
+  /** URL-friendly slug generated from tool name (e.g. "short-link-generator") */
+  slug: string;
   /** Description of tool functionality */
   description: string;
   /** Whether tool is currently enabled/disabled */
@@ -61,6 +63,8 @@ export interface CreateToolRequest {
   key: string;
   /** Human-readable tool name */
   name: string;
+  /** URL-friendly slug (optional, auto-generated from name if not provided) */
+  slug?: string;
   /** Description of tool functionality */
   description: string;
   /** Initial active status (defaults to true) */
@@ -100,6 +104,8 @@ export interface PublicTool {
   key: string;
   /** Human-readable name */
   name: string;
+  /** URL-friendly slug */
+  slug: string;
   /** Brief description */
   description: string;
   /** Whether tool is enabled */

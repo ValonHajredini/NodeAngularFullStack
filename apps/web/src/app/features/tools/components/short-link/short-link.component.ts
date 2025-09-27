@@ -190,47 +190,68 @@ import { Subject, takeUntil } from 'rxjs';
       </p-card>
 
       <!-- Recent Links -->
-      @if (recentLinks().length > 0) {
-        <p-card class="mt-4">
-          <ng-template pTemplate="header">
-            <div class="flex justify-between align-items-center p-3">
-              <h3 class="text-base font-semibold text-gray-800 m-0">
-                <i class="pi pi-history text-primary mr-2"></i>
-                Recent Short Links
-              </h3>
-              <p-button
-                icon="pi pi-refresh"
-                size="small"
-                severity="secondary"
-                (onClick)="refreshLinks()"
-                pTooltip="Refresh list"
-                outlined="true"
-              />
-            </div>
-          </ng-template>
+      <p-card class="mt-4">
+        <ng-template pTemplate="header">
+          <div class="flex justify-between align-items-center p-3">
+            <h3 class="text-base font-semibold text-gray-800 m-0">
+              <i class="pi pi-history text-primary mr-2"></i>
+              Recent Short Links
+            </h3>
+            <p-button
+              icon="pi pi-refresh"
+              size="small"
+              severity="secondary"
+              (onClick)="refreshLinks()"
+              pTooltip="Refresh list"
+              outlined="true"
+            />
+          </div>
+        </ng-template>
 
-          <p-dataView [value]="recentLinks()" [paginator]="false" [rows]="10">
-            <ng-template let-link pTemplate="listItem">
-              <div class="link-item border-bottom border-gray-200 py-3">
-                <div class="flex justify-between align-items-start gap-3">
-                  <div class="flex-1">
-                    <div class="flex align-items-center gap-2 mb-1">
-                      <code class="text-sm text-blue-600 font-mono">
-                        {{ generateShortUrl(link.code) }}
+        @if (recentLinks().length > 0) {
+          <div class="links-container space-y-3">
+            @for (link of recentLinks(); track link.id) {
+              <div
+                class="link-item bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+              >
+                <div class="space-y-3">
+                  <!-- Short URL Section -->
+                  <div class="flex align-items-center justify-between gap-3">
+                    <div class="flex align-items-center gap-2 min-w-0 flex-1">
+                      <i class="pi pi-link text-blue-500 flex-shrink-0"></i>
+                      <code
+                        class="text-sm text-blue-600 font-mono bg-blue-50 px-2 py-1 rounded truncate"
+                      >
+                        {{ link.shortUrl ? link.shortUrl : generateShortUrl(link.code) }}
                       </code>
-                      <p-button
-                        icon="pi pi-copy"
-                        size="small"
-                        severity="secondary"
-                        (onClick)="copyShortUrl(link.code)"
-                        pTooltip="Copy to clipboard"
-                        outlined="true"
-                      />
                     </div>
-                    <div class="text-sm text-gray-600 truncate" [title]="link.originalUrl">
-                      {{ link.originalUrl }}
-                    </div>
-                    <div class="flex align-items-center gap-4 mt-2">
+                    <p-button
+                      icon="pi pi-copy"
+                      size="small"
+                      severity="secondary"
+                      (onClick)="copyShortUrl(link.shortUrl ? link.shortUrl : link.code)"
+                      pTooltip="Copy to clipboard"
+                      outlined="true"
+                    />
+                  </div>
+
+                  <!-- Original URL Section -->
+                  <div class="flex align-items-center gap-2">
+                    <i class="pi pi-external-link text-gray-400 flex-shrink-0"></i>
+                    <a
+                      [href]="link.originalUrl"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="text-sm text-gray-600 hover:text-blue-600 transition-colors min-w-0 flex-1 truncate-url"
+                      [title]="link.originalUrl"
+                    >
+                      {{ getTruncatedUrl(link.originalUrl) }}
+                    </a>
+                  </div>
+
+                  <!-- Metadata Section -->
+                  <div class="flex align-items-center justify-between">
+                    <div class="flex align-items-center gap-4">
                       <span class="text-xs text-gray-500">
                         <i class="pi pi-calendar mr-1"></i>
                         {{ link.createdAt | date: 'short' }}
@@ -239,21 +260,36 @@ import { Subject, takeUntil } from 'rxjs';
                         <i class="pi pi-eye mr-1"></i>
                         {{ link.clickCount || 0 }} clicks
                       </span>
-                      @if (link.expiresAt) {
-                        <p-tag
-                          [value]="getExpirationStatus(link.expiresAt)"
-                          [severity]="getExpirationSeverity(link.expiresAt)"
-                          size="small"
-                        />
-                      }
                     </div>
+                    @if (link.expiresAt) {
+                      <p-tag
+                        [value]="getExpirationStatus(link.expiresAt)"
+                        [severity]="getExpirationSeverity(link.expiresAt)"
+                        size="small"
+                      />
+                    }
                   </div>
                 </div>
               </div>
-            </ng-template>
-          </p-dataView>
-        </p-card>
-      }
+            }
+          </div>
+        } @else {
+          <div class="text-center py-8">
+            <i class="pi pi-info-circle text-4xl text-gray-400 mb-4"></i>
+            <h3 class="text-lg font-semibold text-gray-600 mb-2">No Recent Short Links</h3>
+            <p class="text-gray-500 mb-4">
+              Create your first short link above, or refresh to load existing links.
+            </p>
+            <p-button
+              label="Refresh"
+              icon="pi pi-refresh"
+              severity="secondary"
+              (onClick)="refreshLinks()"
+              outlined="true"
+            />
+          </div>
+        }
+      </p-card>
 
       <!-- Tool Disabled State -->
       @if (!isToolEnabled()) {
@@ -272,7 +308,7 @@ import { Subject, takeUntil } from 'rxjs';
   styles: [
     `
       .short-link-container {
-        max-width: 800px;
+        max-width: 1000px;
         margin: 0 auto;
         padding: 1rem;
       }
@@ -286,14 +322,30 @@ import { Subject, takeUntil } from 'rxjs';
         margin-top: 1rem;
       }
 
-      .link-item:last-child {
-        border-bottom: none !important;
+      .links-container {
+        width: 100%;
+      }
+
+      .link-item {
+        width: 100%;
+        box-sizing: border-box;
       }
 
       .truncate {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+      }
+
+      .truncate-url {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        text-decoration: none;
+      }
+
+      .truncate-url:hover {
+        text-decoration: underline;
       }
 
       :host ::ng-deep {
@@ -314,6 +366,10 @@ import { Subject, takeUntil } from 'rxjs';
         .p-card-header {
           padding: 0;
           border-bottom: 1px solid #e5e7eb;
+        }
+
+        .space-y-3 > * + * {
+          margin-top: 0.75rem;
         }
       }
     `,
@@ -368,6 +424,9 @@ export class ShortLinkComponent implements OnInit, OnDestroy {
     // Set minimum date to current time
     this.minDate.set(new Date());
 
+    // Load recent links when component initializes
+    this.refreshLinks();
+
     // Clear error state when form changes
     this.shortLinkForm.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(() => {
       this.shortLinkService.clearError();
@@ -409,6 +468,8 @@ export class ShortLinkComponent implements OnInit, OnDestroy {
               detail: 'Short link created successfully!',
             });
             this.clearForm();
+            // Refresh the recent links list to show the new link
+            this.refreshLinks();
           }
         },
         error: (error) => {
@@ -433,8 +494,19 @@ export class ShortLinkComponent implements OnInit, OnDestroy {
   /**
    * Copies the short URL to clipboard.
    */
-  async copyShortUrl(code?: string): Promise<void> {
-    const shortUrl = code ? this.shortLinkService.generateShortUrl(code) : this.generatedShortUrl();
+  async copyShortUrl(codeOrUrl?: string): Promise<void> {
+    let shortUrl: string;
+
+    if (!codeOrUrl) {
+      // Use the generated short URL from form submission
+      shortUrl = this.generatedShortUrl();
+    } else if (codeOrUrl.startsWith('http')) {
+      // It's already a full URL
+      shortUrl = codeOrUrl;
+    } else {
+      // It's just a code, generate the full URL
+      shortUrl = this.shortLinkService.generateShortUrl(codeOrUrl);
+    }
 
     try {
       const success = await this.shortLinkService.copyToClipboard(shortUrl);
@@ -515,5 +587,16 @@ export class ShortLinkComponent implements OnInit, OnDestroy {
     }
 
     return 'success';
+  }
+
+  /**
+   * Truncates a URL to a maximum length and adds ellipsis if needed.
+   */
+  getTruncatedUrl(url: string, maxLength: number = 80): string {
+    if (url.length <= maxLength) {
+      return url;
+    }
+
+    return url.substring(0, maxLength) + '...';
   }
 }

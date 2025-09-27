@@ -300,6 +300,90 @@ function handleToolUnavailable(
 }
 
 /**
+ * Dynamic tool guard that checks tool availability by slug from route parameters.
+ * Used for dynamic tool routing where the slug is part of the URL.
+ *
+ * @param redirectRoute - Optional route to redirect to if tool is disabled
+ * @param showError - Whether to show an error message in query params
+ * @returns CanActivateFn that checks tool availability using slug from route
+ *
+ * @example
+ * // In route configuration for dynamic tool routes
+ * {
+ *   path: 'tools/:slug',
+ *   component: ToolContainerComponent,
+ *   canActivate: [slugToolGuard]
+ * }
+ */
+export const slugToolGuard: CanActivateFn = (route: ActivatedRouteSnapshot, state) => {
+  const toolsService = inject(ToolsService);
+  const router = inject(Router);
+
+  const slug = route.paramMap.get('slug');
+  const redirectRoute = '/app/dashboard';
+  const showError = true;
+
+  if (!slug) {
+    console.error('ToolGuard: No slug parameter found in route');
+    return handleToolUnavailable(router, redirectRoute, 'unknown', showError, 'Invalid tool URL');
+  }
+
+  // Get tool by slug from cached tools
+  const cachedTools = toolsService.getCachedTools();
+  const cachedTool = cachedTools.find((tool) => tool.slug === slug);
+
+  if (cachedTool && cachedTool.active && toolsService.hasFreshCache()) {
+    return true;
+  }
+
+  // If no cache or tool not found/disabled, fetch fresh data
+  return toolsService.refreshAllTools().pipe(
+    timeout(5000),
+    map((tools) => {
+      const tool = tools.find((t) => t.slug === slug);
+
+      if (!tool) {
+        console.warn(`ToolGuard: Tool with slug '${slug}' not found`);
+        return handleToolUnavailable(router, redirectRoute, slug, showError, 'Tool not found');
+      }
+
+      if (!tool.active) {
+        console.info(`ToolGuard: Tool '${tool.name}' (${slug}) is disabled`);
+        return handleToolUnavailable(
+          router,
+          redirectRoute,
+          slug,
+          showError,
+          'Tool is currently disabled',
+        );
+      }
+
+      return true;
+    }),
+    catchError((error) => {
+      console.error(`ToolGuard: Failed to check tool with slug '${slug}':`, error);
+
+      // On API failure, use cached data as fallback
+      if (cachedTool && cachedTool.active) {
+        console.warn(`ToolGuard: Using cached data for tool '${slug}' due to API failure`);
+        return of(true);
+      }
+
+      // If no cache and API fails, deny access
+      return of(
+        handleToolUnavailable(
+          router,
+          redirectRoute,
+          slug,
+          showError,
+          'Unable to verify tool status',
+        ),
+      );
+    }),
+  );
+};
+
+/**
  * Convenience guards for commonly checked tools
  */
 

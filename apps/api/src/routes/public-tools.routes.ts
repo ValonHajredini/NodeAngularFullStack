@@ -19,6 +19,17 @@ const router = Router();
 router.get('/', publicToolsController.getPublicTools);
 
 /**
+ * @route GET /api/v1/tools/slug/:slug
+ * @description Get tool information by slug for dynamic routing
+ * @access Public (no authentication required)
+ * @param slug - Tool slug (URL-friendly identifier)
+ * @response 200 - Tool information
+ * @response 404 - Tool not found or disabled
+ * @response 500 - Internal server error
+ */
+router.get('/slug/:slug', publicToolsController.getPublicToolBySlug);
+
+/**
  * @route GET /api/v1/tools/:key
  * @description Check if a specific tool is enabled
  * @access Public (no authentication required)

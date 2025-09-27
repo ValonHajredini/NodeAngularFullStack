@@ -1,6 +1,16 @@
 import { Injectable, inject, signal, computed, OnDestroy } from '@angular/core';
-import { Observable, throwError, BehaviorSubject, timer, EMPTY } from 'rxjs';
-import { map, catchError, tap, switchMap, takeUntil, shareReplay, startWith } from 'rxjs/operators';
+import { Observable, throwError, BehaviorSubject, timer, EMPTY, fromEvent } from 'rxjs';
+import {
+  map,
+  catchError,
+  tap,
+  switchMap,
+  takeUntil,
+  shareReplay,
+  startWith,
+  debounceTime,
+  filter,
+} from 'rxjs/operators';
 import { ApiClientService } from '../api/api-client.service';
 import {
   Tool,
@@ -51,11 +61,16 @@ export class ToolsService implements OnDestroy {
 
   // Service configuration with defaults
   private readonly config: ToolsServiceConfig = {
-    cacheTtl: 5 * 60 * 1000, // 5 minutes
-    pollingInterval: 30 * 1000, // 30 seconds
+    cacheTtl: 10 * 60 * 1000, // 10 minutes (increased for better caching)
+    pollingInterval: 60 * 1000, // 60 seconds (reduced frequency)
     maxRetries: 3,
     enableWebSocket: false, // Will be implemented in future story
   };
+
+  // Request deduplication tracking
+  private readonly ongoingRequests = new Map<string, Observable<any>>();
+  private isPageVisible = signal<boolean>(true);
+  private hasInitialized = signal<boolean>(false);
 
   // Internal state management with signals
   private readonly toolsCache = signal<Map<string, ToolCacheEntry>>(new Map());
@@ -86,7 +101,8 @@ export class ToolsService implements OnDestroy {
   });
 
   constructor() {
-    this.initializePolling();
+    this.initializeVisibilityTracking();
+    // Defer polling initialization until first actual use
   }
 
   ngOnDestroy(): void {
@@ -97,6 +113,7 @@ export class ToolsService implements OnDestroy {
   /**
    * Gets the status of a specific tool by its key.
    * Returns cached data if available and valid, otherwise fetches from API.
+   * Implements request deduplication to prevent simultaneous calls.
    * @param toolKey - Unique key identifier for the tool
    * @returns Observable containing the tool status or null if not found
    * @throws {HttpErrorResponse} When tool retrieval fails
@@ -107,6 +124,8 @@ export class ToolsService implements OnDestroy {
    * });
    */
   getToolStatus(toolKey: string): Observable<Tool | null> {
+    this.ensureInitialized();
+
     const cached = this.getCachedTool(toolKey);
 
     if (cached && this.isCacheEntryValid(cached)) {
@@ -117,8 +136,14 @@ export class ToolsService implements OnDestroy {
       });
     }
 
+    // Check for ongoing request to avoid duplication
+    const requestKey = `tool-${toolKey}`;
+    if (this.ongoingRequests.has(requestKey)) {
+      return this.ongoingRequests.get(requestKey)!;
+    }
+
     // Fetch from API if not cached or expired
-    return this.fetchToolFromApi(toolKey);
+    return this.fetchToolFromApiWithDeduplication(toolKey);
   }
 
   /**
@@ -137,7 +162,7 @@ export class ToolsService implements OnDestroy {
 
     if (!cached) {
       // Trigger background fetch for future requests
-      this.fetchToolFromApi(toolKey).subscribe({
+      this.fetchToolFromApiWithDeduplication(toolKey).subscribe({
         error: () => {}, // Silent background fetch
       });
       return false;
@@ -146,7 +171,7 @@ export class ToolsService implements OnDestroy {
     // Return cached status even if expired (stale-while-revalidate)
     if (!this.isCacheEntryValid(cached)) {
       // Trigger background refresh
-      this.fetchToolFromApi(toolKey).subscribe({
+      this.fetchToolFromApiWithDeduplication(toolKey).subscribe({
         error: () => {}, // Silent background refresh
       });
     }
@@ -156,7 +181,7 @@ export class ToolsService implements OnDestroy {
 
   /**
    * Forces a refresh of all tools from the API.
-   * Clears cache and fetches fresh data.
+   * Clears cache and fetches fresh data with request deduplication.
    * @returns Observable containing array of all tools
    * @throws {HttpErrorResponse} When tools refresh fails
    * @example
@@ -166,10 +191,18 @@ export class ToolsService implements OnDestroy {
    * });
    */
   refreshAllTools(): Observable<Tool[]> {
+    this.ensureInitialized();
+
+    // Check for ongoing refresh request
+    const requestKey = 'refresh-all-tools';
+    if (this.ongoingRequests.has(requestKey)) {
+      return this.ongoingRequests.get(requestKey)!;
+    }
+
     this.loadingSignal.set(true);
     this.errorSignal.set(null);
 
-    return this.apiClient.get<ToolsApiResponse<PublicToolsResponse>>('/tools').pipe(
+    const request$ = this.apiClient.get<ToolsApiResponse<PublicToolsResponse>>('/tools').pipe(
       map((response: ToolsApiResponse<PublicToolsResponse>) => response.data.tools),
       tap((tools: Tool[]) => {
         this.updateCache(tools);
@@ -193,8 +226,16 @@ export class ToolsService implements OnDestroy {
 
         return throwError(() => error);
       }),
-      tap(() => this.loadingSignal.set(false)),
+      tap(() => {
+        this.loadingSignal.set(false);
+        this.ongoingRequests.delete(requestKey);
+      }),
+      shareReplay({ bufferSize: 1, refCount: true }),
     );
+
+    // Store ongoing request
+    this.ongoingRequests.set(requestKey, request$);
+    return request$;
   }
 
   /**
@@ -289,10 +330,12 @@ export class ToolsService implements OnDestroy {
   }
 
   /**
-   * Fetches a specific tool from the API and updates cache.
+   * Fetches a specific tool from the API and updates cache with deduplication.
    */
-  private fetchToolFromApi(toolKey: string): Observable<Tool | null> {
-    return this.apiClient.get<ToolsApiResponse<PublicToolsResponse>>('/tools').pipe(
+  private fetchToolFromApiWithDeduplication(toolKey: string): Observable<Tool | null> {
+    const requestKey = `tool-${toolKey}`;
+
+    const request$ = this.apiClient.get<ToolsApiResponse<PublicToolsResponse>>('/tools').pipe(
       map((response: ToolsApiResponse<PublicToolsResponse>) => {
         const tools = response.data.tools;
         const tool = tools.find((t: Tool) => t.key === toolKey);
@@ -317,7 +360,15 @@ export class ToolsService implements OnDestroy {
 
         return throwError(() => error);
       }),
+      tap(() => {
+        this.ongoingRequests.delete(requestKey);
+      }),
+      shareReplay({ bufferSize: 1, refCount: true }),
     );
+
+    // Store ongoing request
+    this.ongoingRequests.set(requestKey, request$);
+    return request$;
   }
 
   /**
@@ -352,16 +403,20 @@ export class ToolsService implements OnDestroy {
 
   /**
    * Initializes polling for tool status updates.
-   * Uses configurable interval to check for changes.
+   * Uses configurable interval to check for changes with visibility-based optimization.
    */
   private initializePolling(): void {
-    // Only start polling if service is actually being used
-    timer(0, this.config.pollingInterval)
+    timer(this.config.pollingInterval, this.config.pollingInterval)
       .pipe(
         takeUntil(this.destroy$),
+        filter(() => {
+          // Only poll if page is visible and we have cached data
+          return this.isPageVisible() && this.toolsCache().size > 0;
+        }),
+        debounceTime(1000), // Debounce rapid polling requests
         switchMap(() => {
-          // Only poll if we have cached data or are explicitly requested
-          if (this.toolsCache().size === 0) {
+          // Check if there are already ongoing requests
+          if (this.ongoingRequests.has('refresh-all-tools')) {
             return EMPTY;
           }
 
@@ -371,5 +426,33 @@ export class ToolsService implements OnDestroy {
         }),
       )
       .subscribe();
+  }
+
+  /**
+   * Initializes page visibility tracking for optimized polling.
+   */
+  private initializeVisibilityTracking(): void {
+    if (typeof document !== 'undefined') {
+      // Track page visibility changes
+      fromEvent(document, 'visibilitychange')
+        .pipe(
+          takeUntil(this.destroy$),
+          map(() => !document.hidden),
+          startWith(!document.hidden),
+        )
+        .subscribe((isVisible) => {
+          this.isPageVisible.set(isVisible);
+        });
+    }
+  }
+
+  /**
+   * Ensures service is initialized before use.
+   */
+  private ensureInitialized(): void {
+    if (!this.hasInitialized()) {
+      this.hasInitialized.set(true);
+      this.initializePolling();
+    }
   }
 }

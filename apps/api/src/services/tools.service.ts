@@ -90,6 +90,7 @@ export class ToolsService {
       id: entity.id,
       key: entity.key,
       name: entity.name,
+      slug: entity.slug,
       description: entity.description,
       active: entity.active,
       createdAt: entity.createdAt,
@@ -166,6 +167,25 @@ export class ToolsService {
     } catch (error) {
       console.error('Error retrieving active tools:', error);
       throw new Error('Failed to retrieve active tools');
+    }
+  }
+
+  /**
+   * Finds a tool by its unique slug.
+   * @param slug - Tool slug to search for (e.g., 'short-link-generator')
+   * @returns Promise containing the tool or null if not found
+   * @throws {Error} When database query fails
+   * @example
+   * const tool = await toolsService.getToolBySlug('short-link-generator');
+   * if (tool) console.log(`Tool found: ${tool.name}`);
+   */
+  async getToolBySlug(slug: string): Promise<Tool | null> {
+    try {
+      const entity = await this.toolsRepository.findBySlug(slug);
+      return entity ? this.entityToTool(entity) : null;
+    } catch (error) {
+      console.error(`Error finding tool by slug ${slug}:`, error);
+      throw new Error('Failed to find tool');
     }
   }
 
@@ -270,6 +290,7 @@ export class ToolsService {
       const createData: CreateToolData = {
         key: request.key,
         name: request.name,
+        slug: request.slug,
         description: request.description,
         active: request.active ?? true,
       };

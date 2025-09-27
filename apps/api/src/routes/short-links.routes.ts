@@ -72,7 +72,7 @@ const previewUrlRateLimit = rateLimit({
 });
 
 /**
- * @route POST /api/tools/short-links
+ * @route POST /api/v1/tools/short-links
  * @description Create a new short link
  * @access Authenticated users only
  * @body CreateShortLinkRequest - Short link creation data
@@ -84,7 +84,7 @@ const previewUrlRateLimit = rateLimit({
  * @response 429 - Rate limit exceeded
  * @response 500 - Internal server error
  * @example
- * POST /api/tools/short-links
+ * POST /api/v1/tools/short-links
  * Authorization: Bearer <user-token>
  * Content-Type: application/json
  *
@@ -143,7 +143,7 @@ router.get(
 );
 
 /**
- * @route POST /api/tools/short-links/preview
+ * @route POST /api/v1/tools/short-links/preview
  * @description Preview URL information without creating a short link
  * @access Public (no authentication required)
  * @body { url: string } - URL to preview
@@ -153,7 +153,7 @@ router.get(
  * @response 429 - Rate limit exceeded
  * @response 500 - Internal server error
  * @example
- * POST /api/tools/short-links/preview
+ * POST /api/v1/tools/short-links/preview
  * Content-Type: application/json
  *
  * {

@@ -9,6 +9,7 @@ export interface ToolEntity {
   id: string;
   key: string;
   name: string;
+  slug: string;
   description: string;
   active: boolean;
   createdAt: Date;
@@ -21,6 +22,7 @@ export interface ToolEntity {
 export interface CreateToolData {
   key: string;
   name: string;
+  slug?: string;
   description: string;
   active?: boolean;
 }
@@ -30,6 +32,7 @@ export interface CreateToolData {
  */
 export interface UpdateToolData {
   name?: string;
+  slug?: string;
   description?: string;
   active?: boolean;
 }
@@ -65,6 +68,7 @@ export class ToolsRepository extends BaseRepository<ToolEntity> {
           id,
           key,
           name,
+          slug,
           description,
           active,
           created_at as "createdAt",
@@ -78,6 +82,43 @@ export class ToolsRepository extends BaseRepository<ToolEntity> {
     } catch (error) {
       console.error('Error fetching all tools:', error);
       throw new Error('Failed to retrieve tools from database');
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Finds a tool by its unique slug.
+   * @param slug - Tool slug to search for (e.g., 'short-link-generator')
+   * @returns Promise containing the tool or null if not found
+   * @throws {Error} When database query fails
+   * @example
+   * const tool = await toolsRepository.findBySlug('short-link-generator');
+   * if (tool) console.log(`Tool found: ${tool.name}`);
+   */
+  async findBySlug(slug: string): Promise<ToolEntity | null> {
+    const client = await this.pool.connect();
+
+    try {
+      const query = `
+        SELECT
+          id,
+          key,
+          name,
+          slug,
+          description,
+          active,
+          created_at as "createdAt",
+          updated_at as "updatedAt"
+        FROM tools
+        WHERE slug = $1
+      `;
+
+      const result = await client.query(query, [slug]);
+      return result.rows[0] || null;
+    } catch (error) {
+      console.error(`Error finding tool by slug ${slug}:`, error);
+      throw new Error('Failed to find tool in database');
     } finally {
       client.release();
     }
@@ -101,6 +142,7 @@ export class ToolsRepository extends BaseRepository<ToolEntity> {
           id,
           key,
           name,
+          slug,
           description,
           active,
           created_at as "createdAt",
@@ -143,6 +185,7 @@ export class ToolsRepository extends BaseRepository<ToolEntity> {
           id,
           key,
           name,
+          slug,
           description,
           active,
           created_at as "createdAt",
@@ -184,25 +227,26 @@ export class ToolsRepository extends BaseRepository<ToolEntity> {
     const client = await this.pool.connect();
 
     try {
-      const { key, name, description, active = true } = toolData;
+      const { key, name, slug, description, active = true } = toolData;
 
       const query = `
         INSERT INTO tools (
-          key, name, description, active,
+          key, name, slug, description, active,
           created_at, updated_at
         )
-        VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         RETURNING
           id,
           key,
           name,
+          slug,
           description,
           active,
           created_at as "createdAt",
           updated_at as "updatedAt"
       `;
 
-      const values = [key, name, description, active];
+      const values = [key, name, slug || null, description, active];
 
       const result = await client.query(query, values);
       return result.rows[0];
@@ -242,6 +286,11 @@ export class ToolsRepository extends BaseRepository<ToolEntity> {
         values.push(updateData.name);
       }
 
+      if (updateData.slug !== undefined) {
+        updateFields.push(`slug = $${paramCounter++}`);
+        values.push(updateData.slug);
+      }
+
       if (updateData.description !== undefined) {
         updateFields.push(`description = $${paramCounter++}`);
         values.push(updateData.description);
@@ -266,6 +315,7 @@ export class ToolsRepository extends BaseRepository<ToolEntity> {
           id,
           key,
           name,
+          slug,
           description,
           active,
           created_at as "createdAt",
@@ -332,6 +382,7 @@ export class ToolsRepository extends BaseRepository<ToolEntity> {
           id,
           key,
           name,
+          slug,
           description,
           active,
           created_at as "createdAt",

@@ -89,6 +89,10 @@ export const routes: Routes = [
           import('./features/settings/settings.component').then((m) => m.SettingsComponent),
       },
       {
+        path: 'tools',
+        loadChildren: () => import('./features/tools/tools.routes').then((m) => m.toolsRoutes),
+      },
+      {
         path: 'support',
         loadComponent: () =>
           import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent), // Placeholder

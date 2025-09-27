@@ -59,6 +59,20 @@ router.get('/', toolsController.getTools);
 router.get('/active', toolsController.getActiveTools);
 
 /**
+ * @route GET /api/admin/tools/slug/:slug
+ * @description Retrieve a specific tool by slug
+ * @access Super Admin only
+ * @param slug - Tool slug (URL-friendly identifier)
+ * @response 200 - Tool data
+ * @response 400 - Invalid tool slug
+ * @response 401 - Authentication required
+ * @response 403 - Super admin access required
+ * @response 404 - Tool not found
+ * @response 500 - Internal server error
+ */
+router.get('/slug/:slug', toolsController.getToolBySlug);
+
+/**
  * @route GET /api/admin/tools/:key
  * @description Retrieve a specific tool by key
  * @access Super Admin only

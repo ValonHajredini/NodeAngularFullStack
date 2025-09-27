@@ -12,6 +12,8 @@ import {
   Injector,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import { BehaviorSubject } from 'rxjs';
 import { ToolsService } from '../../core/services/tools.service';
 
 /**
@@ -61,6 +63,8 @@ export class ToolGateDirective implements OnInit, OnDestroy {
   private readonly isLoadingSignal = signal<boolean>(false);
   private hasViewCreated = false;
   private hasLoadingViewCreated = false;
+  private lastToolKey = '';
+  private readonly toolKeyChange$ = new BehaviorSubject<string>('');
 
   /**
    * Tool key to check for enablement status.
@@ -103,6 +107,9 @@ export class ToolGateDirective implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    // Initialize debounced status checking
+    this.initializeDebouncedStatusCheck();
+
     // Reactive effect to handle view updates
     effect(
       () => {
@@ -114,11 +121,11 @@ export class ToolGateDirective implements OnInit, OnDestroy {
       { injector: this.injector },
     );
 
-    // Effect to monitor tool status changes
+    // Effect to monitor tool status changes (with reduced frequency)
     effect(
       () => {
         const toolKey = this.toolKeySignal();
-        if (toolKey) {
+        if (toolKey && toolKey !== this.lastToolKey) {
           this.checkToolStatus(toolKey);
         }
       },
@@ -148,6 +155,7 @@ export class ToolGateDirective implements OnInit, OnDestroy {
   /**
    * Checks the current status of the specified tool.
    * Updates internal state based on tool enablement and invert setting.
+   * Optimized to prevent excessive API calls with debouncing.
    */
   private checkToolStatus(toolKey: string): void {
     if (!toolKey.trim()) {
@@ -157,6 +165,12 @@ export class ToolGateDirective implements OnInit, OnDestroy {
       return;
     }
 
+    // Avoid redundant checks for the same tool
+    if (this.lastToolKey === toolKey) {
+      return;
+    }
+    this.lastToolKey = toolKey;
+
     try {
       // Get immediate status (uses cache if available)
       const isEnabled = this.toolsService.isToolEnabled(toolKey);
@@ -164,39 +178,63 @@ export class ToolGateDirective implements OnInit, OnDestroy {
 
       this.isVisibleSignal.set(shouldShow);
 
-      // Also fetch latest status from API for accuracy
-      this.toolsService
-        .getToolStatus(toolKey)
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe({
-          next: (tool) => {
-            if (tool) {
-              const isCurrentlyEnabled = tool.active;
-              const shouldShowUpdated = this.invertSignal()
-                ? !isCurrentlyEnabled
-                : isCurrentlyEnabled;
-              this.isVisibleSignal.set(shouldShowUpdated);
-            } else {
-              // Tool not found - hide content unless inverted
-              this.isVisibleSignal.set(this.invertSignal());
-            }
-          },
-          error: (error) => {
-            // eslint-disable-next-line no-console
-            console.error(
-              `ToolGateDirective: Failed to check tool status for '${toolKey}':`,
-              error,
-            );
-            // On error, keep current state but ensure loading is cleared
-            this.isLoadingSignal.set(false);
-          },
-        });
+      // Only make API call if cache is stale or missing
+      if (!this.toolsService.hasFreshCache()) {
+        // Debounce API calls through the subject
+        this.toolKeyChange$.next(toolKey);
+      }
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error(`ToolGateDirective: Error checking tool '${toolKey}':`, error);
       this.isVisibleSignal.set(false);
       this.isLoadingSignal.set(false);
     }
+  }
+
+  /**
+   * Initializes debounced API call handling.
+   */
+  private initializeDebouncedStatusCheck(): void {
+    this.toolKeyChange$
+      .pipe(
+        debounceTime(200), // Wait 200ms before making API call
+        distinctUntilChanged(), // Only process if toolKey actually changed
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((toolKey) => {
+        if (toolKey) {
+          this.performApiStatusCheck(toolKey);
+        }
+      });
+  }
+
+  /**
+   * Performs the actual API status check with error handling.
+   */
+  private performApiStatusCheck(toolKey: string): void {
+    this.toolsService
+      .getToolStatus(toolKey)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (tool) => {
+          if (tool) {
+            const isCurrentlyEnabled = tool.active;
+            const shouldShowUpdated = this.invertSignal()
+              ? !isCurrentlyEnabled
+              : isCurrentlyEnabled;
+            this.isVisibleSignal.set(shouldShowUpdated);
+          } else {
+            // Tool not found - hide content unless inverted
+            this.isVisibleSignal.set(this.invertSignal());
+          }
+        },
+        error: (error) => {
+          // eslint-disable-next-line no-console
+          console.error(`ToolGateDirective: Failed to check tool status for '${toolKey}':`, error);
+          // On error, keep current state but ensure loading is cleared
+          this.isLoadingSignal.set(false);
+        },
+      });
   }
 
   /**

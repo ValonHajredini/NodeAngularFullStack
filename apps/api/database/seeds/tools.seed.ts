@@ -9,6 +9,7 @@ import {
 export interface ToolEntry {
   key: string;
   name: string;
+  slug?: string;
   description: string;
   active: boolean;
 }
@@ -56,6 +57,7 @@ export class ToolsSeed {
     {
       key: 'short-link',
       name: 'Short Link Generator',
+      slug: 'short-link-generator',
       description:
         'Generate shortened URLs for sharing long links with analytics tracking',
       active: true,
@@ -74,17 +76,25 @@ export class ToolsSeed {
         INSERT INTO tools (
           key,
           name,
+          slug,
           description,
           active
-        ) VALUES ($1, $2, $3, $4)
+        ) VALUES ($1, $2, $3, $4, $5)
         ON CONFLICT (key) DO UPDATE SET
           name = EXCLUDED.name,
+          slug = EXCLUDED.slug,
           description = EXCLUDED.description,
           active = EXCLUDED.active,
           updated_at = CURRENT_TIMESTAMP
       `;
 
-      const params = [tool.key, tool.name, tool.description, tool.active];
+      const params = [
+        tool.key,
+        tool.name,
+        tool.slug,
+        tool.description,
+        tool.active,
+      ];
 
       await databaseService.query(query, params);
       console.log(`✅ Created tool: ${tool.name} (${tool.key})`);

@@ -97,9 +97,7 @@ export class ShortLinkService {
     this.errorSignal.set(null);
 
     return this.apiClient
-      .post<
-        ShortLinkApiResponse<CreateShortLinkResponse['data']>
-      >('/api/tools/short-links', request)
+      .post<ShortLinkApiResponse<CreateShortLinkResponse['data']>>('/tools/short-links', request)
       .pipe(
         map((response) => ({
           success: response.success,
@@ -137,7 +135,7 @@ export class ShortLinkService {
     this.errorSignal.set(null);
 
     return this.apiClient
-      .get<ShortLinkApiResponse<ResolveShortLinkResponse['data']>>(`/api/tools/short-links/${code}`)
+      .get<ShortLinkApiResponse<ResolveShortLinkResponse['data']>>(`/tools/short-links/${code}`)
       .pipe(
         map((response) => ({
           success: response.success,
@@ -171,7 +169,7 @@ export class ShortLinkService {
     const params = { limit: limit.toString(), offset: offset.toString() };
 
     return this.apiClient
-      .get<ShortLinkApiResponse<{ shortLinks: ShortLink[] }>>('/api/tools/short-links', { params })
+      .get<ShortLinkApiResponse<{ shortLinks: ShortLink[] }>>('/tools/short-links', { params })
       .pipe(
         map((response) => response.data.shortLinks),
         tap((links) => {
@@ -200,7 +198,7 @@ export class ShortLinkService {
    */
   previewUrl(url: string): Observable<UrlPreview> {
     return this.apiClient
-      .post<ShortLinkApiResponse<UrlPreview>>('/api/tools/short-links/preview', { url })
+      .post<ShortLinkApiResponse<UrlPreview>>('/tools/short-links/preview', { url })
       .pipe(
         map((response) => response.data),
         catchError((error) => {

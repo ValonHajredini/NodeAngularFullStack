@@ -9,6 +9,7 @@ import { StatsCardComponent, type StatsCardData } from '../../shared/components/
 import { SectionContainerComponent } from '../../shared/components/section-container';
 import { ToolGateDirective } from '../../shared/directives/tool-gate.directive';
 import { ToolLoadingComponent } from '../../shared/components/tool-loading/tool-loading.component';
+import { ToolsContainerComponent } from './components/tools-container/tools-container.component';
 
 /**
  * Dashboard component providing overview of user's workspace.
@@ -25,6 +26,7 @@ import { ToolLoadingComponent } from '../../shared/components/tool-loading/tool-
     SectionContainerComponent,
     ToolGateDirective,
     ToolLoadingComponent,
+    ToolsContainerComponent,
   ],
   template: `
     <div class="dashboard-container">
@@ -130,7 +132,7 @@ import { ToolLoadingComponent } from '../../shared/components/tool-loading/tool-
           </app-section-container>
         </div>
 
-        <!-- Tools Demo Section -->
+        <!-- Available Tools Section -->
         <div class="mt-8">
           <app-section-container
             [title]="'Available Tools'"
@@ -138,130 +140,7 @@ import { ToolLoadingComponent } from '../../shared/components/tool-loading/tool-
             [size]="'lg'"
             [ariaLabel]="'Tools and features available in your workspace'"
           >
-            <div class="space-y-6">
-              <!-- Tool Gate Demo: Show different content based on tool availability -->
-
-              <!-- Short Link Tool Demo -->
-              <div class="tool-demo-item">
-                <div *appToolGate="'short-link'; loading: shortLinkLoading" class="tool-enabled">
-                  <div class="tool-card">
-                    <div class="tool-header">
-                      <i class="pi pi-link tool-icon"></i>
-                      <div>
-                        <h4 class="tool-title">Short Link Generator</h4>
-                        <p class="tool-description">
-                          Create shortened URLs for better link management
-                        </p>
-                      </div>
-                    </div>
-                    <div class="tool-actions">
-                      <button class="tool-button" [routerLink]="'/tools/short-link'">
-                        <i class="pi pi-external-link"></i>
-                        Open Tool
-                      </button>
-                      <span class="tool-status tool-status-enabled">
-                        <i class="pi pi-check-circle"></i>
-                        Enabled
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <ng-template #shortLinkLoading>
-                  <app-tool-loading
-                    message="Checking Short Link tool availability..."
-                    [compact]="false"
-                  >
-                  </app-tool-loading>
-                </ng-template>
-              </div>
-
-              <!-- QR Generator Tool Demo -->
-              <div class="tool-demo-item">
-                <div *appToolGate="'qr-generator'; loading: qrLoading" class="tool-enabled">
-                  <div class="tool-card">
-                    <div class="tool-header">
-                      <i class="pi pi-qrcode tool-icon"></i>
-                      <div>
-                        <h4 class="tool-title">QR Code Generator</h4>
-                        <p class="tool-description">
-                          Generate QR codes for various types of content
-                        </p>
-                      </div>
-                    </div>
-                    <div class="tool-actions">
-                      <button class="tool-button" [routerLink]="'/tools/qr-generator'">
-                        <i class="pi pi-external-link"></i>
-                        Open Tool
-                      </button>
-                      <span class="tool-status tool-status-enabled">
-                        <i class="pi pi-check-circle"></i>
-                        Enabled
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <ng-template #qrLoading>
-                  <app-tool-loading
-                    message="Checking QR Generator tool availability..."
-                    [compact]="false"
-                  >
-                  </app-tool-loading>
-                </ng-template>
-              </div>
-
-              <!-- Disabled Tool Demo (Inverted Logic) -->
-              <div class="tool-demo-item">
-                <div *appToolGate="'analytics'; invert: true" class="tool-disabled">
-                  <div class="tool-card disabled">
-                    <div class="tool-header">
-                      <i class="pi pi-chart-bar tool-icon"></i>
-                      <div>
-                        <h4 class="tool-title">Advanced Analytics</h4>
-                        <p class="tool-description">View detailed analytics and insights</p>
-                      </div>
-                    </div>
-                    <div class="tool-actions">
-                      <span class="tool-status tool-status-disabled">
-                        <i class="pi pi-times-circle"></i>
-                        Currently Disabled
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Tool Status Summary -->
-              <div class="tool-summary">
-                <div class="summary-card">
-                  <div class="summary-header">
-                    <i class="pi pi-cog"></i>
-                    <span>Tool Status Summary</span>
-                  </div>
-                  <div class="summary-stats">
-                    <div class="summary-stat">
-                      <span class="stat-label">Enabled Tools:</span>
-                      <span class="stat-value">{{ enabledToolsCount() }}</span>
-                    </div>
-                    <div class="summary-stat">
-                      <span class="stat-label">Loading State:</span>
-                      <span class="stat-value" [class.loading]="toolsLoading()">
-                        {{ toolsLoading() ? 'Checking...' : 'Ready' }}
-                      </span>
-                    </div>
-                  </div>
-                  <div class="summary-actions">
-                    <button
-                      class="refresh-button"
-                      (click)="refreshTools()"
-                      [disabled]="toolsLoading()"
-                    >
-                      <i class="pi pi-refresh" [class.spinning]="toolsLoading()"></i>
-                      Refresh Tools
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <app-dashboard-tools-container></app-dashboard-tools-container>
           </app-section-container>
         </div>
       </div>

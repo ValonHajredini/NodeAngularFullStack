@@ -11,6 +11,8 @@ export interface PublicTool {
   key: string;
   /** Human-readable name */
   name: string;
+  /** URL-friendly slug */
+  slug: string;
   /** Brief description */
   description: string;
   /** Whether tool is enabled */
@@ -46,6 +48,7 @@ export class PublicToolsController {
         .map((tool: Tool) => ({
           key: tool.key,
           name: tool.name,
+          slug: tool.slug,
           description: tool.description,
           active: tool.active,
         }));
@@ -61,6 +64,68 @@ export class PublicToolsController {
         success: true,
         data: {
           tools: publicTools,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * Get a tool by its slug for dynamic routing.
+   * @route GET /api/v1/tools/slug/:slug
+   * @param req - Express request object with tool slug parameter
+   * @param res - Express response object
+   * @param next - Express next function
+   * @returns HTTP response with tool data or 404 if disabled/missing
+   */
+  getPublicToolBySlug = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { slug } = req.params;
+
+      if (!slug || typeof slug !== 'string') {
+        res.status(400).json({
+          success: false,
+          error: 'Tool slug is required',
+        });
+        return;
+      }
+
+      const tool = await toolsService.getToolBySlug(slug);
+
+      // Return 404 for disabled or non-existent tools
+      if (!tool || !tool.active) {
+        res.status(404).json({
+          success: false,
+          error: 'Tool not found or disabled',
+        });
+        return;
+      }
+
+      // Return public tool information
+      const publicTool: PublicTool = {
+        key: tool.key,
+        name: tool.name,
+        slug: tool.slug,
+        description: tool.description,
+        active: tool.active,
+      };
+
+      // Set cache headers
+      res.set({
+        'Cache-Control': 'public, max-age=300',
+        ETag: `"tool-${slug}-${Date.now()}"`,
+        'Content-Type': 'application/json',
+      });
+
+      res.status(200).json({
+        success: true,
+        data: {
+          tool: publicTool,
         },
       });
     } catch (error) {
@@ -107,6 +172,7 @@ export class PublicToolsController {
       const publicTool: PublicTool = {
         key: tool.key,
         name: tool.name,
+        slug: tool.slug,
         description: tool.description,
         active: tool.active,
       };

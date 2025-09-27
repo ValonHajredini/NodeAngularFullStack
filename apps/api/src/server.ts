@@ -151,9 +151,9 @@ class Server {
     this.app.use('/api/v1/auth', authRoutes);
     this.app.use('/api/v1/users', usersRoutes);
     this.app.use('/api/v1/tokens', tokensRoutes);
-    this.app.use('/api/v1/tools', publicToolsRoutes);
+    this.app.use('/api/v1/tools/short-links', shortLinksRoutes);
     this.app.use('/api/v1/admin/tools', toolsRoutes);
-    this.app.use('/api/tools/short-links', shortLinksRoutes);
+    this.app.use('/api/v1/tools', publicToolsRoutes);
 
     // API root endpoint
     this.app.get('/api', (_req, res: Response) => {
