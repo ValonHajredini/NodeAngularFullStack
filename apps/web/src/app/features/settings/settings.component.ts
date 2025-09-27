@@ -1,12 +1,8 @@
 import { Component, ChangeDetectionStrategy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterOutlet } from '@angular/router';
 import { SettingsService } from './settings.service';
 import { SettingsSidebarComponent } from '@shared/components/settings-sidebar';
-import { GeneralSettingsComponent } from './components/general-settings/general-settings.component';
-import { SecuritySettingsComponent } from './components/security-settings/security-settings.component';
-import { ApiTokensSettingsComponent } from './components/api-tokens-settings/api-tokens-settings.component';
-import { AppearanceSettingsComponent } from './components/appearance-settings/appearance-settings.component';
-import { ToolsSettingsPage } from '../admin/pages/tools-settings/tools-settings.page';
 import { SettingsSection } from './types/settings.types';
 
 /**
@@ -16,15 +12,7 @@ import { SettingsSection } from './types/settings.types';
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [
-    CommonModule,
-    SettingsSidebarComponent,
-    GeneralSettingsComponent,
-    SecuritySettingsComponent,
-    ApiTokensSettingsComponent,
-    AppearanceSettingsComponent,
-    ToolsSettingsPage,
-  ],
+  imports: [CommonModule, RouterOutlet, SettingsSidebarComponent],
   template: `
     <div class="settings-page">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -39,7 +27,6 @@ import { SettingsSection } from './types/settings.types';
                     [navigationItems]="settingsService.navigationItems()"
                     [activeSection]="settingsService.activeSection()"
                     [isMobileOpen]="isMobileSidebarOpen()"
-                    (sectionChange)="onSectionChange($event)"
                     (toggleMobile)="onToggleMobileSidebar()"
                     (closeMobile)="onCloseMobileSidebar()"
                   />
@@ -69,83 +56,7 @@ import { SettingsSection } from './types/settings.types';
 
             <!-- Dynamic Content Area -->
             <div class="settings-content">
-              @switch (settingsService.activeSection()) {
-                @case ('general') {
-                  <app-general-settings />
-                }
-                @case ('security') {
-                  <app-security-settings />
-                }
-                @case ('api-tokens') {
-                  <app-api-tokens-settings />
-                }
-                @case ('appearance') {
-                  <app-appearance-settings />
-                }
-                @case ('notifications') {
-                  <div class="max-w-4xl">
-                    <div class="mb-8">
-                      <h2 class="text-2xl font-bold text-gray-900">Notifications</h2>
-                      <p class="mt-1 text-sm text-gray-600">
-                        Manage your email, push, and in-app notification preferences.
-                      </p>
-                    </div>
-                    <div class="bg-white shadow rounded-lg p-8 text-center">
-                      <div class="text-gray-400 mb-4">
-                        <i class="pi pi-bell text-4xl"></i>
-                      </div>
-                      <h3 class="text-lg font-medium text-gray-900 mb-2">Coming Soon</h3>
-                      <p class="text-gray-500">
-                        Notification preferences will be available in a future update.
-                      </p>
-                    </div>
-                  </div>
-                }
-                @case ('privacy') {
-                  <div class="max-w-4xl">
-                    <div class="mb-8">
-                      <h2 class="text-2xl font-bold text-gray-900">Privacy Settings</h2>
-                      <p class="mt-1 text-sm text-gray-600">
-                        Control your privacy and data sharing preferences.
-                      </p>
-                    </div>
-                    <div class="bg-white shadow rounded-lg p-8 text-center">
-                      <div class="text-gray-400 mb-4">
-                        <i class="pi pi-eye-slash text-4xl"></i>
-                      </div>
-                      <h3 class="text-lg font-medium text-gray-900 mb-2">Coming Soon</h3>
-                      <p class="text-gray-500">
-                        Privacy settings will be available in a future update.
-                      </p>
-                    </div>
-                  </div>
-                }
-                @case ('advanced') {
-                  <div class="max-w-4xl">
-                    <div class="mb-8">
-                      <h2 class="text-2xl font-bold text-gray-900">Advanced Settings</h2>
-                      <p class="mt-1 text-sm text-gray-600">
-                        Advanced options, data export, and account management.
-                      </p>
-                    </div>
-                    <div class="bg-white shadow rounded-lg p-8 text-center">
-                      <div class="text-gray-400 mb-4">
-                        <i class="pi pi-wrench text-4xl"></i>
-                      </div>
-                      <h3 class="text-lg font-medium text-gray-900 mb-2">Coming Soon</h3>
-                      <p class="text-gray-500">
-                        Advanced settings will be available in a future update.
-                      </p>
-                    </div>
-                  </div>
-                }
-                @case ('admin') {
-                  <app-tools-settings />
-                }
-                @default {
-                  <app-general-settings />
-                }
-              }
+              <router-outlet />
             </div>
           </div>
         </div>
@@ -167,7 +78,6 @@ import { SettingsSection } from './types/settings.types';
                   [navigationItems]="settingsService.navigationItems()"
                   [activeSection]="settingsService.activeSection()"
                   [isMobileOpen]="isMobileSidebarOpen()"
-                  (sectionChange)="onSectionChange($event)"
                   (toggleMobile)="onToggleMobileSidebar()"
                   (closeMobile)="onCloseMobileSidebar()"
                 />
@@ -227,13 +137,6 @@ export class SettingsComponent {
 
   // Mobile sidebar state
   public readonly isMobileSidebarOpen = signal(false);
-
-  /**
-   * Handle settings section change
-   */
-  public onSectionChange(section: SettingsSection): void {
-    this.settingsService.setActiveSection(section);
-  }
 
   /**
    * Toggle mobile sidebar

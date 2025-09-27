@@ -323,6 +323,30 @@ export class ToolsService {
   }
 
   /**
+   * Validates if a tool key is unique and available.
+   * @param key - Tool key to validate
+   * @returns Observable indicating if key is available (true) or taken (false)
+   * @example
+   * toolsService.validateToolKey('new-tool').subscribe(isAvailable => {
+   *   if (isAvailable) console.log('Key is available');
+   * });
+   */
+  validateToolKey(key: string): Observable<boolean> {
+    return this.apiClient
+      .get<{ success: boolean; available: boolean }>(`${this.BASE_URL}/validate-key/${key}`)
+      .pipe(
+        map((response) => {
+          return response.success && response.available;
+        }),
+        catchError((error) => {
+          console.error('Error validating tool key:', error);
+          // If validation fails, assume key is taken to be safe
+          return new BehaviorSubject(false).asObservable();
+        }),
+      );
+  }
+
+  /**
    * Refreshes the tools data by clearing cache and fetching fresh data.
    * @returns Observable of updated tools array
    * @example

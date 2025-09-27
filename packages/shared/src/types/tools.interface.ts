@@ -1,4 +1,9 @@
 /**
+ * Tool category enumeration for consistent categorization.
+ */
+export type ToolCategory = 'productivity' | 'utility' | 'communication' | 'data';
+
+/**
  * Represents a tool in the system registry.
  * Used across frontend and backend for type consistency.
  */
@@ -13,6 +18,10 @@ export interface Tool {
   slug: string;
   /** Description of tool functionality */
   description: string;
+  /** Icon class for UI display (e.g. "pi pi-link") */
+  icon?: string;
+  /** Tool category for organization */
+  category?: ToolCategory;
   /** Whether tool is currently enabled/disabled */
   active: boolean;
   /** Tool registration timestamp */
@@ -67,6 +76,10 @@ export interface CreateToolRequest {
   slug?: string;
   /** Description of tool functionality */
   description: string;
+  /** Icon class for UI display (e.g. "pi pi-link") */
+  icon?: string;
+  /** Tool category for organization */
+  category?: ToolCategory;
   /** Initial active status (defaults to true) */
   active?: boolean;
 }
@@ -125,6 +138,8 @@ export interface ShortLink {
   code: string;
   /** Original URL to redirect to */
   originalUrl: string;
+  /** The complete short URL (computed from base domain + code) */
+  shortUrl?: string;
   /** Optional expiration timestamp */
   expiresAt?: Date | null;
   /** User who created the short link (nullable) */
@@ -227,4 +242,52 @@ export interface NotFoundShortLinkError {
     /** The invalid short code */
     code: string;
   };
+}
+
+// Component Generation Types
+
+/**
+ * Request payload for generating a tool component.
+ */
+export interface ComponentGenerationRequest {
+  /** Tool key for component identification */
+  toolKey: string;
+  /** Display name for component */
+  toolName: string;
+  /** URL slug for routing */
+  slug: string;
+  /** Description for component documentation */
+  description: string;
+  /** Optional icon class for component */
+  icon?: string;
+  /** Optional category for organization */
+  category?: ToolCategory;
+}
+
+/**
+ * Result of component generation operation.
+ */
+export interface ComponentGenerationResult {
+  /** Success status of generation */
+  success: boolean;
+  /** List of files created during generation */
+  filesCreated: string[];
+  /** Any errors encountered during generation */
+  errors?: string[];
+  /** Path to the main component file */
+  componentPath?: string;
+  /** Whether routing was successfully updated */
+  routingUpdated?: boolean;
+}
+
+/**
+ * Response containing component generation results.
+ */
+export interface ComponentGenerationResponse {
+  /** Success status of the generation operation */
+  success: boolean;
+  /** Response data containing generation results */
+  data: ComponentGenerationResult;
+  /** Operation timestamp */
+  timestamp: string;
 }

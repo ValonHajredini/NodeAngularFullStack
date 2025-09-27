@@ -7,13 +7,12 @@ import { ToolsService } from '../../core/services/tools.service';
 import { ActionCardComponent, type ActionCardData } from '../../shared/components/action-card';
 import { StatsCardComponent, type StatsCardData } from '../../shared/components/stats-card';
 import { SectionContainerComponent } from '../../shared/components/section-container';
-import { ToolGateDirective } from '../../shared/directives/tool-gate.directive';
-import { ToolLoadingComponent } from '../../shared/components/tool-loading/tool-loading.component';
 import { ToolsContainerComponent } from './components/tools-container/tools-container.component';
 
 /**
  * Dashboard component providing overview of user's workspace.
  * Displays welcome message, quick stats, and navigation shortcuts.
+ * Updated to remove unused imports.
  */
 @Component({
   selector: 'app-dashboard',
@@ -24,8 +23,6 @@ import { ToolsContainerComponent } from './components/tools-container/tools-cont
     ActionCardComponent,
     StatsCardComponent,
     SectionContainerComponent,
-    ToolGateDirective,
-    ToolLoadingComponent,
     ToolsContainerComponent,
   ],
   template: `
@@ -132,7 +129,7 @@ import { ToolsContainerComponent } from './components/tools-container/tools-cont
           </app-section-container>
         </div>
 
-        <!-- Available Tools Section -->
+        <!-- Available Tools Section with Deferred Loading -->
         <div class="mt-8">
           <app-section-container
             [title]="'Available Tools'"
@@ -140,7 +137,35 @@ import { ToolsContainerComponent } from './components/tools-container/tools-cont
             [size]="'lg'"
             [ariaLabel]="'Tools and features available in your workspace'"
           >
-            <app-dashboard-tools-container></app-dashboard-tools-container>
+            @defer (on viewport) {
+              <app-dashboard-tools-container></app-dashboard-tools-container>
+            } @placeholder (minimum 500ms) {
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                @for (skeleton of [1, 2, 3, 4, 5, 6]; track skeleton) {
+                  <div class="tool-card-skeleton">
+                    <div class="skeleton-header">
+                      <div class="skeleton-icon"></div>
+                      <div class="skeleton-badge"></div>
+                    </div>
+                    <div class="skeleton-title"></div>
+                    <div class="skeleton-description-1"></div>
+                    <div class="skeleton-description-2"></div>
+                    <div class="skeleton-footer"></div>
+                  </div>
+                }
+              </div>
+            } @error {
+              <div class="text-center py-8 text-gray-500">
+                <i class="pi pi-exclamation-triangle text-3xl mb-3 block text-orange-500"></i>
+                <p>Unable to load tools at the moment.</p>
+                <button
+                  class="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                  (click)="retryLoadTools()"
+                >
+                  Retry
+                </button>
+              </div>
+            }
           </app-section-container>
         </div>
       </div>
@@ -473,6 +498,90 @@ import { ToolsContainerComponent } from './components/tools-container/tools-cont
         }
       }
 
+      /* Skeleton Loading Styles */
+      .tool-card-skeleton {
+        background: var(--surface-0);
+        border: 1px solid var(--surface-border);
+        border-radius: 0.5rem;
+        padding: 1rem;
+        animation: skeleton-pulse 1.5s ease-in-out infinite alternate;
+      }
+
+      .skeleton-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 0.75rem;
+      }
+
+      .skeleton-icon {
+        width: 2.5rem;
+        height: 2.5rem;
+        background: var(--surface-200);
+        border-radius: 0.5rem;
+      }
+
+      .skeleton-badge {
+        width: 4rem;
+        height: 1.25rem;
+        background: var(--surface-200);
+        border-radius: 9999px;
+      }
+
+      .skeleton-title {
+        width: 70%;
+        height: 1.5rem;
+        background: var(--surface-200);
+        border-radius: 0.25rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .skeleton-description-1 {
+        width: 100%;
+        height: 1rem;
+        background: var(--surface-200);
+        border-radius: 0.25rem;
+        margin-bottom: 0.25rem;
+      }
+
+      .skeleton-description-2 {
+        width: 80%;
+        height: 1rem;
+        background: var(--surface-200);
+        border-radius: 0.25rem;
+        margin-bottom: 1rem;
+      }
+
+      .skeleton-footer {
+        width: 40%;
+        height: 1rem;
+        background: var(--surface-200);
+        border-radius: 0.25rem;
+      }
+
+      @keyframes skeleton-pulse {
+        0% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0.4;
+        }
+      }
+
+      /* Dark mode skeleton adjustments */
+      [data-theme='dark'] .tool-card-skeleton {
+        background: var(--surface-100);
+      }
+
+      [data-theme='dark'] .skeleton-icon,
+      [data-theme='dark'] .skeleton-badge,
+      [data-theme='dark'] .skeleton-title,
+      [data-theme='dark'] .skeleton-description-1,
+      [data-theme='dark'] .skeleton-description-2,
+      [data-theme='dark'] .skeleton-footer {
+        background: var(--surface-300);
+      }
+
       /* Responsive adjustments for tools */
       @media (max-width: 768px) {
         .tool-card {
@@ -614,5 +723,14 @@ export class DashboardComponent implements OnInit {
         console.error('Dashboard: Failed to refresh tools:', error);
       },
     });
+  }
+
+  /**
+   * Retry method for tools loading in case of error.
+   * Forces a reload of the tools container component.
+   */
+  protected retryLoadTools(): void {
+    // Force refresh tools data which will trigger the deferred component to reload
+    this.refreshTools();
   }
 }

@@ -1,5 +1,6 @@
 import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { SettingsNavItem, SettingsSection } from '@features/settings/types/settings.types';
 
 /**
@@ -9,7 +10,7 @@ import { SettingsNavItem, SettingsSection } from '@features/settings/types/setti
 @Component({
   selector: 'app-settings-sidebar',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterModule],
   template: `
     <div class="settings-sidebar">
       <!-- Mobile Header -->
@@ -34,12 +35,11 @@ import { SettingsNavItem, SettingsSection } from '@features/settings/types/setti
       >
         <div class="space-y-1 p-4">
           @for (item of navigationItems(); track item.id) {
-            <button
-              type="button"
-              (click)="onNavigationClick(item.id)"
-              [class.active]="item.id === activeSection()"
-              class="nav-item group w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out"
-              [attr.aria-current]="item.id === activeSection() ? 'page' : null"
+            <a
+              [routerLink]="getRouteForSection(item.id)"
+              routerLinkActive="active"
+              (click)="onNavigationClick()"
+              class="nav-item group w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out block"
               [attr.aria-describedby]="'nav-desc-' + item.id"
             >
               <div class="nav-item-content">
@@ -65,7 +65,7 @@ import { SettingsNavItem, SettingsSection } from '@features/settings/types/setti
                   </p>
                 }
               </div>
-            </button>
+            </a>
           }
         </div>
 
@@ -180,15 +180,31 @@ export class SettingsSidebarComponent {
   public readonly isMobileOpen = input(false);
 
   // Outputs
-  public readonly sectionChange = output<SettingsSection>();
   public readonly toggleMobile = output<void>();
   public readonly closeMobile = output<void>();
 
   /**
-   * Handle navigation item click
+   * Get the route path for a settings section
    */
-  public onNavigationClick(sectionId: string): void {
-    this.sectionChange.emit(sectionId as SettingsSection);
+  public getRouteForSection(sectionId: string): string {
+    const routeMap: Record<string, string> = {
+      general: '/app/settings/general',
+      security: '/app/settings/security',
+      'api-tokens': '/app/settings/api-tokens',
+      notifications: '/app/settings/notifications',
+      appearance: '/app/settings/appearance',
+      privacy: '/app/settings/privacy',
+      advanced: '/app/settings/advanced',
+      admin: '/app/settings/administration',
+    };
+
+    return routeMap[sectionId] || '/app/settings/general';
+  }
+
+  /**
+   * Handle navigation item click (for mobile sidebar closing)
+   */
+  public onNavigationClick(): void {
     // Close mobile sidebar when navigating
     if (this.isMobileOpen()) {
       this.closeMobile.emit();

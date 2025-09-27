@@ -17,8 +17,20 @@ export const adminRoutes: Routes = [
       import('./pages/tools-settings/tools-settings.page').then((m) => m.ToolsSettingsPage),
     canActivate: [authGuard, roleGuard(['admin'])],
     data: {
-      title: 'Tools Management',
+      title: 'Tools Management!!',
       description: 'Manage system-wide tools and their availability',
+    },
+  },
+  {
+    path: 'tools/create',
+    loadComponent: () =>
+      import('./tools/create-tool-wizard/create-tool-wizard.component').then(
+        (m) => m.CreateToolWizardComponent,
+      ),
+    canActivate: [authGuard, roleGuard(['admin'])],
+    data: {
+      title: 'Create New Tool',
+      description: 'Register a new tool using the guided wizard',
     },
   },
 ];

@@ -59,6 +59,23 @@ router.get('/', toolsController.getTools);
 router.get('/active', toolsController.getActiveTools);
 
 /**
+ * @route GET /api/admin/tools/validate-key/:key
+ * @description Validate if a tool key is available
+ * @access Super Admin only
+ * @param key - Tool key to validate (kebab-case)
+ * @response 200 - Key validation result
+ * @response 400 - Invalid tool key format
+ * @response 401 - Authentication required
+ * @response 403 - Super admin access required
+ * @response 500 - Internal server error
+ */
+router.get(
+  '/validate-key/:key',
+  toolKeyValidator,
+  toolsController.validateToolKey
+);
+
+/**
  * @route GET /api/admin/tools/slug/:slug
  * @description Retrieve a specific tool by slug
  * @access Super Admin only
@@ -126,6 +143,26 @@ router.patch(
   updateToolStatusValidator,
   auditToolUpdate,
   toolsController.updateToolStatus
+);
+
+/**
+ * @route POST /api/admin/tools/:key/generate-component
+ * @description Generate component files for a tool
+ * @access Super Admin only
+ * @param key - Tool key (kebab-case)
+ * @body ComponentGenerationRequest - Component generation configuration
+ * @response 201 - Component generation results
+ * @response 400 - Invalid input data or generation failed
+ * @response 401 - Authentication required
+ * @response 403 - Super admin access required
+ * @response 404 - Tool not found
+ * @response 500 - Internal server error
+ */
+router.post(
+  '/:key/generate-component',
+  toolKeyValidator,
+  sanitizeToolInput,
+  toolsController.generateComponent
 );
 
 /**

@@ -40,6 +40,7 @@ describe('ToolGateDirective', () => {
     id: '1',
     key: 'test-tool',
     name: 'Test Tool',
+    slug: 'test-tool',
     description: 'A test tool',
     active: true,
     createdAt: new Date(),
@@ -49,7 +50,7 @@ describe('ToolGateDirective', () => {
   beforeEach(async () => {
     loadingSubject = new BehaviorSubject<boolean>(false);
     const spy = jasmine.createSpyObj('ToolsService', ['isToolEnabled', 'getToolStatus'], {
-      loading: loadingSubject.asReadonly(),
+      loading: loadingSubject.asObservable(),
     });
 
     await TestBed.configureTestingModule({

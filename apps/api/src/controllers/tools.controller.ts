@@ -1,7 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 import { toolsService } from '../services/tools.service';
+import { componentGenerationService } from '../services/component-generation.service';
 import { AuthRequest } from '../middleware/auth.middleware';
+import { ComponentGenerationRequest } from '@nodeangularfullstack/shared';
 
 /**
  * Tools controller handling HTTP requests for tools management operations.
@@ -191,6 +193,71 @@ export class ToolsController {
       next({
         status: 500,
         message: 'Failed to retrieve tool',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  };
+
+  /**
+   * Validates if a tool key is available for use.
+   * @route GET /api/admin/tools/validate-key/:key
+   * @param req - Express request object with tool key parameter
+   * @param res - Express response object
+   * @param next - Express next function
+   * @returns HTTP response with validation result
+   * @throws {ApiError} 400 - Invalid tool key format
+   * @throws {ApiError} 401 - Authentication required
+   * @throws {ApiError} 403 - Super admin access required
+   * @throws {ApiError} 500 - Internal server error
+   * @example
+   * GET /api/admin/tools/validate-key/new-tool-key
+   * Authorization: Bearer <admin-token>
+   *
+   * Response:
+   * {
+   *   "success": true,
+   *   "available": true,
+   *   "message": "Tool key is available"
+   * }
+   */
+  validateToolKey = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      // Check validation results
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid tool key format',
+            details: errors.array(),
+          },
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      const { key } = req.params;
+      const existingTool = await toolsService.getToolByKey(key);
+      const isAvailable = !existingTool;
+
+      res.status(200).json({
+        success: true,
+        available: isAvailable,
+        message: isAvailable
+          ? 'Tool key is available'
+          : 'Tool key is already taken',
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('Error validating tool key:', error);
+      next({
+        status: 500,
+        message: 'Failed to validate tool key',
         error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
@@ -500,6 +567,108 @@ export class ToolsController {
       next({
         status: 500,
         message: 'Failed to delete tool',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  };
+
+  /**
+   * Generates component files for a tool.
+   * @route POST /api/admin/tools/:key/generate-component
+   * @param req - Express request object with tool key and generation config
+   * @param res - Express response object
+   * @param next - Express next function
+   * @returns HTTP response with generation results
+   * @throws {ApiError} 400 - Invalid input data
+   * @throws {ApiError} 401 - Authentication required
+   * @throws {ApiError} 403 - Super admin access required
+   * @throws {ApiError} 404 - Tool not found
+   * @throws {ApiError} 500 - Internal server error
+   * @example
+   * POST /api/admin/tools/my-tool/generate-component
+   * Authorization: Bearer <admin-token>
+   * {
+   *   "toolKey": "my-tool",
+   *   "toolName": "My Tool",
+   *   "slug": "my-tool",
+   *   "description": "A custom tool for the system"
+   * }
+   */
+  generateComponent = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      // Check validation results
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid input data',
+            details: errors.array(),
+          },
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      const { key } = req.params;
+
+      // Verify tool exists
+      const tool = await toolsService.getToolByKey(key);
+      if (!tool) {
+        res.status(404).json({
+          success: false,
+          error: {
+            code: 'TOOL_NOT_FOUND',
+            message: `Tool with key '${key}' not found`,
+          },
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      // Prepare generation request
+      const generationRequest: ComponentGenerationRequest = {
+        toolKey: tool.key,
+        toolName: tool.name,
+        slug: tool.slug,
+        description: tool.description,
+        icon: tool.icon,
+        category: tool.category,
+        ...req.body, // Allow override from request body
+      };
+
+      const result =
+        await componentGenerationService.generateComponent(generationRequest);
+
+      if (!result.success) {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: 'GENERATION_FAILED',
+            message: 'Component generation failed',
+            details: result.errors,
+          },
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      res.status(201).json({
+        success: true,
+        data: result,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('Error generating component:', error);
+
+      next({
+        status: 500,
+        message: 'Failed to generate component',
         error: error instanceof Error ? error.message : 'Unknown error',
       });
     }

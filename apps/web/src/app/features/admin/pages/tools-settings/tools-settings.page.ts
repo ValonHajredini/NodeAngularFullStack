@@ -11,7 +11,8 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
-import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { ToggleButtonModule } from 'primeng/togglebutton';
+import { TableModule } from 'primeng/table';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -37,7 +38,8 @@ import { Tool } from '@nodeangularfullstack/shared';
     ReactiveFormsModule,
     CardModule,
     ButtonModule,
-    ToggleSwitchModule,
+    ToggleButtonModule,
+    TableModule,
     ProgressSpinnerModule,
     ToastModule,
     ConfirmDialogModule,
@@ -264,7 +266,8 @@ import { Tool } from '@nodeangularfullstack/shared';
               <div class="flex items-center justify-between pt-3">
                 <!-- Status Toggle -->
                 <div class="flex items-center space-x-2">
-                  <p-toggleswitch
+                  <p-checkbox
+                    [binary]="true"
                     [ngModel]="tool.active"
                     (ngModelChange)="onToggleStatus(tool, $event)"
                     (click)="$event.stopPropagation()"
@@ -467,7 +470,8 @@ import { Tool } from '@nodeangularfullstack/shared';
           <!-- Actions -->
           <div class="flex justify-between items-center pt-4 border-t">
             <div class="flex items-center space-x-3">
-              <p-toggleswitch
+              <p-checkbox
+                [binary]="true"
                 [ngModel]="selectedToolForDetails()!.active"
                 (ngModelChange)="onToggleStatus(selectedToolForDetails()!, $event)"
                 [disabled]="isUpdating(selectedToolForDetails()!.key)"
@@ -806,12 +810,7 @@ export class ToolsSettingsPage implements OnInit {
    * Navigates to the tool creation wizard.
    */
   navigateToCreateTool(): void {
-    // TODO: Navigate to tool registration wizard (Story 8.2)
-    this.messageService.add({
-      severity: 'info',
-      summary: 'Coming Soon',
-      detail: 'Tool registration wizard will be available in the next update.',
-    });
+    this.router.navigate(['/app/admin/tools/create']);
   }
 
   /**

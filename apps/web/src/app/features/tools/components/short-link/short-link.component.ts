@@ -222,14 +222,14 @@ import { Subject, takeUntil } from 'rxjs';
                       <code
                         class="text-sm text-blue-600 font-mono bg-blue-50 px-2 py-1 rounded truncate"
                       >
-                        {{ link.shortUrl ? link.shortUrl : generateShortUrl(link.code) }}
+                        {{ generateShortUrl(link.code) }}
                       </code>
                     </div>
                     <p-button
                       icon="pi pi-copy"
                       size="small"
                       severity="secondary"
-                      (onClick)="copyShortUrl(link.shortUrl ? link.shortUrl : link.code)"
+                      (onClick)="copyShortUrl(generateShortUrl(link.code))"
                       pTooltip="Copy to clipboard"
                       outlined="true"
                     />
