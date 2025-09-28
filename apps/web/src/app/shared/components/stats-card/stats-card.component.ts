@@ -1,374 +1,227 @@
-import { Component, input, computed } from '@angular/core';
+import { Component, input, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 /**
- * Color variants for the stats card icon
+ * Color variants for the statistics card
  */
-export type StatsCardColorVariant =
-  | 'primary'
-  | 'success'
-  | 'warning'
-  | 'danger'
-  | 'info'
-  | 'purple'
-  | 'gray';
+export type StatsCardColorVariant = 'success' | 'danger' | 'info' | 'warning' | 'primary';
 
 /**
- * Size variants for the stats card
+ * Size variants for the statistics card
  */
 export type StatsCardSize = 'sm' | 'md' | 'lg';
 
 /**
- * Configuration interface for stats card data
+ * Configuration interface for statistics card data (tools-settings style)
+ */
+export interface StatsCardConfig {
+  label: string;
+  value: number | string;
+  icon: string;
+  colorVariant: StatsCardColorVariant;
+  borderColor?: string;
+  iconColor?: string;
+}
+
+/**
+ * Legacy interface for dashboard compatibility
  */
 export interface StatsCardData {
   title: string;
-  value: string | number;
+  value: number | string;
   icon: string;
-  iconColor: StatsCardColorVariant;
-  size?: StatsCardSize;
-  description?: string;
+  iconColor: StatsCardColorVariant | string;
+  ariaLabel?: string;
   trend?: {
     value: number;
-    isPositive: boolean;
-    label?: string;
+    direction: 'up' | 'down';
+    label: string;
   };
-  ariaLabel?: string;
 }
 
 /**
  * StatsCard Component
  *
- * A reusable card component for displaying statistical information with:
- * - Dark theme-optimized design that adapts to light/dark modes
- * - Icon with colored background
- * - Large value display with title
- * - Optional trend indicators
- * - Multiple color variants and size options
- * - Accessibility features including ARIA labels
- * - Responsive design for mobile and desktop
+ * A reusable card component for displaying statistics with:
+ * - Configurable color themes and icons
+ * - Responsive design with consistent styling
+ * - Left border accent matching the theme
+ * - Signal-based reactive properties
+ * - Accessibility features
+ * - Matches the tools-settings page design
  *
  * @example
  * ```html
- * <!-- Basic stats card -->
+ * <!-- Success variant -->
  * <app-stats-card
- *   [title]="'Active Projects'"
- *   [value]="12"
- *   [icon]="'pi pi-folder'"
- *   [iconColor]="'primary'"
+ *   [label]="'Active Tools'"
+ *   [value]="6"
+ *   [icon]="'pi pi-check-circle'"
+ *   [colorVariant]="'success'"
  * />
  *
- * <!-- Stats card with trend -->
+ * <!-- With custom colors -->
  * <app-stats-card
- *   [title]="'Revenue'"
- *   [value]="'$45,231'"
- *   [icon]="'pi pi-dollar'"
- *   [iconColor]="'success'"
- *   [trend]="{ value: 12, isPositive: true, label: 'vs last month' }"
+ *   [label]="'Total Users'"
+ *   [value]="1250"
+ *   [icon]="'pi pi-users'"
+ *   [colorVariant]="'info'"
+ *   [borderColor]="'#3b82f6'"
+ *   [iconColor]="'#3b82f6'"
  * />
  * ```
  */
 @Component({
   selector: 'app-stats-card',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule],
   template: `
-    <div [class]="cardClasses()" [attr.aria-label]="effectiveAriaLabel()" role="article">
-      <!-- Card Content -->
-      <div class="stats-card-content">
-        <!-- Icon Section -->
-        <div class="icon-container">
-          <div [class]="iconWrapperClasses()">
-            <i [class]="iconClasses()"></i>
-          </div>
+    <div class="bg-white p-4 rounded-lg shadow border-l-4" [ngStyle]="borderStyles()">
+      <div class="flex items-center">
+        <div class="flex-shrink-0">
+          <i [class]="iconClasses()" [ngStyle]="iconStyles()"></i>
         </div>
-
-        <!-- Stats Section -->
-        <div class="stats-section">
-          <!-- Value -->
-          <div [class]="valueClasses()">
-            {{ value() }}
-          </div>
-
-          <!-- Title -->
-          <div [class]="titleClasses()">
-            {{ title() }}
-          </div>
-
-          <!-- Optional Description -->
-          @if (description()) {
-            <div [class]="descriptionClasses()">
-              {{ description() }}
-            </div>
-          }
-
-          <!-- Optional Trend -->
-          @if (trend()) {
-            <div [class]="trendClasses()">
-              <i [class]="trendIconClasses()"></i>
-              <span class="trend-value">{{ trend()!.value }}%</span>
-              @if (trend()!.label) {
-                <span class="trend-label">{{ trend()!.label }}</span>
-              }
-            </div>
-          }
+        <div class="ml-3">
+          <p class="text-sm font-medium text-gray-500">{{ displayText() }}</p>
+          <p class="text-lg font-semibold text-gray-900">{{ value() }}</p>
         </div>
       </div>
     </div>
   `,
   styles: [
     `
-      .stats-card {
-        position: relative;
-        background: var(--color-surface);
-        border: var(--border-width-1) solid var(--color-border);
-        border-radius: var(--border-radius-xl);
-        box-shadow: var(--shadow-sm);
-        transition:
-          var(--transition-colors),
-          box-shadow var(--transition-duration-200) var(--transition-timing-in-out);
-        overflow: hidden;
-
-        &:hover {
-          box-shadow: var(--shadow-md);
-          border-color: var(--color-border-dark);
-        }
-
-        /* Size variants */
-        &.size-sm {
-          --card-padding: var(--spacing-4);
-          --icon-size: var(--spacing-8);
-          --value-font-size: var(--font-size-xl);
-        }
-
-        &.size-md {
-          --card-padding: var(--spacing-5);
-          --icon-size: var(--spacing-10);
-          --value-font-size: var(--font-size-2xl);
-        }
-
-        &.size-lg {
-          --card-padding: var(--spacing-6);
-          --icon-size: var(--spacing-12);
-          --value-font-size: var(--font-size-3xl);
-        }
-      }
-
-      .stats-card-content {
-        padding: var(--card-padding);
-        display: flex;
-        align-items: flex-start;
-        gap: var(--spacing-4);
-      }
-
-      .icon-container {
-        flex-shrink: 0;
-      }
-
-      .icon-wrapper {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: var(--icon-size);
-        height: var(--icon-size);
-        border-radius: var(--border-radius-lg);
-        transition: var(--transition-colors);
-
-        /* Color variants */
-        &.primary {
-          background-color: rgba(59, 130, 246, 0.1);
-          color: var(--color-primary-600);
-        }
-
-        &.success {
-          background-color: rgba(34, 197, 94, 0.1);
-          color: var(--color-success-600);
-        }
-
-        &.warning {
-          background-color: rgba(245, 158, 11, 0.1);
-          color: var(--color-warning-600);
-        }
-
-        &.danger {
-          background-color: rgba(239, 68, 68, 0.1);
-          color: var(--color-error-600);
-        }
-
-        &.info {
-          background-color: rgba(6, 182, 212, 0.1);
-          color: var(--color-info-600);
-        }
-
-        &.purple {
-          background-color: rgba(147, 51, 234, 0.1);
-          color: #7c3aed;
-        }
-
-        &.gray {
-          background-color: rgba(107, 114, 128, 0.1);
-          color: var(--color-gray-600);
-        }
-      }
-
-      .icon {
-        font-size: calc(var(--icon-size) * 0.5);
-      }
-
-      .stats-section {
-        flex: 1;
-        min-width: 0;
-      }
-
-      .value {
-        font-size: var(--value-font-size);
-        font-weight: var(--font-weight-bold);
-        line-height: var(--line-height-tight);
-        color: var(--color-text-primary);
-        margin-bottom: var(--spacing-1);
-      }
-
-      .title {
-        font-size: var(--font-size-sm);
-        font-weight: var(--font-weight-medium);
-        line-height: var(--line-height-normal);
-        color: var(--color-text-secondary);
-        margin-bottom: var(--spacing-1);
-      }
-
-      .description {
-        font-size: var(--font-size-xs);
-        line-height: var(--line-height-normal);
-        color: var(--color-text-muted);
-        margin-bottom: var(--spacing-2);
-      }
-
-      .trend {
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-1);
-        font-size: var(--font-size-xs);
-        margin-top: var(--spacing-2);
-
-        &.positive {
-          color: var(--color-success-600);
-        }
-
-        &.negative {
-          color: var(--color-error-600);
-        }
-
-        .trend-icon {
-          font-size: var(--font-size-xs);
-        }
-
-        .trend-value {
-          font-weight: var(--font-weight-medium);
-        }
-
-        .trend-label {
-          color: var(--color-text-muted);
-        }
-      }
-
-      /* Responsive design */
-      @media (max-width: 640px) {
-        .stats-card {
-          &.size-md {
-            --card-padding: var(--spacing-4);
-            --icon-size: var(--spacing-8);
-            --value-font-size: var(--font-size-xl);
-          }
-
-          &.size-lg {
-            --card-padding: var(--spacing-5);
-            --icon-size: var(--spacing-10);
-            --value-font-size: var(--font-size-2xl);
-          }
-        }
-
-        .stats-card-content {
-          gap: var(--spacing-3);
-        }
-      }
-
-      /* High contrast mode support */
-      @media (prefers-contrast: high) {
-        .stats-card {
-          border-width: var(--border-width-2);
-        }
-
-        .icon-wrapper {
-          border: var(--border-width-1) solid currentColor;
-        }
-      }
-
-      /* Reduced motion support */
-      @media (prefers-reduced-motion: reduce) {
-        .stats-card {
-          transition: none;
-        }
-
-        .icon-wrapper {
-          transition: none;
-        }
+      :host {
+        display: block;
       }
     `,
   ],
 })
 export class StatsCardComponent {
-  // Input signals
-  readonly title = input.required<string>();
-  readonly value = input.required<string | number>();
+  /**
+   * The label text displayed in the card (tools-settings style)
+   */
+  readonly label = input<string>();
+
+  /**
+   * The title text displayed in the card (dashboard style)
+   */
+  readonly title = input<string>();
+
+  /**
+   * The value/number displayed in the card
+   */
+  readonly value = input.required<number | string>();
+
+  /**
+   * The PrimeIcons class for the icon
+   */
   readonly icon = input.required<string>();
-  readonly iconColor = input<StatsCardColorVariant>('primary');
+
+  /**
+   * The color variant theme for the card (tools-settings style)
+   */
+  readonly colorVariant = input<StatsCardColorVariant>();
+
+  /**
+   * Optional custom border color (overrides theme color)
+   */
+  readonly borderColor = input<string>();
+
+  /**
+   * Optional custom icon color (overrides theme color)
+   */
+  readonly iconColor = input<StatsCardColorVariant | string>();
+
+  /**
+   * The size variant for the card
+   */
   readonly size = input<StatsCardSize>('md');
-  readonly description = input<string | undefined>(undefined);
+
+  /**
+   * Trend data for dashboard compatibility
+   */
   readonly trend = input<StatsCardData['trend'] | undefined>(undefined);
-  readonly ariaLabel = input<string | undefined>(undefined);
 
-  // Computed properties
-  readonly effectiveAriaLabel = computed(() => {
-    const baseLabel = this.ariaLabel() || `${this.title()}: ${this.value()}`;
-    const trendData = this.trend();
+  /**
+   * Accessibility label
+   */
+  readonly ariaLabel = input<string>();
 
-    if (trendData) {
-      const trendText = trendData.isPositive ? 'increased' : 'decreased';
-      return `${baseLabel}, ${trendText} by ${trendData.value}%${trendData.label ? ` ${trendData.label}` : ''}`;
+  /**
+   * Computed icon classes combining the icon and base classes
+   */
+  readonly iconClasses = computed(() => {
+    return `${this.icon()} text-xl`;
+  });
+
+  /**
+   * Computed border styles based on color variant or custom color
+   */
+  readonly borderStyles = computed(() => {
+    const customColor = this.borderColor();
+    if (customColor) {
+      return { 'border-left-color': customColor };
     }
 
-    return baseLabel;
+    const colorVariant = this.colorVariant();
+    if (colorVariant) {
+      const variantColors: Record<StatsCardColorVariant, string> = {
+        success: '#10b981', // green-500
+        danger: '#ef4444', // red-500
+        info: '#3b82f6', // blue-500
+        warning: '#f59e0b', // amber-500
+        primary: '#6366f1', // indigo-500
+      };
+
+      return { 'border-left-color': variantColors[colorVariant] };
+    }
+
+    return { 'border-left-color': '#6366f1' }; // default primary color
   });
 
-  readonly cardClasses = computed(() => {
-    return ['stats-card', `size-${this.size()}`].join(' ');
+  /**
+   * Computed display text (label or title)
+   */
+  readonly displayText = computed(() => {
+    return this.label() || this.title() || '';
   });
 
-  readonly iconWrapperClasses = computed(() => {
-    return ['icon-wrapper', this.iconColor()].join(' ');
-  });
+  /**
+   * Computed icon styles based on color variant or custom color
+   */
+  readonly iconStyles = computed(() => {
+    const customColor = this.iconColor();
+    if (customColor) {
+      // Handle both string colors and color variants
+      if (typeof customColor === 'string' && customColor.startsWith('#')) {
+        return { color: customColor };
+      }
 
-  readonly iconClasses = computed(() => {
-    return ['icon', this.icon()].join(' ');
-  });
+      const variantColors: Record<StatsCardColorVariant, string> = {
+        success: '#10b981', // green-500
+        danger: '#ef4444', // red-500
+        info: '#3b82f6', // blue-500
+        warning: '#f59e0b', // amber-500
+        primary: '#6366f1', // indigo-500
+      };
 
-  readonly valueClasses = computed(() => 'value');
+      return { color: variantColors[customColor as StatsCardColorVariant] || customColor };
+    }
 
-  readonly titleClasses = computed(() => 'title');
+    const colorVariant = this.colorVariant();
+    if (colorVariant) {
+      const variantColors: Record<StatsCardColorVariant, string> = {
+        success: '#10b981', // green-500
+        danger: '#ef4444', // red-500
+        info: '#3b82f6', // blue-500
+        warning: '#f59e0b', // amber-500
+        primary: '#6366f1', // indigo-500
+      };
 
-  readonly descriptionClasses = computed(() => 'description');
+      return { color: variantColors[colorVariant] };
+    }
 
-  readonly trendClasses = computed(() => {
-    const trendData = this.trend();
-    if (!trendData) return 'trend';
-
-    return ['trend', trendData.isPositive ? 'positive' : 'negative'].join(' ');
-  });
-
-  readonly trendIconClasses = computed(() => {
-    const trendData = this.trend();
-    if (!trendData) return 'trend-icon pi pi-arrow-up';
-
-    return ['trend-icon', trendData.isPositive ? 'pi pi-arrow-up' : 'pi pi-arrow-down'].join(' ');
+    return { color: '#6366f1' }; // default primary color
   });
 }

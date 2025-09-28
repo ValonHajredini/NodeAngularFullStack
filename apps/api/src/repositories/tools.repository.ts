@@ -11,6 +11,7 @@ export interface ToolEntity {
   name: string;
   slug: string;
   description: string;
+  codePath?: string;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -24,6 +25,7 @@ export interface CreateToolData {
   name: string;
   slug?: string;
   description: string;
+  codePath?: string;
   active?: boolean;
 }
 
@@ -34,6 +36,7 @@ export interface UpdateToolData {
   name?: string;
   slug?: string;
   description?: string;
+  codePath?: string;
   active?: boolean;
 }
 
@@ -70,6 +73,7 @@ export class ToolsRepository extends BaseRepository<ToolEntity> {
           name,
           slug,
           description,
+          code_path as "codePath",
           active,
           created_at as "createdAt",
           updated_at as "updatedAt"
@@ -107,6 +111,7 @@ export class ToolsRepository extends BaseRepository<ToolEntity> {
           name,
           slug,
           description,
+          code_path as "codePath",
           active,
           created_at as "createdAt",
           updated_at as "updatedAt"
@@ -144,6 +149,7 @@ export class ToolsRepository extends BaseRepository<ToolEntity> {
           name,
           slug,
           description,
+          code_path as "codePath",
           active,
           created_at as "createdAt",
           updated_at as "updatedAt"
@@ -187,6 +193,7 @@ export class ToolsRepository extends BaseRepository<ToolEntity> {
           name,
           slug,
           description,
+          code_path as "codePath",
           active,
           created_at as "createdAt",
           updated_at as "updatedAt"
@@ -227,26 +234,41 @@ export class ToolsRepository extends BaseRepository<ToolEntity> {
     const client = await this.pool.connect();
 
     try {
-      const { key, name, slug, description, active = true } = toolData;
+      const {
+        key,
+        name,
+        slug,
+        description,
+        codePath,
+        active = true,
+      } = toolData;
 
       const query = `
         INSERT INTO tools (
-          key, name, slug, description, active,
+          key, name, slug, description, code_path, active,
           created_at, updated_at
         )
-        VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         RETURNING
           id,
           key,
           name,
           slug,
           description,
+          code_path as "codePath",
           active,
           created_at as "createdAt",
           updated_at as "updatedAt"
       `;
 
-      const values = [key, name, slug || null, description, active];
+      const values = [
+        key,
+        name,
+        slug || null,
+        description,
+        codePath || null,
+        active,
+      ];
 
       const result = await client.query(query, values);
       return result.rows[0];
@@ -296,6 +318,11 @@ export class ToolsRepository extends BaseRepository<ToolEntity> {
         values.push(updateData.description);
       }
 
+      if (updateData.codePath !== undefined) {
+        updateFields.push(`code_path = $${paramCounter++}`);
+        values.push(updateData.codePath);
+      }
+
       if (updateData.active !== undefined) {
         updateFields.push(`active = $${paramCounter++}`);
         values.push(updateData.active);
@@ -317,6 +344,7 @@ export class ToolsRepository extends BaseRepository<ToolEntity> {
           name,
           slug,
           description,
+          code_path as "codePath",
           active,
           created_at as "createdAt",
           updated_at as "updatedAt"
@@ -384,6 +412,7 @@ export class ToolsRepository extends BaseRepository<ToolEntity> {
           name,
           slug,
           description,
+          code_path as "codePath",
           active,
           created_at as "createdAt",
           updated_at as "updatedAt"

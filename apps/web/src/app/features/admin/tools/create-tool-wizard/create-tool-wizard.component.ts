@@ -35,6 +35,7 @@ export interface ToolFormData {
   slug: string; // auto-generated, editable
   icon: string;
   category: ToolCategory;
+  codePath: string;
 }
 
 /**
@@ -326,6 +327,23 @@ export interface ToolFormData {
                   Category is required.
                 </small>
               </div>
+
+              <!-- Code Path -->
+              <div>
+                <label for="codePath" class="block text-sm font-medium text-gray-700 mb-2">
+                  Code Path
+                </label>
+                <input
+                  pInputText
+                  id="codePath"
+                  formControlName="codePath"
+                  placeholder="src/app/features/tools/components/my-tool/"
+                  class="w-full"
+                />
+                <small class="text-gray-500 block mt-1">
+                  Optional. Path to the tool's source code location for developer reference.
+                </small>
+              </div>
             </form>
 
             <!-- Navigation Buttons -->
@@ -415,6 +433,12 @@ export interface ToolFormData {
                     <span class="text-sm font-medium text-gray-500">Category:</span>
                     <span class="text-sm text-gray-900 ml-2">
                       {{ getCategoryLabel(configurationForm.get('category')?.value) || 'Not set' }}
+                    </span>
+                  </div>
+                  <div>
+                    <span class="text-sm font-medium text-gray-500">Code Path:</span>
+                    <span class="text-sm text-gray-900 ml-2">
+                      {{ configurationForm.get('codePath')?.value || 'Not specified' }}
                     </span>
                   </div>
                 </div>
@@ -520,6 +544,7 @@ export class CreateToolWizardComponent implements OnInit, OnDestroy {
       slug: ['', [Validators.required, Validators.pattern(/^[a-z0-9-]+$/)]],
       icon: ['pi pi-cog'], // Default icon
       category: ['', Validators.required],
+      codePath: [''], // Optional field
     });
   }
 
@@ -661,6 +686,7 @@ export class CreateToolWizardComponent implements OnInit, OnDestroy {
       slug: this.configurationForm.get('slug')?.value,
       icon: this.configurationForm.get('icon')?.value,
       category: this.configurationForm.get('category')?.value,
+      codePath: this.configurationForm.get('codePath')?.value || undefined,
       active: true, // Tools are created active by default
     };
 

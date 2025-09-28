@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { databaseService, DatabaseService } from '../services/database.service';
 
@@ -180,16 +180,15 @@ export class MigrationUtils {
     try {
       console.log('🚀 Starting database migration process...');
 
-      // For now, we'll manually specify the migration order
-      // In a production app, you'd want to read the directory and sort files
-      const migrations = [
-        '001_create_auth_tables.sql',
-        '002_add_audit_logging.sql',
-        '003_enhance_multi_tenancy.sql',
-        '004_add_tenant_rls_policies.sql',
-        '005_create_api_tokens_table.sql',
-        '006_create_api_token_usage_table.sql',
-      ];
+      const migrationsDir = join(process.cwd(), 'database', 'migrations');
+      const migrations = readdirSync(migrationsDir)
+        .filter((file) => /^\d+_.*\.sql$/.test(file))
+        .sort();
+
+      if (migrations.length === 0) {
+        console.warn('⚠️  No migrations found to run.');
+        return;
+      }
 
       for (const migration of migrations) {
         await this.runMigration(migration);

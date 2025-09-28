@@ -22,6 +22,8 @@ export interface Tool {
   icon?: string;
   /** Tool category for organization */
   category?: ToolCategory;
+  /** Path to the tool's source code location (e.g. "src/app/features/tools/components/short-link/") */
+  codePath?: string;
   /** Whether tool is currently enabled/disabled */
   active: boolean;
   /** Tool registration timestamp */
@@ -80,6 +82,8 @@ export interface CreateToolRequest {
   icon?: string;
   /** Tool category for organization */
   category?: ToolCategory;
+  /** Path to the tool's source code location */
+  codePath?: string;
   /** Initial active status (defaults to true) */
   active?: boolean;
 }

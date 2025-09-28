@@ -15,6 +15,7 @@ export {
 } from './action-card';
 export {
   StatsCardComponent,
+  type StatsCardConfig,
   type StatsCardData,
   type StatsCardColorVariant,
   type StatsCardSize,
@@ -32,6 +33,12 @@ export {
   type AvatarUploadState,
 } from './avatar-upload/avatar-upload.component';
 export { ToolLoadingComponent } from './tool-loading/tool-loading.component';
+export {
+  ToolCardComponent,
+  type ToolCardColorVariant,
+  type ToolCardSize,
+  type ToolCardConfig,
+} from './tool-card';
 
 // Welcome Page Components
 export {

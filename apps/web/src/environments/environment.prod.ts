@@ -5,6 +5,7 @@
 export const environment = {
   production: true,
   apiUrl: 'https://api.yourapp.com/api/v1',
+  shortLinkBaseUrl: 'https://api.yourapp.com',
   appName: 'NodeAngularFullStack',
   enableMultiTenancy: false,
   showTestCredentials: false,
@@ -13,20 +14,20 @@ export const environment = {
     passwordReset: true,
     profileManagement: true,
     userManagement: true,
-    dashboard: true
+    dashboard: true,
   },
   jwt: {
     tokenKey: 'access_token',
     refreshTokenKey: 'refresh_token',
-    tokenExpirationBuffer: 300000 // 5 minutes buffer before token expires
+    tokenExpirationBuffer: 300000, // 5 minutes buffer before token expires
   },
   api: {
     timeout: 30000, // 30 seconds
     retryAttempts: 3,
-    retryDelay: 1000 // 1 second
+    retryDelay: 1000, // 1 second
   },
   logging: {
     enableConsoleLogging: false,
-    logLevel: 'error'
-  }
+    logLevel: 'error',
+  },
 };
