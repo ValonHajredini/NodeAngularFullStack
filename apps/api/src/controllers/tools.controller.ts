@@ -3,7 +3,6 @@ import { validationResult } from 'express-validator';
 import { toolsService } from '../services/tools.service';
 import { componentGenerationService } from '../services/component-generation.service';
 import { AuthRequest } from '../middleware/auth.middleware';
-import { ComponentGenerationRequest } from '@nodeangularfullstack/shared';
 
 /**
  * Tools controller handling HTTP requests for tools management operations.
@@ -462,6 +461,40 @@ export class ToolsController {
 
       const result = await toolsService.createTool(req.body);
 
+      // Generate component scaffolding in development mode
+      if (result.success && componentGenerationService.isScaffoldingEnabled()) {
+        try {
+          const tool = result.data.tool;
+          const componentResult =
+            await componentGenerationService.generateComponent({
+              toolKey: tool.key,
+              toolName: tool.name,
+              slug: tool.slug,
+              description: tool.description,
+              icon: 'pi pi-wrench',
+              category: 'utility',
+            });
+
+          if (componentResult.success) {
+            console.log(
+              `Component scaffolding generated for tool '${tool.key}':`,
+              componentResult.filesCreated
+            );
+          } else {
+            console.warn(
+              `Component scaffolding failed for tool '${tool.key}':`,
+              componentResult.errors
+            );
+          }
+        } catch (error) {
+          console.error(
+            `Component scaffolding error for tool '${req.body.key}':`,
+            error
+          );
+          // Don't fail the tool creation if scaffolding fails
+        }
+      }
+
       res.status(201).json({
         success: result.success,
         data: result.data,
@@ -567,108 +600,6 @@ export class ToolsController {
       next({
         status: 500,
         message: 'Failed to delete tool',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
-    }
-  };
-
-  /**
-   * Generates component files for a tool.
-   * @route POST /api/admin/tools/:key/generate-component
-   * @param req - Express request object with tool key and generation config
-   * @param res - Express response object
-   * @param next - Express next function
-   * @returns HTTP response with generation results
-   * @throws {ApiError} 400 - Invalid input data
-   * @throws {ApiError} 401 - Authentication required
-   * @throws {ApiError} 403 - Super admin access required
-   * @throws {ApiError} 404 - Tool not found
-   * @throws {ApiError} 500 - Internal server error
-   * @example
-   * POST /api/admin/tools/my-tool/generate-component
-   * Authorization: Bearer <admin-token>
-   * {
-   *   "toolKey": "my-tool",
-   *   "toolName": "My Tool",
-   *   "slug": "my-tool",
-   *   "description": "A custom tool for the system"
-   * }
-   */
-  generateComponent = async (
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> => {
-    try {
-      // Check validation results
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        res.status(400).json({
-          success: false,
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Invalid input data',
-            details: errors.array(),
-          },
-          timestamp: new Date().toISOString(),
-        });
-        return;
-      }
-
-      const { key } = req.params;
-
-      // Verify tool exists
-      const tool = await toolsService.getToolByKey(key);
-      if (!tool) {
-        res.status(404).json({
-          success: false,
-          error: {
-            code: 'TOOL_NOT_FOUND',
-            message: `Tool with key '${key}' not found`,
-          },
-          timestamp: new Date().toISOString(),
-        });
-        return;
-      }
-
-      // Prepare generation request
-      const generationRequest: ComponentGenerationRequest = {
-        toolKey: tool.key,
-        toolName: tool.name,
-        slug: tool.slug,
-        description: tool.description,
-        icon: tool.icon,
-        category: tool.category,
-        ...req.body, // Allow override from request body
-      };
-
-      const result =
-        await componentGenerationService.generateComponent(generationRequest);
-
-      if (!result.success) {
-        res.status(400).json({
-          success: false,
-          error: {
-            code: 'GENERATION_FAILED',
-            message: 'Component generation failed',
-            details: result.errors,
-          },
-          timestamp: new Date().toISOString(),
-        });
-        return;
-      }
-
-      res.status(201).json({
-        success: true,
-        data: result,
-        timestamp: new Date().toISOString(),
-      });
-    } catch (error) {
-      console.error('Error generating component:', error);
-
-      next({
-        status: 500,
-        message: 'Failed to generate component',
         error: error instanceof Error ? error.message : 'Unknown error',
       });
     }

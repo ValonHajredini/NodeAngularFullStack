@@ -10,6 +10,8 @@ import { MenuItem } from 'primeng/api';
 import { ToolsService } from '../../../../core/services';
 import { Tool } from '@nodeangularfullstack/shared';
 import { ShortLinkComponent } from '../short-link/short-link.component';
+import { MapComponent } from '../map/map.component';
+import { MarkComponent } from '../mark/mark.component';
 
 /**
  * Tool container component that dynamically loads tools based on slug.
@@ -26,6 +28,8 @@ import { ShortLinkComponent } from '../short-link/short-link.component';
     MessageModule,
     BreadcrumbModule,
     ShortLinkComponent,
+    MapComponent,
+    MarkComponent,
   ],
   template: `
     <div class="tool-container">
@@ -72,7 +76,13 @@ import { ShortLinkComponent } from '../short-link/short-link.component';
         <div class="tool-content">
           @switch (tool()!.key) {
             @case ('short-link') {
-              <app-short-link></app-short-link>
+              <app-short-link />
+            }
+            @case ('map') {
+              <app-map />
+            }
+            @case ('mark') {
+              <app-mark />
             }
             @default {
               <p-card>

@@ -69,11 +69,12 @@ router.get('/active', toolsController.getActiveTools);
  * @response 403 - Super admin access required
  * @response 500 - Internal server error
  */
-router.get(
-  '/validate-key/:key',
-  toolKeyValidator,
-  toolsController.validateToolKey
-);
+// Temporarily disabled - validateToolKey method removed
+// router.get(
+//   '/validate-key/:key',
+//   toolKeyValidator,
+//   toolsController.validateToolKey
+// );
 
 /**
  * @route GET /api/admin/tools/slug/:slug
@@ -158,12 +159,13 @@ router.patch(
  * @response 404 - Tool not found
  * @response 500 - Internal server error
  */
-router.post(
-  '/:key/generate-component',
-  toolKeyValidator,
-  sanitizeToolInput,
-  toolsController.generateComponent
-);
+// Temporarily disabled - generateComponent method removed
+// router.post(
+//   '/:key/generate-component',
+//   toolKeyValidator,
+//   sanitizeToolInput,
+//   toolsController.generateComponent
+// );
 
 /**
  * @route DELETE /api/admin/tools/:key

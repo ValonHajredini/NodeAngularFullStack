@@ -1,10 +1,10 @@
-const bcrypt = require('bcrypt');
+import bcrypt from 'bcryptjs';
 import { UsersService } from '../../../src/services/users.service';
 import { usersRepository } from '../../../src/repositories/users.repository';
 
 // Mock the repository
 jest.mock('../../../src/repositories/users.repository');
-jest.mock('bcrypt');
+jest.mock('bcryptjs');
 
 /**
  * Unit tests for UsersService.
@@ -25,7 +25,7 @@ describe('UsersService', () => {
         password: 'PlainPassword123!',
         firstName: 'John',
         lastName: 'Doe',
-        role: 'user' as const
+        role: 'user' as const,
       };
 
       const hashedPassword = 'hashedPassword123';
@@ -40,7 +40,7 @@ describe('UsersService', () => {
         isActive: true,
         emailVerified: false,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
 
       (bcrypt.hash as jest.Mock).mockResolvedValue(hashedPassword);
@@ -54,7 +54,7 @@ describe('UsersService', () => {
         passwordHash: hashedPassword,
         firstName: userData.firstName,
         lastName: userData.lastName,
-        role: userData.role
+        role: userData.role,
       });
 
       // Should return user without password hash
@@ -68,7 +68,7 @@ describe('UsersService', () => {
         isActive: true,
         emailVerified: false,
         createdAt: expect.any(Date),
-        updatedAt: expect.any(Date)
+        updatedAt: expect.any(Date),
       });
       expect(result).not.toHaveProperty('passwordHash');
     });
@@ -78,7 +78,7 @@ describe('UsersService', () => {
         email: 'test@example.com',
         password: 'PlainPassword123!',
         firstName: 'John',
-        lastName: 'Doe'
+        lastName: 'Doe',
       };
 
       const hashedPassword = 'hashedPassword123';
@@ -93,7 +93,7 @@ describe('UsersService', () => {
         isActive: true,
         emailVerified: false,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
 
       (bcrypt.hash as jest.Mock).mockResolvedValue(hashedPassword);
@@ -106,7 +106,7 @@ describe('UsersService', () => {
         passwordHash: hashedPassword,
         firstName: userData.firstName,
         lastName: userData.lastName,
-        role: 'user' // Default role
+        role: 'user', // Default role
       });
     });
 
@@ -116,14 +116,16 @@ describe('UsersService', () => {
         password: 'PlainPassword123!',
         firstName: 'John',
         lastName: 'Doe',
-        role: 'user' as const
+        role: 'user' as const,
       };
 
       const repositoryError = new Error('Email already exists');
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashedPassword');
       (usersRepository.create as jest.Mock).mockRejectedValue(repositoryError);
 
-      await expect(usersService.createUser(userData)).rejects.toThrow('Email already exists');
+      await expect(usersService.createUser(userData)).rejects.toThrow(
+        'Email already exists'
+      );
     });
   });
 
@@ -140,7 +142,7 @@ describe('UsersService', () => {
         isActive: true,
         emailVerified: false,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
 
       (usersRepository.findById as jest.Mock).mockResolvedValue(user);
@@ -158,7 +160,7 @@ describe('UsersService', () => {
         isActive: true,
         emailVerified: false,
         createdAt: expect.any(Date),
-        updatedAt: expect.any(Date)
+        updatedAt: expect.any(Date),
       });
       expect(result).not.toHaveProperty('passwordHash');
     });
@@ -185,21 +187,29 @@ describe('UsersService', () => {
         isActive: true,
         emailVerified: false,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
 
       (usersRepository.findByEmail as jest.Mock).mockResolvedValue(user);
 
-      const result = await usersService.getUserByEmail('test@example.com', 'tenant-id');
+      const result = await usersService.getUserByEmail(
+        'test@example.com',
+        'tenant-id'
+      );
 
-      expect(usersRepository.findByEmail).toHaveBeenCalledWith('test@example.com', 'tenant-id');
+      expect(usersRepository.findByEmail).toHaveBeenCalledWith(
+        'test@example.com',
+        'tenant-id'
+      );
       expect(result).not.toHaveProperty('passwordHash');
     });
 
     it('should return null when user not found', async () => {
       (usersRepository.findByEmail as jest.Mock).mockResolvedValue(null);
 
-      const result = await usersService.getUserByEmail('nonexistent@example.com');
+      const result = await usersService.getUserByEmail(
+        'nonexistent@example.com'
+      );
 
       expect(result).toBeNull();
     });
@@ -210,7 +220,7 @@ describe('UsersService', () => {
       const updateData = {
         firstName: 'Updated',
         lastName: 'Name',
-        email: 'updated@example.com'
+        email: 'updated@example.com',
       };
 
       const updatedUser = {
@@ -224,7 +234,7 @@ describe('UsersService', () => {
         isActive: true,
         emailVerified: false,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
 
       (usersRepository.findByEmail as jest.Mock).mockResolvedValue(null); // Email not taken
@@ -232,7 +242,10 @@ describe('UsersService', () => {
 
       const result = await usersService.updateUser('user-id', updateData);
 
-      expect(usersRepository.update).toHaveBeenCalledWith('user-id', updateData);
+      expect(usersRepository.update).toHaveBeenCalledWith(
+        'user-id',
+        updateData
+      );
       expect(result).not.toHaveProperty('passwordHash');
     });
 
@@ -255,14 +268,16 @@ describe('UsersService', () => {
         isActive: true,
         emailVerified: false,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
 
-      (usersRepository.findByEmail as jest.Mock).mockResolvedValue(existingUser);
-
-      await expect(usersService.updateUser('user-id', updateData)).rejects.toThrow(
-        'Email already exists'
+      (usersRepository.findByEmail as jest.Mock).mockResolvedValue(
+        existingUser
       );
+
+      await expect(
+        usersService.updateUser('user-id', updateData)
+      ).rejects.toThrow('Email already exists');
     });
 
     it('should allow email update for same user', async () => {
@@ -278,7 +293,7 @@ describe('UsersService', () => {
         isActive: true,
         emailVerified: false,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
 
       (usersRepository.findByEmail as jest.Mock).mockResolvedValue(sameUser);
@@ -286,7 +301,10 @@ describe('UsersService', () => {
 
       const result = await usersService.updateUser('user-id', updateData);
 
-      expect(usersRepository.update).toHaveBeenCalledWith('user-id', updateData);
+      expect(usersRepository.update).toHaveBeenCalledWith(
+        'user-id',
+        updateData
+      );
       expect(result).not.toHaveProperty('passwordHash');
     });
   });
@@ -304,7 +322,7 @@ describe('UsersService', () => {
         isActive: true,
         emailVerified: false,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
 
       (usersRepository.findById as jest.Mock).mockResolvedValue(user);
@@ -320,7 +338,9 @@ describe('UsersService', () => {
     it('should throw error when user not found', async () => {
       (usersRepository.findById as jest.Mock).mockResolvedValue(null);
 
-      await expect(usersService.deleteUser('nonexistent-id')).rejects.toThrow('User not found');
+      await expect(usersService.deleteUser('nonexistent-id')).rejects.toThrow(
+        'User not found'
+      );
     });
   });
 
@@ -338,7 +358,7 @@ describe('UsersService', () => {
           isActive: true,
           emailVerified: false,
           createdAt: new Date(),
-          updatedAt: new Date()
+          updatedAt: new Date(),
         },
         {
           id: 'user2',
@@ -351,8 +371,8 @@ describe('UsersService', () => {
           isActive: true,
           emailVerified: true,
           createdAt: new Date(),
-          updatedAt: new Date()
-        }
+          updatedAt: new Date(),
+        },
       ];
 
       const repositoryResult = {
@@ -362,27 +382,29 @@ describe('UsersService', () => {
         limit: 20,
         pages: 1,
         hasNext: false,
-        hasPrev: false
+        hasPrev: false,
       };
 
-      (usersRepository.findWithPagination as jest.Mock).mockResolvedValue(repositoryResult);
+      (usersRepository.findWithPagination as jest.Mock).mockResolvedValue(
+        repositoryResult
+      );
 
       const result = await usersService.getUsers({
         page: 1,
         limit: 20,
         search: 'john',
-        role: 'user'
+        role: 'user',
       });
 
       expect(usersRepository.findWithPagination).toHaveBeenCalledWith({
         page: 1,
         limit: 20,
         search: 'john',
-        role: 'user'
+        role: 'user',
       });
 
       expect(result.users).toHaveLength(2);
-      result.users.forEach(user => {
+      result.users.forEach((user) => {
         expect(user).not.toHaveProperty('passwordHash');
       });
 
@@ -392,7 +414,7 @@ describe('UsersService', () => {
         total: 2,
         pages: 1,
         hasNext: false,
-        hasPrev: false
+        hasPrev: false,
       });
     });
 
@@ -404,20 +426,22 @@ describe('UsersService', () => {
         limit: 20,
         pages: 0,
         hasNext: false,
-        hasPrev: false
+        hasPrev: false,
       };
 
-      (usersRepository.findWithPagination as jest.Mock).mockResolvedValue(repositoryResult);
+      (usersRepository.findWithPagination as jest.Mock).mockResolvedValue(
+        repositoryResult
+      );
 
       // Test with invalid parameters
       await usersService.getUsers({
         page: -1, // Should be corrected to 1
-        limit: 150 // Should be capped to 100
+        limit: 150, // Should be capped to 100
       });
 
       expect(usersRepository.findWithPagination).toHaveBeenCalledWith({
         page: 1, // Corrected
-        limit: 100 // Capped
+        limit: 100, // Capped
       });
     });
   });
@@ -428,16 +452,25 @@ describe('UsersService', () => {
 
       const result = await usersService.emailExists('existing@example.com');
 
-      expect(usersRepository.emailExists).toHaveBeenCalledWith('existing@example.com', undefined);
+      expect(usersRepository.emailExists).toHaveBeenCalledWith(
+        'existing@example.com',
+        undefined
+      );
       expect(result).toBe(true);
     });
 
     it('should return false when email does not exist', async () => {
       (usersRepository.emailExists as jest.Mock).mockResolvedValue(false);
 
-      const result = await usersService.emailExists('nonexistent@example.com', 'tenant-id');
+      const result = await usersService.emailExists(
+        'nonexistent@example.com',
+        'tenant-id'
+      );
 
-      expect(usersRepository.emailExists).toHaveBeenCalledWith('nonexistent@example.com', 'tenant-id');
+      expect(usersRepository.emailExists).toHaveBeenCalledWith(
+        'nonexistent@example.com',
+        'tenant-id'
+      );
       expect(result).toBe(false);
     });
   });
@@ -448,33 +481,54 @@ describe('UsersService', () => {
       const hashedPassword = 'newHashedPassword';
 
       (bcrypt.hash as jest.Mock).mockResolvedValue(hashedPassword);
-      (usersRepository.updatePassword as jest.Mock).mockResolvedValue(undefined);
+      (usersRepository.updatePassword as jest.Mock).mockResolvedValue(
+        undefined
+      );
 
       await usersService.updatePassword('user-id', newPassword);
 
       expect(bcrypt.hash).toHaveBeenCalledWith(newPassword, 12);
-      expect(usersRepository.updatePassword).toHaveBeenCalledWith('user-id', hashedPassword);
+      expect(usersRepository.updatePassword).toHaveBeenCalledWith(
+        'user-id',
+        hashedPassword
+      );
     });
   });
 
   describe('validateUserAccess', () => {
     it('should allow admin access to any user', () => {
-      const result = usersService.validateUserAccess('admin-id', 'any-user-id', 'admin');
+      const result = usersService.validateUserAccess(
+        'admin-id',
+        'any-user-id',
+        'admin'
+      );
       expect(result).toBe(true);
     });
 
     it('should allow users to access their own data', () => {
-      const result = usersService.validateUserAccess('user-id', 'user-id', 'user');
+      const result = usersService.validateUserAccess(
+        'user-id',
+        'user-id',
+        'user'
+      );
       expect(result).toBe(true);
     });
 
     it('should deny users access to other users data', () => {
-      const result = usersService.validateUserAccess('user-id', 'other-user-id', 'user');
+      const result = usersService.validateUserAccess(
+        'user-id',
+        'other-user-id',
+        'user'
+      );
       expect(result).toBe(false);
     });
 
     it('should deny readonly users access to other users data', () => {
-      const result = usersService.validateUserAccess('readonly-id', 'other-user-id', 'readonly');
+      const result = usersService.validateUserAccess(
+        'readonly-id',
+        'other-user-id',
+        'readonly'
+      );
       expect(result).toBe(false);
     });
   });

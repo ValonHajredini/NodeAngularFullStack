@@ -12,7 +12,7 @@ import {
 export class ComponentGenerationService {
   private readonly frontendPath = path.resolve(
     __dirname,
-    '../../../../web/src/app/features/tools/components'
+    '../../../../apps/web/src/app/features/tools/components'
   );
 
   /**
@@ -24,7 +24,16 @@ export class ComponentGenerationService {
   async generateComponent(
     request: ComponentGenerationRequest
   ): Promise<ComponentGenerationResult> {
-    const { toolKey, toolName, slug, description, icon, category } = request;
+    // Check if scaffolding is enabled in development mode
+    if (!this.isScaffoldingEnabled()) {
+      return {
+        success: false,
+        filesCreated: [],
+        errors: ['Component scaffolding is only available in development mode'],
+      };
+    }
+
+    const { toolKey, toolName, slug, description, icon } = request;
     const filesCreated: string[] = [];
     const errors: string[] = [];
 
@@ -42,6 +51,10 @@ export class ComponentGenerationService {
 
       await fs.mkdir(componentDir, { recursive: true });
 
+      // Create components subdirectory for future nested components
+      const componentsSubDir = path.join(componentDir, 'components');
+      await fs.mkdir(componentsSubDir, { recursive: true });
+
       // Generate component files
       const componentPath = await this.generateComponentFile(
         componentDir,
@@ -49,15 +62,13 @@ export class ComponentGenerationService {
         toolName,
         slug,
         description,
-        icon,
-        category
+        icon
       );
       filesCreated.push(componentPath);
 
       // Generate test file
       const testPath = await this.generateTestFile(
         componentDir,
-        toolKey,
         toolName,
         slug
       );
@@ -66,7 +77,6 @@ export class ComponentGenerationService {
       // Generate service file (optional)
       const servicePath = await this.generateServiceFile(
         componentDir,
-        toolKey,
         toolName,
         slug
       );
@@ -92,12 +102,31 @@ export class ComponentGenerationService {
         error instanceof Error ? error.message : 'Unknown error';
       errors.push(errorMessage);
 
+      // Log detailed error for debugging
+      console.error('Component generation failed:', {
+        toolKey,
+        slug,
+        error: errorMessage,
+        filesCreated,
+      });
+
       return {
         success: false,
         filesCreated: [],
         errors,
       };
     }
+  }
+
+  /**
+   * Checks if component scaffolding should be active.
+   * Only activates in development environment to prevent accidental generation in production.
+   * @returns {boolean} True if scaffolding is enabled
+   */
+  isScaffoldingEnabled(): boolean {
+    return (
+      process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'local'
+    );
   }
 
   /**
@@ -138,12 +167,11 @@ export class ComponentGenerationService {
    */
   private async generateComponentFile(
     componentDir: string,
-    _toolKey: string,
+    toolKey: string,
     toolName: string,
     slug: string,
     description: string,
-    icon?: string,
-    _category?: string
+    icon?: string
   ): Promise<string> {
     const pascalCaseName = this.toPascalCase(slug);
     const componentFileName = `${slug}.component.ts`;
@@ -151,12 +179,11 @@ export class ComponentGenerationService {
 
     const componentTemplate = this.getComponentTemplate(
       pascalCaseName,
-      _toolKey,
+      toolKey,
       toolName,
       slug,
       description,
-      icon,
-      _category
+      icon
     );
 
     await fs.writeFile(componentPath, componentTemplate, 'utf8');
@@ -168,7 +195,6 @@ export class ComponentGenerationService {
    */
   private async generateTestFile(
     componentDir: string,
-    _toolKey: string,
     toolName: string,
     slug: string
   ): Promise<string> {
@@ -187,7 +213,6 @@ export class ComponentGenerationService {
    */
   private async generateServiceFile(
     componentDir: string,
-    _toolKey: string,
     toolName: string,
     slug: string
   ): Promise<string> {
@@ -240,7 +265,7 @@ export class ComponentGenerationService {
 
       // Add to switch statement
       const switchRegex = /(@case \('short-link'\) \{[^}]+\})/;
-      const newCase = `\n            @case ('${toolKey}') {\n              <app-${slug}></${slug}>\n            }`;
+      const newCase = `\n            @case ('${toolKey}') {\n              <app-${slug} />\n            }`;
       const updatedSwitch = updatedImportsArray.replace(
         switchRegex,
         `$1${newCase}`
@@ -286,10 +311,9 @@ export class ComponentGenerationService {
     toolName: string,
     slug: string,
     description: string,
-    icon?: string,
-    _category?: string
+    icon?: string
   ): string {
-    return `import { Component, OnInit, inject, signal } from '@angular/core';
+    return `import { Component, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
@@ -303,6 +327,7 @@ import { ${pascalCaseName}Service } from './${slug}.service';
 @Component({
   selector: 'app-${slug}',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
     CardModule,

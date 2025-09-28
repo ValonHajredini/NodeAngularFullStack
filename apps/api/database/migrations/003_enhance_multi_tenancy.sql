@@ -38,37 +38,63 @@ SET settings = COALESCE(settings, '{}') || jsonb_build_object(
 )
 WHERE settings = '{}' OR settings IS NULL;
 
--- Add constraints for plan and status
-ALTER TABLE tenants
-ADD CONSTRAINT IF NOT EXISTS valid_plan
-CHECK (plan IN ('free', 'starter', 'professional', 'enterprise'));
+-- Add constraints for plan and status using DO block for conditional creation
+DO $$
+BEGIN
+    -- Add valid_plan constraint if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE constraint_name = 'valid_plan' AND table_name = 'tenants'
+    ) THEN
+        ALTER TABLE tenants ADD CONSTRAINT valid_plan
+        CHECK (plan IN ('free', 'starter', 'professional', 'enterprise'));
+    END IF;
 
-ALTER TABLE tenants
-ADD CONSTRAINT IF NOT EXISTS valid_status
-CHECK (status IN ('active', 'suspended', 'inactive', 'pending'));
+    -- Add valid_status constraint if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE constraint_name = 'valid_status' AND table_name = 'tenants'
+    ) THEN
+        ALTER TABLE tenants ADD CONSTRAINT valid_status
+        CHECK (status IN ('active', 'suspended', 'inactive', 'pending'));
+    END IF;
 
-ALTER TABLE tenants
-ADD CONSTRAINT IF NOT EXISTS valid_max_users
-CHECK (max_users > 0 AND max_users <= 10000);
+    -- Add valid_max_users constraint if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE constraint_name = 'valid_max_users' AND table_name = 'tenants'
+    ) THEN
+        ALTER TABLE tenants ADD CONSTRAINT valid_max_users
+        CHECK (max_users > 0 AND max_users <= 10000);
+    END IF;
 
--- Add JSONB validation for settings structure
-ALTER TABLE tenants
-ADD CONSTRAINT IF NOT EXISTS valid_settings_structure
-CHECK (
-    jsonb_typeof(settings) = 'object' AND
-    jsonb_typeof(settings->'branding') = 'object' AND
-    jsonb_typeof(settings->'features') = 'object' AND
-    jsonb_typeof(settings->'isolation') = 'object' AND
-    jsonb_typeof(settings->'limits') = 'object' AND
-    jsonb_typeof(settings->'security') = 'object'
-);
+    -- Add valid_settings_structure constraint if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE constraint_name = 'valid_settings_structure' AND table_name = 'tenants'
+    ) THEN
+        ALTER TABLE tenants ADD CONSTRAINT valid_settings_structure
+        CHECK (
+            jsonb_typeof(settings) = 'object' AND
+            jsonb_typeof(settings->'branding') = 'object' AND
+            jsonb_typeof(settings->'features') = 'object' AND
+            jsonb_typeof(settings->'isolation') = 'object' AND
+            jsonb_typeof(settings->'limits') = 'object' AND
+            jsonb_typeof(settings->'security') = 'object'
+        );
+    END IF;
 
--- Add JSONB validation for isolation level
-ALTER TABLE tenants
-ADD CONSTRAINT IF NOT EXISTS valid_isolation_level
-CHECK (
-    settings->'isolation'->>'level' IN ('row', 'schema', 'database')
-);
+    -- Add valid_isolation_level constraint if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE constraint_name = 'valid_isolation_level' AND table_name = 'tenants'
+    ) THEN
+        ALTER TABLE tenants ADD CONSTRAINT valid_isolation_level
+        CHECK (
+            settings->'isolation'->>'level' IN ('row', 'schema', 'database')
+        );
+    END IF;
+END $$;
 
 -- Create additional indexes for enhanced columns
 CREATE INDEX IF NOT EXISTS idx_tenants_plan ON tenants(plan);

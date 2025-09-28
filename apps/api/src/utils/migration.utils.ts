@@ -16,7 +16,9 @@ export class MigrationUtils {
     const statements: string[] = [];
     let currentStatement = '';
     let inFunction = false;
+    let inDoBlock = false;
     let functionDelimiter = '';
+    let doBlockLevel = 0;
 
     const lines = sql.split('\n');
 
@@ -28,9 +30,35 @@ export class MigrationUtils {
         continue;
       }
 
+      // Check for DO block start
+      if (trimmedLine.match(/^DO\s+\$\$/i)) {
+        inDoBlock = true;
+        doBlockLevel = 1;
+        currentStatement += line + '\n';
+        continue;
+      }
+
+      // Handle nested DO blocks
+      if (inDoBlock) {
+        if (trimmedLine.match(/^DO\s+\$\$/i)) {
+          doBlockLevel++;
+        } else if (trimmedLine.match(/^END\s+\$\$\s*;?\s*$/i)) {
+          doBlockLevel--;
+          currentStatement += line + '\n';
+          if (doBlockLevel === 0) {
+            inDoBlock = false;
+            statements.push(currentStatement.trim());
+            currentStatement = '';
+          }
+          continue;
+        }
+        currentStatement += line + '\n';
+        continue;
+      }
+
       // Check for function start with $$ delimiter
       const dollarMatch = trimmedLine.match(/\$(\w*)\$/);
-      if (dollarMatch && !inFunction) {
+      if (dollarMatch && !inFunction && !inDoBlock) {
         inFunction = true;
         functionDelimiter = dollarMatch[0];
         currentStatement += line + '\n';
