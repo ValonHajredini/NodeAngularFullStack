@@ -397,7 +397,7 @@ export class LoginComponent implements OnInit {
   private readonly authService = inject(AuthService);
   readonly themeService = inject(ThemeService);
 
-  private returnUrl: string = '/dashboard';
+  private returnUrl = '/dashboard';
 
   protected readonly loginForm: FormGroup;
   protected readonly loading = signal(false);

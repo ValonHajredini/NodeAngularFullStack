@@ -263,6 +263,75 @@ export class ToolsController {
   };
 
   /**
+   * Checks if a component exists for the given slug.
+   * @route GET /api/admin/tools/check-component/:slug
+   * @param req - Express request object with slug parameter
+   * @param res - Express response object
+   * @param next - Express next function
+   * @returns HTTP response with component existence check
+   * @throws {ApiError} 400 - Invalid slug format
+   * @throws {ApiError} 401 - Authentication required
+   * @throws {ApiError} 403 - Super admin access required
+   * @throws {ApiError} 500 - Internal server error
+   * @example
+   * GET /api/admin/tools/check-component/todo-app
+   * Authorization: Bearer <admin-token>
+   *
+   * Response:
+   * {
+   *   "success": true,
+   *   "data": {
+   *     "exists": true,
+   *     "componentPath": "/path/to/component",
+   *     "filesFound": ["todo-app.component.ts", "todo-app.service.ts"],
+   *     "lastModified": "2025-09-30T...",
+   *     "totalSize": 5120
+   *   }
+   * }
+   */
+  checkComponent = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      // Check validation results
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid slug format',
+            details: errors.array(),
+          },
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      const { slug } = req.params;
+
+      // Check if component exists
+      const existenceCheck =
+        await componentGenerationService.checkComponentExists(slug);
+
+      res.status(200).json({
+        success: true,
+        data: existenceCheck,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('Error checking component:', error);
+      next({
+        status: 500,
+        message: 'Failed to check component existence',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  };
+
+  /**
    * Retrieves a specific tool by its key.
    * @route GET /api/admin/tools/:key
    * @param req - Express request object with tool key parameter

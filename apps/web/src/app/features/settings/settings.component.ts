@@ -22,7 +22,7 @@ import { SettingsSection } from './types/settings.types';
           <div class="lg:col-span-1">
             <div class="sticky top-8">
               <div class="hidden lg:block">
-                <div class="bg-white shadow rounded-lg min-h-[600px]">
+                <div class="settings-sidebar-container">
                   <app-settings-sidebar
                     [navigationItems]="settingsService.navigationItems()"
                     [activeSection]="settingsService.activeSection()"
@@ -39,13 +39,13 @@ import { SettingsSection } from './types/settings.types';
           <div class="lg:col-span-3">
             <!-- Mobile Header -->
             <div class="lg:hidden mb-6">
-              <div class="bg-white shadow rounded-lg p-4">
+              <div class="settings-mobile-header">
                 <div class="flex items-center justify-between">
                   <h1 class="text-xl font-semibold text-gray-900">Settings</h1>
                   <button
                     type="button"
                     (click)="onToggleMobileSidebar()"
-                    class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                    class="settings-menu-button"
                   >
                     <i class="pi pi-bars mr-2"></i>
                     Menu
@@ -73,7 +73,7 @@ import { SettingsSection } from './types/settings.types';
               ></div>
 
               <!-- Sidebar Panel -->
-              <div class="relative flex-1 flex flex-col max-w-xs w-full bg-white shadow-xl">
+              <div class="settings-mobile-sidebar">
                 <app-settings-sidebar
                   [navigationItems]="settingsService.navigationItems()"
                   [activeSection]="settingsService.activeSection()"
@@ -91,11 +91,67 @@ import { SettingsSection } from './types/settings.types';
   styles: [
     `
       .settings-page {
-        @apply min-h-screen bg-gray-50;
+        min-height: 100vh;
+        background-color: var(--color-background);
+        transition: var(--transition-colors);
       }
 
       .settings-content {
         @apply space-y-8;
+      }
+
+      .settings-sidebar-container {
+        background-color: var(--color-surface);
+        box-shadow: var(--shadow-base);
+        border-radius: var(--border-radius-lg);
+        min-height: 600px;
+        border: 1px solid var(--color-border-light);
+        transition: var(--transition-colors);
+      }
+
+      .settings-mobile-header {
+        background-color: var(--color-surface);
+        box-shadow: var(--shadow-base);
+        border-radius: var(--border-radius-lg);
+        padding: 1rem;
+        border: 1px solid var(--color-border-light);
+        transition: var(--transition-colors);
+      }
+
+      .settings-menu-button {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid var(--color-border);
+        box-shadow: var(--shadow-sm);
+        font-size: 0.875rem;
+        font-weight: 500;
+        border-radius: var(--border-radius-md);
+        color: var(--color-text-secondary);
+        background-color: var(--color-surface);
+        transition: var(--transition-colors);
+
+        &:hover {
+          background-color: var(--color-gray-50);
+        }
+
+        &:focus {
+          outline: none;
+          box-shadow: 0 0 0 2px var(--color-focus-ring);
+          outline-offset: 2px;
+        }
+      }
+
+      .settings-mobile-sidebar {
+        position: relative;
+        flex: 1 1 0%;
+        display: flex;
+        flex-direction: column;
+        max-width: 20rem;
+        width: 100%;
+        background-color: var(--color-surface);
+        box-shadow: var(--shadow-xl);
+        transition: var(--transition-colors);
       }
 
       /* Ensure sticky positioning works correctly */

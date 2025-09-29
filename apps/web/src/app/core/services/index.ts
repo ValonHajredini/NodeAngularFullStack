@@ -14,3 +14,4 @@ export {
   type DeleteTokenResponse,
 } from './token.service';
 export { ToolsService, type ToolsApiResponse, type ToolsServiceConfig } from './tools.service';
+export { ToolConfigService } from './tool-config.service';

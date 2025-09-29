@@ -36,8 +36,8 @@ import { ToolsService } from '../services/tools.service';
  */
 export function toolGuard(
   toolKey: string,
-  redirectRoute: string = '/app/dashboard',
-  showError: boolean = true,
+  redirectRoute = '/app/dashboard',
+  showError = true,
 ): CanActivateFn {
   return (route: ActivatedRouteSnapshot, state) => {
     const toolsService = inject(ToolsService);
@@ -125,8 +125,8 @@ export function toolGuard(
  */
 export function anyToolGuard(
   toolKeys: string[],
-  redirectRoute: string = '/app/dashboard',
-  showError: boolean = true,
+  redirectRoute = '/app/dashboard',
+  showError = true,
 ): CanActivateFn {
   return (route, state) => {
     const toolsService = inject(ToolsService);
@@ -213,8 +213,8 @@ export function anyToolGuard(
  */
 export function allToolsGuard(
   toolKeys: string[],
-  redirectRoute: string = '/app/dashboard',
-  showError: boolean = true,
+  redirectRoute = '/app/dashboard',
+  showError = true,
 ): CanActivateFn {
   return (route, state) => {
     const toolsService = inject(ToolsService);
@@ -237,7 +237,7 @@ export function allToolsGuard(
       map((tools) => {
         const disabledTools = toolKeys.filter((key) => {
           const tool = tools.find((t) => t.key === key);
-          return !tool || !tool.active;
+          return !tool?.active;
         });
 
         if (disabledTools.length > 0) {
@@ -364,7 +364,7 @@ export const slugToolGuard: CanActivateFn = (route: ActivatedRouteSnapshot, stat
       console.error(`ToolGuard: Failed to check tool with slug '${slug}':`, error);
 
       // On API failure, use cached data as fallback
-      if (cachedTool && cachedTool.active) {
+      if (cachedTool?.active) {
         console.warn(`ToolGuard: Using cached data for tool '${slug}' due to API failure`);
         return of(true);
       }

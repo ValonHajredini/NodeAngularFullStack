@@ -162,10 +162,10 @@ export class ApiClientService {
  */
 export interface ApiRequestOptions {
   /** Custom headers to include in the request */
-  headers?: { [key: string]: string };
+  headers?: Record<string, string>;
 
   /** Query parameters to include in the request */
-  params?: { [key: string]: string };
+  params?: Record<string, string>;
 
   /** Whether to include credentials with the request */
   withCredentials?: boolean;

@@ -40,6 +40,7 @@ CREATE INDEX IF NOT EXISTS idx_api_tokens_created_at ON api_tokens(created_at);
 CREATE INDEX IF NOT EXISTS idx_api_tokens_last_used_at ON api_tokens(last_used_at);
 
 -- Create trigger for updated_at timestamp
+DROP TRIGGER IF EXISTS update_api_tokens_updated_at ON api_tokens;
 CREATE TRIGGER update_api_tokens_updated_at
     BEFORE UPDATE ON api_tokens
     FOR EACH ROW

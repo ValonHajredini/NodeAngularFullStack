@@ -83,11 +83,11 @@ export interface WelcomeApiDocsConfig {
  */
 export interface WelcomeFooterConfig {
   copyrightText: string;
-  links?: Array<{
+  links?: {
     label: string;
     href?: string;
     routerLink?: string;
-  }>;
+  }[];
   showSocialLinks?: boolean;
   backgroundColor?: WelcomeColorVariant;
 }
@@ -117,11 +117,13 @@ export interface WelcomePageConfig {
   } | null;
   apiDocs?: WelcomeApiDocsConfig | null;
   footer?: WelcomeFooterConfig | null;
-  customSections?: Array<{
-    id: string;
-    component: any;
-    props?: Record<string, any>;
-  }> | null;
+  customSections?:
+    | {
+        id: string;
+        component: any;
+        props?: Record<string, any>;
+      }[]
+    | null;
 }
 
 /**

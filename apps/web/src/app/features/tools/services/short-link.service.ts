@@ -163,7 +163,7 @@ export class ShortLinkService {
    *   error: (error) => console.error('Retrieval failed:', error)
    * });
    */
-  getUserShortLinks(limit: number = 20, offset: number = 0): Observable<ShortLink[]> {
+  getUserShortLinks(limit = 20, offset = 0): Observable<ShortLink[]> {
     this.loadingSignal.set(true);
     this.errorSignal.set(null);
 

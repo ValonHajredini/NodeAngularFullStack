@@ -308,7 +308,7 @@ import { Subject, takeUntil } from 'rxjs';
   styles: [
     `
       .short-link-container {
-        max-width: 1000px;
+        // max-width: 1000px;
         margin: 0 auto;
         padding: 1rem;
       }
@@ -592,7 +592,7 @@ export class ShortLinkComponent implements OnInit, OnDestroy {
   /**
    * Truncates a URL to a maximum length and adds ellipsis if needed.
    */
-  getTruncatedUrl(url: string, maxLength: number = 80): string {
+  getTruncatedUrl(url: string, maxLength = 80): string {
     if (url.length <= maxLength) {
       return url;
     }

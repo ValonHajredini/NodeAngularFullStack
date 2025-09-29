@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { toolsController } from '../controllers/tools.controller';
+import { toolConfigsController } from '../controllers/tool-configs.controller';
 import { AuthMiddleware } from '../middleware/auth.middleware';
 import {
   auditToolCreate,
@@ -13,6 +14,14 @@ import {
   sanitizeToolInput,
   xssProtection,
 } from '../validators/tools.validator';
+import {
+  validateGetConfigs,
+  validateGetActiveConfig,
+  validateCreateConfig,
+  validateUpdateConfig,
+  validateActivateConfig,
+  validateDeleteConfig,
+} from '../validators/tool-config.validator';
 
 /**
  * Tools routes configuration.
@@ -69,12 +78,24 @@ router.get('/active', toolsController.getActiveTools);
  * @response 403 - Super admin access required
  * @response 500 - Internal server error
  */
-// Temporarily disabled - validateToolKey method removed
-// router.get(
-//   '/validate-key/:key',
-//   toolKeyValidator,
-//   toolsController.validateToolKey
-// );
+router.get(
+  '/validate-key/:key',
+  toolKeyValidator,
+  toolsController.validateToolKey
+);
+
+/**
+ * @route GET /api/admin/tools/check-component/:slug
+ * @description Check if a component exists for the given slug
+ * @access Super Admin only
+ * @param slug - Component slug to check (kebab-case)
+ * @response 200 - Component existence check with metadata
+ * @response 400 - Invalid slug format
+ * @response 401 - Authentication required
+ * @response 403 - Super admin access required
+ * @response 500 - Internal server error
+ */
+router.get('/check-component/:slug', toolsController.checkComponent);
 
 /**
  * @route GET /api/admin/tools/slug/:slug
@@ -89,6 +110,123 @@ router.get('/active', toolsController.getActiveTools);
  * @response 500 - Internal server error
  */
 router.get('/slug/:slug', toolsController.getToolBySlug);
+
+// ========================================
+// Tool Configuration Routes (must be before /:key route)
+// ========================================
+
+/**
+ * @route GET /api/admin/tools/:toolKey/configs
+ * @description Retrieve all configurations for a specific tool
+ * @access Super Admin only
+ * @param toolKey - Tool key (kebab-case)
+ * @response 200 - List of configurations with active config
+ * @response 400 - Invalid tool key
+ * @response 401 - Authentication required
+ * @response 403 - Super admin access required
+ * @response 404 - Tool not found
+ * @response 500 - Internal server error
+ */
+router.get(
+  '/:toolKey/configs',
+  validateGetConfigs(),
+  toolConfigsController.getConfigs
+);
+
+/**
+ * @route GET /api/admin/tools/:toolKey/configs/active
+ * @description Retrieve the active configuration for a specific tool
+ * @access Super Admin only
+ * @param toolKey - Tool key (kebab-case)
+ * @response 200 - Active configuration
+ * @response 400 - Invalid tool key
+ * @response 401 - Authentication required
+ * @response 403 - Super admin access required
+ * @response 404 - Tool or config not found
+ * @response 500 - Internal server error
+ */
+router.get(
+  '/:toolKey/configs/active',
+  validateGetActiveConfig(),
+  toolConfigsController.getActiveConfig
+);
+
+/**
+ * @route POST /api/admin/tools/:toolKey/configs
+ * @description Create a new configuration for a tool
+ * @access Super Admin only
+ * @param toolKey - Tool key (kebab-case)
+ * @body CreateToolConfigRequest - Configuration data
+ * @response 201 - Created configuration
+ * @response 400 - Invalid input data or version already exists
+ * @response 401 - Authentication required
+ * @response 403 - Super admin access required
+ * @response 404 - Tool not found
+ * @response 500 - Internal server error
+ */
+router.post(
+  '/:toolKey/configs',
+  validateCreateConfig(),
+  toolConfigsController.createConfig
+);
+
+/**
+ * @route PUT /api/admin/tools/:toolKey/configs/:configId
+ * @description Update an existing tool configuration
+ * @access Super Admin only
+ * @param toolKey - Tool key (kebab-case)
+ * @param configId - Configuration ID (UUID)
+ * @body UpdateToolConfigRequest - Configuration update data
+ * @response 200 - Updated configuration
+ * @response 400 - Invalid input data or version already exists
+ * @response 401 - Authentication required
+ * @response 403 - Super admin access required
+ * @response 404 - Tool or config not found
+ * @response 500 - Internal server error
+ */
+router.put(
+  '/:toolKey/configs/:configId',
+  validateUpdateConfig(),
+  toolConfigsController.updateConfig
+);
+
+/**
+ * @route PUT /api/admin/tools/:toolKey/configs/:configId/activate
+ * @description Set a configuration as active
+ * @access Super Admin only
+ * @param toolKey - Tool key (kebab-case)
+ * @param configId - Configuration ID (UUID)
+ * @response 200 - Activated configuration
+ * @response 400 - Invalid tool key or config ID
+ * @response 401 - Authentication required
+ * @response 403 - Super admin access required
+ * @response 404 - Tool or config not found
+ * @response 500 - Internal server error
+ */
+router.put(
+  '/:toolKey/configs/:configId/activate',
+  validateActivateConfig(),
+  toolConfigsController.activateConfig
+);
+
+/**
+ * @route DELETE /api/admin/tools/:toolKey/configs/:configId
+ * @description Delete a tool configuration
+ * @access Super Admin only
+ * @param toolKey - Tool key (kebab-case)
+ * @param configId - Configuration ID (UUID)
+ * @response 200 - Deletion confirmation
+ * @response 400 - Invalid tool key, config ID, or cannot delete active config
+ * @response 401 - Authentication required
+ * @response 403 - Super admin access required
+ * @response 404 - Tool or config not found
+ * @response 500 - Internal server error
+ */
+router.delete(
+  '/:toolKey/configs/:configId',
+  validateDeleteConfig(),
+  toolConfigsController.deleteConfig
+);
 
 /**
  * @route GET /api/admin/tools/:key

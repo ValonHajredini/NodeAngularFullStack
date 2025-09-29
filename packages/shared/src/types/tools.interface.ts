@@ -295,3 +295,184 @@ export interface ComponentGenerationResponse {
   /** Operation timestamp */
   timestamp: string;
 }
+
+// Tool Configuration Types
+
+/**
+ * Display mode options for tool rendering.
+ */
+export type DisplayMode = 'standard' | 'full-width' | 'compact' | 'modal' | 'embedded';
+
+/**
+ * Layout settings for tool display customization.
+ */
+export interface LayoutSettings {
+  /** Maximum width (e.g., "1200px", "100%") */
+  maxWidth?: string;
+  /** Padding (e.g., "2rem", "1rem 2rem") */
+  padding?: string;
+  /** Margin (e.g., "0 auto", "1rem") */
+  margin?: string;
+  /** Background color */
+  backgroundColor?: string;
+  /** Border radius */
+  borderRadius?: string;
+  /** Custom CSS classes array */
+  customClasses?: string[];
+  /** Additional custom settings */
+  [key: string]: any;
+}
+
+/**
+ * Tool configuration entity.
+ */
+export interface ToolConfig {
+  /** Unique identifier (UUID v4) */
+  id: string;
+  /** Tool ID reference */
+  toolId: string;
+  /** Semantic version (e.g., "1.0.0") */
+  version: string;
+  /** Display mode for tool rendering */
+  displayMode: DisplayMode;
+  /** Layout customization settings */
+  layoutSettings: LayoutSettings;
+  /** Whether this is the active configuration */
+  isActive: boolean;
+  /** Configuration creation timestamp */
+  createdAt: Date;
+  /** Last modification timestamp */
+  updatedAt: Date;
+}
+
+/**
+ * Request payload for creating a new tool configuration.
+ */
+export interface CreateToolConfigRequest {
+  /** Semantic version (e.g., "1.0.0") */
+  version: string;
+  /** Display mode for tool rendering */
+  displayMode: DisplayMode;
+  /** Layout customization settings */
+  layoutSettings?: LayoutSettings;
+  /** Whether to set as active configuration */
+  isActive?: boolean;
+}
+
+/**
+ * Request payload for updating an existing tool configuration.
+ */
+export interface UpdateToolConfigRequest {
+  /** Semantic version (optional) */
+  version?: string;
+  /** Display mode (optional) */
+  displayMode?: DisplayMode;
+  /** Layout customization settings (optional) */
+  layoutSettings?: LayoutSettings;
+  /** Whether to set as active configuration (optional) */
+  isActive?: boolean;
+}
+
+/**
+ * Response containing a single tool configuration.
+ */
+export interface GetToolConfigResponse {
+  /** Success status of the retrieval operation */
+  success: boolean;
+  /** Response data containing the configuration */
+  data: {
+    /** The tool configuration */
+    config: ToolConfig;
+  };
+}
+
+/**
+ * Response containing list of tool configurations.
+ */
+export interface GetToolConfigsResponse {
+  /** Success status of the retrieval operation */
+  success: boolean;
+  /** Response data containing configurations list */
+  data: {
+    /** Array of tool configurations */
+    configs: ToolConfig[];
+    /** The currently active configuration */
+    activeConfig: ToolConfig | null;
+  };
+}
+
+/**
+ * Response after creating or updating a configuration.
+ */
+export interface SaveToolConfigResponse {
+  /** Success status of the operation */
+  success: boolean;
+  /** Response data containing the saved configuration */
+  data: {
+    /** The saved tool configuration */
+    config: ToolConfig;
+  };
+}
+
+/**
+ * Response after activating a configuration.
+ */
+export interface ActivateToolConfigResponse {
+  /** Success status of the operation */
+  success: boolean;
+  /** Response data containing the activated configuration */
+  data: {
+    /** The activated tool configuration */
+    config: ToolConfig;
+  };
+}
+
+/**
+ * Response after deleting a configuration.
+ */
+export interface DeleteToolConfigResponse {
+  /** Success status of the operation */
+  success: boolean;
+  /** Response message */
+  message: string;
+}
+
+// Component Detection Types
+
+/**
+ * Result of checking if a component exists in the filesystem.
+ */
+export interface ComponentExistenceCheck {
+  /** Whether the component directory exists */
+  exists: boolean;
+  /** Absolute path to the component directory */
+  componentPath?: string;
+  /** List of files found in the component directory */
+  filesFound?: string[];
+  /** Timestamp of last modification */
+  lastModified?: Date;
+  /** Size of component files in bytes */
+  totalSize?: number;
+}
+
+/**
+ * Options for component generation behavior.
+ */
+export interface ComponentGenerationOptions {
+  /** Whether to reuse existing component code */
+  reuseExisting: boolean;
+  /** Whether to overwrite existing component */
+  overwrite: boolean;
+}
+
+/**
+ * Response containing component existence check results.
+ */
+export interface CheckComponentResponse {
+  /** Success status of the check operation */
+  success: boolean;
+  /** Response data containing existence check */
+  data: ComponentExistenceCheck;
+  /** Operation timestamp */
+  timestamp: string;
+}

@@ -42,11 +42,25 @@
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   border: none;
   box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
 
   &:hover {
     background: linear-gradient(135deg, #059669 0%, #047857 100%);
     transform: translateY(-1px);
     box-shadow: 0 6px 8px -1px rgba(16, 185, 129, 0.4);
+  }
+}
+
+/* Action Buttons Container - Consistent Heights */
+.flex.items-center.space-x-3.lg\:ml-4 {
+  ::ng-deep .p-button {
+    height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.5rem;
   }
 }
 
@@ -467,5 +481,342 @@
   .flex.items-center.space-x-2 {
     width: 100%;
     justify-content: space-between;
+  }
+}
+
+// Configuration Modal Styles
+:host ::ng-deep .config-modal {
+  .p-dialog {
+    max-width: 900px;
+    width: 90vw;
+  }
+
+  .p-dialog-content {
+    padding: 1.5rem;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+}
+
+.config-modal-content {
+  .config-form {
+    :host ::ng-deep .p-selectbutton {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+
+      .p-button {
+        flex: 1;
+        min-width: 120px;
+        justify-content: center;
+      }
+    }
+  }
+
+  .config-history {
+    .config-item {
+      transition: all 0.2s ease-in-out;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow:
+          0 4px 6px -1px rgba(0, 0, 0, 0.1),
+          0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      }
+    }
+  }
+}
+
+/* ==========================================================================
+   Dark Mode Styles
+   ========================================================================== */
+
+[data-theme='dark'] {
+  .tools-settings {
+    /* Background and Surface Colors */
+    .bg-white {
+      background-color: var(--color-surface) !important;
+      color: var(--color-text-primary);
+    }
+
+    .bg-gray-50 {
+      background-color: var(--color-background) !important;
+      color: var(--color-text-primary);
+    }
+
+    .bg-gray-100 {
+      background-color: var(--color-gray-800) !important;
+    }
+
+    .bg-gradient-to-r {
+      background: linear-gradient(
+        to right,
+        var(--color-gray-800),
+        var(--color-gray-700)
+      ) !important;
+    }
+
+    .bg-blue-50 {
+      background-color: rgba(59, 130, 246, 0.1) !important;
+      color: var(--color-text-primary);
+    }
+
+    /* Text Colors */
+    .text-gray-900 {
+      color: var(--color-text-primary) !important;
+    }
+
+    .text-gray-800 {
+      color: var(--color-text-primary) !important;
+    }
+
+    .text-gray-700 {
+      color: var(--color-text-secondary) !important;
+    }
+
+    .text-gray-600 {
+      color: var(--color-text-secondary) !important;
+    }
+
+    .text-gray-500 {
+      color: var(--color-text-muted) !important;
+    }
+
+    .text-gray-400 {
+      color: var(--color-text-muted) !important;
+    }
+
+    /* Border Colors */
+    .border-gray-100 {
+      border-color: var(--color-border-light) !important;
+    }
+
+    .border-gray-200 {
+      border-color: var(--color-border) !important;
+    }
+
+    .border-gray-300 {
+      border-color: var(--color-border-dark) !important;
+    }
+
+    .border-blue-200 {
+      border-color: rgba(59, 130, 246, 0.3) !important;
+    }
+
+    /* PrimeNG Component Overrides */
+    ::ng-deep .p-card {
+      background: var(--color-surface);
+      border-color: var(--color-border);
+      color: var(--color-text-primary);
+
+      .p-card-body,
+      .p-card-content {
+        color: var(--color-text-primary);
+      }
+
+      .p-card-footer {
+        background: var(--color-surface);
+        border-color: var(--color-border);
+      }
+    }
+
+    ::ng-deep .p-inputtext {
+      background-color: var(--color-gray-800);
+      color: var(--color-text-primary);
+      border-color: var(--color-border);
+
+      &:enabled:focus {
+        background-color: var(--color-gray-800);
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 1px #3b82f6;
+      }
+
+      &::placeholder {
+        color: var(--color-text-muted);
+      }
+    }
+
+    ::ng-deep .p-button {
+      &.p-button-text {
+        color: var(--color-text-secondary);
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.05);
+          color: var(--color-text-primary);
+        }
+      }
+    }
+
+    ::ng-deep .p-dialog {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      color: var(--color-text-primary);
+
+      .p-dialog-header {
+        background: var(--color-gray-800);
+        border-bottom: 1px solid var(--color-border);
+        color: var(--color-text-primary);
+      }
+
+      .p-dialog-content {
+        background: var(--color-surface);
+        color: var(--color-text-primary);
+      }
+    }
+
+    ::ng-deep .p-chip {
+      background-color: var(--color-gray-700);
+      color: var(--color-text-primary);
+      border-color: var(--color-border);
+    }
+
+    ::ng-deep .p-badge {
+      &.p-badge-success {
+        background-color: #10b981;
+      }
+
+      &.p-badge-secondary {
+        background-color: var(--color-gray-600);
+      }
+    }
+
+    ::ng-deep .p-selectbutton {
+      .p-button {
+        background: var(--color-gray-700);
+        border-color: var(--color-border);
+        color: var(--color-text-primary);
+
+        &:hover {
+          background: var(--color-gray-600);
+          border-color: var(--color-border-dark);
+        }
+
+        &.p-highlight {
+          background: #3b82f6;
+          border-color: #3b82f6;
+          color: white;
+        }
+      }
+    }
+
+    ::ng-deep .p-checkbox {
+      .p-checkbox-box {
+        background: var(--color-gray-800);
+        border-color: var(--color-border);
+        color: var(--color-text-primary);
+
+        &:hover {
+          border-color: #3b82f6;
+        }
+
+        &.p-highlight {
+          background: #10b981;
+          border-color: #10b981;
+        }
+      }
+    }
+
+    ::ng-deep .p-divider {
+      &.p-divider-horizontal {
+        &::before {
+          border-top-color: var(--color-border);
+        }
+      }
+    }
+
+    /* Tool Card Dark Mode */
+    .tool-card {
+      background: var(--color-surface);
+      border-color: var(--color-border);
+
+      &:hover {
+        border-color: #3b82f6;
+        background: var(--color-gray-800);
+      }
+
+      &.selected {
+        border-color: #10b981;
+        background: rgba(16, 185, 129, 0.1);
+      }
+    }
+
+    /* Filter Tab Dark Mode */
+    .filter-tab {
+      color: var(--color-text-secondary);
+
+      &:hover {
+        background: rgba(59, 130, 246, 0.15);
+        color: #60a5fa;
+      }
+
+      &.filter-tab-active {
+        background: #3b82f6 !important;
+        color: white !important;
+      }
+    }
+
+    /* Bulk Action Button Dark Mode */
+    .bulk-action-button {
+      background: var(--color-gray-800);
+      border-color: var(--color-border);
+      color: var(--color-text-primary);
+
+      &:hover:not(:disabled) {
+        background: var(--color-gray-700);
+        border-color: var(--color-border-dark);
+      }
+
+      &.bulk-action-enable:hover:not(:disabled) {
+        background: rgba(16, 185, 129, 0.15);
+        border-color: #10b981;
+        color: #4ade80;
+      }
+
+      &.bulk-action-disable:hover:not(:disabled) {
+        background: rgba(239, 68, 68, 0.15);
+        border-color: #ef4444;
+        color: #f87171;
+      }
+    }
+
+    .bulk-action-count {
+      background: var(--color-gray-600);
+      color: white;
+    }
+
+    /* Config Modal Dark Mode */
+    .config-item {
+      background: var(--color-surface);
+      border-color: var(--color-border);
+
+      &.border-blue-300 {
+        border-color: rgba(59, 130, 246, 0.5) !important;
+      }
+
+      &.bg-blue-50 {
+        background: rgba(59, 130, 246, 0.1) !important;
+      }
+
+      &:hover {
+        background: var(--color-gray-800);
+        box-shadow:
+          0 4px 6px -1px rgba(0, 0, 0, 0.3),
+          0 2px 4px -1px rgba(0, 0, 0, 0.2);
+      }
+    }
+
+    /* Info Section Dark Mode */
+    .bg-blue-50.border {
+      background-color: rgba(59, 130, 246, 0.1) !important;
+      border-color: rgba(59, 130, 246, 0.3) !important;
+
+      .text-blue-800 {
+        color: #93c5fd !important;
+      }
+
+      .text-blue-700 {
+        color: #bfdbfe !important;
+      }
+    }
   }
 }

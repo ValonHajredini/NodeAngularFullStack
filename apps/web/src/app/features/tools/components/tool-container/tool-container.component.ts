@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CardModule } from 'primeng/card';
@@ -8,8 +8,10 @@ import { MessageModule } from 'primeng/message';
 import { BreadcrumbModule } from 'primeng/breadcrumb';
 import { MenuItem } from 'primeng/api';
 import { ToolsService } from '../../../../core/services';
-import { Tool } from '@nodeangularfullstack/shared';
+import { ToolConfigService } from '../../../../core/services/tool-config.service';
+import { Tool, ToolConfig } from '@nodeangularfullstack/shared';
 import { ShortLinkComponent } from '../short-link/short-link.component';
+import { TodoAppComponent } from '../todo-app/todo-app.component';
 import { MapComponent } from '../map/map.component';
 import { MarkComponent } from '../mark/mark.component';
 
@@ -28,11 +30,12 @@ import { MarkComponent } from '../mark/mark.component';
     MessageModule,
     BreadcrumbModule,
     ShortLinkComponent,
+    TodoAppComponent,
     MapComponent,
     MarkComponent,
   ],
   template: `
-    <div class="tool-container">
+    <div [class]="containerClass()">
       <div class="mb-6">
         <p-breadcrumb [model]="breadcrumbItems()" [home]="homeItem"></p-breadcrumb>
       </div>
@@ -73,10 +76,13 @@ import { MarkComponent } from '../mark/mark.component';
           </div>
         </div>
 
-        <div class="tool-content">
+        <div class="tool-content" [ngStyle]="contentStyles()">
           @switch (tool()!.key) {
             @case ('short-link') {
               <app-short-link />
+            }
+            @case ('todo-app') {
+              <app-todo-app />
             }
             @case ('map') {
               <app-map />
@@ -105,10 +111,33 @@ import { MarkComponent } from '../mark/mark.component';
   `,
   styles: [
     `
-      .tool-container {
+      .tool-container-standard {
         padding: 2rem;
         max-width: 1200px;
         margin: 0 auto;
+      }
+
+      .tool-container-full-width {
+        padding: 2rem;
+        max-width: none;
+        width: 100%;
+      }
+
+      .tool-container-compact {
+        padding: 1rem;
+        max-width: 800px;
+        margin: 0 auto;
+      }
+
+      .tool-container-modal {
+        padding: 1rem;
+        max-width: 600px;
+        margin: 0 auto;
+      }
+
+      .tool-container-embedded {
+        padding: 0.5rem;
+        max-width: 100%;
       }
 
       .tool-header {
@@ -131,14 +160,40 @@ import { MarkComponent } from '../mark/mark.component';
 })
 export class ToolContainerComponent implements OnInit {
   private readonly toolsService = inject(ToolsService);
+  private readonly toolConfigService = inject(ToolConfigService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
   // Component state
   readonly tool = signal<Tool | null>(null);
+  readonly toolConfig = signal<ToolConfig | null>(null);
   readonly loading = signal<boolean>(true);
   readonly error = signal<string | null>(null);
   readonly breadcrumbItems = signal<MenuItem[]>([]);
+
+  // Computed properties for dynamic styling
+  readonly containerClass = computed(() => {
+    const config = this.toolConfig();
+    if (!config) return 'tool-container-standard';
+    return `tool-container-${config.displayMode}`;
+  });
+
+  readonly contentStyles = computed(() => {
+    const config = this.toolConfig();
+    if (!config?.layoutSettings) return {};
+
+    const styles: any = {};
+    const settings = config.layoutSettings;
+
+    if (settings.backgroundColor) {
+      styles['backgroundColor'] = settings.backgroundColor;
+    }
+    if (settings.borderRadius) {
+      styles['borderRadius'] = settings.borderRadius;
+    }
+
+    return styles;
+  });
 
   // Breadcrumb home item
   readonly homeItem: MenuItem = {
@@ -188,11 +243,28 @@ export class ToolContainerComponent implements OnInit {
 
       this.tool.set(foundTool);
       this.updateBreadcrumb(foundTool);
+
+      // Load tool configuration
+      await this.loadToolConfig(foundTool.key);
     } catch (error) {
       console.error('Failed to load tool:', error);
       this.error.set('Failed to load tool. Please try again later.');
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  /**
+   * Loads the active configuration for the tool.
+   */
+  private async loadToolConfig(toolKey: string): Promise<void> {
+    try {
+      const config = await this.toolConfigService.getActiveConfig(toolKey).toPromise();
+      this.toolConfig.set(config || null);
+    } catch (error) {
+      console.error('Failed to load tool configuration:', error);
+      // Don't show error to user, just use default styling
+      this.toolConfig.set(null);
     }
   }
 

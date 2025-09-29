@@ -1,4 +1,13 @@
-import { Component, ChangeDetectionStrategy, Input, Output, EventEmitter, OnInit, OnDestroy, signal } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  Input,
+  Output,
+  EventEmitter,
+  OnInit,
+  OnDestroy,
+  signal,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 /**
@@ -23,22 +32,21 @@ export interface ErrorNotification {
   imports: [CommonModule],
   template: `
     <!-- Main notification container -->
-    <div [class]="containerClasses"
-         role="alert"
-         [attr.aria-live]="ariaLive"
-         [attr.aria-atomic]="true"
-         tabindex="0"
-         [attr.aria-describedby]="'notification-content-' + notification.id">
-
+    <div
+      [class]="containerClasses"
+      role="alert"
+      [attr.aria-live]="ariaLive"
+      [attr.aria-atomic]="true"
+      tabindex="0"
+      [attr.aria-describedby]="'notification-content-' + notification.id"
+    >
       <!-- Icon -->
       <div class="flex-shrink-0">
-        <i [class]="iconClasses"
-           [attr.aria-hidden]="true"></i>
+        <i [class]="iconClasses" [attr.aria-hidden]="true"></i>
       </div>
 
       <!-- Content -->
-      <div class="ml-3 w-0 flex-1"
-           [id]="'notification-content-' + notification.id">
+      <div class="ml-3 w-0 flex-1" [id]="'notification-content-' + notification.id">
         <p [class]="messageClasses">
           {{ notification.message }}
         </p>
@@ -46,10 +54,12 @@ export interface ErrorNotification {
         <!-- Action button -->
         @if (notification.actionLabel && notification.action) {
           <div class="mt-2">
-            <button type="button"
-                    [class]="actionButtonClasses"
-                    (click)="handleAction()"
-                    [attr.aria-describedby]="'notification-content-' + notification.id">
+            <button
+              type="button"
+              [class]="actionButtonClasses"
+              (click)="handleAction()"
+              [attr.aria-describedby]="'notification-content-' + notification.id"
+            >
               {{ notification.actionLabel }}
             </button>
           </div>
@@ -58,10 +68,12 @@ export interface ErrorNotification {
 
       <!-- Dismiss button -->
       <div class="ml-4 flex-shrink-0 flex">
-        <button type="button"
-                [class]="dismissButtonClasses"
-                (click)="dismiss()"
-                [attr.aria-label]="'Dismiss ' + notification.type + ' notification'">
+        <button
+          type="button"
+          [class]="dismissButtonClasses"
+          (click)="dismiss()"
+          [attr.aria-label]="'Dismiss ' + notification.type + ' notification'"
+        >
           <span class="sr-only">Close</span>
           <i class="pi pi-times text-sm" aria-hidden="true"></i>
         </button>
@@ -70,65 +82,68 @@ export interface ErrorNotification {
       <!-- Progress bar for auto-dismiss -->
       @if (!notification.persistent && autoDismissTime > 0) {
         <div class="absolute bottom-0 left-0 right-0 h-1 bg-black/10 rounded-b-md overflow-hidden">
-          <div class="h-full bg-white/50 transition-all duration-linear"
-               [style.width.%]="progressWidth()"
-               role="progressbar"
-               [attr.aria-label]="'Auto-dismiss in ' + timeRemaining() + ' seconds'"
-               [attr.aria-valuenow]="timeRemaining()"
-               [attr.aria-valuemin]="0"
-               [attr.aria-valuemax]="autoDismissTime / 1000">
-          </div>
+          <div
+            class="h-full bg-white/50 transition-all duration-linear"
+            [style.width.%]="progressWidth()"
+            role="progressbar"
+            [attr.aria-label]="'Auto-dismiss in ' + timeRemaining() + ' seconds'"
+            [attr.aria-valuenow]="timeRemaining()"
+            [attr.aria-valuemin]="0"
+            [attr.aria-valuemax]="autoDismissTime / 1000"
+          ></div>
         </div>
       }
     </div>
   `,
-  styles: [`
-    /* Smooth transitions */
-    .transition-all {
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    /* Custom focus styles for accessibility */
-    [role="alert"]:focus {
-      outline: 2px solid currentColor;
-      outline-offset: 2px;
-    }
-
-    /* High contrast mode support */
-    @media (prefers-contrast: high) {
-      .bg-opacity-90 {
-        background-color: var(--notification-bg);
-        opacity: 1;
-      }
-    }
-
-    /* Reduced motion support */
-    @media (prefers-reduced-motion: reduce) {
+  styles: [
+    `
+      /* Smooth transitions */
       .transition-all {
-        transition: none;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       }
 
-      .duration-linear {
-        animation: none;
-      }
-    }
-
-    /* Dark mode support */
-    @media (prefers-color-scheme: dark) {
-      .bg-white {
-        background-color: #1f2937;
+      /* Custom focus styles for accessibility */
+      [role='alert']:focus {
+        outline: 2px solid currentColor;
+        outline-offset: 2px;
       }
 
-      .text-gray-900 {
-        color: #f9fafb;
+      /* High contrast mode support */
+      @media (prefers-contrast: high) {
+        .bg-opacity-90 {
+          background-color: var(--notification-bg);
+          opacity: 1;
+        }
       }
 
-      .text-gray-500 {
-        color: #9ca3af;
+      /* Reduced motion support */
+      @media (prefers-reduced-motion: reduce) {
+        .transition-all {
+          transition: none;
+        }
+
+        .duration-linear {
+          animation: none;
+        }
       }
-    }
-  `],
-  changeDetection: ChangeDetectionStrategy.OnPush
+
+      /* Dark mode support */
+      @media (prefers-color-scheme: dark) {
+        .bg-white {
+          background-color: #1f2937;
+        }
+
+        .text-gray-900 {
+          color: #f9fafb;
+        }
+
+        .text-gray-500 {
+          color: #9ca3af;
+        }
+      }
+    `,
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ErrorNotificationComponent implements OnInit, OnDestroy {
   /**
@@ -139,17 +154,17 @@ export class ErrorNotificationComponent implements OnInit, OnDestroy {
   /**
    * Auto-dismiss time in milliseconds (0 = no auto-dismiss)
    */
-  @Input() autoDismissTime: number = 5000;
+  @Input() autoDismissTime = 5000;
 
   /**
    * Whether to show the notification with animation
    */
-  @Input() animate: boolean = true;
+  @Input() animate = true;
 
   /**
    * Custom CSS classes to apply
    */
-  @Input() customClasses: string = '';
+  @Input() customClasses = '';
 
   /**
    * Event emitted when notification is dismissed
@@ -227,13 +242,14 @@ export class ErrorNotificationComponent implements OnInit, OnDestroy {
    * Gets CSS classes for the main container
    */
   get containerClasses(): string {
-    const base = 'relative max-w-sm w-full bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden';
+    const base =
+      'relative max-w-sm w-full bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden';
     const animation = this.animate ? 'transition-all duration-300 ease-in-out' : '';
     const typeClasses = {
       error: 'border-l-4 border-red-500',
       warning: 'border-l-4 border-yellow-500',
       info: 'border-l-4 border-blue-500',
-      success: 'border-l-4 border-green-500'
+      success: 'border-l-4 border-green-500',
     };
 
     return `${base} ${animation} ${typeClasses[this.notification.type]} ${this.customClasses} p-4`.trim();
@@ -248,7 +264,7 @@ export class ErrorNotificationComponent implements OnInit, OnDestroy {
       error: 'pi pi-exclamation-triangle text-red-500',
       warning: 'pi pi-exclamation-triangle text-yellow-500',
       info: 'pi pi-info-circle text-blue-500',
-      success: 'pi pi-check-circle text-green-500'
+      success: 'pi pi-check-circle text-green-500',
     };
 
     return `${base} ${typeClasses[this.notification.type]}`.trim();
@@ -265,12 +281,13 @@ export class ErrorNotificationComponent implements OnInit, OnDestroy {
    * Gets CSS classes for the action button
    */
   get actionButtonClasses(): string {
-    const base = 'inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2';
+    const base =
+      'inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2';
     const typeClasses = {
       error: 'text-red-700 bg-red-100 hover:bg-red-200 focus:ring-red-500',
       warning: 'text-yellow-700 bg-yellow-100 hover:bg-yellow-200 focus:ring-yellow-500',
       info: 'text-blue-700 bg-blue-100 hover:bg-blue-200 focus:ring-blue-500',
-      success: 'text-green-700 bg-green-100 hover:bg-green-200 focus:ring-green-500'
+      success: 'text-green-700 bg-green-100 hover:bg-green-200 focus:ring-green-500',
     };
 
     return `${base} ${typeClasses[this.notification.type]}`.trim();

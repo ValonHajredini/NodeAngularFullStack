@@ -7,6 +7,7 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { ChipModule } from 'primeng/chip';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { ToggleButtonModule } from 'primeng/togglebutton';
+import { TooltipModule } from 'primeng/tooltip';
 import { Tool } from '@nodeangularfullstack/shared';
 
 /**
@@ -67,6 +68,7 @@ export interface ToolCardConfig {
     ChipModule,
     ProgressSpinnerModule,
     ToggleButtonModule,
+    TooltipModule,
   ],
   template: `
     <div
@@ -100,65 +102,66 @@ export interface ToolCardConfig {
         <p-chip [label]="tool().key" icon="pi pi-tag" styleClass="tool-key-chip" />
       </div>
 
-      <!-- Footer Row: Toggle and Actions -->
-      <div class="tool-card-footer">
-        <!-- Status Toggle -->
-        <div class="tool-card-toggle">
-          <p-toggleButton
-            [ngModel]="tool().active"
-            (ngModelChange)="onToggleStatus($event)"
-            (click)="$event.stopPropagation()"
-            [disabled]="updating()"
-            onLabel="Enabled"
-            offLabel="Disabled"
-            onIcon="pi pi-check"
-            offIcon="pi pi-times"
-            class="status-toggle-button"
-          />
+      <!-- Dates Row -->
+      <div class="tool-card-middle">
+        <div class="tool-card-dates">
+          <span class="metadata-item">
+            <i class="pi pi-calendar text-xs"></i>
+            <span>{{ tool().createdAt | date: 'MMM d' }}</span>
+          </span>
+          <span class="metadata-item">
+            <i class="pi pi-clock text-xs"></i>
+            <span>{{ tool().updatedAt | date: 'MMM d' }}</span>
+          </span>
         </div>
-
-        <!-- Action Buttons -->
-        @if (showActions()) {
-          <div class="tool-card-actions">
-            <p-button
-              icon="pi pi-eye"
-              [text]="true"
-              [rounded]="true"
-              size="small"
-              severity="secondary"
-              pTooltip="View details"
-              (onClick)="onViewDetails(); $event.stopPropagation()"
-              [disabled]="updating()"
-            />
-            <p-button
-              icon="pi pi-cog"
-              [text]="true"
-              [rounded]="true"
-              size="small"
-              severity="secondary"
-              pTooltip="Configure"
-              (onClick)="onConfigure(); $event.stopPropagation()"
-              [disabled]="updating()"
-            />
-          </div>
-        }
       </div>
 
-      <!-- Metadata - moved to last row -->
-      <div class="tool-card-metadata">
-        <span class="metadata-item">
-          <i class="pi pi-calendar text-xs"></i>
-          <span>{{ tool().createdAt | date: 'MMM d' }}</span>
-        </span>
-        <span class="metadata-item">
-          <i class="pi pi-clock text-xs"></i>
-          <span>{{ tool().updatedAt | date: 'MMM d' }}</span>
-        </span>
-        @if (tool().codePath) {
-          <span class="metadata-item" [title]="tool().codePath">
-            <i class="pi pi-code text-xs"></i>
-            <span class="truncate">{{ tool().codePath }}</span>
-          </span>
+      <!-- Action Buttons Footer -->
+      <div class="tool-card-footer">
+        <!-- Status Toggle Button (smaller) -->
+        <p-toggleButton
+          [ngModel]="tool().active"
+          (ngModelChange)="onToggleStatus($event)"
+          (click)="$event.stopPropagation()"
+          [disabled]="updating()"
+          onLabel="On"
+          offLabel="Off"
+          onIcon="pi pi-check"
+          offIcon="pi pi-times"
+          class="status-toggle-button-small"
+        />
+
+        @if (showActions()) {
+          <p-button
+            icon="pi pi-eye"
+            [text]="true"
+            [rounded]="true"
+            size="small"
+            severity="secondary"
+            pTooltip="View details"
+            (onClick)="onViewDetails(); $event.stopPropagation()"
+            [disabled]="updating()"
+          />
+          <p-button
+            icon="pi pi-cog"
+            [text]="true"
+            [rounded]="true"
+            size="small"
+            severity="secondary"
+            pTooltip="Configure"
+            (onClick)="onConfigure(); $event.stopPropagation()"
+            [disabled]="updating()"
+          />
+          <p-button
+            icon="pi pi-trash"
+            [text]="true"
+            [rounded]="true"
+            size="small"
+            severity="danger"
+            pTooltip="Delete tool"
+            (onClick)="onDelete(); $event.stopPropagation()"
+            [disabled]="updating()"
+          />
         }
       </div>
 
@@ -174,8 +177,8 @@ export interface ToolCardConfig {
     `
       .tool-card {
         position: relative;
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border-light);
         border-radius: 12px;
         padding: 1rem;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -184,22 +187,18 @@ export interface ToolCardConfig {
         display: flex;
         flex-direction: column;
         gap: 0.2rem;
-        box-shadow:
-          0 1px 3px 0 rgba(0, 0, 0, 0.1),
-          0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        box-shadow: var(--shadow-base);
         width: 100%;
 
         &:hover:not(.updating) {
-          border-color: #3b82f6;
-          box-shadow:
-            0 4px 6px -1px rgba(0, 0, 0, 0.1),
-            0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          border-color: var(--color-primary-500);
+          box-shadow: var(--shadow-md);
           transform: translateY(-2px);
         }
 
         &.selected {
           border-color: #10b981;
-          background: #f0fdf4;
+          background: rgba(16, 185, 129, 0.1);
           box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
         }
 
@@ -209,7 +208,7 @@ export interface ToolCardConfig {
         }
 
         &:focus-visible {
-          outline: 2px solid #3b82f6;
+          outline: 2px solid var(--color-primary-500);
           outline-offset: 2px;
         }
       }
@@ -232,10 +231,10 @@ export interface ToolCardConfig {
         display: flex;
         align-items: center;
         justify-content: center;
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        border: 1px solid #e2e8f0;
+        background: var(--color-gray-50);
+        border: 1px solid var(--color-border-light);
         border-radius: 8px;
-        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        box-shadow: var(--shadow-sm);
 
         i {
           font-size: 1.125rem;
@@ -246,7 +245,7 @@ export interface ToolCardConfig {
         margin: 0;
         font-size: 1rem;
         font-weight: 600;
-        color: #1f2937;
+        color: var(--color-text-primary);
         line-height: 1.3;
         word-wrap: break-word;
         overflow-wrap: break-word;
@@ -265,17 +264,17 @@ export interface ToolCardConfig {
 
         ::ng-deep .tool-key-chip {
           height: 1.5rem;
-          background: #f1f5f9;
-          border: 1px solid #e2e8f0;
+          background: var(--color-gray-100);
+          border: 1px solid var(--color-border-light);
 
           .p-chip-text {
             font-size: 0.75rem;
             font-weight: 500;
-            color: #64748b;
+            color: var(--color-text-secondary);
           }
 
           .p-chip-icon {
-            color: #94a3b8;
+            color: var(--color-text-muted);
             font-size: 0.675rem;
           }
         }
@@ -285,10 +284,10 @@ export interface ToolCardConfig {
         display: flex;
         gap: 1.5rem;
         font-size: 0.75rem;
-        color: #9ca3af;
+        color: var(--color-text-muted);
         margin-top: 0.75rem;
         padding-top: 0.75rem;
-        border-top: 1px solid #f3f4f6;
+        border-top: 1px solid var(--color-border-light);
       }
 
       .metadata-item {
@@ -297,39 +296,45 @@ export interface ToolCardConfig {
         gap: 0.375rem;
 
         i {
-          color: #d1d5db;
+          color: var(--color-text-muted);
         }
+      }
+
+      .tool-card-middle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        margin-top: 0.75rem;
+        margin-bottom: 0.75rem;
+      }
+
+      .tool-card-dates {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.75rem;
+        color: var(--color-text-muted);
       }
 
       .tool-card-footer {
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        gap: 0.75rem;
+        justify-content: center;
+        gap: 0.5rem;
         margin-top: auto;
-        margin-bottom: 0.25rem;
-      }
-
-      .tool-card-toggle {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-      }
-
-      .tool-card-actions {
-        display: flex;
-        gap: 0.5rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--color-border-light);
       }
 
       .tool-card-loading {
         position: absolute;
         top: 1rem;
         right: 1rem;
-        background: #ffffff;
+        background: var(--color-surface);
         border-radius: 50%;
         padding: 0.5rem;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        border: 1px solid #e2e8f0;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--color-border-light);
       }
 
       /* Status badge styling */
@@ -363,22 +368,22 @@ export interface ToolCardConfig {
           width: 1.125rem;
           height: 1.125rem;
           border-radius: 4px;
-          border: 2px solid #d1d5db;
+          border: 2px solid var(--color-border);
           transition: all 0.2s ease;
 
           &:hover {
-            border-color: #3b82f6;
+            border-color: var(--color-primary-500);
           }
         }
 
         .p-checkbox-icon {
           font-size: 0.75rem;
-          color: #ffffff;
+          color: var(--color-text-inverse);
         }
 
         &.p-checkbox-checked .p-checkbox-box {
-          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-          border-color: #3b82f6;
+          background: var(--color-primary-600);
+          border-color: var(--color-primary-600);
           box-shadow: 0 1px 2px rgba(59, 130, 246, 0.3);
         }
       }
@@ -390,15 +395,15 @@ export interface ToolCardConfig {
           padding: 0.375rem 0.75rem;
           font-size: 0.75rem;
           font-weight: 500;
-          border: 1px solid #d1d5db;
+          border: 1px solid var(--color-border);
           transition: all 0.2s ease;
           min-width: 70px;
           height: 32px;
 
           &:not(.p-disabled):hover {
-            border-color: #3b82f6;
+            border-color: var(--color-primary-500);
             transform: translateY(-1px);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            box-shadow: var(--shadow-sm);
           }
 
           &:not(.p-disabled):focus {
@@ -426,34 +431,134 @@ export interface ToolCardConfig {
 
         /* Disabled state */
         .p-togglebutton:not(.p-togglebutton-checked) {
-          background: #f8fafc;
-          border-color: #e2e8f0;
-          color: #6b7280;
+          background: var(--color-gray-50);
+          border-color: var(--color-border-light);
+          color: var(--color-text-secondary);
         }
       }
 
-      /* Action buttons styling */
-      ::ng-deep .tool-card-actions {
-        .p-button {
-          width: 2.25rem;
-          height: 2.25rem;
+      /* Small toggle button styling for footer */
+      ::ng-deep .status-toggle-button-small {
+        .p-togglebutton {
           border-radius: 6px;
-          border: 1px solid #e2e8f0;
-          background: #ffffff;
-          color: #6b7280;
+          padding: 0.1rem !important;
+          font-size: 0.5rem !important;
+          font-weight: 500;
+          border: 1px solid var(--color-border);
           transition: all 0.2s ease;
+          width: 2rem !important;
+          min-width: 2rem !important;
+          max-width: 2rem;
+          height: 2rem !important;
+          max-height: 2rem;
+          line-height: 1;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
 
-          &:hover {
-            background: #f8fafc;
-            border-color: #3b82f6;
-            color: #3b82f6;
+          &:not(.p-disabled):hover {
+            border-color: var(--color-primary-500);
             transform: translateY(-1px);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            box-shadow: var(--shadow-sm);
+          }
+
+          &:not(.p-disabled):focus {
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+            outline: none;
+          }
+
+          .p-button-label {
+            font-size: 0.5rem !important;
+            font-weight: 500;
+            line-height: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin: 0;
+            padding: 0;
           }
 
           .p-button-icon {
-            font-size: 0.875rem;
+            font-size: 0.5rem !important;
+            line-height: 1;
+            margin: 0;
           }
+
+          /* Ensure proper spacing between icon and label */
+          .p-button-icon + .p-button-label {
+            margin-left: 0.15rem;
+          }
+        }
+
+        /* Enabled state */
+        .p-togglebutton.p-togglebutton-checked {
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          border-color: #10b981;
+          color: #ffffff;
+          box-shadow: 0 1px 2px rgba(16, 185, 129, 0.3);
+        }
+
+        /* Disabled state */
+        .p-togglebutton:not(.p-togglebutton-checked) {
+          background: var(--color-gray-50);
+          border-color: var(--color-border-light);
+          color: var(--color-text-secondary);
+        }
+      }
+
+      /* Code path button styling */
+      ::ng-deep .code-path-button {
+        .p-button {
+          width: 2rem;
+          height: 2rem;
+          border-radius: 4px;
+          border: 1px solid var(--color-border-light);
+          background: var(--color-gray-50);
+          color: var(--color-text-secondary);
+          transition: all 0.2s ease;
+
+          &:hover {
+            background: var(--color-gray-100);
+            border-color: var(--color-border);
+            color: var(--color-text-primary);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+          }
+
+          .p-button-icon {
+            font-size: 0.75rem;
+          }
+        }
+      }
+
+      /* Action buttons styling - now in footer */
+      ::ng-deep .tool-card-footer {
+        .p-button {
+          width: 2rem;
+          height: 2rem;
+          border-radius: 6px;
+          border: 1px solid var(--color-border-light);
+          background: var(--color-surface);
+          color: var(--color-text-secondary);
+          transition: all 0.2s ease;
+
+          &:hover {
+            background: var(--color-gray-50);
+            border-color: var(--color-primary-500);
+            color: var(--color-primary-500);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+          }
+
+          .p-button-icon {
+            font-size: 0.75rem;
+          }
+        }
+
+        /* Special styling for delete button */
+        .p-button.p-button-danger:hover {
+          border-color: var(--color-error-500);
+          color: var(--color-error-500);
         }
       }
 
@@ -492,15 +597,49 @@ export interface ToolCardConfig {
           margin-bottom: 0.5rem;
         }
 
-        .tool-card-metadata {
-          font-size: 0.6875rem;
-          gap: 1rem;
+        .tool-card-middle {
           margin-top: 0.5rem;
-          padding-top: 0.5rem;
+          margin-bottom: 0.5rem;
+          gap: 0.5rem;
+        }
+
+        .tool-card-dates {
+          font-size: 0.6875rem;
+          gap: 0.75rem;
         }
 
         .tool-card-footer {
-          margin-bottom: 0.25rem;
+          padding-top: 0.5rem;
+          gap: 0.375rem;
+        }
+
+        .tool-card-footer .p-button {
+          width: 1.75rem;
+          height: 1.75rem;
+        }
+
+        /* Small toggle button responsive */
+        .status-toggle-button-small .p-togglebutton {
+          width: 1.75rem !important;
+          min-width: 1.75rem !important;
+          max-width: 1.75rem;
+          height: 1.75rem !important;
+          max-height: 1.75rem;
+          padding: 0.1rem !important;
+
+          .p-button-label {
+            font-size: 0.45rem !important;
+            line-height: 1;
+          }
+
+          .p-button-icon {
+            font-size: 0.45rem !important;
+            line-height: 1;
+          }
+
+          .p-button-icon + .p-button-label {
+            margin-left: 0.1rem;
+          }
         }
       }
 
@@ -542,6 +681,7 @@ export class ToolCardComponent {
   readonly toggleSelection = output<boolean>();
   readonly viewDetails = output<Tool>();
   readonly configure = output<Tool>();
+  readonly delete = output<Tool>();
   readonly cardClick = output<Tool>();
 
   // Computed properties
@@ -630,6 +770,13 @@ export class ToolCardComponent {
    */
   onConfigure(): void {
     this.configure.emit(this.tool());
+  }
+
+  /**
+   * Handle delete action
+   */
+  onDelete(): void {
+    this.delete.emit(this.tool());
   }
 
   /**

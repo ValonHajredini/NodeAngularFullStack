@@ -3,6 +3,8 @@ import path from 'path';
 import {
   ComponentGenerationRequest,
   ComponentGenerationResult,
+  ComponentExistenceCheck,
+  ComponentGenerationOptions,
 } from '@nodeangularfullstack/shared';
 
 /**
@@ -16,13 +18,72 @@ export class ComponentGenerationService {
   );
 
   /**
+   * Checks if a component exists and returns metadata about it.
+   * @param slug - Component slug to check
+   * @returns Component existence check with metadata
+   */
+  async checkComponentExists(slug: string): Promise<ComponentExistenceCheck> {
+    const componentDir = path.join(this.frontendPath, slug);
+    const exists = await this.checkDirectoryExists(componentDir);
+
+    if (!exists) {
+      return {
+        exists: false,
+      };
+    }
+
+    try {
+      // Get list of files in the component directory
+      const files = await fs.readdir(componentDir);
+      const filesFound: string[] = [];
+      let totalSize = 0;
+      let lastModified: Date | undefined;
+
+      // Collect file information
+      for (const file of files) {
+        const filePath = path.join(componentDir, file);
+        try {
+          const stat = await fs.stat(filePath);
+          if (stat.isFile()) {
+            filesFound.push(file);
+            totalSize += stat.size;
+
+            // Track most recent modification
+            if (!lastModified || stat.mtime > lastModified) {
+              lastModified = stat.mtime;
+            }
+          }
+        } catch {
+          // Skip files we can't read
+        }
+      }
+
+      return {
+        exists: true,
+        componentPath: componentDir,
+        filesFound,
+        lastModified,
+        totalSize,
+      };
+    } catch (error) {
+      console.error('Error checking component metadata:', error);
+      return {
+        exists: true,
+        componentPath: componentDir,
+      };
+    }
+  }
+
+  /**
    * Generates a complete tool component with tests and routing integration.
    * @param request - Component generation configuration
+   * @param options - Options for handling existing components
    * @returns Generation result with file paths and status
    * @throws {Error} When file operations fail or validation errors occur
    */
   async generateComponent(
-    request: ComponentGenerationRequest
+    request: ComponentGenerationRequest,
+    options?: ComponentGenerationOptions
   ): Promise<ComponentGenerationResult> {
     // Check if scaffolding is enabled in development mode
     if (!this.isScaffoldingEnabled()) {
@@ -45,8 +106,27 @@ export class ComponentGenerationService {
       const componentDir = path.join(this.frontendPath, slug);
       const componentExists = await this.checkDirectoryExists(componentDir);
 
+      // Handle existing component based on options
       if (componentExists) {
-        throw new Error(`Component directory already exists: ${slug}`);
+        if (options?.reuseExisting) {
+          // Reuse existing component - just update routing
+          const routingUpdated = await this.updateToolContainerRouting(
+            toolKey,
+            slug
+          );
+
+          return {
+            success: true,
+            filesCreated: [],
+            componentPath: componentDir,
+            routingUpdated,
+          };
+        } else if (!options?.overwrite) {
+          throw new Error(`Component directory already exists: ${slug}`);
+        }
+
+        // If overwrite is true, delete existing directory
+        await fs.rm(componentDir, { recursive: true, force: true });
       }
 
       await fs.mkdir(componentDir, { recursive: true });

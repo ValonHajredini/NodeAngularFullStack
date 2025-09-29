@@ -6,7 +6,7 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Create short_links table
-CREATE TABLE short_links (
+CREATE TABLE IF NOT EXISTS short_links (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     code VARCHAR(8) NOT NULL UNIQUE,
     original_url TEXT NOT NULL,
@@ -19,17 +19,27 @@ CREATE TABLE short_links (
 );
 
 -- Create indexes for performance
-CREATE UNIQUE INDEX idx_short_links_code ON short_links(code);
-CREATE INDEX idx_short_links_expires_at ON short_links(expires_at) WHERE expires_at IS NOT NULL;
-CREATE INDEX idx_short_links_created_by ON short_links(created_by) WHERE created_by IS NOT NULL;
-CREATE INDEX idx_short_links_created_at ON short_links(created_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_short_links_code ON short_links(code);
+CREATE INDEX IF NOT EXISTS idx_short_links_expires_at ON short_links(expires_at) WHERE expires_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_short_links_created_by ON short_links(created_by) WHERE created_by IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_short_links_created_at ON short_links(created_at);
 
 -- Add constraints
-ALTER TABLE short_links
-    ADD CONSTRAINT chk_short_links_code_length CHECK (length(code) >= 6 AND length(code) <= 8),
-    ADD CONSTRAINT chk_short_links_code_format CHECK (code ~ '^[a-zA-Z0-9]+$'),
-    ADD CONSTRAINT chk_short_links_url_length CHECK (length(original_url) <= 2048),
-    ADD CONSTRAINT chk_short_links_click_count CHECK (click_count >= 0);
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_short_links_code_length') THEN
+        ALTER TABLE short_links ADD CONSTRAINT chk_short_links_code_length CHECK (length(code) >= 6 AND length(code) <= 8);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_short_links_code_format') THEN
+        ALTER TABLE short_links ADD CONSTRAINT chk_short_links_code_format CHECK (code ~ '^[a-zA-Z0-9]+$');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_short_links_url_length') THEN
+        ALTER TABLE short_links ADD CONSTRAINT chk_short_links_url_length CHECK (length(original_url) <= 2048);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_short_links_click_count') THEN
+        ALTER TABLE short_links ADD CONSTRAINT chk_short_links_click_count CHECK (click_count >= 0);
+    END IF;
+END $$;
 
 -- Create trigger to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_short_links_updated_at()
@@ -40,6 +50,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_short_links_updated_at ON short_links;
 CREATE TRIGGER trigger_short_links_updated_at
     BEFORE UPDATE ON short_links
     FOR EACH ROW
