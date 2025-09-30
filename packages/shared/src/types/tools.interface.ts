@@ -476,3 +476,169 @@ export interface CheckComponentResponse {
   /** Operation timestamp */
   timestamp: string;
 }
+
+// SVG Drawing Tool Types
+
+/**
+ * Represents a 2D point in the drawing canvas.
+ * Used for shape coordinates and mouse positions.
+ */
+export interface Point {
+  /** X coordinate in pixels */
+  x: number;
+  /** Y coordinate in pixels */
+  y: number;
+}
+
+/**
+ * Shape type enumeration for different drawable shapes.
+ */
+export type ShapeType = 'line' | 'polygon';
+
+/**
+ * Style properties for shapes.
+ */
+export interface ShapeStyle {
+  /** Stroke color in hex format (e.g., "#000000") */
+  color: string;
+  /** Stroke width in pixels */
+  strokeWidth: number;
+  /** Optional fill color in hex format */
+  fillColor?: string;
+}
+
+/**
+ * Base interface for all drawable shapes.
+ * Contains common properties shared across shape types.
+ */
+export interface Shape {
+  /** Unique identifier (UUID v4) */
+  id: string;
+  /** Type of shape */
+  type: ShapeType;
+  /** Stroke color in hex format (e.g., "#000000") */
+  color: string;
+  /** Stroke width in pixels */
+  strokeWidth: number;
+  /** Optional fill color in hex format */
+  fillColor?: string;
+  /** Shape creation timestamp */
+  createdAt: Date;
+}
+
+/**
+ * Represents a line shape with start and end points.
+ */
+export interface LineShape extends Shape {
+  /** Shape type discriminator */
+  type: 'line';
+  /** Starting point of the line */
+  start: Point;
+  /** Ending point of the line */
+  end: Point;
+}
+
+/**
+ * Represents a polygon shape with multiple vertices.
+ */
+export interface PolygonShape extends Shape {
+  /** Shape type discriminator */
+  type: 'polygon';
+  /** Array of polygon vertices */
+  vertices: Point[];
+  /** Optional fill color in hex format */
+  fillColor?: string;
+}
+
+/**
+ * Drawing state interface for canvas state management.
+ */
+export interface DrawingState {
+  /** Array of all shapes in the drawing */
+  shapes: Shape[];
+  /** ID of the currently selected shape */
+  selectedShapeId: string | null;
+  /** Currently active drawing tool */
+  currentTool: 'line' | 'polygon' | 'select' | 'delete';
+  /** Whether drawing is in progress */
+  isDrawing: boolean;
+  /** Active vertices for in-progress polygon */
+  activeVertices: Point[];
+  /** Whether snap guides are enabled */
+  snapEnabled: boolean;
+  /** Snap threshold in degrees */
+  snapThreshold: number;
+}
+
+/**
+ * Command interface for undo/redo pattern.
+ */
+export interface Command {
+  /** Execute the command */
+  execute(): void;
+  /** Undo the command */
+  undo(): void;
+  /** Redo the command (typically same as execute) */
+  redo(): void;
+}
+
+/**
+ * SVG optimization level for export operations.
+ */
+export type OptimizationLevel = 'none' | 'basic' | 'aggressive';
+
+/**
+ * Export options for SVG generation.
+ */
+export interface ExportOptions {
+  /** Output filename (including .svg extension) */
+  filename: string;
+  /** Canvas width in pixels */
+  width: number;
+  /** Canvas height in pixels */
+  height: number;
+  /** Optimization level for SVG output */
+  optimizationLevel: OptimizationLevel;
+  /** Padding around shapes in pixels */
+  padding?: number;
+}
+
+/**
+ * Bounding box for shapes calculation.
+ */
+export interface BoundingBox {
+  /** Minimum X coordinate */
+  x: number;
+  /** Minimum Y coordinate */
+  y: number;
+  /** Bounding box width */
+  width: number;
+  /** Bounding box height */
+  height: number;
+}
+
+/**
+ * Stored drawing data structure for localStorage persistence.
+ */
+export interface StoredDrawing {
+  /** Schema version for future migrations */
+  version: string;
+  /** Array of all shapes */
+  shapes: Shape[];
+  /** Drawing settings */
+  settings: DrawingSettings;
+  /** Timestamp when saved */
+  timestamp: Date;
+}
+
+/**
+ * Drawing settings for persistence.
+ */
+export interface DrawingSettings {
+  /** Whether snap guides are enabled */
+  snapEnabled: boolean;
+  /** Snap threshold in degrees */
+  snapThreshold: number;
+  /** Whether grid is visible */
+  gridVisible: boolean;
+}

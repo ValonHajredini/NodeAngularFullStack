@@ -1,83 +1,250 @@
-import { Component, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  inject,
+  signal,
+  ChangeDetectionStrategy,
+  HostListener,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { CardModule } from 'primeng/card';
-import { ButtonModule } from 'primeng/button';
-import { MessageModule } from 'primeng/message';
+import { Message } from 'primeng/message';
+import { Toast } from 'primeng/toast';
+import { ButtonDirective } from 'primeng/button';
+import { TooltipModule } from 'primeng/tooltip';
+import { Tabs, TabList, Tab, TabPanels, TabPanel } from 'primeng/tabs';
+import { MessageService } from 'primeng/api';
 import { SvgDrawingService } from './svg-drawing.service';
+import { CanvasRendererComponent } from './components/canvas-renderer/canvas-renderer.component';
+import { ToolsSidebarComponent } from './components/tools-sidebar/tools-sidebar.component';
+import { ShapePropertiesComponent } from './components/shape-properties/shape-properties.component';
+import { ExportOptionsComponent } from './components/export-options/export-options.component';
+import { HelpPanelComponent } from './components/help-panel/help-panel.component';
+import { GuideOverlayComponent } from './components/guide-overlay/guide-overlay.component';
+import { ShapeStyle, ExportOptions } from '@nodeangularfullstack/shared';
 
 /**
  * SVG Drawing tool component.
- * draw svg using polygons
+ * Provides a full-viewport canvas for drawing lines and polygons with comprehensive shape management.
  */
 @Component({
   selector: 'app-svg-drawing',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, CardModule, ButtonModule, MessageModule],
+  imports: [
+    CommonModule,
+    Message,
+    Toast,
+    ButtonDirective,
+    TooltipModule,
+    Tabs,
+    TabList,
+    Tab,
+    TabPanels,
+    TabPanel,
+    CanvasRendererComponent,
+    ToolsSidebarComponent,
+    ShapePropertiesComponent,
+    ExportOptionsComponent,
+    HelpPanelComponent,
+    GuideOverlayComponent,
+  ],
+  providers: [MessageService],
   template: `
-    <div class="tool-container p-4">
-      <p-card>
-        <ng-template pTemplate="header">
-          <div class="flex items-center gap-3 p-4">
-            <i class="pi pi-wrench text-2xl text-primary"></i>
-            <div>
-              <h2 class="text-xl font-bold text-gray-900 m-0">SVG Drawing</h2>
-              <p class="text-gray-600 text-sm m-0">draw svg using polygons</p>
+    <div class="svg-drawing-container w-full h-full relative">
+      @if (loading()) {
+        <div class="flex items-center justify-center h-full">
+          <p-message severity="info" text="Loading SVG Drawing..." [closable]="false"></p-message>
+        </div>
+      } @else if (error()) {
+        <div class="flex items-center justify-center h-full">
+          <p-message
+            severity="error"
+            [text]="error() || 'An error occurred'"
+            [closable]="false"
+          ></p-message>
+        </div>
+      } @else {
+        <!-- Toast for notifications -->
+        <p-toast position="top-right"></p-toast>
+
+        <!-- Top Toolbar -->
+        <div class="top-toolbar">
+          <div class="toolbar-content">
+            <div class="flex items-center gap-4">
+              <button
+                pButton
+                type="button"
+                label="New Drawing"
+                icon="pi pi-plus"
+                severity="secondary"
+                [outlined]="true"
+                (click)="onNewDrawing()"
+              ></button>
+
+              <button
+                pButton
+                type="button"
+                [label]="svgDrawingService.gridVisible() ? 'Hide Grid' : 'Show Grid'"
+                icon="pi pi-th-large"
+                severity="secondary"
+                [outlined]="true"
+                (click)="svgDrawingService.toggleGrid()"
+                pTooltip="Toggle Grid (G)"
+              ></button>
+            </div>
+
+            <div class="text-sm text-gray-600">
+              <span class="hidden md:inline">{{ svgDrawingService.shapes().length }} shapes</span>
             </div>
           </div>
-        </ng-template>
-
-        <div class="tool-content">
-          @if (loading()) {
-            <p-message severity="info" text="Loading SVG Drawing..." [closable]="false"></p-message>
-          } @else if (error()) {
-            <p-message
-              severity="error"
-              [text]="error() || 'An error occurred'"
-              [closable]="false"
-            ></p-message>
-          } @else {
-            <div class="text-center py-8">
-              <i class="pi pi-cog text-4xl text-gray-400 mb-4"></i>
-              <h3 class="text-lg font-semibold text-gray-900 mb-2">Tool Implementation</h3>
-              <p class="text-gray-600 mb-4">The SVG Drawing tool is ready for implementation.</p>
-              <p class="text-sm text-gray-500">
-                Tool Key: svg-drawing | Component: SvgDrawingComponent
-              </p>
-
-              <div class="mt-6">
-                <p-button
-                  label="Get Started"
-                  icon="pi pi-play"
-                  (click)="onGetStarted()"
-                  [disabled]="loading()"
-                ></p-button>
-              </div>
-            </div>
-          }
         </div>
-      </p-card>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+          <!-- Left Sidebar - Tools -->
+          <app-tools-sidebar
+            [currentTool]="svgDrawingService.currentTool"
+            [canUndo]="svgDrawingService.canUndo"
+            [canRedo]="svgDrawingService.canRedo"
+            (toolSelected)="onToolSelected($event)"
+            (undoClicked)="onUndo()"
+            (redoClicked)="onRedo()"
+            (clearAllClicked)="onClearAll()"
+          ></app-tools-sidebar>
+
+          <!-- Canvas Area -->
+          <div class="canvas-area">
+            <app-canvas-renderer></app-canvas-renderer>
+            <app-guide-overlay
+              [visible]="true"
+              [showGrid]="svgDrawingService.gridVisible()"
+              [width]="800"
+              [height]="600"
+            ></app-guide-overlay>
+          </div>
+
+          <!-- Right Sidebar - Tabs -->
+          <div class="right-sidebar">
+            <p-tabs [value]="0">
+              <p-tablist>
+                <p-tab [value]="0">
+                  <i class="pi pi-pencil mr-2"></i>
+                  Edit
+                </p-tab>
+                <p-tab [value]="1">
+                  <i class="pi pi-download mr-2"></i>
+                  Export
+                </p-tab>
+                <p-tab [value]="2">
+                  <i class="pi pi-question-circle mr-2"></i>
+                  Help
+                </p-tab>
+              </p-tablist>
+
+              <p-tabpanels>
+                <p-tabpanel [value]="0">
+                  <app-shape-properties
+                    [selectedShape]="svgDrawingService.selectedShape()"
+                    (propertiesChanged)="onPropertiesChanged($event)"
+                  ></app-shape-properties>
+                </p-tabpanel>
+
+                <p-tabpanel [value]="1">
+                  <app-export-options (export)="onExport($event)"></app-export-options>
+                </p-tabpanel>
+
+                <p-tabpanel [value]="2">
+                  <app-help-panel></app-help-panel>
+                </p-tabpanel>
+              </p-tabpanels>
+            </p-tabs>
+          </div>
+        </div>
+      }
     </div>
   `,
   styles: [
     `
-      .tool-container {
-        max-width: 800px;
-        margin: 0 auto;
+      .svg-drawing-container {
+        height: 100vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        background: #f3f4f6;
       }
 
-      :host ::ng-deep .p-card-header {
-        padding: 0;
+      .top-toolbar {
+        height: 60px;
+        background: white;
+        border-bottom: 1px solid #e5e7eb;
+        flex-shrink: 0;
+        z-index: 10;
       }
 
-      :host ::ng-deep .p-card-body {
-        padding: 1.5rem;
+      .toolbar-content {
+        height: 100%;
+        padding: 0 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .main-content {
+        flex: 1;
+        display: flex;
+        min-height: 0;
+      }
+
+      .canvas-area {
+        flex: 1;
+        position: relative;
+        overflow: hidden;
+        background: #f3f4f6;
+        padding: 1rem;
+        min-height: 0;
+      }
+
+      .right-sidebar {
+        width: 350px;
+        background: white;
+        border-left: 1px solid #e5e7eb;
+        flex-shrink: 0;
+        overflow: hidden;
+      }
+
+      :host ::ng-deep .right-sidebar .p-tabs {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+
+      :host ::ng-deep .right-sidebar .p-tabpanels {
+        flex: 1;
+        overflow-y: auto;
+      }
+
+      :host ::ng-deep .right-sidebar .p-tablist {
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      @media (max-width: 1024px) {
+        .right-sidebar {
+          width: 280px;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .right-sidebar {
+          display: none;
+        }
       }
     `,
   ],
 })
-export class SvgDrawingComponent implements OnInit {
-  private readonly svgDrawingService = inject(SvgDrawingService);
+export class SvgDrawingComponent implements OnInit, OnDestroy {
+  readonly svgDrawingService = inject(SvgDrawingService);
+  private readonly messageService = inject(MessageService);
 
   // Component state
   readonly loading = signal<boolean>(false);
@@ -85,6 +252,10 @@ export class SvgDrawingComponent implements OnInit {
 
   ngOnInit(): void {
     this.initializeTool();
+  }
+
+  ngOnDestroy(): void {
+    // Cleanup
   }
 
   /**
@@ -95,7 +266,6 @@ export class SvgDrawingComponent implements OnInit {
       this.loading.set(true);
       this.error.set(null);
 
-      // Initialize tool-specific functionality here
       await this.svgDrawingService.initialize();
     } catch (error) {
       console.error('Failed to initialize SVG Drawing:', error);
@@ -106,10 +276,166 @@ export class SvgDrawingComponent implements OnInit {
   }
 
   /**
-   * Handles the get started action.
+   * Handles tool selection from toolbar.
    */
-  onGetStarted(): void {
-    // Implement tool-specific get started logic here
-    console.log('SVG Drawing tool started');
+  onToolSelected(tool: 'line' | 'polygon' | 'select' | 'delete'): void {
+    this.svgDrawingService.setCurrentTool(tool);
+  }
+
+  /**
+   * Handles undo action.
+   */
+  onUndo(): void {
+    this.svgDrawingService.undo();
+  }
+
+  /**
+   * Handles redo action.
+   */
+  onRedo(): void {
+    this.svgDrawingService.redo();
+  }
+
+  /**
+   * Handles clear all action.
+   */
+  onClearAll(): void {
+    if (confirm('Are you sure you want to clear all shapes?')) {
+      this.svgDrawingService.clearAll();
+    }
+  }
+
+  /**
+   * Handles shape properties changes.
+   */
+  onPropertiesChanged(event: { shapeId: string; updates: Partial<ShapeStyle> }): void {
+    this.svgDrawingService.updateShapeProperties(event.shapeId, event.updates);
+  }
+
+  /**
+   * Handles export action.
+   */
+  onExport(options: ExportOptions): void {
+    try {
+      const svgContent = this.svgDrawingService.exportToSVG(options);
+
+      // Validate SVG
+      if (!this.svgDrawingService.validateSVG(svgContent)) {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Export Failed',
+          detail: 'Generated SVG is invalid',
+          life: 3000,
+        });
+        return;
+      }
+
+      // Download SVG
+      this.svgDrawingService.downloadSVG(svgContent, options.filename);
+
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Export Successful',
+        detail: `${options.filename} has been downloaded`,
+        life: 3000,
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Export Failed',
+        detail: 'An error occurred during export',
+        life: 3000,
+      });
+    }
+  }
+
+  /**
+   * Handles new drawing action.
+   */
+  onNewDrawing(): void {
+    if (this.svgDrawingService.shapes().length === 0) {
+      return;
+    }
+
+    if (confirm('Are you sure you want to start a new drawing? All unsaved work will be lost.')) {
+      this.svgDrawingService.newDrawing();
+      this.messageService.add({
+        severity: 'info',
+        summary: 'New Drawing',
+        detail: 'Started a new drawing',
+        life: 3000,
+      });
+    }
+  }
+
+  /**
+   * Handles keyboard shortcuts.
+   */
+  @HostListener('document:keydown', ['$event'])
+  handleKeyboardEvent(event: KeyboardEvent): void {
+    // Prevent shortcuts when typing in input fields
+    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+      return;
+    }
+
+    // Tool selection shortcuts
+    if (event.key === 'l' || event.key === 'L') {
+      event.preventDefault();
+      this.svgDrawingService.setCurrentTool('line');
+    } else if (event.key === 'p' || event.key === 'P') {
+      event.preventDefault();
+      this.svgDrawingService.setCurrentTool('polygon');
+    } else if (event.key === 's' || event.key === 'S') {
+      if (!event.ctrlKey && !event.metaKey) {
+        event.preventDefault();
+        this.svgDrawingService.setCurrentTool('select');
+      }
+    } else if (event.key === 'g' || event.key === 'G') {
+      event.preventDefault();
+      this.svgDrawingService.toggleGrid();
+    } else if (event.key === 'Escape') {
+      // Cancel polygon drawing or deselect
+      event.preventDefault();
+      if (this.svgDrawingService.currentTool() === 'polygon') {
+        this.svgDrawingService.cancelPolygon();
+      }
+      this.svgDrawingService.selectShape(null);
+    } else if (event.key === 'Delete' || event.key === 'Backspace') {
+      // Delete selected shape
+      if (
+        this.svgDrawingService.selectedShapeId() &&
+        this.svgDrawingService.currentTool() !== 'polygon'
+      ) {
+        event.preventDefault();
+        this.svgDrawingService.deleteSelectedShape();
+      }
+    } else if (event.ctrlKey || event.metaKey) {
+      // File operations - keyboard shortcuts still work but open the tab instead
+      if (event.key === 's' || event.key === 'S') {
+        event.preventDefault();
+        // Note: Ctrl+S now handled by export button in tab
+      } else if (event.key === 'o' || event.key === 'O') {
+        event.preventDefault();
+        // Note: Ctrl+O now opens export tab
+      } else if (event.key === 'a' || event.key === 'A') {
+        event.preventDefault();
+        this.svgDrawingService.selectAllShapes();
+      } else if (event.key === 'z' || event.key === 'Z') {
+        // Undo/Redo shortcuts
+        event.preventDefault();
+        if (event.shiftKey) {
+          // Ctrl+Shift+Z = Redo
+          this.svgDrawingService.redo();
+        } else {
+          // Ctrl+Z = Undo
+          this.svgDrawingService.undo();
+        }
+      } else if (event.key === 'y' || event.key === 'Y') {
+        // Ctrl+Y = Redo
+        event.preventDefault();
+        this.svgDrawingService.redo();
+      }
+    }
   }
 }

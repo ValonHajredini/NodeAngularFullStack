@@ -569,16 +569,29 @@ export class AuthService {
 
   /**
    * Parses JWT expiration time string to milliseconds.
-   * @param expirationString - Expiration string (e.g., '15m', '7d')
+   * @param expirationString - Expiration string (e.g., '15m', '7d', '604800')
    * @returns Expiration time in milliseconds
    * @private
    */
-  private parseExpirationTime(expirationString: string): number {
+  private parseExpirationTime(expirationString: string | number): number {
+    // Handle numeric value (already in seconds)
+    if (typeof expirationString === 'number') {
+      return expirationString * 1000; // Convert seconds to milliseconds
+    }
+
+    // Handle string numeric value (seconds)
+    if (/^\d+$/.test(expirationString)) {
+      return parseInt(expirationString, 10) * 1000; // Convert seconds to milliseconds
+    }
+
+    // Handle time format strings (e.g., '7d', '15m')
     const regex = /^(\d+)([smhdw])$/;
     const match = expirationString.match(regex);
 
     if (!match) {
-      throw new Error(`Invalid expiration format: ${expirationString}`);
+      throw new Error(
+        `Invalid expiration format: ${expirationString}. Expected formats: '7d', '15m', '604800', or numeric value`
+      );
     }
 
     const value = parseInt(match[1], 10);
