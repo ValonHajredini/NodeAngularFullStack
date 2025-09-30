@@ -1,7 +1,18 @@
-import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  ChangeDetectionStrategy,
+  signal,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ButtonDirective } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
+import { ColorPickerModule } from 'primeng/colorpicker';
+import { SliderModule } from 'primeng/slider';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
 
 /**
  * Tools sidebar component for SVG drawing.
@@ -10,13 +21,21 @@ import { TooltipModule } from 'primeng/tooltip';
 @Component({
   selector: 'app-tools-sidebar',
   standalone: true,
-  imports: [CommonModule, ButtonDirective, TooltipModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ButtonDirective,
+    TooltipModule,
+    ColorPickerModule,
+    SliderModule,
+    ToggleSwitchModule,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="tools-sidebar">
       <!-- Drawing Tools Section -->
       <div class="tools-section">
-        <h3 class="section-title">Drawing Tools</h3>
+        <h3 class="section-title">Basic Shapes</h3>
 
         <div class="tools-grid">
           <button
@@ -34,15 +53,94 @@ import { TooltipModule } from 'primeng/tooltip';
           <button
             pButton
             type="button"
+            [class.active]="currentTool() === 'rectangle'"
+            class="tool-button"
+            (click)="onToolSelect('rectangle')"
+            pTooltip="Rectangle (R)"
+            tooltipPosition="bottom"
+          >
+            <i class="pi pi-stop"></i>
+          </button>
+
+          <button
+            pButton
+            type="button"
+            [class.active]="currentTool() === 'circle'"
+            class="tool-button"
+            (click)="onToolSelect('circle')"
+            pTooltip="Circle (C)"
+            tooltipPosition="bottom"
+          >
+            <i class="pi pi-circle"></i>
+          </button>
+
+          <button
+            pButton
+            type="button"
+            [class.active]="currentTool() === 'ellipse'"
+            class="tool-button"
+            (click)="onToolSelect('ellipse')"
+            pTooltip="Ellipse (E)"
+            tooltipPosition="bottom"
+          >
+            <i class="pi pi-ellipsis-h"></i>
+          </button>
+
+          <button
+            pButton
+            type="button"
+            [class.active]="currentTool() === 'triangle'"
+            class="tool-button"
+            (click)="onToolSelect('triangle')"
+            pTooltip="Triangle (T)"
+            tooltipPosition="bottom"
+          >
+            <i class="pi pi-caret-up"></i>
+          </button>
+
+          <button
+            pButton
+            type="button"
             [class.active]="currentTool() === 'polygon'"
             class="tool-button"
             (click)="onToolSelect('polygon')"
             pTooltip="Polygon (P)"
             tooltipPosition="bottom"
           >
-            <i class="pi pi-stop"></i>
+            <i class="pi pi-slack"></i>
           </button>
 
+          <button
+            pButton
+            type="button"
+            [class.active]="currentTool() === 'polyline'"
+            class="tool-button"
+            (click)="onToolSelect('polyline')"
+            pTooltip="Polyline (Y)"
+            tooltipPosition="bottom"
+          >
+            <i class="pi pi-chart-bar"></i>
+          </button>
+
+          <button
+            pButton
+            type="button"
+            [class.active]="currentTool() === 'bezier'"
+            class="tool-button"
+            (click)="onToolSelect('bezier')"
+            pTooltip="Curve (B)"
+            tooltipPosition="bottom"
+          >
+            <i class="pi pi-chart-line"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Tools Section -->
+      <div class="tools-section">
+        <h3 class="section-title">Tools</h3>
+
+        <div class="tools-grid">
           <button
             pButton
             type="button"
@@ -58,6 +156,30 @@ import { TooltipModule } from 'primeng/tooltip';
           <button
             pButton
             type="button"
+            [class.active]="currentTool() === 'move'"
+            class="tool-button"
+            (click)="onToolSelect('move')"
+            pTooltip="Move (M)"
+            tooltipPosition="bottom"
+          >
+            <i class="pi pi-arrows-alt"></i>
+          </button>
+
+          <button
+            pButton
+            type="button"
+            [class.active]="currentTool() === 'cut'"
+            class="tool-button"
+            (click)="onToolSelect('cut')"
+            pTooltip="Cut Line (X)"
+            tooltipPosition="bottom"
+          >
+            <i class="pi pi-scissors"></i>
+          </button>
+
+          <button
+            pButton
+            type="button"
             [class.active]="currentTool() === 'delete'"
             class="tool-button danger"
             (click)="onToolSelect('delete')"
@@ -67,6 +189,60 @@ import { TooltipModule } from 'primeng/tooltip';
             <i class="pi pi-trash"></i>
           </button>
         </div>
+      </div>
+
+      <!-- Style Settings Section -->
+      <div class="tools-section">
+        <h3 class="section-title">Style Settings</h3>
+
+        <!-- Stroke Color -->
+        <div class="style-control">
+          <label class="control-label">Stroke Color</label>
+          <div class="color-picker-wrapper">
+            <p-colorPicker
+              [(ngModel)]="localStrokeColor"
+              (onChange)="onStrokeColorChange($event)"
+              [inline]="false"
+              appendTo="body"
+            />
+            <span class="color-preview" [style.background-color]="localStrokeColor"></span>
+          </div>
+        </div>
+
+        <!-- Stroke Width -->
+        <div class="style-control">
+          <label class="control-label">Stroke Width ({{ localStrokeWidth }}px)</label>
+          <p-slider
+            [(ngModel)]="localStrokeWidth"
+            (onChange)="onStrokeWidthChange($event)"
+            [min]="1"
+            [max]="10"
+            [step]="1"
+            class="w-full"
+          />
+        </div>
+
+        <!-- Fill Toggle -->
+        <div class="style-control">
+          <label class="control-label">Fill</label>
+          <p-toggleswitch [(ngModel)]="localFillEnabled" (onChange)="onFillEnabledChange($event)" />
+        </div>
+
+        <!-- Fill Color (only when enabled) -->
+        @if (localFillEnabled) {
+          <div class="style-control">
+            <label class="control-label">Fill Color</label>
+            <div class="color-picker-wrapper">
+              <p-colorPicker
+                [(ngModel)]="localFillColor"
+                (onChange)="onFillColorChange($event)"
+                [inline]="false"
+                appendTo="body"
+              />
+              <span class="color-preview" [style.background-color]="localFillColor"></span>
+            </div>
+          </div>
+        }
       </div>
 
       <!-- Actions Section -->
@@ -143,7 +319,7 @@ import { TooltipModule } from 'primeng/tooltip';
 
       .tools-grid {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(3, 1fr);
         gap: 0.5rem;
       }
 
@@ -270,6 +446,33 @@ import { TooltipModule } from 'primeng/tooltip';
         color: #d1d5db;
       }
 
+      .style-control {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+      }
+
+      .control-label {
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: #4b5563;
+      }
+
+      .color-picker-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .color-preview {
+        width: 30px;
+        height: 30px;
+        border: 2px solid #d1d5db;
+        border-radius: 0.375rem;
+        display: inline-block;
+      }
+
       @media (max-width: 768px) {
         .tools-sidebar {
           width: 60px;
@@ -277,7 +480,8 @@ import { TooltipModule } from 'primeng/tooltip';
         }
 
         .section-title,
-        .action-button span {
+        .action-button span,
+        .style-control {
           display: none;
         }
 
@@ -295,7 +499,25 @@ import { TooltipModule } from 'primeng/tooltip';
 })
 export class ToolsSidebarComponent {
   /** Current active tool */
-  @Input() currentTool!: () => 'line' | 'polygon' | 'select' | 'delete';
+  @Input() currentTool!: () =>
+    | 'line'
+    | 'polygon'
+    | 'polyline'
+    | 'rectangle'
+    | 'circle'
+    | 'ellipse'
+    | 'triangle'
+    | 'rounded-rectangle'
+    | 'arc'
+    | 'bezier'
+    | 'star'
+    | 'arrow'
+    | 'cylinder'
+    | 'cone'
+    | 'select'
+    | 'move'
+    | 'delete'
+    | 'cut';
 
   /** Whether undo is available */
   @Input() canUndo!: () => boolean;
@@ -303,8 +525,47 @@ export class ToolsSidebarComponent {
   /** Whether redo is available */
   @Input() canRedo!: () => boolean;
 
+  /** Current stroke color */
+  @Input() set strokeColor(value: string) {
+    this.localStrokeColor = value;
+  }
+
+  /** Current stroke width */
+  @Input() set strokeWidth(value: number) {
+    this.localStrokeWidth = value;
+  }
+
+  /** Current fill color */
+  @Input() set fillColor(value: string) {
+    this.localFillColor = value;
+  }
+
+  /** Whether fill is enabled */
+  @Input() set fillEnabled(value: boolean) {
+    this.localFillEnabled = value;
+  }
+
   /** Tool selection event */
-  @Output() toolSelected = new EventEmitter<'line' | 'polygon' | 'select' | 'delete'>();
+  @Output() toolSelected = new EventEmitter<
+    | 'line'
+    | 'polygon'
+    | 'polyline'
+    | 'rectangle'
+    | 'circle'
+    | 'ellipse'
+    | 'triangle'
+    | 'rounded-rectangle'
+    | 'arc'
+    | 'bezier'
+    | 'star'
+    | 'arrow'
+    | 'cylinder'
+    | 'cone'
+    | 'select'
+    | 'move'
+    | 'delete'
+    | 'cut'
+  >();
 
   /** Undo event */
   @Output() undoClicked = new EventEmitter<void>();
@@ -315,10 +576,42 @@ export class ToolsSidebarComponent {
   /** Clear all event */
   @Output() clearAllClicked = new EventEmitter<void>();
 
+  /** Style change events */
+  @Output() strokeColorChanged = new EventEmitter<string>();
+  @Output() strokeWidthChanged = new EventEmitter<number>();
+  @Output() fillColorChanged = new EventEmitter<string>();
+  @Output() fillEnabledChanged = new EventEmitter<boolean>();
+
+  // Local state for style controls
+  localStrokeColor = '#000000';
+  localStrokeWidth = 2;
+  localFillColor = '#cccccc';
+  localFillEnabled = false;
+
   /**
    * Handles tool selection.
    */
-  onToolSelect(tool: 'line' | 'polygon' | 'select' | 'delete'): void {
+  onToolSelect(
+    tool:
+      | 'line'
+      | 'polygon'
+      | 'polyline'
+      | 'rectangle'
+      | 'circle'
+      | 'ellipse'
+      | 'triangle'
+      | 'rounded-rectangle'
+      | 'arc'
+      | 'bezier'
+      | 'star'
+      | 'arrow'
+      | 'cylinder'
+      | 'cone'
+      | 'select'
+      | 'move'
+      | 'delete'
+      | 'cut',
+  ): void {
     this.toolSelected.emit(tool);
   }
 
@@ -341,5 +634,37 @@ export class ToolsSidebarComponent {
    */
   onClearAll(): void {
     this.clearAllClicked.emit();
+  }
+
+  /**
+   * Handles stroke color change.
+   */
+  onStrokeColorChange(event: any): void {
+    // PrimeNG ColorPicker returns hex without #
+    const color = event.value.startsWith('#') ? event.value : `#${event.value}`;
+    this.strokeColorChanged.emit(color);
+  }
+
+  /**
+   * Handles stroke width change.
+   */
+  onStrokeWidthChange(event: any): void {
+    this.strokeWidthChanged.emit(event.value);
+  }
+
+  /**
+   * Handles fill color change.
+   */
+  onFillColorChange(event: any): void {
+    // PrimeNG ColorPicker returns hex without #
+    const color = event.value.startsWith('#') ? event.value : `#${event.value}`;
+    this.fillColorChanged.emit(color);
+  }
+
+  /**
+   * Handles fill enabled toggle.
+   */
+  onFillEnabledChange(event: any): void {
+    this.fillEnabledChanged.emit(event.checked);
   }
 }

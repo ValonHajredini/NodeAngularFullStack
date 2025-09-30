@@ -21,6 +21,7 @@ import { ShapePropertiesComponent } from './components/shape-properties/shape-pr
 import { BackgroundImagePanelComponent } from './components/background-image-panel/background-image-panel.component';
 import { ExportOptionsComponent } from './components/export-options/export-options.component';
 import { HelpPanelComponent } from './components/help-panel/help-panel.component';
+import { ShapesListComponent } from './components/shapes-list/shapes-list.component';
 import { ShapeStyle, ExportOptions } from '@nodeangularfullstack/shared';
 
 /**
@@ -48,6 +49,7 @@ import { ShapeStyle, ExportOptions } from '@nodeangularfullstack/shared';
     BackgroundImagePanelComponent,
     ExportOptionsComponent,
     HelpPanelComponent,
+    ShapesListComponent,
   ],
   providers: [MessageService],
   template: `
@@ -96,10 +98,18 @@ import { ShapeStyle, ExportOptions } from '@nodeangularfullstack/shared';
             [currentTool]="svgDrawingService.currentTool"
             [canUndo]="svgDrawingService.canUndo"
             [canRedo]="svgDrawingService.canRedo"
+            [strokeColor]="svgDrawingService.strokeColor()"
+            [strokeWidth]="svgDrawingService.strokeWidth()"
+            [fillColor]="svgDrawingService.fillColor()"
+            [fillEnabled]="svgDrawingService.fillEnabled()"
             (toolSelected)="onToolSelected($event)"
             (undoClicked)="onUndo()"
             (redoClicked)="onRedo()"
             (clearAllClicked)="onClearAll()"
+            (strokeColorChanged)="onStrokeColorChanged($event)"
+            (strokeWidthChanged)="onStrokeWidthChanged($event)"
+            (fillColorChanged)="onFillColorChanged($event)"
+            (fillEnabledChanged)="onFillEnabledChanged($event)"
           ></app-tools-sidebar>
 
           <!-- Canvas Area -->
@@ -116,14 +126,18 @@ import { ShapeStyle, ExportOptions } from '@nodeangularfullstack/shared';
                   Edit
                 </p-tab>
                 <p-tab [value]="1">
+                  <i class="pi pi-list mr-2"></i>
+                  Shapes
+                </p-tab>
+                <p-tab [value]="2">
                   <i class="pi pi-image mr-2"></i>
                   Background
                 </p-tab>
-                <p-tab [value]="2">
+                <p-tab [value]="3">
                   <i class="pi pi-download mr-2"></i>
                   Export
                 </p-tab>
-                <p-tab [value]="3">
+                <p-tab [value]="4">
                   <i class="pi pi-question-circle mr-2"></i>
                   Help
                 </p-tab>
@@ -138,14 +152,25 @@ import { ShapeStyle, ExportOptions } from '@nodeangularfullstack/shared';
                 </p-tabpanel>
 
                 <p-tabpanel [value]="1">
-                  <app-background-image-panel></app-background-image-panel>
+                  <app-shapes-list
+                    [shapes]="svgDrawingService.shapes()"
+                    [selectedShapeId]="svgDrawingService.selectedShapeId()"
+                    (shapeSelect)="onShapeSelect($event)"
+                    (shapeToggleVisibility)="onShapeToggleVisibility($event)"
+                    (shapeDuplicate)="onShapeDuplicate($event)"
+                    (shapeDelete)="onShapeDelete($event)"
+                  ></app-shapes-list>
                 </p-tabpanel>
 
                 <p-tabpanel [value]="2">
-                  <app-export-options (export)="onExport($event)"></app-export-options>
+                  <app-background-image-panel></app-background-image-panel>
                 </p-tabpanel>
 
                 <p-tabpanel [value]="3">
+                  <app-export-options (export)="onExport($event)"></app-export-options>
+                </p-tabpanel>
+
+                <p-tabpanel [value]="4">
                   <app-help-panel></app-help-panel>
                 </p-tabpanel>
               </p-tabpanels>
@@ -269,7 +294,27 @@ export class SvgDrawingComponent implements OnInit, OnDestroy {
   /**
    * Handles tool selection from toolbar.
    */
-  onToolSelected(tool: 'line' | 'polygon' | 'select' | 'delete'): void {
+  onToolSelected(
+    tool:
+      | 'line'
+      | 'polygon'
+      | 'polyline'
+      | 'rectangle'
+      | 'circle'
+      | 'ellipse'
+      | 'triangle'
+      | 'rounded-rectangle'
+      | 'arc'
+      | 'bezier'
+      | 'star'
+      | 'arrow'
+      | 'cylinder'
+      | 'cone'
+      | 'select'
+      | 'move'
+      | 'delete'
+      | 'cut',
+  ): void {
     this.svgDrawingService.setCurrentTool(tool);
   }
 
@@ -361,6 +406,79 @@ export class SvgDrawingComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Handles stroke color change.
+   */
+  onStrokeColorChanged(color: string): void {
+    this.svgDrawingService.setStrokeColor(color);
+  }
+
+  /**
+   * Handles stroke width change.
+   */
+  onStrokeWidthChanged(width: number): void {
+    this.svgDrawingService.setStrokeWidth(width);
+  }
+
+  /**
+   * Handles fill color change.
+   */
+  onFillColorChanged(color: string): void {
+    this.svgDrawingService.setFillColor(color);
+  }
+
+  /**
+   * Handles fill enabled toggle.
+   */
+  onFillEnabledChanged(enabled: boolean): void {
+    this.svgDrawingService.setFillEnabled(enabled);
+  }
+
+  /**
+   * Handles shape selection from shapes list.
+   */
+  onShapeSelect(shapeId: string): void {
+    this.svgDrawingService.selectShape(shapeId);
+  }
+
+  /**
+   * Handles shape visibility toggle from shapes list.
+   */
+  onShapeToggleVisibility(shapeId: string): void {
+    this.svgDrawingService.toggleShapeVisibility(shapeId);
+  }
+
+  /**
+   * Handles shape duplication from shapes list.
+   */
+  onShapeDuplicate(shapeId: string): void {
+    this.svgDrawingService.duplicateShape(shapeId);
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Shape Duplicated',
+      detail: 'Shape has been duplicated',
+      life: 2000,
+    });
+  }
+
+  /**
+   * Handles shape deletion from shapes list.
+   */
+  onShapeDelete(shapeId: string): void {
+    const shape = this.svgDrawingService.shapes().find((s) => s.id === shapeId);
+    if (!shape) return;
+
+    if (confirm('Are you sure you want to delete this shape?')) {
+      this.svgDrawingService.removeShape(shapeId);
+      this.messageService.add({
+        severity: 'info',
+        summary: 'Shape Deleted',
+        detail: 'Shape has been removed',
+        life: 2000,
+      });
+    }
+  }
+
+  /**
    * Handles keyboard shortcuts.
    */
   @HostListener('document:keydown', ['$event'])
@@ -368,6 +486,29 @@ export class SvgDrawingComponent implements OnInit, OnDestroy {
     // Prevent shortcuts when typing in input fields
     if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
       return;
+    }
+
+    // Arrow keys for panning (with optional Shift for faster panning)
+    // Only pan if no Ctrl/Cmd/Alt modifiers are pressed
+    if (!event.ctrlKey && !event.metaKey && !event.altKey) {
+      const panAmount = event.shiftKey ? 100 : 50;
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        this.svgDrawingService.panDirection('up', panAmount);
+        return;
+      } else if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        this.svgDrawingService.panDirection('down', panAmount);
+        return;
+      } else if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        this.svgDrawingService.panDirection('left', panAmount);
+        return;
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        this.svgDrawingService.panDirection('right', panAmount);
+        return;
+      }
     }
 
     // Tool selection shortcuts
@@ -426,6 +567,18 @@ export class SvgDrawingComponent implements OnInit, OnDestroy {
         // Ctrl+Y = Redo
         event.preventDefault();
         this.svgDrawingService.redo();
+      } else if (event.key === '+' || event.key === '=') {
+        // Ctrl++ = Zoom In
+        event.preventDefault();
+        this.svgDrawingService.zoomIn();
+      } else if (event.key === '-' || event.key === '_') {
+        // Ctrl+- = Zoom Out
+        event.preventDefault();
+        this.svgDrawingService.zoomOut();
+      } else if (event.key === '0') {
+        // Ctrl+0 = Reset Zoom
+        event.preventDefault();
+        this.svgDrawingService.resetZoom();
       }
     }
   }

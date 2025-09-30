@@ -5,6 +5,7 @@ import {
   Shape,
   LineShape,
   PolygonShape,
+  PolylineShape,
   Point,
   DrawingState,
   Command,
@@ -14,6 +15,7 @@ import {
   OptimizationLevel,
   StoredDrawing,
   DrawingSettings,
+  DrawingStyleSettings,
 } from '@nodeangularfullstack/shared';
 
 /**
@@ -27,7 +29,26 @@ export class SvgDrawingService {
   // Reactive state signals
   private readonly _shapes = signal<Shape[]>([]);
   private readonly _selectedShapeId = signal<string | null>(null);
-  private readonly _currentTool = signal<'line' | 'polygon' | 'select' | 'delete'>('line');
+  private readonly _currentTool = signal<
+    | 'line'
+    | 'polygon'
+    | 'polyline'
+    | 'rectangle'
+    | 'circle'
+    | 'ellipse'
+    | 'triangle'
+    | 'rounded-rectangle'
+    | 'arc'
+    | 'bezier'
+    | 'star'
+    | 'arrow'
+    | 'cylinder'
+    | 'cone'
+    | 'select'
+    | 'move'
+    | 'delete'
+    | 'cut'
+  >('line');
   private readonly _isDrawing = signal<boolean>(false);
   private readonly _activeVertices = signal<Point[]>([]);
   private readonly _snapEnabled = signal<boolean>(true);
@@ -36,12 +57,22 @@ export class SvgDrawingService {
   private readonly _redoStack = signal<Command[]>([]);
   private readonly _gridVisible = signal<boolean>(false);
 
+  // Style state signals
+  private readonly _strokeColor = signal<string>('#000000');
+  private readonly _strokeWidth = signal<number>(2);
+  private readonly _fillColor = signal<string>('#cccccc');
+  private readonly _fillEnabled = signal<boolean>(false);
+
   // Background image state
   private readonly _backgroundImage = signal<string | null>(null);
   private readonly _imageOpacity = signal<number>(0.5);
   private readonly _imageScale = signal<number>(1);
   private readonly _imagePosition = signal<{ x: number; y: number }>({ x: 0, y: 0 });
   private readonly _imageLocked = signal<boolean>(false);
+
+  // Canvas zoom state
+  private readonly _canvasZoom = signal<number>(1);
+  private readonly _canvasOffset = signal<{ x: number; y: number }>({ x: 0, y: 0 });
 
   // localStorage persistence
   private readonly savePending$ = new Subject<DrawingState>();
@@ -58,12 +89,22 @@ export class SvgDrawingService {
   readonly snapThreshold = this._snapThreshold.asReadonly();
   readonly gridVisible = this._gridVisible.asReadonly();
 
+  // Style public signals
+  readonly strokeColor = this._strokeColor.asReadonly();
+  readonly strokeWidth = this._strokeWidth.asReadonly();
+  readonly fillColor = this._fillColor.asReadonly();
+  readonly fillEnabled = this._fillEnabled.asReadonly();
+
   // Background image public signals
   readonly backgroundImage = this._backgroundImage.asReadonly();
   readonly imageOpacity = this._imageOpacity.asReadonly();
   readonly imageScale = this._imageScale.asReadonly();
   readonly imagePosition = this._imagePosition.asReadonly();
   readonly imageLocked = this._imageLocked.asReadonly();
+
+  // Canvas zoom public signals
+  readonly canvasZoom = this._canvasZoom.asReadonly();
+  readonly canvasOffset = this._canvasOffset.asReadonly();
 
   // Computed signals
   readonly selectedShape = computed(() => {
@@ -73,6 +114,12 @@ export class SvgDrawingService {
 
   readonly canUndo = computed(() => this._commandHistory().length > 0);
   readonly canRedo = computed(() => this._redoStack().length > 0);
+
+  readonly currentStyle = computed<ShapeStyle>(() => ({
+    color: this._strokeColor(),
+    strokeWidth: this._strokeWidth(),
+    fillColor: this._fillEnabled() ? this._fillColor() : undefined,
+  }));
 
   readonly drawingState = computed<DrawingState>(() => ({
     shapes: this._shapes(),
@@ -111,6 +158,14 @@ export class SvgDrawingService {
       this._snapThreshold.set(stored.settings.snapThreshold);
       this._gridVisible.set(stored.settings.gridVisible);
 
+      // Restore style settings if available
+      if (stored.settings.style) {
+        this._strokeColor.set(stored.settings.style.strokeColor);
+        this._strokeWidth.set(stored.settings.style.strokeWidth);
+        this._fillColor.set(stored.settings.style.fillColor);
+        this._fillEnabled.set(stored.settings.style.fillEnabled);
+      }
+
       // Restore background image settings if available
       if (stored.backgroundImage) {
         this._backgroundImage.set(stored.backgroundImage.data || null);
@@ -118,6 +173,14 @@ export class SvgDrawingService {
         this._imageScale.set(stored.backgroundImage.scale ?? 1);
         this._imagePosition.set(stored.backgroundImage.position ?? { x: 0, y: 0 });
         this._imageLocked.set(stored.backgroundImage.locked ?? false);
+      }
+
+      // Restore canvas zoom settings if available
+      if (stored.canvasZoom !== undefined) {
+        this._canvasZoom.set(stored.canvasZoom);
+      }
+      if (stored.canvasOffset) {
+        this._canvasOffset.set(stored.canvasOffset);
       }
 
       console.log('SvgDrawingService initialized with stored data');
@@ -135,6 +198,8 @@ export class SvgDrawingService {
       this._imageScale.set(1);
       this._imagePosition.set({ x: 0, y: 0 });
       this._imageLocked.set(false);
+      this._canvasZoom.set(1);
+      this._canvasOffset.set({ x: 0, y: 0 });
       console.log('SvgDrawingService initialized with defaults');
     }
   }
@@ -162,6 +227,8 @@ export class SvgDrawingService {
   finishDrawing(shape: Shape): void {
     this._shapes.update((shapes) => [...shapes, shape]);
     this._isDrawing.set(false);
+    // Auto-select the newly created shape for immediate editing
+    this._selectedShapeId.set(shape.id);
   }
 
   /**
@@ -202,7 +269,27 @@ export class SvgDrawingService {
    * Sets the current drawing tool.
    * @param tool - Tool to activate
    */
-  setCurrentTool(tool: 'line' | 'polygon' | 'select' | 'delete'): void {
+  setCurrentTool(
+    tool:
+      | 'line'
+      | 'polygon'
+      | 'polyline'
+      | 'rectangle'
+      | 'circle'
+      | 'ellipse'
+      | 'triangle'
+      | 'rounded-rectangle'
+      | 'arc'
+      | 'bezier'
+      | 'star'
+      | 'arrow'
+      | 'cylinder'
+      | 'cone'
+      | 'select'
+      | 'move'
+      | 'delete'
+      | 'cut',
+  ): void {
     this._currentTool.set(tool);
     this._isDrawing.set(false);
     this._activeVertices.set([]);
@@ -345,6 +432,8 @@ export class SvgDrawingService {
     this.executeCommand(new AddShapeCommand(this, polygon));
     this._activeVertices.set([]);
     this._isDrawing.set(false);
+    // Auto-select the newly created polygon for immediate editing
+    this._selectedShapeId.set(polygon.id);
 
     return polygon;
   }
@@ -372,6 +461,58 @@ export class SvgDrawingService {
     return distance <= tolerance;
   }
 
+  // ===== Polyline Drawing Methods =====
+
+  /**
+   * Adds a vertex to the active polyline drawing.
+   * @param point - Vertex point to add
+   */
+  addPolylineVertex(point: Point): void {
+    this._activeVertices.update((vertices) => [...vertices, point]);
+    if (!this._isDrawing()) {
+      this._isDrawing.set(true);
+    }
+  }
+
+  /**
+   * Finishes the active polyline and creates a shape (without closing the path).
+   * @param style - Style properties for the polyline
+   * @returns The created polyline shape or null if invalid
+   */
+  finishPolyline(style: ShapeStyle): PolylineShape | null {
+    const vertices = this._activeVertices();
+    if (vertices.length < 2) {
+      return null;
+    }
+
+    const polyline: PolylineShape = {
+      id: this.generateShapeId(),
+      type: 'polyline',
+      vertices: [...vertices],
+      color: style.color,
+      strokeWidth: style.strokeWidth,
+      fillColor: style.fillColor,
+      lineStyle: style.lineStyle,
+      createdAt: new Date(),
+    };
+
+    this.executeCommand(new AddShapeCommand(this, polyline));
+    this._activeVertices.set([]);
+    this._isDrawing.set(false);
+    // Auto-select the newly created polyline for immediate editing
+    this._selectedShapeId.set(polyline.id);
+
+    return polyline;
+  }
+
+  /**
+   * Cancels the active polyline drawing.
+   */
+  cancelPolyline(): void {
+    this._activeVertices.set([]);
+    this._isDrawing.set(false);
+  }
+
   // ===== Shape Selection Methods =====
 
   /**
@@ -388,8 +529,109 @@ export class SvgDrawingService {
         if (this.isPointInPolygon(point, (shape as PolygonShape).vertices)) {
           return shape.id;
         }
+      } else if (shape.type === 'polyline') {
+        // Check if point is near any line segment of the polyline
+        const polyline = shape as PolylineShape;
+        for (let j = 0; j < polyline.vertices.length - 1; j++) {
+          const lineShape: LineShape = {
+            ...shape,
+            type: 'line',
+            start: polyline.vertices[j],
+            end: polyline.vertices[j + 1],
+          } as LineShape;
+          if (this.isPointOnLine(point, lineShape, 5)) {
+            return shape.id;
+          }
+        }
       } else if (shape.type === 'line') {
         if (this.isPointOnLine(point, shape as LineShape, 5)) {
+          return shape.id;
+        }
+      } else if (shape.type === 'rectangle' || shape.type === 'rounded-rectangle') {
+        const rect = shape as any;
+        if (
+          point.x >= rect.topLeft.x &&
+          point.x <= rect.topLeft.x + rect.width &&
+          point.y >= rect.topLeft.y &&
+          point.y <= rect.topLeft.y + rect.height
+        ) {
+          return shape.id;
+        }
+      } else if (shape.type === 'circle') {
+        const circle = shape as any;
+        const distance = Math.sqrt(
+          Math.pow(point.x - circle.center.x, 2) + Math.pow(point.y - circle.center.y, 2),
+        );
+        if (distance <= circle.radius) {
+          return shape.id;
+        }
+      } else if (shape.type === 'ellipse') {
+        const ellipse = shape as any;
+        // Check if point is inside ellipse using ellipse equation
+        const dx = (point.x - ellipse.center.x) / ellipse.radiusX;
+        const dy = (point.y - ellipse.center.y) / ellipse.radiusY;
+        if (dx * dx + dy * dy <= 1) {
+          return shape.id;
+        }
+      } else if (shape.type === 'triangle') {
+        const triangle = shape as any;
+        if (this.isPointInPolygon(point, triangle.vertices)) {
+          return shape.id;
+        }
+      } else if (shape.type === 'arc' || shape.type === 'arrow') {
+        // Treat arc and arrow as lines for click detection
+        const lineShape = shape as any;
+        if (
+          this.isPointOnLine(
+            point,
+            { ...shape, start: lineShape.start, end: lineShape.end } as LineShape,
+            10,
+          )
+        ) {
+          return shape.id;
+        }
+      } else if (shape.type === 'bezier') {
+        // Approximate bezier as line for simple click detection
+        const bezier = shape as any;
+        if (
+          this.isPointOnLine(
+            point,
+            { ...shape, start: bezier.start, end: bezier.end } as LineShape,
+            10,
+          )
+        ) {
+          return shape.id;
+        }
+      } else if (shape.type === 'star') {
+        const star = shape as any;
+        const distance = Math.sqrt(
+          Math.pow(point.x - star.center.x, 2) + Math.pow(point.y - star.center.y, 2),
+        );
+        // Approximate as circle with outer radius
+        if (distance <= star.outerRadius) {
+          return shape.id;
+        }
+      } else if (shape.type === 'cylinder') {
+        const cylinder = shape as any;
+        if (
+          point.x >= cylinder.topLeft.x &&
+          point.x <= cylinder.topLeft.x + cylinder.width &&
+          point.y >= cylinder.topLeft.y &&
+          point.y <= cylinder.topLeft.y + cylinder.height
+        ) {
+          return shape.id;
+        }
+      } else if (shape.type === 'cone') {
+        const cone = shape as any;
+        // Approximate cone as triangle for click detection
+        const width = cone.baseWidth;
+        const height = Math.abs(cone.baseCenter.y - cone.apex.y);
+        const vertices = [
+          cone.apex,
+          { x: cone.baseCenter.x - width / 2, y: cone.baseCenter.y },
+          { x: cone.baseCenter.x + width / 2, y: cone.baseCenter.y },
+        ];
+        if (this.isPointInPolygon(point, vertices)) {
           return shape.id;
         }
       }
@@ -570,6 +812,456 @@ export class SvgDrawingService {
     this._selectedShapeId.set(null);
   }
 
+  /**
+   * Toggles the visibility of a shape.
+   * @param shapeId - ID of the shape to toggle visibility
+   */
+  toggleShapeVisibility(shapeId: string): void {
+    const shape = this._shapes().find((s) => s.id === shapeId);
+    if (!shape) return;
+
+    const updatedShape = { ...shape, visible: shape.visible === false ? true : false };
+    this.executeCommand(new UpdateShapeCommand(this, shape, updatedShape));
+  }
+
+  /**
+   * Duplicates a shape by creating a copy with a slight offset.
+   * @param shapeId - ID of the shape to duplicate
+   */
+  duplicateShape(shapeId: string): void {
+    const shape = this._shapes().find((s) => s.id === shapeId);
+    if (!shape) return;
+
+    const offset = 20; // Offset in pixels for the duplicate
+    let duplicatedShape: Shape;
+
+    if (shape.type === 'line') {
+      const line = shape as LineShape;
+      duplicatedShape = {
+        ...line,
+        id: this.generateShapeId(),
+        start: { x: line.start.x + offset, y: line.start.y + offset },
+        end: { x: line.end.x + offset, y: line.end.y + offset },
+        createdAt: new Date(),
+      } as LineShape;
+    } else if (shape.type === 'polygon') {
+      const polygon = shape as PolygonShape;
+      duplicatedShape = {
+        ...polygon,
+        id: this.generateShapeId(),
+        vertices: polygon.vertices.map((v) => ({ x: v.x + offset, y: v.y + offset })),
+        createdAt: new Date(),
+      } as PolygonShape;
+    } else if (shape.type === 'polyline') {
+      const polyline = shape as PolylineShape;
+      duplicatedShape = {
+        ...polyline,
+        id: this.generateShapeId(),
+        vertices: polyline.vertices.map((v) => ({ x: v.x + offset, y: v.y + offset })),
+        createdAt: new Date(),
+      } as PolylineShape;
+    } else if (shape.type === 'rectangle' || shape.type === 'rounded-rectangle') {
+      const rect = shape as any;
+      duplicatedShape = {
+        ...rect,
+        id: this.generateShapeId(),
+        topLeft: { x: rect.topLeft.x + offset, y: rect.topLeft.y + offset },
+        createdAt: new Date(),
+      } as Shape;
+    } else if (shape.type === 'circle') {
+      const circle = shape as any;
+      duplicatedShape = {
+        ...circle,
+        id: this.generateShapeId(),
+        center: { x: circle.center.x + offset, y: circle.center.y + offset },
+        createdAt: new Date(),
+      } as Shape;
+    } else if (shape.type === 'ellipse') {
+      const ellipse = shape as any;
+      duplicatedShape = {
+        ...ellipse,
+        id: this.generateShapeId(),
+        center: { x: ellipse.center.x + offset, y: ellipse.center.y + offset },
+        createdAt: new Date(),
+      } as Shape;
+    } else if (shape.type === 'triangle') {
+      const triangle = shape as any;
+      duplicatedShape = {
+        ...triangle,
+        id: this.generateShapeId(),
+        vertices: triangle.vertices.map((v: Point) => ({ x: v.x + offset, y: v.y + offset })),
+        createdAt: new Date(),
+      } as Shape;
+    } else if (shape.type === 'arc' || shape.type === 'arrow') {
+      const arcOrArrow = shape as any;
+      duplicatedShape = {
+        ...arcOrArrow,
+        id: this.generateShapeId(),
+        start: { x: arcOrArrow.start.x + offset, y: arcOrArrow.start.y + offset },
+        end: { x: arcOrArrow.end.x + offset, y: arcOrArrow.end.y + offset },
+        createdAt: new Date(),
+      } as Shape;
+    } else if (shape.type === 'bezier') {
+      const bezier = shape as any;
+      duplicatedShape = {
+        ...bezier,
+        id: this.generateShapeId(),
+        start: { x: bezier.start.x + offset, y: bezier.start.y + offset },
+        end: { x: bezier.end.x + offset, y: bezier.end.y + offset },
+        controlPoint1: {
+          x: bezier.controlPoint1.x + offset,
+          y: bezier.controlPoint1.y + offset,
+        },
+        controlPoint2: {
+          x: bezier.controlPoint2.x + offset,
+          y: bezier.controlPoint2.y + offset,
+        },
+        createdAt: new Date(),
+      } as Shape;
+    } else if (shape.type === 'star') {
+      const star = shape as any;
+      duplicatedShape = {
+        ...star,
+        id: this.generateShapeId(),
+        center: { x: star.center.x + offset, y: star.center.y + offset },
+        createdAt: new Date(),
+      } as Shape;
+    } else if (shape.type === 'cylinder') {
+      const cylinder = shape as any;
+      duplicatedShape = {
+        ...cylinder,
+        id: this.generateShapeId(),
+        topLeft: { x: cylinder.topLeft.x + offset, y: cylinder.topLeft.y + offset },
+        createdAt: new Date(),
+      } as Shape;
+    } else if (shape.type === 'cone') {
+      const cone = shape as any;
+      duplicatedShape = {
+        ...cone,
+        id: this.generateShapeId(),
+        apex: { x: cone.apex.x + offset, y: cone.apex.y + offset },
+        baseCenter: { x: cone.baseCenter.x + offset, y: cone.baseCenter.y + offset },
+        createdAt: new Date(),
+      } as Shape;
+    } else {
+      return;
+    }
+
+    this.executeCommand(new AddShapeCommand(this, duplicatedShape));
+    this._selectedShapeId.set(duplicatedShape.id);
+  }
+
+  /**
+   * Resizes a shape from a specific handle.
+   * @param shapeId - ID of the shape to resize
+   * @param handlePosition - Which handle is being dragged ('nw', 'ne', 'sw', 'se', 'n', 's', 'e', 'w', 'center')
+   * @param newPoint - New position for the handle
+   */
+  resizeShape(shapeId: string, handlePosition: string, newPoint: Point): void {
+    const shape = this._shapes().find((s) => s.id === shapeId);
+    if (!shape) return;
+
+    let resizedShape: Shape;
+
+    if (shape.type === 'rectangle' || shape.type === 'rounded-rectangle') {
+      const rect = shape as any;
+      const topLeft = { ...rect.topLeft };
+      let width = rect.width;
+      let height = rect.height;
+
+      // Handle corner and edge resizing
+      if (handlePosition.includes('n')) {
+        const deltaY = newPoint.y - topLeft.y;
+        topLeft.y = newPoint.y;
+        height -= deltaY;
+      }
+      if (handlePosition.includes('s')) {
+        height = newPoint.y - topLeft.y;
+      }
+      if (handlePosition.includes('w')) {
+        const deltaX = newPoint.x - topLeft.x;
+        topLeft.x = newPoint.x;
+        width -= deltaX;
+      }
+      if (handlePosition.includes('e')) {
+        width = newPoint.x - topLeft.x;
+      }
+
+      // Ensure minimum size
+      width = Math.max(10, width);
+      height = Math.max(10, height);
+
+      resizedShape = { ...rect, topLeft, width, height };
+    } else if (shape.type === 'circle') {
+      const circle = shape as any;
+      const radius = Math.sqrt(
+        Math.pow(newPoint.x - circle.center.x, 2) + Math.pow(newPoint.y - circle.center.y, 2),
+      );
+      resizedShape = { ...circle, radius: Math.max(5, radius) };
+    } else if (shape.type === 'ellipse') {
+      const ellipse = shape as any;
+      const radiusX = Math.abs(newPoint.x - ellipse.center.x);
+      const radiusY = Math.abs(newPoint.y - ellipse.center.y);
+      resizedShape = { ...ellipse, radiusX: Math.max(5, radiusX), radiusY: Math.max(5, radiusY) };
+    } else if (shape.type === 'line') {
+      const line = shape as LineShape;
+      if (handlePosition === 'start') {
+        resizedShape = { ...line, start: newPoint } as LineShape;
+      } else {
+        resizedShape = { ...line, end: newPoint } as LineShape;
+      }
+    } else if (shape.type === 'star') {
+      const star = shape as any;
+      const outerRadius = Math.sqrt(
+        Math.pow(newPoint.x - star.center.x, 2) + Math.pow(newPoint.y - star.center.y, 2),
+      );
+      const innerRadius = (outerRadius * star.innerRadius) / star.outerRadius;
+      resizedShape = {
+        ...star,
+        outerRadius: Math.max(10, outerRadius),
+        innerRadius: Math.max(5, innerRadius),
+      };
+    } else if (shape.type === 'cylinder') {
+      const cylinder = shape as any;
+      const topLeft = { ...cylinder.topLeft };
+      let width = cylinder.width;
+      let height = cylinder.height;
+
+      if (handlePosition.includes('n')) {
+        const deltaY = newPoint.y - topLeft.y;
+        topLeft.y = newPoint.y;
+        height -= deltaY;
+      }
+      if (handlePosition.includes('s')) {
+        height = newPoint.y - topLeft.y;
+      }
+      if (handlePosition.includes('w')) {
+        const deltaX = newPoint.x - topLeft.x;
+        topLeft.x = newPoint.x;
+        width -= deltaX;
+      }
+      if (handlePosition.includes('e')) {
+        width = newPoint.x - topLeft.x;
+      }
+
+      width = Math.max(10, width);
+      height = Math.max(10, height);
+
+      resizedShape = { ...cylinder, topLeft, width, height };
+    } else if (shape.type === 'cone') {
+      const cone = shape as any;
+      if (handlePosition === 'apex') {
+        resizedShape = { ...cone, apex: newPoint };
+      } else if (handlePosition === 'base') {
+        const baseWidth = Math.abs(newPoint.x - cone.baseCenter.x) * 2;
+        resizedShape = { ...cone, baseWidth: Math.max(10, baseWidth) };
+      } else {
+        return;
+      }
+    } else if (shape.type === 'arrow') {
+      const arrow = shape as any;
+      if (handlePosition === 'start') {
+        resizedShape = { ...arrow, start: newPoint };
+      } else {
+        resizedShape = { ...arrow, end: newPoint };
+      }
+    } else if (shape.type === 'arc') {
+      const arc = shape as any;
+      if (handlePosition === 'start') {
+        resizedShape = { ...arc, start: newPoint };
+      } else {
+        resizedShape = { ...arc, end: newPoint };
+      }
+    } else if (shape.type === 'bezier') {
+      const bezier = shape as any;
+      if (handlePosition === 'start') {
+        resizedShape = { ...bezier, start: newPoint };
+      } else if (handlePosition === 'end') {
+        resizedShape = { ...bezier, end: newPoint };
+      } else if (handlePosition === 'cp1') {
+        resizedShape = { ...bezier, controlPoint1: newPoint };
+      } else if (handlePosition === 'cp2') {
+        resizedShape = { ...bezier, controlPoint2: newPoint };
+      } else {
+        return;
+      }
+    } else {
+      // For polygon and triangle, we don't support uniform resizing
+      // They can be moved, but not resized uniformly
+      return;
+    }
+
+    this.executeCommand(new UpdateShapeCommand(this, shape, resizedShape));
+  }
+
+  /**
+   * Moves a shape by a delta offset.
+   * @param shapeId - ID of the shape to move
+   * @param deltaX - X offset in pixels
+   * @param deltaY - Y offset in pixels
+   */
+  moveShape(shapeId: string, deltaX: number, deltaY: number): void {
+    const shape = this._shapes().find((s) => s.id === shapeId);
+    if (!shape) return;
+
+    let movedShape: Shape;
+
+    if (shape.type === 'line') {
+      const line = shape as LineShape;
+      movedShape = {
+        ...line,
+        start: { x: line.start.x + deltaX, y: line.start.y + deltaY },
+        end: { x: line.end.x + deltaX, y: line.end.y + deltaY },
+      } as LineShape;
+    } else if (shape.type === 'polygon') {
+      const polygon = shape as PolygonShape;
+      movedShape = {
+        ...polygon,
+        vertices: polygon.vertices.map((v) => ({ x: v.x + deltaX, y: v.y + deltaY })),
+      } as PolygonShape;
+    } else if (shape.type === 'polyline') {
+      const polyline = shape as PolylineShape;
+      movedShape = {
+        ...polyline,
+        vertices: polyline.vertices.map((v) => ({ x: v.x + deltaX, y: v.y + deltaY })),
+      } as PolylineShape;
+    } else if (shape.type === 'rectangle') {
+      const rect = shape as any;
+      movedShape = {
+        ...rect,
+        topLeft: { x: rect.topLeft.x + deltaX, y: rect.topLeft.y + deltaY },
+      } as Shape;
+    } else if (shape.type === 'circle') {
+      const circle = shape as any;
+      movedShape = {
+        ...circle,
+        center: { x: circle.center.x + deltaX, y: circle.center.y + deltaY },
+      } as Shape;
+    } else if (shape.type === 'ellipse') {
+      const ellipse = shape as any;
+      movedShape = {
+        ...ellipse,
+        center: { x: ellipse.center.x + deltaX, y: ellipse.center.y + deltaY },
+      } as Shape;
+    } else if (shape.type === 'triangle') {
+      const triangle = shape as any;
+      movedShape = {
+        ...triangle,
+        vertices: triangle.vertices.map((v: Point) => ({ x: v.x + deltaX, y: v.y + deltaY })),
+      } as Shape;
+    } else if (shape.type === 'rounded-rectangle') {
+      const roundedRect = shape as any;
+      movedShape = {
+        ...roundedRect,
+        topLeft: { x: roundedRect.topLeft.x + deltaX, y: roundedRect.topLeft.y + deltaY },
+      } as Shape;
+    } else if (shape.type === 'arc') {
+      const arc = shape as any;
+      movedShape = {
+        ...arc,
+        start: { x: arc.start.x + deltaX, y: arc.start.y + deltaY },
+        end: { x: arc.end.x + deltaX, y: arc.end.y + deltaY },
+      } as Shape;
+    } else if (shape.type === 'bezier') {
+      const bezier = shape as any;
+      movedShape = {
+        ...bezier,
+        start: { x: bezier.start.x + deltaX, y: bezier.start.y + deltaY },
+        end: { x: bezier.end.x + deltaX, y: bezier.end.y + deltaY },
+        controlPoint1: {
+          x: bezier.controlPoint1.x + deltaX,
+          y: bezier.controlPoint1.y + deltaY,
+        },
+        controlPoint2: {
+          x: bezier.controlPoint2.x + deltaX,
+          y: bezier.controlPoint2.y + deltaY,
+        },
+      } as Shape;
+    } else if (shape.type === 'star') {
+      const star = shape as any;
+      movedShape = {
+        ...star,
+        center: { x: star.center.x + deltaX, y: star.center.y + deltaY },
+      } as Shape;
+    } else if (shape.type === 'arrow') {
+      const arrow = shape as any;
+      movedShape = {
+        ...arrow,
+        start: { x: arrow.start.x + deltaX, y: arrow.start.y + deltaY },
+        end: { x: arrow.end.x + deltaX, y: arrow.end.y + deltaY },
+      } as Shape;
+    } else if (shape.type === 'cylinder') {
+      const cylinder = shape as any;
+      movedShape = {
+        ...cylinder,
+        topLeft: { x: cylinder.topLeft.x + deltaX, y: cylinder.topLeft.y + deltaY },
+      } as Shape;
+    } else if (shape.type === 'cone') {
+      const cone = shape as any;
+      movedShape = {
+        ...cone,
+        apex: { x: cone.apex.x + deltaX, y: cone.apex.y + deltaY },
+        baseCenter: { x: cone.baseCenter.x + deltaX, y: cone.baseCenter.y + deltaY },
+      } as Shape;
+    } else {
+      return;
+    }
+
+    this.executeCommand(new UpdateShapeCommand(this, shape, movedShape));
+  }
+
+  /**
+   * Cuts a line at a specific point and adds cut marks (darts) at the cut point.
+   * @param lineId - ID of the line to cut
+   * @param cutPoint - Point where the line should be cut
+   * @param addDottedLine - Whether to add a dotted line at the cut point (default: true)
+   * @returns Array of new line IDs created from the cut
+   */
+  cutLineAtPoint(lineId: string, cutPoint: Point, addDottedLine: boolean = true): string[] {
+    const line = this._shapes().find((s) => s.id === lineId && s.type === 'line') as
+      | LineShape
+      | undefined;
+    if (!line) return [];
+
+    // Check if cut point is on the line (use existing method)
+    const distance = this.distanceFromPointToLine(cutPoint, line.start, line.end);
+    if (distance > 10) {
+      return [];
+    }
+
+    // Create two new lines from the cut with cut marks enabled
+    const line1: LineShape = {
+      id: this.generateShapeId(),
+      type: 'line',
+      start: line.start,
+      end: cutPoint,
+      color: line.color,
+      strokeWidth: line.strokeWidth,
+      fillColor: line.fillColor,
+      lineStyle: line.lineStyle,
+      hasCutMarks: true, // Add cut marks at the end point
+      createdAt: new Date(),
+    };
+
+    const line2: LineShape = {
+      id: this.generateShapeId(),
+      type: 'line',
+      start: cutPoint,
+      end: line.end,
+      color: line.color,
+      strokeWidth: line.strokeWidth,
+      fillColor: line.fillColor,
+      lineStyle: addDottedLine ? 'dotted' : line.lineStyle,
+      hasCutMarks: true, // Add cut marks at the start point
+      createdAt: new Date(),
+    };
+
+    // Delete old line and add new ones
+    this.executeCommand(new CutLineCommand(this, line, [line1, line2]));
+
+    return [line1.id, line2.id];
+  }
+
   // ===== SVG Export Methods =====
 
   /**
@@ -621,23 +1313,39 @@ export class SvgDrawingService {
    * @returns SVG element string
    */
   private shapeToSVGElement(shape: Shape): string {
+    const stroke = shape.color;
+    const strokeWidth = shape.strokeWidth;
+    const fill = shape.fillColor || 'transparent';
+
     if (shape.type === 'line') {
       const line = shape as LineShape;
       const x1 = line.start.x.toFixed(2);
       const y1 = line.start.y.toFixed(2);
       const x2 = line.end.x.toFixed(2);
       const y2 = line.end.y.toFixed(2);
-      const stroke = shape.color;
-      const strokeWidth = shape.strokeWidth;
-
       return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="${strokeWidth}"/>`;
     } else if (shape.type === 'polygon') {
       const polygon = shape as PolygonShape;
       const points = polygon.vertices.map((v) => `${v.x.toFixed(2)},${v.y.toFixed(2)}`).join(' ');
-      const stroke = shape.color;
-      const strokeWidth = shape.strokeWidth;
-      const fill = shape.fillColor || 'transparent';
-
+      return `<polygon points="${points}" stroke="${stroke}" stroke-width="${strokeWidth}" fill="${fill}"/>`;
+    } else if (shape.type === 'polyline') {
+      const polyline = shape as PolylineShape;
+      const points = polyline.vertices.map((v) => `${v.x.toFixed(2)},${v.y.toFixed(2)}`).join(' ');
+      return `<polyline points="${points}" stroke="${stroke}" stroke-width="${strokeWidth}" fill="none"/>`;
+    } else if (shape.type === 'rectangle') {
+      const rect = shape as any; // RectangleShape
+      return `<rect x="${rect.topLeft.x.toFixed(2)}" y="${rect.topLeft.y.toFixed(2)}" width="${rect.width.toFixed(2)}" height="${rect.height.toFixed(2)}" stroke="${stroke}" stroke-width="${strokeWidth}" fill="${fill}"/>`;
+    } else if (shape.type === 'circle') {
+      const circle = shape as any; // CircleShape
+      return `<circle cx="${circle.center.x.toFixed(2)}" cy="${circle.center.y.toFixed(2)}" r="${circle.radius.toFixed(2)}" stroke="${stroke}" stroke-width="${strokeWidth}" fill="${fill}"/>`;
+    } else if (shape.type === 'ellipse') {
+      const ellipse = shape as any; // EllipseShape
+      return `<ellipse cx="${ellipse.center.x.toFixed(2)}" cy="${ellipse.center.y.toFixed(2)}" rx="${ellipse.radiusX.toFixed(2)}" ry="${ellipse.radiusY.toFixed(2)}" stroke="${stroke}" stroke-width="${strokeWidth}" fill="${fill}"/>`;
+    } else if (shape.type === 'triangle') {
+      const triangle = shape as any; // TriangleShape
+      const points = triangle.vertices
+        .map((v: Point) => `${v.x.toFixed(2)},${v.y.toFixed(2)}`)
+        .join(' ');
       return `<polygon points="${points}" stroke="${stroke}" stroke-width="${strokeWidth}" fill="${fill}"/>`;
     }
     return '';
@@ -763,6 +1471,42 @@ export class SvgDrawingService {
     this._gridVisible.set(visible);
   }
 
+  // ===== Style Setter Methods =====
+
+  /**
+   * Sets the stroke color for new shapes.
+   * @param color - Stroke color in hex format (e.g., "#000000")
+   */
+  setStrokeColor(color: string): void {
+    this._strokeColor.set(color);
+  }
+
+  /**
+   * Sets the stroke width for new shapes.
+   * @param width - Stroke width in pixels (1-10)
+   */
+  setStrokeWidth(width: number): void {
+    if (width >= 1 && width <= 10) {
+      this._strokeWidth.set(width);
+    }
+  }
+
+  /**
+   * Sets the fill color for new shapes.
+   * @param color - Fill color in hex format (e.g., "#cccccc")
+   */
+  setFillColor(color: string): void {
+    this._fillColor.set(color);
+  }
+
+  /**
+   * Toggles whether fill is enabled for new shapes.
+   * @param enabled - Whether fill should be enabled
+   */
+  setFillEnabled(enabled: boolean): void {
+    this._fillEnabled.set(enabled);
+  }
+
   // ===== Background Image Methods =====
 
   /**
@@ -825,6 +1569,122 @@ export class SvgDrawingService {
     this._imageLocked.set(locked);
   }
 
+  // ===== Canvas Zoom Methods =====
+
+  /**
+   * Zooms in the canvas by 10%.
+   */
+  zoomIn(): void {
+    const currentZoom = this._canvasZoom();
+    const newZoom = Math.min(currentZoom + 0.1, 5); // Max 500%
+    this._canvasZoom.set(newZoom);
+  }
+
+  /**
+   * Zooms out the canvas by 10%.
+   */
+  zoomOut(): void {
+    const currentZoom = this._canvasZoom();
+    const newZoom = Math.max(currentZoom - 0.1, 0.1); // Min 10%
+    this._canvasZoom.set(newZoom);
+  }
+
+  /**
+   * Resets the canvas zoom to 100%.
+   */
+  resetZoom(): void {
+    this._canvasZoom.set(1);
+    this._canvasOffset.set({ x: 0, y: 0 });
+  }
+
+  /**
+   * Sets a specific zoom level for the canvas.
+   * @param zoom - Zoom level (0.1 to 5)
+   */
+  setZoom(zoom: number): void {
+    const clampedZoom = Math.max(0.1, Math.min(5, zoom));
+    this._canvasZoom.set(clampedZoom);
+  }
+
+  /**
+   * Sets the canvas offset (pan position).
+   * @param x - X offset
+   * @param y - Y offset
+   */
+  setCanvasOffset(x: number, y: number): void {
+    this._canvasOffset.set({ x, y });
+  }
+
+  /**
+   * Zooms the canvas at a specific point (e.g., mouse cursor).
+   * @param zoomDelta - Amount to zoom (positive = zoom in, negative = zoom out)
+   * @param centerX - X coordinate of zoom center
+   * @param centerY - Y coordinate of zoom center
+   * @param canvasWidth - Width of the canvas
+   * @param canvasHeight - Height of the canvas
+   */
+  zoomAtPoint(
+    zoomDelta: number,
+    centerX: number,
+    centerY: number,
+    canvasWidth: number,
+    canvasHeight: number,
+  ): void {
+    const currentZoom = this._canvasZoom();
+    const currentOffset = this._canvasOffset();
+
+    // Calculate new zoom level
+    const newZoom = Math.max(0.1, Math.min(5, currentZoom + zoomDelta));
+
+    // Calculate zoom ratio for offset adjustment
+    const zoomRatio = newZoom / currentZoom;
+
+    // Adjust offset to keep the point under cursor stationary
+    const newOffsetX = centerX - (centerX - currentOffset.x) * zoomRatio;
+    const newOffsetY = centerY - (centerY - currentOffset.y) * zoomRatio;
+
+    this._canvasZoom.set(newZoom);
+    this._canvasOffset.set({ x: newOffsetX, y: newOffsetY });
+  }
+
+  // ===== Canvas Pan Methods =====
+
+  /**
+   * Pans the canvas by a relative delta amount.
+   * @param deltaX - X offset delta in pixels
+   * @param deltaY - Y offset delta in pixels
+   */
+  panCanvas(deltaX: number, deltaY: number): void {
+    const currentOffset = this._canvasOffset();
+    this._canvasOffset.set({
+      x: currentOffset.x + deltaX,
+      y: currentOffset.y + deltaY,
+    });
+  }
+
+  /**
+   * Pans the canvas by a fixed amount in a specific direction.
+   * @param direction - Direction to pan ('up', 'down', 'left', 'right')
+   * @param amount - Number of pixels to pan (default: 50)
+   */
+  panDirection(direction: 'up' | 'down' | 'left' | 'right', amount: number = 50): void {
+    const offset = this._canvasOffset();
+    switch (direction) {
+      case 'up':
+        this._canvasOffset.set({ x: offset.x, y: offset.y + amount });
+        break;
+      case 'down':
+        this._canvasOffset.set({ x: offset.x, y: offset.y - amount });
+        break;
+      case 'left':
+        this._canvasOffset.set({ x: offset.x + amount, y: offset.y });
+        break;
+      case 'right':
+        this._canvasOffset.set({ x: offset.x - amount, y: offset.y });
+        break;
+    }
+  }
+
   // ===== localStorage Persistence Methods =====
 
   /**
@@ -840,6 +1700,12 @@ export class SvgDrawingService {
           snapEnabled: state.snapEnabled,
           snapThreshold: state.snapThreshold,
           gridVisible: this._gridVisible(),
+          style: {
+            strokeColor: this._strokeColor(),
+            strokeWidth: this._strokeWidth(),
+            fillColor: this._fillColor(),
+            fillEnabled: this._fillEnabled(),
+          },
         },
         backgroundImage: {
           data: this._backgroundImage(),
@@ -848,6 +1714,8 @@ export class SvgDrawingService {
           position: this._imagePosition(),
           locked: this._imageLocked(),
         },
+        canvasZoom: this._canvasZoom(),
+        canvasOffset: this._canvasOffset(),
         timestamp: new Date(),
       };
 
@@ -996,6 +1864,31 @@ class UpdateShapeCommand implements Command {
 
   undo(): void {
     this.service.updateShapeInState(this.oldShape.id, this.oldShape);
+  }
+
+  redo(): void {
+    this.execute();
+  }
+}
+
+/**
+ * Command for cutting a line into multiple segments.
+ */
+class CutLineCommand implements Command {
+  constructor(
+    private service: SvgDrawingService,
+    private originalLine: LineShape,
+    private newLines: LineShape[],
+  ) {}
+
+  execute(): void {
+    this.service.removeShapeFromState(this.originalLine.id);
+    this.newLines.forEach((line) => this.service.addShapeToState(line));
+  }
+
+  undo(): void {
+    this.newLines.forEach((line) => this.service.removeShapeFromState(line.id));
+    this.service.addShapeToState(this.originalLine);
   }
 
   redo(): void {

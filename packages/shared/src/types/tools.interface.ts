@@ -493,7 +493,26 @@ export interface Point {
 /**
  * Shape type enumeration for different drawable shapes.
  */
-export type ShapeType = 'line' | 'polygon';
+export type ShapeType =
+  | 'line'
+  | 'polygon'
+  | 'polyline'
+  | 'rectangle'
+  | 'circle'
+  | 'ellipse'
+  | 'triangle'
+  | 'rounded-rectangle'
+  | 'arc'
+  | 'bezier'
+  | 'star'
+  | 'arrow'
+  | 'cylinder'
+  | 'cone';
+
+/**
+ * Line style types for stroke rendering.
+ */
+export type LineStyle = 'solid' | 'dashed' | 'dotted';
 
 /**
  * Style properties for shapes.
@@ -505,6 +524,8 @@ export interface ShapeStyle {
   strokeWidth: number;
   /** Optional fill color in hex format */
   fillColor?: string;
+  /** Line style (solid, dashed, dotted) */
+  lineStyle?: LineStyle;
 }
 
 /**
@@ -522,6 +543,10 @@ export interface Shape {
   strokeWidth: number;
   /** Optional fill color in hex format */
   fillColor?: string;
+  /** Line style (solid, dashed, dotted) */
+  lineStyle?: LineStyle;
+  /** Whether the shape is visible on the canvas (default: true) */
+  visible?: boolean;
   /** Shape creation timestamp */
   createdAt: Date;
 }
@@ -536,6 +561,8 @@ export interface LineShape extends Shape {
   start: Point;
   /** Ending point of the line */
   end: Point;
+  /** Whether this line has cut marks at the end points (2 darts on each side) */
+  hasCutMarks?: boolean;
 }
 
 /**
@@ -551,6 +578,182 @@ export interface PolygonShape extends Shape {
 }
 
 /**
+ * Represents a polyline shape with multiple vertices (open path, not closed).
+ */
+export interface PolylineShape extends Shape {
+  /** Shape type discriminator */
+  type: 'polyline';
+  /** Array of polyline vertices */
+  vertices: Point[];
+}
+
+/**
+ * Represents a rectangle shape.
+ */
+export interface RectangleShape extends Shape {
+  /** Shape type discriminator */
+  type: 'rectangle';
+  /** Top-left corner point */
+  topLeft: Point;
+  /** Rectangle width in pixels */
+  width: number;
+  /** Rectangle height in pixels */
+  height: number;
+}
+
+/**
+ * Represents a circle shape.
+ */
+export interface CircleShape extends Shape {
+  /** Shape type discriminator */
+  type: 'circle';
+  /** Center point of the circle */
+  center: Point;
+  /** Radius in pixels */
+  radius: number;
+}
+
+/**
+ * Represents an ellipse shape.
+ */
+export interface EllipseShape extends Shape {
+  /** Shape type discriminator */
+  type: 'ellipse';
+  /** Center point of the ellipse */
+  center: Point;
+  /** Horizontal radius in pixels */
+  radiusX: number;
+  /** Vertical radius in pixels */
+  radiusY: number;
+}
+
+/**
+ * Represents a triangle shape with exactly three vertices.
+ */
+export interface TriangleShape extends Shape {
+  /** Shape type discriminator */
+  type: 'triangle';
+  /** Array of exactly three vertices */
+  vertices: [Point, Point, Point];
+}
+
+/**
+ * Represents a rectangle with rounded corners.
+ */
+export interface RoundedRectangleShape extends Shape {
+  /** Shape type discriminator */
+  type: 'rounded-rectangle';
+  /** Top-left corner point */
+  topLeft: Point;
+  /** Rectangle width in pixels */
+  width: number;
+  /** Rectangle height in pixels */
+  height: number;
+  /** Corner radius in pixels */
+  cornerRadius: number;
+}
+
+/**
+ * Represents an arc (curved line segment).
+ */
+export interface ArcShape extends Shape {
+  /** Shape type discriminator */
+  type: 'arc';
+  /** Starting point of the arc */
+  start: Point;
+  /** Ending point of the arc */
+  end: Point;
+  /** Arc radius in pixels */
+  radius: number;
+  /** Large arc flag for SVG path */
+  largeArc: boolean;
+  /** Sweep direction flag for SVG path */
+  sweep: boolean;
+}
+
+/**
+ * Represents a cubic Bezier curve.
+ */
+export interface BezierShape extends Shape {
+  /** Shape type discriminator */
+  type: 'bezier';
+  /** Starting point */
+  start: Point;
+  /** Ending point */
+  end: Point;
+  /** First control point */
+  controlPoint1: Point;
+  /** Second control point */
+  controlPoint2: Point;
+}
+
+/**
+ * Represents a star shape with configurable points.
+ */
+export interface StarShape extends Shape {
+  /** Shape type discriminator */
+  type: 'star';
+  /** Center point of the star */
+  center: Point;
+  /** Outer radius (tip of points) */
+  outerRadius: number;
+  /** Inner radius (between points) */
+  innerRadius: number;
+  /** Number of star points */
+  points: number;
+  /** Rotation angle in degrees */
+  rotation: number;
+}
+
+/**
+ * Represents an arrow shape.
+ */
+export interface ArrowShape extends Shape {
+  /** Shape type discriminator */
+  type: 'arrow';
+  /** Starting point (tail) */
+  start: Point;
+  /** Ending point (head) */
+  end: Point;
+  /** Width of the arrowhead */
+  headWidth: number;
+  /** Length of the arrowhead */
+  headLength: number;
+}
+
+/**
+ * Represents a cylinder in 2D projection.
+ */
+export interface CylinderShape extends Shape {
+  /** Shape type discriminator */
+  type: 'cylinder';
+  /** Top-left corner point */
+  topLeft: Point;
+  /** Cylinder width in pixels */
+  width: number;
+  /** Cylinder height in pixels */
+  height: number;
+  /** Height of the ellipse caps */
+  ellipseHeight: number;
+}
+
+/**
+ * Represents a cone in 2D projection.
+ */
+export interface ConeShape extends Shape {
+  /** Shape type discriminator */
+  type: 'cone';
+  /** Apex (tip) point of the cone */
+  apex: Point;
+  /** Center point of the base */
+  baseCenter: Point;
+  /** Width of the base ellipse */
+  baseWidth: number;
+  /** Height of the base ellipse */
+  baseHeight: number;
+}
+
+/**
  * Drawing state interface for canvas state management.
  */
 export interface DrawingState {
@@ -559,7 +762,25 @@ export interface DrawingState {
   /** ID of the currently selected shape */
   selectedShapeId: string | null;
   /** Currently active drawing tool */
-  currentTool: 'line' | 'polygon' | 'select' | 'delete';
+  currentTool:
+    | 'line'
+    | 'polygon'
+    | 'polyline'
+    | 'rectangle'
+    | 'circle'
+    | 'ellipse'
+    | 'triangle'
+    | 'rounded-rectangle'
+    | 'arc'
+    | 'bezier'
+    | 'star'
+    | 'arrow'
+    | 'cylinder'
+    | 'cone'
+    | 'select'
+    | 'move'
+    | 'delete'
+    | 'cut';
   /** Whether drawing is in progress */
   isDrawing: boolean;
   /** Active vertices for in-progress polygon */
@@ -629,6 +850,10 @@ export interface StoredDrawing {
   settings: DrawingSettings;
   /** Background image settings (optional) */
   backgroundImage?: BackgroundImageSettings;
+  /** Canvas zoom level (0.1 - 5) */
+  canvasZoom?: number;
+  /** Canvas pan offset */
+  canvasOffset?: { x: number; y: number };
   /** Timestamp when saved */
   timestamp: Date;
 }
@@ -643,6 +868,22 @@ export interface DrawingSettings {
   snapThreshold: number;
   /** Whether grid is visible */
   gridVisible: boolean;
+  /** Current style settings for new shapes */
+  style: DrawingStyleSettings;
+}
+
+/**
+ * Style settings for drawing shapes.
+ */
+export interface DrawingStyleSettings {
+  /** Stroke color in hex format (e.g., "#000000") */
+  strokeColor: string;
+  /** Stroke width in pixels (1-10) */
+  strokeWidth: number;
+  /** Fill color in hex format (e.g., "#cccccc") */
+  fillColor: string;
+  /** Whether fill is enabled */
+  fillEnabled: boolean;
 }
 
 /**
