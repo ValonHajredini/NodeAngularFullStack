@@ -12,7 +12,6 @@ import {
   computed,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { NgxDotpatternComponent } from '@omnedia/ngx-dotpattern';
 import { SvgDrawingService } from '../../svg-drawing.service';
 import { Point, LineShape, PolygonShape, Shape, ShapeStyle } from '@nodeangularfullstack/shared';
 
@@ -23,18 +22,25 @@ import { Point, LineShape, PolygonShape, Shape, ShapeStyle } from '@nodeangularf
 @Component({
   selector: 'app-canvas-renderer',
   standalone: true,
-  imports: [CommonModule, NgxDotpatternComponent],
+  imports: [CommonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
       class="canvas-container relative w-full h-full"
       [class.cursor-select]="drawingService.currentTool() === 'select'"
     >
-      <!-- Dot Pattern Background -->
-      <om-dotpattern
-        [patternColor]="'rgba(156, 163, 175, 0.3)'"
-        styleClass="absolute inset-0 w-full h-full"
-      ></om-dotpattern>
+      <!-- Background Image Layer (z-index: 5) -->
+      @if (drawingService.backgroundImage()) {
+        <img
+          [src]="drawingService.backgroundImage()!"
+          [style.opacity]="drawingService.imageOpacity()"
+          [style.transform]="getImageTransform()"
+          class="background-image"
+          alt="Background for tracing"
+        />
+      }
+
+      <!-- SVG Drawing Layer (z-index: 10) -->
       <svg
         #canvas
         class="absolute inset-0 w-full h-full"
@@ -178,6 +184,16 @@ import { Point, LineShape, PolygonShape, Shape, ShapeStyle } from '@nodeangularf
 
       .canvas-container.cursor-select {
         cursor: default;
+      }
+
+      .background-image {
+        position: absolute;
+        top: 0;
+        left: 0;
+        pointer-events: none;
+        z-index: 5;
+        transform-origin: top left;
+        max-width: none;
       }
 
       svg {
@@ -438,5 +454,14 @@ export class CanvasRendererComponent implements OnInit, OnDestroy {
    */
   getPolygonPoints(polygon: PolygonShape): string {
     return polygon.vertices.map((v) => `${v.x},${v.y}`).join(' ');
+  }
+
+  /**
+   * Gets the CSS transform string for the background image.
+   */
+  getImageTransform(): string {
+    const scale = this.drawingService.imageScale();
+    const position = this.drawingService.imagePosition();
+    return `translate(${position.x}px, ${position.y}px) scale(${scale})`;
   }
 }

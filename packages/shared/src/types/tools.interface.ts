@@ -627,6 +627,8 @@ export interface StoredDrawing {
   shapes: Shape[];
   /** Drawing settings */
   settings: DrawingSettings;
+  /** Background image settings (optional) */
+  backgroundImage?: BackgroundImageSettings;
   /** Timestamp when saved */
   timestamp: Date;
 }
@@ -641,4 +643,20 @@ export interface DrawingSettings {
   snapThreshold: number;
   /** Whether grid is visible */
   gridVisible: boolean;
+}
+
+/**
+ * Background image settings for tracing.
+ */
+export interface BackgroundImageSettings {
+  /** Base64 encoded image data or null */
+  data: string | null;
+  /** Image opacity (0-1) */
+  opacity: number;
+  /** Image scale factor (0.1-5) */
+  scale: number;
+  /** Image position offset */
+  position: { x: number; y: number };
+  /** Whether image is locked from manipulation */
+  locked: boolean;
 }

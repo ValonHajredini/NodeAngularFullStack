@@ -36,6 +36,13 @@ export class SvgDrawingService {
   private readonly _redoStack = signal<Command[]>([]);
   private readonly _gridVisible = signal<boolean>(false);
 
+  // Background image state
+  private readonly _backgroundImage = signal<string | null>(null);
+  private readonly _imageOpacity = signal<number>(0.5);
+  private readonly _imageScale = signal<number>(1);
+  private readonly _imagePosition = signal<{ x: number; y: number }>({ x: 0, y: 0 });
+  private readonly _imageLocked = signal<boolean>(false);
+
   // localStorage persistence
   private readonly savePending$ = new Subject<DrawingState>();
   private readonly STORAGE_KEY = 'svg-drawing-state';
@@ -50,6 +57,13 @@ export class SvgDrawingService {
   readonly snapEnabled = this._snapEnabled.asReadonly();
   readonly snapThreshold = this._snapThreshold.asReadonly();
   readonly gridVisible = this._gridVisible.asReadonly();
+
+  // Background image public signals
+  readonly backgroundImage = this._backgroundImage.asReadonly();
+  readonly imageOpacity = this._imageOpacity.asReadonly();
+  readonly imageScale = this._imageScale.asReadonly();
+  readonly imagePosition = this._imagePosition.asReadonly();
+  readonly imageLocked = this._imageLocked.asReadonly();
 
   // Computed signals
   readonly selectedShape = computed(() => {
@@ -96,6 +110,16 @@ export class SvgDrawingService {
       this._snapEnabled.set(stored.settings.snapEnabled);
       this._snapThreshold.set(stored.settings.snapThreshold);
       this._gridVisible.set(stored.settings.gridVisible);
+
+      // Restore background image settings if available
+      if (stored.backgroundImage) {
+        this._backgroundImage.set(stored.backgroundImage.data || null);
+        this._imageOpacity.set(stored.backgroundImage.opacity ?? 0.5);
+        this._imageScale.set(stored.backgroundImage.scale ?? 1);
+        this._imagePosition.set(stored.backgroundImage.position ?? { x: 0, y: 0 });
+        this._imageLocked.set(stored.backgroundImage.locked ?? false);
+      }
+
       console.log('SvgDrawingService initialized with stored data');
     } else {
       // Reset state on initialization
@@ -106,6 +130,11 @@ export class SvgDrawingService {
       this._snapEnabled.set(true);
       this._snapThreshold.set(5);
       this._gridVisible.set(false);
+      this._backgroundImage.set(null);
+      this._imageOpacity.set(0.5);
+      this._imageScale.set(1);
+      this._imagePosition.set({ x: 0, y: 0 });
+      this._imageLocked.set(false);
       console.log('SvgDrawingService initialized with defaults');
     }
   }
@@ -734,6 +763,68 @@ export class SvgDrawingService {
     this._gridVisible.set(visible);
   }
 
+  // ===== Background Image Methods =====
+
+  /**
+   * Sets the background image for tracing.
+   * @param imageData - Base64 encoded image data or null to clear
+   */
+  setBackgroundImage(imageData: string | null): void {
+    this._backgroundImage.set(imageData);
+  }
+
+  /**
+   * Sets the background image opacity.
+   * @param opacity - Opacity value between 0 and 1
+   */
+  setImageOpacity(opacity: number): void {
+    if (opacity >= 0 && opacity <= 1) {
+      this._imageOpacity.set(opacity);
+    }
+  }
+
+  /**
+   * Sets the background image scale.
+   * @param scale - Scale value between 0.1 and 5
+   */
+  setImageScale(scale: number): void {
+    if (scale >= 0.1 && scale <= 5) {
+      this._imageScale.set(scale);
+    }
+  }
+
+  /**
+   * Sets the background image position.
+   * @param x - X coordinate offset
+   * @param y - Y coordinate offset
+   */
+  setImagePosition(x: number, y: number): void {
+    this._imagePosition.set({ x, y });
+  }
+
+  /**
+   * Resets the background image transform to defaults.
+   */
+  resetImageTransform(): void {
+    this._imageScale.set(1);
+    this._imagePosition.set({ x: 0, y: 0 });
+  }
+
+  /**
+   * Toggles the background image lock state.
+   */
+  toggleImageLock(): void {
+    this._imageLocked.update((locked) => !locked);
+  }
+
+  /**
+   * Sets the background image lock state.
+   * @param locked - Whether the image should be locked
+   */
+  setImageLocked(locked: boolean): void {
+    this._imageLocked.set(locked);
+  }
+
   // ===== localStorage Persistence Methods =====
 
   /**
@@ -749,6 +840,13 @@ export class SvgDrawingService {
           snapEnabled: state.snapEnabled,
           snapThreshold: state.snapThreshold,
           gridVisible: this._gridVisible(),
+        },
+        backgroundImage: {
+          data: this._backgroundImage(),
+          opacity: this._imageOpacity(),
+          scale: this._imageScale(),
+          position: this._imagePosition(),
+          locked: this._imageLocked(),
         },
         timestamp: new Date(),
       };

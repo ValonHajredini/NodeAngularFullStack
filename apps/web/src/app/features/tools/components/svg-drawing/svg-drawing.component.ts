@@ -18,6 +18,7 @@ import { SvgDrawingService } from './svg-drawing.service';
 import { CanvasRendererComponent } from './components/canvas-renderer/canvas-renderer.component';
 import { ToolsSidebarComponent } from './components/tools-sidebar/tools-sidebar.component';
 import { ShapePropertiesComponent } from './components/shape-properties/shape-properties.component';
+import { BackgroundImagePanelComponent } from './components/background-image-panel/background-image-panel.component';
 import { ExportOptionsComponent } from './components/export-options/export-options.component';
 import { HelpPanelComponent } from './components/help-panel/help-panel.component';
 import { ShapeStyle, ExportOptions } from '@nodeangularfullstack/shared';
@@ -44,6 +45,7 @@ import { ShapeStyle, ExportOptions } from '@nodeangularfullstack/shared';
     CanvasRendererComponent,
     ToolsSidebarComponent,
     ShapePropertiesComponent,
+    BackgroundImagePanelComponent,
     ExportOptionsComponent,
     HelpPanelComponent,
   ],
@@ -114,10 +116,14 @@ import { ShapeStyle, ExportOptions } from '@nodeangularfullstack/shared';
                   Edit
                 </p-tab>
                 <p-tab [value]="1">
+                  <i class="pi pi-image mr-2"></i>
+                  Background
+                </p-tab>
+                <p-tab [value]="2">
                   <i class="pi pi-download mr-2"></i>
                   Export
                 </p-tab>
-                <p-tab [value]="2">
+                <p-tab [value]="3">
                   <i class="pi pi-question-circle mr-2"></i>
                   Help
                 </p-tab>
@@ -132,10 +138,14 @@ import { ShapeStyle, ExportOptions } from '@nodeangularfullstack/shared';
                 </p-tabpanel>
 
                 <p-tabpanel [value]="1">
-                  <app-export-options (export)="onExport($event)"></app-export-options>
+                  <app-background-image-panel></app-background-image-panel>
                 </p-tabpanel>
 
                 <p-tabpanel [value]="2">
+                  <app-export-options (export)="onExport($event)"></app-export-options>
+                </p-tabpanel>
+
+                <p-tabpanel [value]="3">
                   <app-help-panel></app-help-panel>
                 </p-tabpanel>
               </p-tabpanels>
