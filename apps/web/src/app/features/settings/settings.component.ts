@@ -1,9 +1,10 @@
-import { Component, ChangeDetectionStrategy, inject, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
 import { SettingsService } from './settings.service';
 import { SettingsSidebarComponent } from '@shared/components/settings-sidebar';
 import { SettingsSection } from './types/settings.types';
+import { ThemeService } from '@core/services/theme.service';
 
 /**
  * Main settings component with sidebar navigation and dynamic content area.
@@ -15,30 +16,27 @@ import { SettingsSection } from './types/settings.types';
   imports: [CommonModule, RouterOutlet, SettingsSidebarComponent],
   template: `
     <div class="settings-page">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div class="settings-container">
         <!-- Desktop Layout -->
-        <div class="lg:grid lg:grid-cols-4 lg:gap-8">
+        <div class="settings-layout">
           <!-- Sidebar -->
-          <div class="lg:col-span-1">
-            <div class="sticky top-8">
-              <div class="hidden lg:block">
-                <div class="settings-sidebar-container">
-                  <app-settings-sidebar
-                    [navigationItems]="settingsService.navigationItems()"
-                    [activeSection]="settingsService.activeSection()"
-                    [isMobileOpen]="isMobileSidebarOpen()"
-                    (toggleMobile)="onToggleMobileSidebar()"
-                    (closeMobile)="onCloseMobileSidebar()"
-                  />
-                </div>
-              </div>
+          <aside class="settings-sidebar-wrapper">
+            <div class="hidden lg:block h-full">
+              <app-settings-sidebar
+                [navigationItems]="settingsService.navigationItems()"
+                [activeSection]="settingsService.activeSection()"
+                [isMobileOpen]="isMobileSidebarOpen()"
+                [theme]="currentTheme()"
+                (toggleMobile)="onToggleMobileSidebar()"
+                (closeMobile)="onCloseMobileSidebar()"
+              />
             </div>
-          </div>
+          </aside>
 
           <!-- Main Content -->
-          <div class="lg:col-span-3">
+          <main class="settings-main">
             <!-- Mobile Header -->
-            <div class="lg:hidden mb-6">
+            <div class="lg:hidden mb-6 px-4">
               <div class="settings-mobile-header">
                 <div class="flex items-center justify-between">
                   <h1 class="text-xl font-semibold text-gray-900">Settings</h1>
@@ -58,7 +56,7 @@ import { SettingsSection } from './types/settings.types';
             <div class="settings-content">
               <router-outlet />
             </div>
-          </div>
+          </main>
         </div>
 
         <!-- Mobile Sidebar Overlay -->
@@ -78,6 +76,7 @@ import { SettingsSection } from './types/settings.types';
                   [navigationItems]="settingsService.navigationItems()"
                   [activeSection]="settingsService.activeSection()"
                   [isMobileOpen]="isMobileSidebarOpen()"
+                  [theme]="currentTheme()"
                   (toggleMobile)="onToggleMobileSidebar()"
                   (closeMobile)="onCloseMobileSidebar()"
                 />
@@ -91,22 +90,39 @@ import { SettingsSection } from './types/settings.types';
   styles: [
     `
       .settings-page {
-        min-height: 100vh;
+        @apply min-h-screen;
         background-color: var(--color-background);
         transition: var(--transition-colors);
       }
 
-      .settings-content {
-        @apply space-y-8;
+      .settings-container {
+        @apply w-full h-full;
       }
 
-      .settings-sidebar-container {
-        background-color: var(--color-surface);
-        box-shadow: var(--shadow-base);
-        border-radius: var(--border-radius-lg);
-        min-height: 600px;
-        border: 1px solid var(--color-border-light);
-        transition: var(--transition-colors);
+      .settings-layout {
+        @apply flex h-full;
+      }
+
+      /* Sidebar */
+      .settings-sidebar-wrapper {
+        @apply hidden lg:block;
+        width: 360px;
+        min-width: 360px;
+        max-width: 360px;
+        height: 100vh;
+        position: sticky;
+        top: 0;
+        overflow-y: auto;
+      }
+
+      /* Main Content */
+      .settings-main {
+        @apply flex-1 min-w-0;
+        background-color: var(--color-background);
+      }
+
+      .settings-content {
+        @apply w-full h-full;
       }
 
       .settings-mobile-header {
@@ -154,24 +170,14 @@ import { SettingsSection } from './types/settings.types';
         transition: var(--transition-colors);
       }
 
-      /* Ensure sticky positioning works correctly */
-      .sticky {
-        position: -webkit-sticky;
-        position: sticky;
-      }
-
       /* Mobile sidebar animations */
       @media (max-width: 1023px) {
-        .settings-sidebar {
-          @apply transform transition-transform duration-300 ease-in-out;
+        .settings-sidebar-wrapper {
+          display: none;
         }
 
-        .settings-sidebar.mobile-open {
-          @apply translate-x-0;
-        }
-
-        .settings-sidebar.mobile-closed {
-          @apply -translate-x-full;
+        .settings-main {
+          width: 100%;
         }
       }
 
@@ -179,20 +185,21 @@ import { SettingsSection } from './types/settings.types';
       button:focus {
         @apply outline-none ring-2 ring-primary-500 ring-offset-2;
       }
-
-      /* Smooth transitions */
-      .settings-content > * {
-        @apply transition-all duration-200 ease-in-out;
-      }
     `,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SettingsComponent {
   protected readonly settingsService = inject(SettingsService);
+  private readonly themeService = inject(ThemeService);
 
   // Mobile sidebar state
   public readonly isMobileSidebarOpen = signal(false);
+
+  // Computed theme signal for sidebar
+  protected readonly currentTheme = computed(() => {
+    return this.themeService.isDarkMode() ? 'dark' : 'light';
+  });
 
   /**
    * Toggle mobile sidebar

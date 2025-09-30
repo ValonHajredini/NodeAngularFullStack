@@ -12,136 +12,112 @@ import { RouterLink } from '@angular/router';
   imports: [CommonModule, RouterLink],
   template: `
     <div class="security-settings">
-      <div class="max-w-4xl">
-        <!-- Header -->
-        <div class="mb-8">
-          <h2 class="text-2xl font-bold text-gray-900">Security Settings</h2>
-          <p class="mt-1 text-sm text-gray-600">
-            Manage your password, authentication, and API access tokens.
-          </p>
+      <!-- Header -->
+      <div class="settings-header">
+        <h1 class="settings-title">Security Settings</h1>
+        <p class="settings-subtitle">
+          Manage your password, authentication, and API access tokens.
+        </p>
+      </div>
+
+      <!-- Password & Authentication Card -->
+      <div class="settings-card">
+        <h2 class="card-title">Password & Authentication</h2>
+
+        <div class="security-options">
+          <!-- Password -->
+          <div class="security-option">
+            <div class="option-icon">
+              <i class="pi pi-key"></i>
+            </div>
+            <div class="option-content">
+              <h3 class="option-title">Password</h3>
+              <p class="option-description">Change your account password</p>
+            </div>
+            <a routerLink="/auth/password-reset" class="btn btn-secondary">
+              <i class="pi pi-arrow-right"></i>
+              Change
+            </a>
+          </div>
+
+          <!-- Two-Factor Authentication -->
+          <div class="security-option">
+            <div class="option-icon option-icon-disabled">
+              <i class="pi pi-shield"></i>
+            </div>
+            <div class="option-content">
+              <h3 class="option-title">Two-Factor Authentication</h3>
+              <p class="option-description">Add an extra layer of security to your account</p>
+            </div>
+            <button type="button" disabled class="btn btn-disabled" title="Coming soon">
+              <i class="pi pi-lock"></i>
+              Enable 2FA
+            </button>
+          </div>
+
+          <!-- Active Sessions -->
+          <div class="security-option">
+            <div class="option-icon option-icon-disabled">
+              <i class="pi pi-desktop"></i>
+            </div>
+            <div class="option-content">
+              <h3 class="option-title">Active Sessions</h3>
+              <p class="option-description">Manage devices and browser sessions</p>
+            </div>
+            <button type="button" disabled class="btn btn-disabled" title="Coming soon">
+              <i class="pi pi-arrow-right"></i>
+              View
+            </button>
+          </div>
         </div>
+      </div>
 
-        <div class="space-y-8">
-          <!-- Password & Authentication -->
-          <div class="bg-white shadow rounded-lg">
-            <div class="px-4 py-5 sm:p-6">
-              <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
-                Password & Authentication
-              </h3>
+      <!-- Security Notifications Card -->
+      <div class="settings-card">
+        <h2 class="card-title">Security Notifications</h2>
 
-              <div class="space-y-4">
-                <div
-                  class="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
-                >
-                  <div>
-                    <h4 class="text-sm font-medium text-gray-900">Password</h4>
-                    <p class="text-sm text-gray-500">Change your account password</p>
-                  </div>
-                  <a
-                    routerLink="/auth/password-reset"
-                    class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
-                  >
-                    <i class="pi pi-key mr-2"></i>
-                    Change Password
-                  </a>
-                </div>
-
-                <div
-                  class="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
-                >
-                  <div>
-                    <h4 class="text-sm font-medium text-gray-900">Two-Factor Authentication</h4>
-                    <p class="text-sm text-gray-500">
-                      Add an extra layer of security to your account
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    disabled
-                    class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-400 bg-gray-50 cursor-not-allowed"
-                    title="Coming soon"
-                  >
-                    <i class="pi pi-shield mr-2"></i>
-                    Enable 2FA
-                  </button>
-                </div>
-
-                <div
-                  class="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
-                >
-                  <div>
-                    <h4 class="text-sm font-medium text-gray-900">Active Sessions</h4>
-                    <p class="text-sm text-gray-500">Manage devices and browser sessions</p>
-                  </div>
-                  <button
-                    type="button"
-                    disabled
-                    class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-400 bg-gray-50 cursor-not-allowed"
-                    title="Coming soon"
-                  >
-                    <i class="pi pi-desktop mr-2"></i>
-                    View Sessions
-                  </button>
-                </div>
-              </div>
+        <div class="notification-options">
+          <!-- Login Alerts -->
+          <div class="notification-item">
+            <div class="notification-content">
+              <h3 class="notification-title">Login Alerts</h3>
+              <p class="notification-description">
+                Get notified when someone logs into your account from a new device
+              </p>
+            </div>
+            <div class="toggle-switch">
+              <input type="checkbox" id="login-alerts" checked disabled class="toggle-input" />
+              <label for="login-alerts" class="toggle-label"></label>
             </div>
           </div>
 
-          <!-- Security Notifications -->
-          <div class="bg-white shadow rounded-lg">
-            <div class="px-4 py-5 sm:p-6">
-              <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
-                Security Notifications
-              </h3>
+          <!-- Password Changes -->
+          <div class="notification-item">
+            <div class="notification-content">
+              <h3 class="notification-title">Password Changes</h3>
+              <p class="notification-description">Get notified when your password is changed</p>
+            </div>
+            <div class="toggle-switch">
+              <input type="checkbox" id="password-changes" checked disabled class="toggle-input" />
+              <label for="password-changes" class="toggle-label"></label>
+            </div>
+          </div>
 
-              <div class="space-y-4">
-                <div class="flex items-start space-x-3">
-                  <div class="flex-shrink-0">
-                    <label class="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" checked class="sr-only peer" disabled />
-                      <div
-                        class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"
-                      ></div>
-                    </label>
-                  </div>
-                  <div class="min-w-0 flex-1">
-                    <p class="text-sm font-medium text-gray-900">Login Alerts</p>
-                    <p class="text-sm text-gray-500">
-                      Get notified when someone logs into your account from a new device
-                    </p>
-                  </div>
-                </div>
-
-                <div class="flex items-start space-x-3">
-                  <div class="flex-shrink-0">
-                    <label class="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" checked class="sr-only peer" disabled />
-                      <div
-                        class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"
-                      ></div>
-                    </label>
-                  </div>
-                  <div class="min-w-0 flex-1">
-                    <p class="text-sm font-medium text-gray-900">Password Changes</p>
-                    <p class="text-sm text-gray-500">Get notified when your password is changed</p>
-                  </div>
-                </div>
-
-                <div class="flex items-start space-x-3">
-                  <div class="flex-shrink-0">
-                    <label class="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" checked class="sr-only peer" disabled />
-                      <div
-                        class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"
-                      ></div>
-                    </label>
-                  </div>
-                  <div class="min-w-0 flex-1">
-                    <p class="text-sm font-medium text-gray-900">Suspicious Activity</p>
-                    <p class="text-sm text-gray-500">Get notified of unusual account activity</p>
-                  </div>
-                </div>
-              </div>
+          <!-- Suspicious Activity -->
+          <div class="notification-item">
+            <div class="notification-content">
+              <h3 class="notification-title">Suspicious Activity</h3>
+              <p class="notification-description">Get notified of unusual account activity</p>
+            </div>
+            <div class="toggle-switch">
+              <input
+                type="checkbox"
+                id="suspicious-activity"
+                checked
+                disabled
+                class="toggle-input"
+              />
+              <label for="suspicious-activity" class="toggle-label"></label>
             </div>
           </div>
         </div>
@@ -150,9 +126,179 @@ import { RouterLink } from '@angular/router';
   `,
   styles: [
     `
-      /* Toggle switch styles are handled by Tailwind classes above */
-      .cursor-not-allowed {
-        cursor: not-allowed;
+      .security-settings {
+        @apply max-w-4xl mx-auto px-6 py-8;
+      }
+
+      /* Header */
+      .settings-header {
+        @apply mb-8;
+      }
+
+      .settings-title {
+        @apply text-3xl font-bold mb-2;
+        color: var(--color-text-primary);
+      }
+
+      .settings-subtitle {
+        @apply text-base;
+        color: var(--color-text-secondary);
+      }
+
+      /* Cards */
+      .settings-card {
+        @apply rounded-xl p-6 mb-6;
+        background-color: var(--color-surface);
+        border: 1px solid var(--color-border-light);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      }
+
+      .card-title {
+        @apply text-xl font-semibold mb-6;
+        color: var(--color-text-primary);
+      }
+
+      /* Security Options */
+      .security-options {
+        @apply space-y-4;
+      }
+
+      .security-option {
+        @apply flex items-center gap-4 p-4 rounded-lg transition-all;
+        background-color: var(--color-background);
+        border: 1px solid var(--color-border-light);
+      }
+
+      .security-option:hover {
+        border-color: var(--color-border);
+      }
+
+      .option-icon {
+        @apply w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        font-size: 20px;
+      }
+
+      .option-icon-disabled {
+        background: var(--color-gray-200);
+        color: var(--color-text-muted);
+      }
+
+      .option-content {
+        @apply flex-1 min-w-0;
+      }
+
+      .option-title {
+        @apply text-sm font-semibold mb-1;
+        color: var(--color-text-primary);
+      }
+
+      .option-description {
+        @apply text-xs;
+        color: var(--color-text-secondary);
+      }
+
+      /* Notification Options */
+      .notification-options {
+        @apply space-y-4;
+      }
+
+      .notification-item {
+        @apply flex items-center gap-4 p-4 rounded-lg;
+        background-color: var(--color-background);
+      }
+
+      .notification-content {
+        @apply flex-1 min-w-0;
+      }
+
+      .notification-title {
+        @apply text-sm font-semibold mb-1;
+        color: var(--color-text-primary);
+      }
+
+      .notification-description {
+        @apply text-xs;
+        color: var(--color-text-secondary);
+      }
+
+      /* Toggle Switch */
+      .toggle-switch {
+        @apply relative;
+      }
+
+      .toggle-input {
+        @apply sr-only;
+      }
+
+      .toggle-label {
+        @apply block w-11 h-6 rounded-full cursor-pointer transition-colors;
+        background-color: var(--color-gray-300);
+        position: relative;
+      }
+
+      .toggle-label::after {
+        content: '';
+        @apply absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform;
+      }
+
+      .toggle-input:checked + .toggle-label {
+        background-color: var(--color-primary-600);
+      }
+
+      .toggle-input:checked + .toggle-label::after {
+        transform: translateX(20px);
+      }
+
+      .toggle-input:disabled + .toggle-label {
+        @apply opacity-50 cursor-not-allowed;
+      }
+
+      /* Buttons */
+      .btn {
+        @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all flex-shrink-0;
+      }
+
+      .btn-secondary {
+        background-color: var(--color-surface);
+        border: 1px solid var(--color-border);
+        color: var(--color-text-secondary);
+      }
+
+      .btn-secondary:hover {
+        background-color: var(--color-gray-50);
+        border-color: var(--color-border-dark);
+      }
+
+      .btn-disabled {
+        @apply opacity-50 cursor-not-allowed;
+        background-color: var(--color-gray-100);
+        border: 1px solid var(--color-border-light);
+        color: var(--color-text-muted);
+      }
+
+      /* Responsive */
+      @media (max-width: 768px) {
+        .security-settings {
+          @apply px-4 py-6;
+        }
+
+        .settings-title {
+          @apply text-2xl;
+        }
+
+        .settings-card {
+          @apply p-5;
+        }
+
+        .security-option {
+          @apply flex-col items-start;
+        }
+
+        .btn {
+          @apply w-full justify-center;
+        }
       }
     `,
   ],

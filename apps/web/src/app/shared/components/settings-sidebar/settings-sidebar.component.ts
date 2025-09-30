@@ -12,18 +12,29 @@ import { SettingsNavItem, SettingsSection } from '@features/settings/types/setti
   standalone: true,
   imports: [CommonModule, RouterModule],
   template: `
-    <div class="settings-sidebar">
-      <!-- Mobile Header -->
-      <div class="lg:hidden flex items-center justify-between p-4 border-b border-gray-200">
-        <h2 class="text-lg font-semibold text-gray-900">Settings</h2>
+    <div class="settings-sidebar" [attr.data-theme]="theme()">
+      <!-- Header -->
+      <div class="sidebar-header">
+        <h1 class="sidebar-title">Settings & privacy</h1>
         <button
           type="button"
           (click)="onToggleMobileSidebar()"
-          class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500"
+          class="lg:hidden sidebar-toggle"
           aria-label="Toggle settings menu"
         >
-          <i class="pi pi-bars text-lg"></i>
+          <i class="pi pi-bars"></i>
         </button>
+      </div>
+
+      <!-- Search Bar -->
+      <div class="sidebar-search">
+        <i class="pi pi-search search-icon"></i>
+        <input
+          type="text"
+          placeholder="Search settings"
+          class="search-input"
+          aria-label="Search settings"
+        />
       </div>
 
       <!-- Navigation Items -->
@@ -33,141 +44,260 @@ import { SettingsNavItem, SettingsSection } from '@features/settings/types/setti
         role="navigation"
         aria-label="Settings navigation"
       >
-        <div class="space-y-1 p-4">
+        <div class="nav-items">
           @for (item of navigationItems(); track item.id) {
             <a
               [routerLink]="getRouteForSection(item.id)"
               routerLinkActive="active"
               (click)="onNavigationClick()"
-              class="nav-item group w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out block"
-              [attr.aria-describedby]="'nav-desc-' + item.id"
+              class="nav-item"
+              [attr.aria-label]="item.label"
             >
+              <div class="nav-item-icon">
+                <i [class]="'pi ' + item.icon" aria-hidden="true"></i>
+              </div>
               <div class="nav-item-content">
-                <div class="flex items-center">
-                  <i
-                    [class]="'pi ' + item.icon + ' nav-icon'"
-                    class="flex-shrink-0 w-5 h-5 mr-3 text-current"
-                    aria-hidden="true"
-                  ></i>
-                  <span class="nav-label">{{ item.label }}</span>
-                  @if (item.requiresRole === 'admin') {
-                    <span class="ml-auto">
-                      <i class="pi pi-crown text-xs text-amber-500" title="Admin only"></i>
-                    </span>
-                  }
-                </div>
+                <span class="nav-item-label">{{ item.label }}</span>
                 @if (item.description) {
-                  <p
-                    [id]="'nav-desc-' + item.id"
-                    class="nav-description text-xs text-gray-500 mt-1 ml-8 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                  >
-                    {{ item.description }}
-                  </p>
+                  <span class="nav-item-description">{{ item.description }}</span>
                 }
               </div>
+              @if (item.requiresRole === 'admin') {
+                <div class="nav-item-badge">
+                  <i class="pi pi-crown" title="Admin only"></i>
+                </div>
+              }
             </a>
           }
-        </div>
-
-        <!-- Footer Info -->
-        <div class="border-t border-gray-200 mt-6 pt-6 px-4">
-          <div class="text-xs text-gray-500">
-            <div class="flex items-center">
-              <i class="pi pi-info-circle mr-2"></i>
-              <span>Settings are auto-saved</span>
-            </div>
-          </div>
         </div>
       </nav>
 
       <!-- Mobile Overlay -->
       @if (isMobileOpen()) {
-        <div
-          class="lg:hidden fixed inset-0 bg-black bg-opacity-25 z-40"
-          (click)="onCloseMobileSidebar()"
-          aria-hidden="true"
-        ></div>
+        <div class="mobile-overlay" (click)="onCloseMobileSidebar()" aria-hidden="true"></div>
       }
     </div>
   `,
   styles: [
     `
+      /* Theme Variables */
       .settings-sidebar {
-        @apply flex flex-col h-full bg-white border-r border-gray-200;
+        @apply flex flex-col h-full;
+        --bg-primary: #ffffff;
+        --bg-secondary: #f8f9fa;
+        --bg-hover: #f0f2f5;
+        --bg-active: #e7f3ff;
+        --border-color: #e4e6eb;
+        --text-primary: #1c1e21;
+        --text-secondary: #65676b;
+        --text-tertiary: #8a8d91;
+        --icon-bg: #f0f2f5;
+        --icon-bg-active: #cfe9ff;
+        --accent: #0866ff;
+        --accent-text: #0866ff;
+        --input-bg: #f0f2f5;
+        --input-border: #e4e6eb;
+        --scrollbar-thumb: rgba(0, 0, 0, 0.2);
+        --scrollbar-thumb-hover: rgba(0, 0, 0, 0.3);
+        --overlay-bg: rgba(0, 0, 0, 0.6);
+        background: var(--bg-primary);
+        border-right: 1px solid var(--border-color);
       }
 
+      /* Dark Theme */
+      .settings-sidebar[data-theme='dark'] {
+        --bg-primary: #1f2937;
+        --bg-secondary: #242526;
+        --bg-hover: rgba(255, 255, 255, 0.05);
+        --bg-active: rgba(45, 136, 255, 0.15);
+        --border-color: rgba(255, 255, 255, 0.1);
+        --text-primary: #e4e6eb;
+        --text-secondary: #b0b3b8;
+        --text-tertiary: #8a8d91;
+        --icon-bg: rgba(255, 255, 255, 0.05);
+        --icon-bg-active: rgba(45, 136, 255, 0.15);
+        --accent: #2d88ff;
+        --accent-text: #2d88ff;
+        --input-bg: rgba(255, 255, 255, 0.05);
+        --input-border: transparent;
+        --scrollbar-thumb: rgba(255, 255, 255, 0.1);
+        --scrollbar-thumb-hover: rgba(255, 255, 255, 0.15);
+        --overlay-bg: rgba(0, 0, 0, 0.7);
+      }
+
+      /* Header */
+      .sidebar-header {
+        @apply flex items-center justify-between px-5 py-4;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .sidebar-title {
+        @apply text-xl font-semibold;
+        color: var(--text-primary);
+        letter-spacing: -0.02em;
+      }
+
+      .sidebar-toggle {
+        @apply p-2 rounded-lg transition-colors;
+        color: var(--text-secondary);
+      }
+
+      .sidebar-toggle:hover {
+        background: var(--bg-hover);
+        color: var(--text-primary);
+      }
+
+      /* Search Bar */
+      .sidebar-search {
+        @apply relative px-3 py-3;
+      }
+
+      .search-icon {
+        @apply absolute left-6 top-1/2 transform -translate-y-1/2 text-sm;
+        color: var(--text-secondary);
+      }
+
+      .search-input {
+        @apply w-full pl-9 pr-4 py-2 rounded-lg text-sm transition-all;
+        background: var(--input-bg);
+        border: 1px solid var(--input-border);
+        color: var(--text-primary);
+      }
+
+      .search-input::placeholder {
+        color: var(--text-tertiary);
+      }
+
+      .search-input:focus {
+        @apply outline-none;
+        background: var(--bg-hover);
+        border-color: var(--accent);
+      }
+
+      /* Navigation */
       .settings-nav {
         @apply flex-1 overflow-y-auto;
+        scrollbar-width: thin;
+        scrollbar-color: var(--scrollbar-thumb) transparent;
+      }
+
+      .settings-nav::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .settings-nav::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      .settings-nav::-webkit-scrollbar-thumb {
+        background: var(--scrollbar-thumb);
+        border-radius: 3px;
+      }
+
+      .settings-nav::-webkit-scrollbar-thumb:hover {
+        background: var(--scrollbar-thumb-hover);
+      }
+
+      .nav-items {
+        @apply space-y-0.5 px-2 py-2;
+      }
+
+      /* Navigation Item */
+      .nav-item {
+        @apply flex items-center gap-3 px-3 py-3 rounded-lg transition-all cursor-pointer;
+        color: var(--text-primary);
+        text-decoration: none;
+      }
+
+      .nav-item:hover {
+        background: var(--bg-hover);
+      }
+
+      .nav-item.active {
+        background: var(--bg-active);
+        color: var(--accent-text);
+      }
+
+      .nav-item.active .nav-item-icon {
+        color: var(--accent-text);
+      }
+
+      /* Icon Container */
+      .nav-item-icon {
+        @apply flex items-center justify-center w-9 h-9 rounded-lg flex-shrink-0;
+        background: var(--icon-bg);
+        color: var(--text-primary);
+        font-size: 18px;
+      }
+
+      .nav-item.active .nav-item-icon {
+        background: var(--icon-bg-active);
+      }
+
+      /* Content */
+      .nav-item-content {
+        @apply flex flex-col flex-1 min-w-0;
+      }
+
+      .nav-item-label {
+        @apply text-[15px] font-medium truncate;
+      }
+
+      .nav-item-description {
+        @apply text-xs mt-0.5 truncate;
+        color: var(--text-secondary);
+      }
+
+      .nav-item.active .nav-item-description {
+        color: var(--accent-text);
+        opacity: 0.8;
+      }
+
+      /* Badge */
+      .nav-item-badge {
+        @apply flex items-center justify-center w-5 h-5 rounded-full;
+        background: rgba(255, 193, 7, 0.15);
+        color: #ffc107;
+        font-size: 10px;
+      }
+
+      /* Mobile Overlay */
+      .mobile-overlay {
+        @apply lg:hidden fixed inset-0 z-40;
+        background: var(--overlay-bg);
       }
 
       .mobile-hidden {
         @apply lg:block hidden;
       }
 
-      .nav-item {
-        @apply text-gray-700 hover:bg-gray-50 hover:text-gray-900 focus:bg-gray-50 focus:text-gray-900 focus:outline-none;
-      }
-
-      .nav-item.active {
-        @apply bg-primary-50 text-primary-700 border border-primary-200;
-      }
-
-      .nav-item.active .nav-icon {
-        @apply text-primary-500;
-      }
-
-      .nav-item:hover .nav-description,
-      .nav-item:focus .nav-description {
-        @apply opacity-100;
-      }
-
-      .nav-item-content {
-        @apply w-full text-left;
-      }
-
-      .nav-icon {
-        @apply transition-colors duration-200;
-      }
-
-      .nav-label {
-        @apply truncate;
-      }
-
       /* Mobile styles */
       @media (max-width: 1023px) {
         .settings-nav {
-          @apply fixed top-0 left-0 z-50 w-64 h-full bg-white shadow-lg transform transition-transform duration-300 ease-in-out;
+          @apply fixed top-0 left-0 z-50 w-80 h-full shadow-2xl transform transition-transform duration-300 ease-out;
+          background: var(--bg-secondary);
         }
 
         .settings-nav.mobile-hidden {
           @apply -translate-x-full;
         }
 
-        .nav-description {
-          @apply opacity-100 lg:opacity-0;
-        }
-      }
-
-      /* Animation for mobile sidebar */
-      @media (max-width: 1023px) {
         .settings-nav:not(.mobile-hidden) {
           @apply translate-x-0;
         }
       }
 
       /* Focus styles */
-      .nav-item:focus {
-        @apply ring-2 ring-primary-500 ring-offset-2;
+      .nav-item:focus-visible {
+        @apply outline-none ring-2 ring-offset-2;
+        ring-color: var(--accent);
+        opacity: 0.5;
       }
 
-      /* Active state enhancements */
-      .nav-item.active {
-        @apply shadow-sm;
-      }
-
-      .nav-item.active::before {
-        content: '';
-        @apply absolute left-0 top-0 bottom-0 w-1 bg-primary-600;
+      .search-input:focus-visible {
+        @apply outline-none ring-2;
+        ring-color: var(--accent);
+        opacity: 0.5;
       }
     `,
   ],
@@ -178,6 +308,7 @@ export class SettingsSidebarComponent {
   public readonly navigationItems = input.required<SettingsNavItem[]>();
   public readonly activeSection = input.required<SettingsSection>();
   public readonly isMobileOpen = input(false);
+  public readonly theme = input<'light' | 'dark'>('light');
 
   // Outputs
   public readonly toggleMobile = output<void>();
