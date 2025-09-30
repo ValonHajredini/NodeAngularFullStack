@@ -116,24 +116,6 @@ router.get('/slug/:slug', toolsController.getToolBySlug);
 // ========================================
 
 /**
- * @route GET /api/admin/tools/:toolKey/configs
- * @description Retrieve all configurations for a specific tool
- * @access Super Admin only
- * @param toolKey - Tool key (kebab-case)
- * @response 200 - List of configurations with active config
- * @response 400 - Invalid tool key
- * @response 401 - Authentication required
- * @response 403 - Super admin access required
- * @response 404 - Tool not found
- * @response 500 - Internal server error
- */
-router.get(
-  '/:toolKey/configs',
-  validateGetConfigs(),
-  toolConfigsController.getConfigs
-);
-
-/**
  * @route GET /api/admin/tools/:toolKey/configs/active
  * @description Retrieve the active configuration for a specific tool
  * @access Super Admin only
@@ -149,6 +131,24 @@ router.get(
   '/:toolKey/configs/active',
   validateGetActiveConfig(),
   toolConfigsController.getActiveConfig
+);
+
+/**
+ * @route GET /api/admin/tools/:toolKey/configs
+ * @description Retrieve all configurations for a specific tool
+ * @access Super Admin only
+ * @param toolKey - Tool key (kebab-case)
+ * @response 200 - List of configurations with active config
+ * @response 400 - Invalid tool key
+ * @response 401 - Authentication required
+ * @response 403 - Super admin access required
+ * @response 404 - Tool not found
+ * @response 500 - Internal server error
+ */
+router.get(
+  '/:toolKey/configs',
+  validateGetConfigs(),
+  toolConfigsController.getConfigs
 );
 
 /**
