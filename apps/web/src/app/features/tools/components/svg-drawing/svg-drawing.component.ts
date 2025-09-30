@@ -20,7 +20,6 @@ import { ToolsSidebarComponent } from './components/tools-sidebar/tools-sidebar.
 import { ShapePropertiesComponent } from './components/shape-properties/shape-properties.component';
 import { ExportOptionsComponent } from './components/export-options/export-options.component';
 import { HelpPanelComponent } from './components/help-panel/help-panel.component';
-import { GuideOverlayComponent } from './components/guide-overlay/guide-overlay.component';
 import { ShapeStyle, ExportOptions } from '@nodeangularfullstack/shared';
 
 /**
@@ -47,7 +46,6 @@ import { ShapeStyle, ExportOptions } from '@nodeangularfullstack/shared';
     ShapePropertiesComponent,
     ExportOptionsComponent,
     HelpPanelComponent,
-    GuideOverlayComponent,
   ],
   providers: [MessageService],
   template: `
@@ -81,17 +79,6 @@ import { ShapeStyle, ExportOptions } from '@nodeangularfullstack/shared';
                 [outlined]="true"
                 (click)="onNewDrawing()"
               ></button>
-
-              <button
-                pButton
-                type="button"
-                [label]="svgDrawingService.gridVisible() ? 'Hide Grid' : 'Show Grid'"
-                icon="pi pi-th-large"
-                severity="secondary"
-                [outlined]="true"
-                (click)="svgDrawingService.toggleGrid()"
-                pTooltip="Toggle Grid (G)"
-              ></button>
             </div>
 
             <div class="text-sm text-gray-600">
@@ -116,12 +103,6 @@ import { ShapeStyle, ExportOptions } from '@nodeangularfullstack/shared';
           <!-- Canvas Area -->
           <div class="canvas-area">
             <app-canvas-renderer></app-canvas-renderer>
-            <app-guide-overlay
-              [visible]="true"
-              [showGrid]="svgDrawingService.gridVisible()"
-              [width]="800"
-              [height]="600"
-            ></app-guide-overlay>
           </div>
 
           <!-- Right Sidebar - Tabs -->

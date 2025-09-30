@@ -18,61 +18,55 @@ import { TooltipModule } from 'primeng/tooltip';
       <div class="tools-section">
         <h3 class="section-title">Drawing Tools</h3>
 
-        <button
-          pButton
-          type="button"
-          [class.active]="currentTool() === 'line'"
-          class="tool-button"
-          (click)="onToolSelect('line')"
-        >
-          <i class="pi pi-minus text-xl"></i>
-          <div class="tool-info">
-            <span class="tool-name">Line</span>
-            <span class="tool-shortcut">L</span>
-          </div>
-        </button>
+        <div class="tools-grid">
+          <button
+            pButton
+            type="button"
+            [class.active]="currentTool() === 'line'"
+            class="tool-button"
+            (click)="onToolSelect('line')"
+            pTooltip="Line (L)"
+            tooltipPosition="bottom"
+          >
+            <i class="pi pi-minus"></i>
+          </button>
 
-        <button
-          pButton
-          type="button"
-          [class.active]="currentTool() === 'polygon'"
-          class="tool-button"
-          (click)="onToolSelect('polygon')"
-        >
-          <i class="pi pi-stop text-xl"></i>
-          <div class="tool-info">
-            <span class="tool-name">Polygon</span>
-            <span class="tool-shortcut">P</span>
-          </div>
-        </button>
+          <button
+            pButton
+            type="button"
+            [class.active]="currentTool() === 'polygon'"
+            class="tool-button"
+            (click)="onToolSelect('polygon')"
+            pTooltip="Polygon (P)"
+            tooltipPosition="bottom"
+          >
+            <i class="pi pi-stop"></i>
+          </button>
 
-        <button
-          pButton
-          type="button"
-          [class.active]="currentTool() === 'select'"
-          class="tool-button"
-          (click)="onToolSelect('select')"
-        >
-          <i class="pi pi-arrow-up-right text-xl"></i>
-          <div class="tool-info">
-            <span class="tool-name">Select</span>
-            <span class="tool-shortcut">S</span>
-          </div>
-        </button>
+          <button
+            pButton
+            type="button"
+            [class.active]="currentTool() === 'select'"
+            class="tool-button"
+            (click)="onToolSelect('select')"
+            pTooltip="Select (S)"
+            tooltipPosition="bottom"
+          >
+            <i class="pi pi-arrow-up-right"></i>
+          </button>
 
-        <button
-          pButton
-          type="button"
-          [class.active]="currentTool() === 'delete'"
-          class="tool-button danger"
-          (click)="onToolSelect('delete')"
-        >
-          <i class="pi pi-trash text-xl"></i>
-          <div class="tool-info">
-            <span class="tool-name">Delete</span>
-            <span class="tool-shortcut">Del</span>
-          </div>
-        </button>
+          <button
+            pButton
+            type="button"
+            [class.active]="currentTool() === 'delete'"
+            class="tool-button danger"
+            (click)="onToolSelect('delete')"
+            pTooltip="Delete (Del)"
+            tooltipPosition="bottom"
+          >
+            <i class="pi pi-trash"></i>
+          </button>
+        </div>
       </div>
 
       <!-- Actions Section -->
@@ -122,7 +116,7 @@ import { TooltipModule } from 'primeng/tooltip';
   styles: [
     `
       .tools-sidebar {
-        width: 200px;
+        width: 180px;
         background: #f9fafb;
         border-right: 1px solid #e5e7eb;
         padding: 1rem;
@@ -147,24 +141,39 @@ import { TooltipModule } from 'primeng/tooltip';
         letter-spacing: 0.05em;
       }
 
+      .tools-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+      }
+
       .tool-button {
-        width: 100%;
-        height: 70px;
+        aspect-ratio: 1;
         display: flex;
         align-items: center;
-        gap: 0.75rem;
-        padding: 0.75rem;
-        border: 2px solid #e5e7eb;
+        justify-content: center;
+        padding: 0;
+        border: 2px solid #d1d5db;
         border-radius: 0.5rem;
-        background: white;
+        background: #f3f4f6;
         cursor: pointer;
         transition: all 0.2s;
+      }
+
+      .tool-button i {
+        font-size: 1.5rem;
+        color: #374151;
       }
 
       .tool-button:hover {
         border-color: #3b82f6;
         background: #eff6ff;
-        transform: translateY(-1px);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      }
+
+      .tool-button:hover i {
+        color: #3b82f6;
       }
 
       .tool-button.active {
@@ -173,9 +182,17 @@ import { TooltipModule } from 'primeng/tooltip';
         box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
       }
 
+      .tool-button.active i {
+        color: #2563eb;
+      }
+
       .tool-button.danger:hover {
         border-color: #ef4444;
         background: #fef2f2;
+      }
+
+      .tool-button.danger:hover i {
+        color: #ef4444;
       }
 
       .tool-button.danger.active {
@@ -184,24 +201,8 @@ import { TooltipModule } from 'primeng/tooltip';
         box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
       }
 
-      .tool-info {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.25rem;
-      }
-
-      .tool-name {
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: #374151;
-      }
-
-      .tool-shortcut {
-        font-size: 0.75rem;
-        color: #9ca3af;
-        font-family: monospace;
+      .tool-button.danger.active i {
+        color: #dc2626;
       }
 
       .action-button {
@@ -211,31 +212,62 @@ import { TooltipModule } from 'primeng/tooltip';
         justify-content: flex-start;
         gap: 0.5rem;
         padding: 0.625rem 0.75rem;
-        border: 1px solid #e5e7eb;
+        border: 1.5px solid #3b82f6;
         border-radius: 0.375rem;
-        background: white;
+        background: #f0f9ff;
         cursor: pointer;
         transition: all 0.2s;
         font-size: 0.875rem;
-      }
-
-      .action-button:hover:not(:disabled) {
-        border-color: #3b82f6;
-        background: #eff6ff;
-      }
-
-      .action-button.danger:hover:not(:disabled) {
-        border-color: #ef4444;
-        background: #fef2f2;
-      }
-
-      .action-button:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
+        font-weight: 500;
+        color: #1e40af;
       }
 
       .action-button i {
         font-size: 1rem;
+        color: #3b82f6;
+      }
+
+      .action-button:hover:not(:disabled) {
+        border-color: #2563eb;
+        background: #dbeafe;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+      }
+
+      .action-button:hover:not(:disabled) i {
+        color: #2563eb;
+      }
+
+      .action-button.danger {
+        border-color: #ef4444;
+        background: #fef2f2;
+        color: #991b1b;
+      }
+
+      .action-button.danger i {
+        color: #ef4444;
+      }
+
+      .action-button.danger:hover:not(:disabled) {
+        border-color: #dc2626;
+        background: #fee2e2;
+        box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+      }
+
+      .action-button.danger:hover:not(:disabled) i {
+        color: #dc2626;
+      }
+
+      .action-button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+        border-color: #d1d5db;
+        background: #f9fafb;
+        color: #9ca3af;
+      }
+
+      .action-button:disabled i {
+        color: #d1d5db;
       }
 
       @media (max-width: 768px) {
@@ -245,18 +277,17 @@ import { TooltipModule } from 'primeng/tooltip';
         }
 
         .section-title,
-        .tool-info,
         .action-button span {
           display: none;
         }
 
-        .tool-button {
-          height: 50px;
-          justify-content: center;
+        .tools-grid {
+          grid-template-columns: 1fr;
         }
 
         .action-button {
           justify-content: center;
+          padding: 0.625rem;
         }
       }
     `,

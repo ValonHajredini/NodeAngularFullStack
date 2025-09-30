@@ -10,13 +10,7 @@ import { CommonModule } from '@angular/common';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <svg
-      *ngIf="visible"
-      class="guide-overlay"
-      [attr.width]="width"
-      [attr.height]="height"
-      [style.pointer-events]="'none'"
-    >
+    <svg *ngIf="visible" class="guide-overlay" [style.pointer-events]="'none'">
       <!-- Grid lines -->
       <g *ngIf="showGrid" class="grid-lines">
         <!-- Minor grid lines -->
@@ -59,6 +53,8 @@ import { CommonModule } from '@angular/common';
         position: absolute;
         top: 0;
         left: 0;
+        width: 100%;
+        height: 100%;
         z-index: 1;
       }
     `,

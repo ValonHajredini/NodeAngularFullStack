@@ -12,6 +12,7 @@ import {
   computed,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { NgxDotpatternComponent } from '@omnedia/ngx-dotpattern';
 import { SvgDrawingService } from '../../svg-drawing.service';
 import { Point, LineShape, PolygonShape, Shape, ShapeStyle } from '@nodeangularfullstack/shared';
 
@@ -22,13 +23,18 @@ import { Point, LineShape, PolygonShape, Shape, ShapeStyle } from '@nodeangularf
 @Component({
   selector: 'app-canvas-renderer',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, NgxDotpatternComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
       class="canvas-container relative w-full h-full"
       [class.cursor-select]="drawingService.currentTool() === 'select'"
     >
+      <!-- Dot Pattern Background -->
+      <om-dotpattern
+        [patternColor]="'rgba(156, 163, 175, 0.3)'"
+        styleClass="absolute inset-0 w-full h-full"
+      ></om-dotpattern>
       <svg
         #canvas
         class="absolute inset-0 w-full h-full"
@@ -167,6 +173,7 @@ import { Point, LineShape, PolygonShape, Shape, ShapeStyle } from '@nodeangularf
         background: #ffffff;
         border: 1px solid #d1d5db;
         box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
       }
 
       .canvas-container.cursor-select {
@@ -175,6 +182,8 @@ import { Point, LineShape, PolygonShape, Shape, ShapeStyle } from '@nodeangularf
 
       svg {
         background: transparent;
+        position: relative;
+        z-index: 10;
       }
 
       .shape-selected {
