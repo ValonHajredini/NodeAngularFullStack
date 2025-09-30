@@ -39,6 +39,11 @@ export {
   type ToolCardSize,
   type ToolCardConfig,
 } from './tool-card';
+export {
+  SearchFilterComponent,
+  type StatusFilterValue,
+  type BulkAction,
+} from './search-filter/search-filter.component';
 
 // Welcome Page Components
 export {

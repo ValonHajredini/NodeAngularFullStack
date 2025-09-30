@@ -231,13 +231,25 @@ export interface ToolCardConfig {
         display: flex;
         align-items: center;
         justify-content: center;
-        background: var(--color-gray-50);
-        border: 1px solid var(--color-border-light);
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 8px;
-        box-shadow: var(--shadow-sm);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 
         i {
           font-size: 1.125rem;
+          opacity: 0.9;
+        }
+      }
+
+      /* Light mode override */
+      :host-context(body:not(.dark)) .tool-card-icon {
+        background: var(--color-gray-50);
+        border: 1px solid var(--color-border-light);
+        box-shadow: var(--shadow-sm);
+
+        i {
+          opacity: 1;
         }
       }
 
@@ -264,18 +276,34 @@ export interface ToolCardConfig {
 
         ::ng-deep .tool-key-chip {
           height: 1.5rem;
-          background: var(--color-gray-100);
-          border: 1px solid var(--color-border-light);
+          background: rgba(255, 255, 255, 0.08) !important;
+          border: 1px solid rgba(255, 255, 255, 0.15) !important;
 
           .p-chip-text {
             font-size: 0.75rem;
             font-weight: 500;
-            color: var(--color-text-secondary);
+            color: rgba(255, 255, 255, 0.85) !important;
           }
 
           .p-chip-icon {
-            color: var(--color-text-muted);
+            color: rgba(255, 255, 255, 0.6) !important;
             font-size: 0.675rem;
+          }
+        }
+      }
+
+      /* Light mode override */
+      :host-context(body:not(.dark)) .tool-card-key {
+        ::ng-deep .tool-key-chip {
+          background: var(--color-gray-100) !important;
+          border: 1px solid var(--color-border-light) !important;
+
+          .p-chip-text {
+            color: var(--color-text-secondary) !important;
+          }
+
+          .p-chip-icon {
+            color: var(--color-text-muted) !important;
           }
         }
       }

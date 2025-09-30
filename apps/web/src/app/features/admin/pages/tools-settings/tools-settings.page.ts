@@ -23,7 +23,12 @@ import { ChipModule } from 'primeng/chip';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { ToolsService } from '../../services/tools.service';
 import { Tool } from '@nodeangularfullstack/shared';
-import { StatsCardComponent, ToolCardComponent } from '../../../../shared/components';
+import {
+  StatsCardComponent,
+  ToolCardComponent,
+  SearchFilterComponent,
+  BulkAction,
+} from '../../../../shared/components';
 import { ToolConfigService } from '../../../../core/services/tool-config.service';
 import {
   ToolConfig,
@@ -63,6 +68,7 @@ import { TooltipModule } from 'primeng/tooltip';
     TooltipModule,
     StatsCardComponent,
     ToolCardComponent,
+    SearchFilterComponent,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './tools-settings.page.html',
@@ -96,8 +102,22 @@ export class ToolsSettingsPage implements OnInit {
   deleteConfirmationText = signal('');
   private readonly deletingTool = signal(false);
 
-  // Filters expansion state
-  filtersExpanded = signal(false);
+  // Bulk actions for search filter
+  enableBulkActions = signal<BulkAction[]>([
+    {
+      label: 'Enable Selected',
+      icon: 'pi pi-check',
+      severity: 'success',
+    },
+  ]);
+
+  disableBulkActions = signal<BulkAction[]>([
+    {
+      label: 'Disable Selected',
+      icon: 'pi pi-times',
+      severity: 'danger',
+    },
+  ]);
 
   // Configuration modal state
   showConfigModal = signal(false);
@@ -207,10 +227,14 @@ export class ToolsSettingsPage implements OnInit {
   }
 
   /**
-   * Toggles the filters section expansion state.
+   * Handles bulk action clicks from search filter.
    */
-  toggleFiltersExpanded(): void {
-    this.filtersExpanded.set(!this.filtersExpanded());
+  onBulkAction(action: 'enable' | 'disable'): void {
+    if (action === 'enable') {
+      this.bulkUpdateStatus(true);
+    } else {
+      this.bulkUpdateStatus(false);
+    }
   }
 
   /**
@@ -888,17 +912,5 @@ export class ToolsSettingsPage implements OnInit {
   clearFilters(): void {
     this.searchQuery.set('');
     this.statusFilter.set('all');
-  }
-
-  /**
-   * Handles status filter toggle button changes.
-   */
-  onStatusFilterChange(filter: 'all' | 'active' | 'inactive', event: any): void {
-    if (event.checked) {
-      this.statusFilter.set(filter);
-    } else {
-      // If unchecking, default to 'all'
-      this.statusFilter.set('all');
-    }
   }
 }

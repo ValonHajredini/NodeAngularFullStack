@@ -39,15 +39,33 @@ CREATE INDEX IF NOT EXISTS idx_tool_configs_active
 CREATE INDEX IF NOT EXISTS idx_tool_configs_version
     ON tool_configs(version);
 
--- Add check constraint for display_mode enum
-ALTER TABLE tool_configs
-    ADD CONSTRAINT check_display_mode
-    CHECK (display_mode IN ('standard', 'full-width', 'compact', 'modal', 'embedded'));
+-- Add check constraint for display_mode enum (if not exists)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'check_display_mode'
+        AND conrelid = 'tool_configs'::regclass
+    ) THEN
+        ALTER TABLE tool_configs
+            ADD CONSTRAINT check_display_mode
+            CHECK (display_mode IN ('standard', 'full-width', 'compact', 'modal', 'embedded'));
+    END IF;
+END $$;
 
--- Add check constraint for semantic versioning format (simplified)
-ALTER TABLE tool_configs
-    ADD CONSTRAINT check_version_format
-    CHECK (version ~ '^\d+\.\d+\.\d+$');
+-- Add check constraint for semantic versioning format (if not exists)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'check_version_format'
+        AND conrelid = 'tool_configs'::regclass
+    ) THEN
+        ALTER TABLE tool_configs
+            ADD CONSTRAINT check_version_format
+            CHECK (version ~ '^\d+\.\d+\.\d+$');
+    END IF;
+END $$;
 
 -- Create trigger function for automatic updated_at maintenance
 CREATE OR REPLACE FUNCTION update_tool_configs_updated_at()

@@ -11,6 +11,7 @@ import { ToolsService } from '../../../../core/services';
 import { ToolConfigService } from '../../../../core/services/tool-config.service';
 import { Tool, ToolConfig } from '@nodeangularfullstack/shared';
 import { ShortLinkComponent } from '../short-link/short-link.component';
+import { SvgDrawingComponent } from '../svg-drawing/svg-drawing.component';
 import { TodoAppComponent } from '../todo-app/todo-app.component';
 import { MapComponent } from '../map/map.component';
 import { MarkComponent } from '../mark/mark.component';
@@ -30,6 +31,7 @@ import { MarkComponent } from '../mark/mark.component';
     MessageModule,
     BreadcrumbModule,
     ShortLinkComponent,
+    SvgDrawingComponent,
     TodoAppComponent,
     MapComponent,
     MarkComponent,
@@ -80,6 +82,9 @@ import { MarkComponent } from '../mark/mark.component';
           @switch (tool()!.key) {
             @case ('short-link') {
               <app-short-link />
+            }
+            @case ('svg-drawing') {
+              <app-svg-drawing />
             }
             @case ('todo-app') {
               <app-todo-app />
