@@ -215,10 +215,21 @@ import { ShapeStyle, ExportOptions } from '@nodeangularfullstack/shared';
       .canvas-area {
         flex: 1;
         position: relative;
-        overflow: hidden;
+        overflow: auto;
         background: #f3f4f6;
         padding: 1rem;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
         min-height: 0;
+      }
+
+      .canvas-area > app-canvas-renderer {
+        width: 100%;
+        max-width: 2100px;
+        max-height: 900px;
+        aspect-ratio: 16 / 9;
+        align-self: flex-start;
       }
 
       .right-sidebar {

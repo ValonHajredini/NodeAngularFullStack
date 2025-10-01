@@ -56,6 +56,7 @@ export class SvgDrawingService {
   private readonly _commandHistory = signal<Command[]>([]);
   private readonly _redoStack = signal<Command[]>([]);
   private readonly _gridVisible = signal<boolean>(false);
+  private readonly _showExportBounds = signal<boolean>(true); // Always show by default
 
   // Style state signals
   private readonly _strokeColor = signal<string>('#000000');
@@ -74,6 +75,11 @@ export class SvgDrawingService {
   private readonly _canvasZoom = signal<number>(1);
   private readonly _canvasOffset = signal<{ x: number; y: number }>({ x: 0, y: 0 });
 
+  // Export configuration state
+  private readonly _exportWidth = signal<number>(800);
+  private readonly _exportHeight = signal<number>(600);
+  private readonly _exportPadding = signal<number>(20);
+
   // localStorage persistence
   private readonly savePending$ = new Subject<DrawingState>();
   private readonly STORAGE_KEY = 'svg-drawing-state';
@@ -88,6 +94,7 @@ export class SvgDrawingService {
   readonly snapEnabled = this._snapEnabled.asReadonly();
   readonly snapThreshold = this._snapThreshold.asReadonly();
   readonly gridVisible = this._gridVisible.asReadonly();
+  readonly showExportBounds = this._showExportBounds.asReadonly();
 
   // Style public signals
   readonly strokeColor = this._strokeColor.asReadonly();
@@ -106,6 +113,11 @@ export class SvgDrawingService {
   readonly canvasZoom = this._canvasZoom.asReadonly();
   readonly canvasOffset = this._canvasOffset.asReadonly();
 
+  // Export configuration public signals
+  readonly exportWidth = this._exportWidth.asReadonly();
+  readonly exportHeight = this._exportHeight.asReadonly();
+  readonly exportPadding = this._exportPadding.asReadonly();
+
   // Computed signals
   readonly selectedShape = computed(() => {
     const id = this._selectedShapeId();
@@ -114,6 +126,17 @@ export class SvgDrawingService {
 
   readonly canUndo = computed(() => this._commandHistory().length > 0);
   readonly canRedo = computed(() => this._redoStack().length > 0);
+
+  readonly exportBounds = computed(() => {
+    const width = this._exportWidth();
+    const height = this._exportHeight();
+    return {
+      x: 0,
+      y: 0,
+      width: width,
+      height: height,
+    };
+  });
 
   readonly currentStyle = computed<ShapeStyle>(() => ({
     color: this._strokeColor(),
@@ -1296,6 +1319,14 @@ export class SvgDrawingService {
           maxX = Math.max(maxX, vertex.x);
           maxY = Math.max(maxY, vertex.y);
         });
+      } else if (shape.type === 'polyline') {
+        const polyline = shape as PolylineShape;
+        polyline.vertices.forEach((vertex) => {
+          minX = Math.min(minX, vertex.x);
+          minY = Math.min(minY, vertex.y);
+          maxX = Math.max(maxX, vertex.x);
+          maxY = Math.max(maxY, vertex.y);
+        });
       }
     });
 
@@ -1308,43 +1339,49 @@ export class SvgDrawingService {
   }
 
   /**
-   * Converts a shape to SVG element string.
+   * Converts a shape to SVG element string with normalized coordinates.
    * @param shape - Shape to convert
+   * @param offsetX - X offset to normalize coordinates
+   * @param offsetY - Y offset to normalize coordinates
    * @returns SVG element string
    */
-  private shapeToSVGElement(shape: Shape): string {
+  private shapeToSVGElement(shape: Shape, offsetX: number = 0, offsetY: number = 0): string {
     const stroke = shape.color;
     const strokeWidth = shape.strokeWidth;
     const fill = shape.fillColor || 'transparent';
 
     if (shape.type === 'line') {
       const line = shape as LineShape;
-      const x1 = line.start.x.toFixed(2);
-      const y1 = line.start.y.toFixed(2);
-      const x2 = line.end.x.toFixed(2);
-      const y2 = line.end.y.toFixed(2);
+      const x1 = (line.start.x - offsetX).toFixed(2);
+      const y1 = (line.start.y - offsetY).toFixed(2);
+      const x2 = (line.end.x - offsetX).toFixed(2);
+      const y2 = (line.end.y - offsetY).toFixed(2);
       return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="${strokeWidth}"/>`;
     } else if (shape.type === 'polygon') {
       const polygon = shape as PolygonShape;
-      const points = polygon.vertices.map((v) => `${v.x.toFixed(2)},${v.y.toFixed(2)}`).join(' ');
+      const points = polygon.vertices
+        .map((v) => `${(v.x - offsetX).toFixed(2)},${(v.y - offsetY).toFixed(2)}`)
+        .join(' ');
       return `<polygon points="${points}" stroke="${stroke}" stroke-width="${strokeWidth}" fill="${fill}"/>`;
     } else if (shape.type === 'polyline') {
       const polyline = shape as PolylineShape;
-      const points = polyline.vertices.map((v) => `${v.x.toFixed(2)},${v.y.toFixed(2)}`).join(' ');
+      const points = polyline.vertices
+        .map((v) => `${(v.x - offsetX).toFixed(2)},${(v.y - offsetY).toFixed(2)}`)
+        .join(' ');
       return `<polyline points="${points}" stroke="${stroke}" stroke-width="${strokeWidth}" fill="none"/>`;
     } else if (shape.type === 'rectangle') {
       const rect = shape as any; // RectangleShape
-      return `<rect x="${rect.topLeft.x.toFixed(2)}" y="${rect.topLeft.y.toFixed(2)}" width="${rect.width.toFixed(2)}" height="${rect.height.toFixed(2)}" stroke="${stroke}" stroke-width="${strokeWidth}" fill="${fill}"/>`;
+      return `<rect x="${(rect.topLeft.x - offsetX).toFixed(2)}" y="${(rect.topLeft.y - offsetY).toFixed(2)}" width="${rect.width.toFixed(2)}" height="${rect.height.toFixed(2)}" stroke="${stroke}" stroke-width="${strokeWidth}" fill="${fill}"/>`;
     } else if (shape.type === 'circle') {
       const circle = shape as any; // CircleShape
-      return `<circle cx="${circle.center.x.toFixed(2)}" cy="${circle.center.y.toFixed(2)}" r="${circle.radius.toFixed(2)}" stroke="${stroke}" stroke-width="${strokeWidth}" fill="${fill}"/>`;
+      return `<circle cx="${(circle.center.x - offsetX).toFixed(2)}" cy="${(circle.center.y - offsetY).toFixed(2)}" r="${circle.radius.toFixed(2)}" stroke="${stroke}" stroke-width="${strokeWidth}" fill="${fill}"/>`;
     } else if (shape.type === 'ellipse') {
       const ellipse = shape as any; // EllipseShape
-      return `<ellipse cx="${ellipse.center.x.toFixed(2)}" cy="${ellipse.center.y.toFixed(2)}" rx="${ellipse.radiusX.toFixed(2)}" ry="${ellipse.radiusY.toFixed(2)}" stroke="${stroke}" stroke-width="${strokeWidth}" fill="${fill}"/>`;
+      return `<ellipse cx="${(ellipse.center.x - offsetX).toFixed(2)}" cy="${(ellipse.center.y - offsetY).toFixed(2)}" rx="${ellipse.radiusX.toFixed(2)}" ry="${ellipse.radiusY.toFixed(2)}" stroke="${stroke}" stroke-width="${strokeWidth}" fill="${fill}"/>`;
     } else if (shape.type === 'triangle') {
       const triangle = shape as any; // TriangleShape
       const points = triangle.vertices
-        .map((v: Point) => `${v.x.toFixed(2)},${v.y.toFixed(2)}`)
+        .map((v: Point) => `${(v.x - offsetX).toFixed(2)},${(v.y - offsetY).toFixed(2)}`)
         .join(' ');
       return `<polygon points="${points}" stroke="${stroke}" stroke-width="${strokeWidth}" fill="${fill}"/>`;
     }
@@ -1388,12 +1425,17 @@ export class SvgDrawingService {
    */
   exportToSVG(options: ExportOptions): string {
     const shapes = this._shapes();
-    const bounds = this.calculateBounds(shapes, options.padding || 20);
 
-    let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}" width="${options.width}" height="${options.height}">`;
+    // Use fixed export dimensions instead of calculating from shapes
+    const width = options.width;
+    const height = options.height;
 
+    // Create SVG with fixed viewBox dimensions
+    let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">`;
+
+    // No coordinate offset needed - shapes use their absolute positions
     shapes.forEach((shape) => {
-      svg += this.shapeToSVGElement(shape);
+      svg += this.shapeToSVGElement(shape, 0, 0);
     });
 
     svg += '</svg>';
@@ -1471,6 +1513,21 @@ export class SvgDrawingService {
     this._gridVisible.set(visible);
   }
 
+  /**
+   * Toggles export bounds visibility.
+   */
+  toggleExportBounds(): void {
+    this._showExportBounds.update((v) => !v);
+  }
+
+  /**
+   * Sets export bounds visibility.
+   * @param visible - Whether export bounds should be visible
+   */
+  setShowExportBounds(visible: boolean): void {
+    this._showExportBounds.set(visible);
+  }
+
   // ===== Style Setter Methods =====
 
   /**
@@ -1505,6 +1562,38 @@ export class SvgDrawingService {
    */
   setFillEnabled(enabled: boolean): void {
     this._fillEnabled.set(enabled);
+  }
+
+  // ===== Export Configuration Methods =====
+
+  /**
+   * Sets the export width.
+   * @param width - Export width in pixels (100-10000)
+   */
+  setExportWidth(width: number): void {
+    if (width >= 100 && width <= 10000) {
+      this._exportWidth.set(width);
+    }
+  }
+
+  /**
+   * Sets the export height.
+   * @param height - Export height in pixels (100-10000)
+   */
+  setExportHeight(height: number): void {
+    if (height >= 100 && height <= 10000) {
+      this._exportHeight.set(height);
+    }
+  }
+
+  /**
+   * Sets the export padding.
+   * @param padding - Export padding in pixels (0-100)
+   */
+  setExportPadding(padding: number): void {
+    if (padding >= 0 && padding <= 100) {
+      this._exportPadding.set(padding);
+    }
   }
 
   // ===== Background Image Methods =====

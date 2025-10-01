@@ -23,20 +23,9 @@ import { TooltipModule } from 'primeng/tooltip';
           pButton
           type="button"
           class="control-btn zoom-btn"
-          (click)="onZoomInClick()"
-          pTooltip="Zoom In (Ctrl++)"
-          tooltipPosition="left"
-        >
-          <i class="pi pi-plus"></i>
-        </button>
-
-        <button
-          pButton
-          type="button"
-          class="control-btn zoom-btn"
           (click)="onZoomOutClick()"
           pTooltip="Zoom Out (Ctrl+-)"
-          tooltipPosition="left"
+          tooltipPosition="top"
         >
           <i class="pi pi-minus"></i>
         </button>
@@ -47,9 +36,20 @@ import { TooltipModule } from 'primeng/tooltip';
           class="control-btn reset-btn"
           (click)="onResetZoomClick()"
           pTooltip="Reset Zoom (Ctrl+0)"
-          tooltipPosition="left"
+          tooltipPosition="top"
         >
           <i class="pi pi-refresh"></i>
+        </button>
+
+        <button
+          pButton
+          type="button"
+          class="control-btn zoom-btn"
+          (click)="onZoomInClick()"
+          pTooltip="Zoom In (Ctrl++)"
+          tooltipPosition="top"
+        >
+          <i class="pi pi-plus"></i>
         </button>
       </div>
 
@@ -120,54 +120,54 @@ import { TooltipModule } from 'primeng/tooltip';
     `
       .zoom-controls-container {
         position: absolute;
-        bottom: 20px;
-        right: 20px;
+        bottom: 12px;
+        right: 12px;
         z-index: 1000;
         background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(10px);
         border: 1px solid #e5e7eb;
-        border-radius: 12px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        padding: 12px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 8px;
         display: flex;
         flex-direction: column;
-        gap: 8px;
-        min-width: 140px;
+        gap: 4px;
+        min-width: 100px;
       }
 
       .zoom-level {
         text-align: center;
-        font-size: 1rem;
-        font-weight: 700;
+        font-size: 0.75rem;
+        font-weight: 600;
         color: #1e40af;
         background: #dbeafe;
-        padding: 8px;
-        border-radius: 6px;
-        border: 2px solid #3b82f6;
+        padding: 4px 6px;
+        border-radius: 4px;
+        border: 1px solid #3b82f6;
       }
 
       .zoom-buttons {
         display: flex;
-        flex-direction: column;
-        gap: 6px;
+        flex-direction: row;
+        gap: 3px;
       }
 
       .control-btn {
-        width: 100%;
-        height: 36px;
+        flex: 1;
+        height: 28px;
         display: flex;
         align-items: center;
         justify-content: center;
         padding: 0;
-        border: 2px solid #d1d5db;
-        border-radius: 6px;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
         background: #f9fafb;
         cursor: pointer;
         transition: all 0.2s;
       }
 
       .control-btn i {
-        font-size: 1.1rem;
+        font-size: 0.875rem;
         color: #374151;
       }
 
@@ -206,18 +206,18 @@ import { TooltipModule } from 'primeng/tooltip';
       .divider {
         height: 1px;
         background: #e5e7eb;
-        margin: 4px 0;
+        margin: 2px 0;
       }
 
       .pan-controls {
         display: flex;
         flex-direction: column;
-        gap: 6px;
+        gap: 3px;
       }
 
       .pan-label {
         text-align: center;
-        font-size: 0.75rem;
+        font-size: 0.625rem;
         font-weight: 600;
         color: #6b7280;
         text-transform: uppercase;
@@ -227,57 +227,56 @@ import { TooltipModule } from 'primeng/tooltip';
       .pan-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
-        gap: 4px;
+        gap: 2px;
       }
 
       .pan-btn {
-        width: 36px;
-        height: 36px;
+        width: 28px;
+        height: 28px;
       }
 
       .pan-center {
-        width: 36px;
-        height: 36px;
+        width: 28px;
+        height: 28px;
         display: flex;
         align-items: center;
         justify-content: center;
         background: #f9fafb;
-        border-radius: 6px;
+        border-radius: 4px;
         border: 1px dashed #d1d5db;
       }
 
       .pan-center i {
-        font-size: 1rem;
+        font-size: 0.75rem;
       }
 
       .pan-spacer {
-        width: 36px;
-        height: 36px;
+        width: 28px;
+        height: 28px;
       }
 
       /* Responsive adjustments */
       @media (max-width: 768px) {
         .zoom-controls-container {
-          bottom: 10px;
-          right: 10px;
-          padding: 8px;
-          min-width: 120px;
-          font-size: 0.875rem;
+          bottom: 8px;
+          right: 8px;
+          padding: 6px;
+          min-width: 90px;
         }
 
         .control-btn {
-          height: 32px;
+          height: 26px;
         }
 
         .pan-btn {
-          width: 32px;
-          height: 32px;
+          width: 26px;
+          height: 26px;
         }
 
         .pan-center,
         .pan-spacer {
-          width: 32px;
-          height: 32px;
+          width: 26px;
+          height: 26px;
         }
       }
     `,

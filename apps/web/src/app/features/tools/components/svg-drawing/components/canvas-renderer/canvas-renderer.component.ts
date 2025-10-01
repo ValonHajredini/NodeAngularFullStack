@@ -606,6 +606,25 @@ import {
             }
           }
         }
+
+        <!-- Export Bounds Overlay -->
+        @if (drawingService.showExportBounds() && drawingService.exportBounds()) {
+          @let bounds = drawingService.exportBounds();
+          <g class="export-bounds-overlay" opacity="0.2">
+            <!-- Dashed rectangle showing export area -->
+            <rect
+              x="0"
+              y="0"
+              [attr.width]="bounds.width"
+              [attr.height]="bounds.height"
+              fill="none"
+              stroke="#000000"
+              stroke-width="2"
+              stroke-dasharray="10,5"
+              pointer-events="none"
+            />
+          </g>
+        }
       </svg>
 
       <!-- Angle indicator -->
@@ -631,6 +650,12 @@ import {
   `,
   styles: [
     `
+      :host {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
       .canvas-container {
         cursor: crosshair;
         background: #ffffff;

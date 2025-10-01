@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output, signal } from '@angular/core';
+import { Component, EventEmitter, Output, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { InputText } from 'primeng/inputtext';
@@ -7,6 +7,7 @@ import { Select } from 'primeng/select';
 import { ButtonDirective } from 'primeng/button';
 import { Checkbox } from 'primeng/checkbox';
 import { ExportOptions, OptimizationLevel } from '@nodeangularfullstack/shared';
+import { SvgDrawingService } from '../../svg-drawing.service';
 
 /**
  * Component for configuring SVG export options.
@@ -46,6 +47,7 @@ import { ExportOptions, OptimizationLevel } from '@nodeangularfullstack/shared';
           <p-inputNumber
             inputId="width"
             [(ngModel)]="exportOptions.width"
+            (ngModelChange)="onWidthChange($event)"
             [min]="100"
             [max]="10000"
             [step]="100"
@@ -58,6 +60,7 @@ import { ExportOptions, OptimizationLevel } from '@nodeangularfullstack/shared';
           <p-inputNumber
             inputId="height"
             [(ngModel)]="exportOptions.height"
+            (ngModelChange)="onHeightChange($event)"
             [min]="100"
             [max]="10000"
             [step]="100"
@@ -73,6 +76,7 @@ import { ExportOptions, OptimizationLevel } from '@nodeangularfullstack/shared';
         <p-inputNumber
           inputId="padding"
           [(ngModel)]="exportOptions.padding"
+          (ngModelChange)="onPaddingChange($event)"
           [min]="0"
           [max]="100"
           [step]="5"
@@ -134,7 +138,10 @@ import { ExportOptions, OptimizationLevel } from '@nodeangularfullstack/shared';
     `,
   ],
 })
-export class ExportOptionsComponent {
+export class ExportOptionsComponent implements OnInit {
+  /** Inject SVG Drawing Service */
+  private readonly svgDrawingService = inject(SvgDrawingService);
+
   /** Event emitted when export is confirmed */
   @Output() export = new EventEmitter<ExportOptions>();
 
@@ -146,6 +153,13 @@ export class ExportOptionsComponent {
     optimizationLevel: 'basic',
     padding: 20,
   };
+
+  ngOnInit(): void {
+    // Initialize with current service values
+    this.exportOptions.width = this.svgDrawingService.exportWidth();
+    this.exportOptions.height = this.svgDrawingService.exportHeight();
+    this.exportOptions.padding = this.svgDrawingService.exportPadding();
+  }
 
   /** Whether to show preview before download */
   showPreview = false;
@@ -159,6 +173,33 @@ export class ExportOptionsComponent {
     { label: 'Basic', value: 'basic' as OptimizationLevel },
     { label: 'Aggressive', value: 'aggressive' as OptimizationLevel },
   ];
+
+  /**
+   * Handles width change and updates service.
+   */
+  onWidthChange(width: number): void {
+    if (width) {
+      this.svgDrawingService.setExportWidth(width);
+    }
+  }
+
+  /**
+   * Handles height change and updates service.
+   */
+  onHeightChange(height: number): void {
+    if (height) {
+      this.svgDrawingService.setExportHeight(height);
+    }
+  }
+
+  /**
+   * Handles padding change and updates service.
+   */
+  onPaddingChange(padding: number): void {
+    if (padding !== null && padding !== undefined) {
+      this.svgDrawingService.setExportPadding(padding);
+    }
+  }
 
   /**
    * Validates export options.
