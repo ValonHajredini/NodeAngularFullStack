@@ -312,7 +312,7 @@ export class SvgDrawingService {
 
   /**
    * Toggles a shape's selection state.
-   * If the shape is part of a group, toggles the entire group.
+   * If the shape is part of a group, toggles the entire group (including parent groups).
    * @param shapeId - ID of the shape to toggle
    * @param multiSelect - If true, adds to selection; if false, replaces selection
    */
@@ -327,18 +327,28 @@ export class SvgDrawingService {
     }
 
     // Toggle in multi-select mode
-    if (shape.groupId) {
-      // Toggle entire group
-      const groupShapes = this._shapes().filter((s) => s.groupId === shape.groupId);
-      const groupShapeIds = groupShapes.map((s) => s.id);
+    if (shape.groupId || shape.parentGroupId) {
+      // Get all shapes in the entire group hierarchy
+      let groupShapeIds: string[] = [];
+
+      if (shape.parentGroupId) {
+        // Select all shapes with this parentGroupId (includes all child groups)
+        groupShapeIds = this.getAllShapesInGroupHierarchy(shape.parentGroupId);
+      } else if (shape.groupId) {
+        // Select all shapes in this group only
+        groupShapeIds = this._shapes()
+          .filter((s) => s.groupId === shape.groupId && !s.parentGroupId)
+          .map((s) => s.id);
+      }
+
       const allSelected = groupShapeIds.every((id) => this._selectedShapeIds().includes(id));
 
       this._selectedShapeIds.update((ids) => {
         if (allSelected) {
-          // Deselect all shapes in the group
+          // Deselect all shapes in the group hierarchy
           return ids.filter((id) => !groupShapeIds.includes(id));
         } else {
-          // Select all shapes in the group
+          // Select all shapes in the group hierarchy
           const newIds = [...ids];
           groupShapeIds.forEach((id) => {
             if (!newIds.includes(id)) {
@@ -373,6 +383,14 @@ export class SvgDrawingService {
    */
   clearSelection(): void {
     this._selectedShapeIds.set([]);
+  }
+
+  /**
+   * Sets multiple shapes as selected.
+   * @param shapeIds - Array of shape IDs to select
+   */
+  setSelectedShapes(shapeIds: string[]): void {
+    this._selectedShapeIds.set(shapeIds);
   }
 
   /**
@@ -1530,7 +1548,8 @@ export class SvgDrawingService {
    * @returns SVG content string
    */
   exportToSVG(options: ExportOptions): string {
-    const shapes = this._shapes();
+    // Filter out hidden shapes (visible === false)
+    const shapes = this._shapes().filter((shape) => shape.visible !== false);
 
     // Use fixed export dimensions instead of calculating from shapes
     const width = options.width;
@@ -1604,6 +1623,7 @@ export class SvgDrawingService {
   /**
    * Groups the currently selected shapes together.
    * Grouped shapes will move together as one unit.
+   * Supports nested groups - if grouping existing groups, creates a parent group.
    * @returns The group ID, or null if grouping failed
    */
   groupSelectedShapes(): string | null {
@@ -1614,20 +1634,67 @@ export class SvgDrawingService {
       return null;
     }
 
-    // Generate unique group ID
-    const groupId = this.generateShapeId();
+    const selectedShapes = this._shapes().filter((s) => selectedIds.includes(s.id));
 
-    // Update all selected shapes with the group ID
-    this._shapes.update((shapes) =>
-      shapes.map((shape) => (selectedIds.includes(shape.id) ? { ...shape, groupId } : shape)),
+    // Check if we're grouping existing groups together (creating nested groups)
+    const existingGroupIds = new Set(
+      selectedShapes.map((s) => s.groupId).filter((id) => id !== undefined),
     );
+    const hasMultipleGroups = existingGroupIds.size > 1;
+    const hasUngroupedShapes = selectedShapes.some((s) => !s.groupId);
+    const isCreatingNestedGroup =
+      hasMultipleGroups || (existingGroupIds.size === 1 && hasUngroupedShapes);
 
-    return groupId;
+    // Generate unique parent group ID
+    const newGroupId = this.generateShapeId();
+
+    if (isCreatingNestedGroup) {
+      // Creating a parent group (nested groups)
+      // All shapes keep their existing groupId, but get a new parentGroupId
+      this._shapes.update((shapes) =>
+        shapes.map((shape) => {
+          if (selectedIds.includes(shape.id)) {
+            // If shape has no groupId, assign one now
+            const groupId = shape.groupId || newGroupId;
+            return { ...shape, groupId, parentGroupId: newGroupId };
+          }
+          return shape;
+        }),
+      );
+    } else {
+      // Simple grouping (all shapes go into same group)
+      this._shapes.update((shapes) =>
+        shapes.map((shape) =>
+          selectedIds.includes(shape.id) ? { ...shape, groupId: newGroupId } : shape,
+        ),
+      );
+    }
+
+    return newGroupId;
+  }
+
+  /**
+   * Gets all shapes in a group hierarchy (including nested groups).
+   * @param groupId - The group ID to search for (can be groupId or parentGroupId)
+   * @returns Array of shape IDs in the hierarchy
+   */
+  getAllShapesInGroupHierarchy(groupId: string): string[] {
+    const shapes = this._shapes();
+    const shapeIds: string[] = [];
+
+    // Find all shapes that have this groupId or parentGroupId
+    shapes.forEach((shape) => {
+      if (shape.groupId === groupId || shape.parentGroupId === groupId) {
+        shapeIds.push(shape.id);
+      }
+    });
+
+    return shapeIds;
   }
 
   /**
    * Ungroups the currently selected shapes.
-   * Removes group ID from all selected shapes.
+   * Removes one level of grouping (parentGroupId first, then groupId).
    */
   ungroupSelectedShapes(): void {
     const selectedIds = this._selectedShapeIds();
@@ -1636,12 +1703,26 @@ export class SvgDrawingService {
       return;
     }
 
-    // Remove group ID from all selected shapes
-    this._shapes.update((shapes) =>
-      shapes.map((shape) =>
-        selectedIds.includes(shape.id) ? { ...shape, groupId: undefined } : shape,
-      ),
-    );
+    const selectedShapes = this._shapes().filter((s) => selectedIds.includes(s.id));
+
+    // Check if any selected shapes have a parentGroupId
+    const hasParentGroup = selectedShapes.some((s) => s.parentGroupId);
+
+    if (hasParentGroup) {
+      // Remove only the parent group (keep child groups intact)
+      this._shapes.update((shapes) =>
+        shapes.map((shape) =>
+          selectedIds.includes(shape.id) ? { ...shape, parentGroupId: undefined } : shape,
+        ),
+      );
+    } else {
+      // Remove regular group ID (no parent group exists)
+      this._shapes.update((shapes) =>
+        shapes.map((shape) =>
+          selectedIds.includes(shape.id) ? { ...shape, groupId: undefined } : shape,
+        ),
+      );
+    }
   }
 
   /**

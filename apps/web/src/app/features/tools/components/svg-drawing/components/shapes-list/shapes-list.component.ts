@@ -17,6 +17,8 @@ interface DisplayItem {
   groupId?: string; // For groups
   shapes?: Shape[]; // For groups - array of shapes in the group
   visible?: boolean; // For groups - all shapes visible
+  isParentGroup?: boolean; // For groups - indicates if this group contains subgroups
+  childGroupIds?: string[]; // For parent groups - array of child group IDs
 }
 
 /**
@@ -103,9 +105,22 @@ interface DisplayItem {
                   (click)="onGroupCheckboxClick($event, item.groupId!)"
                   class="shape-checkbox"
                 />
-                <i class="pi pi-objects-column text-sm text-blue-600"></i>
+                <!-- Icon: Different for parent groups vs regular groups -->
+                @if (item.isParentGroup) {
+                  <i class="pi pi-sitemap text-sm text-purple-600" pTooltip="Parent Group"></i>
+                } @else {
+                  <i class="pi pi-objects-column text-sm text-blue-600"></i>
+                }
                 <span class="shape-name flex-1">{{ getGroupName(item.shapes!, idx) }}</span>
-                <span class="group-count">({{ item.shapes!.length }})</span>
+                <!-- Count: Show subgroups if parent group -->
+                @if (item.isParentGroup && item.childGroupIds && item.childGroupIds.length > 0) {
+                  <span class="group-count text-purple-600"
+                    >({{ item.childGroupIds.length }} groups,
+                    {{ item.shapes!.length }} shapes)</span
+                  >
+                } @else {
+                  <span class="group-count">({{ item.shapes!.length }})</span>
+                }
                 @if (item.visible === false) {
                   <i class="pi pi-eye-slash text-gray-400" style="font-size: 0.7rem;"></i>
                 }
@@ -544,37 +559,60 @@ export class ShapesListComponent {
 
   /**
    * Computed signal that organizes shapes into display items.
-   * Groups are shown as single items, ungrouped shapes shown individually.
+   * Groups are shown as single items, nested groups shown with parent groups.
+   * Only top-level items (no parentGroupId) are shown at root level.
    */
   readonly displayItems = computed<DisplayItem[]>(() => {
     const allShapes = this.shapes();
     const processedShapes = new Set<string>();
     const items: DisplayItem[] = [];
 
-    // First pass: collect all groups
+    // First pass: collect all groups (both parent and child groups)
     const groupMap = new Map<string, Shape[]>();
+    const parentGroupMap = new Map<string, Set<string>>(); // parentGroupId -> Set of child groupIds
+
     allShapes.forEach((shape) => {
       if (shape.groupId) {
+        // Add shape to its group
         if (!groupMap.has(shape.groupId)) {
           groupMap.set(shape.groupId, []);
         }
         groupMap.get(shape.groupId)!.push(shape);
         processedShapes.add(shape.id);
+
+        // Track parent-child group relationships
+        if (shape.parentGroupId) {
+          if (!parentGroupMap.has(shape.parentGroupId)) {
+            parentGroupMap.set(shape.parentGroupId, new Set());
+          }
+          parentGroupMap.get(shape.parentGroupId)!.add(shape.groupId);
+        }
       }
     });
 
-    // Add groups as single items
+    // Second pass: Add only top-level groups (groups without parent groups)
     groupMap.forEach((shapes, groupId) => {
-      items.push({
-        id: groupId,
-        type: 'group',
-        groupId,
-        shapes,
-        visible: shapes.every((s) => s.visible !== false),
-      });
+      // Check if any shape in this group has a parentGroupId
+      const hasParent = shapes.some((s) => s.parentGroupId);
+
+      if (!hasParent) {
+        // This is a top-level group - add it to items
+        const isParentGroup = parentGroupMap.has(groupId);
+        const childGroups = isParentGroup ? Array.from(parentGroupMap.get(groupId)!) : [];
+
+        items.push({
+          id: groupId,
+          type: 'group',
+          groupId,
+          shapes,
+          visible: shapes.every((s) => s.visible !== false),
+          isParentGroup, // NEW: flag to indicate if this group contains subgroups
+          childGroupIds: childGroups, // NEW: IDs of child groups
+        });
+      }
     });
 
-    // Add ungrouped shapes
+    // Add ungrouped shapes (no groupId at all)
     allShapes.forEach((shape) => {
       if (!processedShapes.has(shape.id)) {
         items.push({
@@ -591,35 +629,50 @@ export class ShapesListComponent {
 
   /**
    * Computed signal to check if selected shapes can be grouped.
+   * Now supports mixed selections (ungrouped shapes + groups) and nested groups.
    */
   readonly canGroup = computed(() => {
     const selected = this.selectedShapeIds();
     if (selected.length < 2) return false;
 
-    // Check if all selected shapes have the same groupId
     const shapes = this.shapes().filter((s) => selected.includes(s.id));
-    const groupIds = new Set(shapes.map((s) => s.groupId).filter((id) => id !== undefined));
 
-    // Can group if: multiple shapes selected and not all in the same group
-    return (
-      groupIds.size === 0 ||
-      (groupIds.size === 1 && shapes.length > shapes.filter((s) => s.groupId).length)
+    // Get unique groupIds and parentGroupIds
+    const groupIds = new Set(shapes.map((s) => s.groupId).filter((id) => id !== undefined));
+    const parentGroupIds = new Set(
+      shapes.map((s) => s.parentGroupId).filter((id) => id !== undefined),
+    );
+
+    // Can always group if:
+    // 1. Multiple groups are selected (creates parent group)
+    // 2. Mix of grouped and ungrouped shapes
+    // 3. Shapes from different parent groups
+    // 4. All ungrouped shapes
+
+    // Cannot group if all shapes are already in the same group AND same parent group
+    const allSameGroup =
+      groupIds.size === 1 && shapes.length === shapes.filter((s) => s.groupId).length;
+    const allSameParentGroup = parentGroupIds.size <= 1;
+
+    return !(
+      allSameGroup &&
+      allSameParentGroup &&
+      shapes.every((s) => s.groupId === shapes[0].groupId)
     );
   });
 
   /**
    * Computed signal to check if selected shapes can be ungrouped.
+   * Returns true if selected shapes have any grouping (groupId or parentGroupId).
    */
   readonly canUngroup = computed(() => {
     const selected = this.selectedShapeIds();
     if (selected.length === 0) return false;
 
-    // Check if all selected shapes share the same groupId
     const shapes = this.shapes().filter((s) => selected.includes(s.id));
-    const groupIds = new Set(shapes.map((s) => s.groupId).filter((id) => id !== undefined));
 
-    // Can ungroup if: all selected shapes share exactly one groupId
-    return groupIds.size === 1;
+    // Can ungroup if any selected shape has a groupId or parentGroupId
+    return shapes.some((s) => s.groupId || s.parentGroupId);
   });
 
   /**
@@ -790,8 +843,7 @@ export class ShapesListComponent {
       {
         label: 'Select',
         icon: 'pi pi-check',
-        command: (event) => {
-          event?.originalEvent?.stopPropagation();
+        command: () => {
           this.shapeSelect.emit({ shapeId: shape.id, multiSelect: false });
         },
       },
@@ -801,16 +853,14 @@ export class ShapesListComponent {
       {
         label: shape.visible === false ? 'Show' : 'Hide',
         icon: shape.visible === false ? 'pi pi-eye' : 'pi pi-eye-slash',
-        command: (event) => {
-          event?.originalEvent?.stopPropagation();
+        command: () => {
           this.shapeToggleVisibility.emit(shape.id);
         },
       },
       {
         label: 'Duplicate',
         icon: 'pi pi-copy',
-        command: (event) => {
-          event?.originalEvent?.stopPropagation();
+        command: () => {
           this.shapeDuplicate.emit(shape.id);
         },
       },
@@ -821,8 +871,7 @@ export class ShapesListComponent {
         label: 'Delete',
         icon: 'pi pi-trash',
         styleClass: 'text-red-500',
-        command: (event) => {
-          event?.originalEvent?.stopPropagation();
+        command: () => {
           this.shapeDelete.emit(shape.id);
         },
       },
@@ -839,8 +888,7 @@ export class ShapesListComponent {
       {
         label: 'Select Group',
         icon: 'pi pi-check',
-        command: (event) => {
-          event?.originalEvent?.stopPropagation();
+        command: () => {
           if (item.groupId && item.shapes && item.shapes.length > 0) {
             this.shapeSelect.emit({ shapeId: item.shapes[0].id, multiSelect: false });
           }
@@ -852,8 +900,7 @@ export class ShapesListComponent {
       {
         label: 'Ungroup',
         icon: 'pi pi-link',
-        command: (event) => {
-          event?.originalEvent?.stopPropagation();
+        command: () => {
           // Select all shapes in the group first, then ungroup
           if (item.shapes && item.shapes.length > 0) {
             this.shapeSelect.emit({ shapeId: item.shapes[0].id, multiSelect: false });
@@ -867,8 +914,7 @@ export class ShapesListComponent {
       {
         label: allVisible ? 'Hide All' : 'Show All',
         icon: allVisible ? 'pi pi-eye-slash' : 'pi pi-eye',
-        command: (event) => {
-          event?.originalEvent?.stopPropagation();
+        command: () => {
           // Toggle visibility for all shapes in the group
           item.shapes?.forEach((shape) => {
             this.shapeToggleVisibility.emit(shape.id);
@@ -879,8 +925,7 @@ export class ShapesListComponent {
         label: 'Delete Group',
         icon: 'pi pi-trash',
         styleClass: 'text-red-500',
-        command: (event) => {
-          event?.originalEvent?.stopPropagation();
+        command: () => {
           // Delete all shapes in the group
           item.shapes?.forEach((shape) => {
             this.shapeDelete.emit(shape.id);

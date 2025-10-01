@@ -583,6 +583,43 @@ import {
           />
         }
 
+        <!-- Selection bounds for selected shapes/groups -->
+        @if (drawingService.selectedShapeIds().length > 0) {
+          @if (getSelectionBounds(); as bounds) {
+            <rect
+              [attr.x]="bounds.x"
+              [attr.y]="bounds.y"
+              [attr.width]="bounds.width"
+              [attr.height]="bounds.height"
+              fill="none"
+              stroke="#3b82f6"
+              stroke-width="2"
+              stroke-dasharray="8,4"
+              pointer-events="none"
+              opacity="0.6"
+            />
+          }
+        }
+
+        <!-- Selection rectangle during drag-to-select -->
+        @if (isDrawingSelectionRect() && selectionRectStart() && selectionRectEnd()) {
+          @let start = selectionRectStart()!;
+          @let end = selectionRectEnd()!;
+          @let rect = normalizeRectangle(start, end);
+          <rect
+            [attr.x]="rect.x"
+            [attr.y]="rect.y"
+            [attr.width]="rect.width"
+            [attr.height]="rect.height"
+            fill="rgba(59, 130, 246, 0.1)"
+            stroke="#3b82f6"
+            stroke-width="2"
+            stroke-dasharray="5,3"
+            pointer-events="none"
+            opacity="0.8"
+          />
+        }
+
         <!-- Resize handles for selected shape -->
         @if (drawingService.selectedShapeId() && drawingService.selectedShape()) {
           @if (getResizeHandles(drawingService.selectedShape()!); as handles) {
@@ -766,6 +803,11 @@ export class CanvasRendererComponent implements OnInit, OnDestroy {
   readonly canvasHeight = signal<number>(600);
   readonly previewLine = signal<{ start: Point; end: Point } | null>(null);
 
+  // Selection rectangle state
+  readonly selectionRectStart = signal<Point | null>(null);
+  readonly selectionRectEnd = signal<Point | null>(null);
+  readonly isDrawingSelectionRect = signal<boolean>(false);
+
   /**
    * Helper method to check if a shape is selected (supports multi-select).
    */
@@ -886,6 +928,182 @@ export class CanvasRendererComponent implements OnInit, OnDestroy {
     this.isResizing = true;
     this.resizeHandle = handleId;
     this.dragStartPos = this.getMousePosition(event);
+  }
+
+  /**
+   * Normalizes a rectangle so that x,y is always top-left corner.
+   * Handles cases where user drags from bottom-right to top-left.
+   */
+  normalizeRectangle(
+    start: Point,
+    end: Point,
+  ): { x: number; y: number; width: number; height: number } {
+    const x = Math.min(start.x, end.x);
+    const y = Math.min(start.y, end.y);
+    const width = Math.abs(end.x - start.x);
+    const height = Math.abs(end.y - start.y);
+    return { x, y, width, height };
+  }
+
+  /**
+   * Finds all shapes that intersect with the given rectangle.
+   * @param rect - Selection rectangle bounds
+   * @returns Array of shape IDs that intersect with the rectangle
+   */
+  private findShapesInRectangle(rect: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }): string[] {
+    const selectedIds: string[] = [];
+    const shapes = this.drawingService.shapes();
+
+    shapes.forEach((shape) => {
+      if (shape.visible === false) return;
+
+      const shapeBounds = this.getShapeBounds(shape);
+      if (!shapeBounds) return;
+
+      // Check if shape intersects with selection rectangle
+      const intersects =
+        shapeBounds.minX <= rect.x + rect.width &&
+        shapeBounds.maxX >= rect.x &&
+        shapeBounds.minY <= rect.y + rect.height &&
+        shapeBounds.maxY >= rect.y;
+
+      if (intersects) {
+        selectedIds.push(shape.id);
+      }
+    });
+
+    return selectedIds;
+  }
+
+  /**
+   * Gets the bounding box for all selected shapes/groups.
+   * Returns null if no shapes are selected.
+   */
+  getSelectionBounds(): { x: number; y: number; width: number; height: number } | null {
+    const selectedIds = this.drawingService.selectedShapeIds();
+    if (selectedIds.length === 0) {
+      return null;
+    }
+
+    const selectedShapes = this.drawingService
+      .shapes()
+      .filter((s) => selectedIds.includes(s.id) && s.visible !== false);
+
+    if (selectedShapes.length === 0) {
+      return null;
+    }
+
+    // Calculate bounding box for all selected shapes
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    selectedShapes.forEach((shape) => {
+      const bounds = this.getShapeBounds(shape);
+      if (bounds) {
+        minX = Math.min(minX, bounds.minX);
+        minY = Math.min(minY, bounds.minY);
+        maxX = Math.max(maxX, bounds.maxX);
+        maxY = Math.max(maxY, bounds.maxY);
+      }
+    });
+
+    if (minX === Infinity || minY === Infinity) {
+      return null;
+    }
+
+    // Add padding around the selection
+    const padding = 10;
+
+    return {
+      x: minX - padding,
+      y: minY - padding,
+      width: maxX - minX + padding * 2,
+      height: maxY - minY + padding * 2,
+    };
+  }
+
+  /**
+   * Gets the bounding box for a single shape.
+   */
+  private getShapeBounds(
+    shape: Shape,
+  ): { minX: number; minY: number; maxX: number; maxY: number } | null {
+    if (shape.type === 'line') {
+      const line = shape as LineShape;
+      return {
+        minX: Math.min(line.start.x, line.end.x),
+        minY: Math.min(line.start.y, line.end.y),
+        maxX: Math.max(line.start.x, line.end.x),
+        maxY: Math.max(line.start.y, line.end.y),
+      };
+    } else if (shape.type === 'rectangle' || shape.type === 'rounded-rectangle') {
+      const rect = shape as RectangleShape;
+      return {
+        minX: rect.topLeft.x,
+        minY: rect.topLeft.y,
+        maxX: rect.topLeft.x + rect.width,
+        maxY: rect.topLeft.y + rect.height,
+      };
+    } else if (shape.type === 'circle') {
+      const circle = shape as CircleShape;
+      return {
+        minX: circle.center.x - circle.radius,
+        minY: circle.center.y - circle.radius,
+        maxX: circle.center.x + circle.radius,
+        maxY: circle.center.y + circle.radius,
+      };
+    } else if (shape.type === 'ellipse') {
+      const ellipse = shape as EllipseShape;
+      return {
+        minX: ellipse.center.x - ellipse.radiusX,
+        minY: ellipse.center.y - ellipse.radiusY,
+        maxX: ellipse.center.x + ellipse.radiusX,
+        maxY: ellipse.center.y + ellipse.radiusY,
+      };
+    } else if (shape.type === 'polygon' || shape.type === 'polyline' || shape.type === 'triangle') {
+      const vertices = (shape as PolygonShape).vertices;
+      if (vertices.length === 0) return null;
+
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -Infinity;
+      let maxY = -Infinity;
+
+      vertices.forEach((v) => {
+        minX = Math.min(minX, v.x);
+        minY = Math.min(minY, v.y);
+        maxX = Math.max(maxX, v.x);
+        maxY = Math.max(maxY, v.y);
+      });
+
+      return { minX, minY, maxX, maxY };
+    } else if (shape.type === 'bezier') {
+      const bezier = shape as BezierShape;
+      const points = [bezier.start, bezier.controlPoint1, bezier.controlPoint2, bezier.end];
+
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -Infinity;
+      let maxY = -Infinity;
+
+      points.forEach((p) => {
+        minX = Math.min(minX, p.x);
+        minY = Math.min(minY, p.y);
+        maxX = Math.max(maxX, p.x);
+        maxY = Math.max(maxY, p.y);
+      });
+
+      return { minX, minY, maxX, maxY };
+    }
+
+    return null;
   }
 
   /**
@@ -1042,8 +1260,18 @@ export class CanvasRendererComponent implements OnInit, OnDestroy {
       this.draggedShapeId = null;
       this.dragStartPos = null;
 
-      // Deselect if using select tool
-      if (tool === 'select' || tool === 'move') {
+      // For select tool, initiate selection rectangle drawing
+      if (tool === 'select') {
+        this.isDrawingSelectionRect.set(true);
+        this.selectionRectStart.set(point);
+        this.selectionRectEnd.set(point);
+        // Don't deselect yet - let user decide with Ctrl/Cmd modifier
+        // If no modifier, we'll clear selection on mouse up
+        return;
+      }
+
+      // Deselect if using move tool
+      if (tool === 'move') {
         this.drawingService.selectShape(null);
         return;
       }
@@ -1141,6 +1369,12 @@ export class CanvasRendererComponent implements OnInit, OnDestroy {
         this.resizeHandle,
         currentPoint,
       );
+      return;
+    }
+
+    // Handle selection rectangle drawing
+    if (this.isDrawingSelectionRect()) {
+      this.selectionRectEnd.set(currentPoint);
       return;
     }
 
@@ -1270,6 +1504,48 @@ export class CanvasRendererComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Handle selection rectangle completion
+    if (this.isDrawingSelectionRect()) {
+      const start = this.selectionRectStart();
+      const end = this.selectionRectEnd();
+
+      if (start && end) {
+        const rect = this.normalizeRectangle(start, end);
+
+        // Only select if rectangle has meaningful size (more than 5px in each dimension)
+        if (rect.width > 5 && rect.height > 5) {
+          const shapesInRect = this.findShapesInRectangle(rect);
+
+          if (shapesInRect.length > 0) {
+            // Check if Ctrl/Cmd is pressed for additive selection
+            const isAdditive = event.ctrlKey || event.metaKey;
+
+            if (isAdditive) {
+              // Add to existing selection
+              const currentSelection = this.drawingService.selectedShapeIds();
+              const newSelection = Array.from(new Set([...currentSelection, ...shapesInRect]));
+              this.drawingService.setSelectedShapes(newSelection);
+            } else {
+              // Replace selection
+              this.drawingService.setSelectedShapes(shapesInRect);
+            }
+          } else if (!event.ctrlKey && !event.metaKey) {
+            // Clear selection if nothing selected and no modifier key
+            this.drawingService.clearSelection();
+          }
+        } else if (!event.ctrlKey && !event.metaKey) {
+          // Small rectangle or click - clear selection
+          this.drawingService.clearSelection();
+        }
+      }
+
+      // Reset selection rectangle state
+      this.isDrawingSelectionRect.set(false);
+      this.selectionRectStart.set(null);
+      this.selectionRectEnd.set(null);
+      return;
+    }
+
     // Stop dragging
     if (this.isDragging) {
       this.isDragging = false;
@@ -1380,6 +1656,13 @@ export class CanvasRendererComponent implements OnInit, OnDestroy {
     if (this.isResizing) {
       this.isResizing = false;
       this.resizeHandle = null;
+    }
+
+    // Reset selection rectangle state
+    if (this.isDrawingSelectionRect()) {
+      this.isDrawingSelectionRect.set(false);
+      this.selectionRectStart.set(null);
+      this.selectionRectEnd.set(null);
     }
 
     if (this.drawingService.isDrawing()) {

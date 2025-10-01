@@ -549,6 +549,8 @@ export interface Shape {
   visible?: boolean;
   /** Group ID if this shape belongs to a group (for locked movement) */
   groupId?: string;
+  /** Parent group ID for nested groups - allows groups to be grouped together */
+  parentGroupId?: string;
   /** Shape creation timestamp */
   createdAt: Date;
 }
