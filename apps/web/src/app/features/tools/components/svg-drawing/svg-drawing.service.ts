@@ -28,7 +28,7 @@ import {
 export class SvgDrawingService {
   // Reactive state signals
   private readonly _shapes = signal<Shape[]>([]);
-  private readonly _selectedShapeId = signal<string | null>(null);
+  private readonly _selectedShapeIds = signal<string[]>([]);
   private readonly _currentTool = signal<
     | 'line'
     | 'polygon'
@@ -87,7 +87,12 @@ export class SvgDrawingService {
 
   // Public readonly signals
   readonly shapes = this._shapes.asReadonly();
-  readonly selectedShapeId = this._selectedShapeId.asReadonly();
+  readonly selectedShapeIds = this._selectedShapeIds.asReadonly();
+  // Computed signal for backward compatibility (returns first selected or null)
+  readonly selectedShapeId = computed(() => {
+    const ids = this._selectedShapeIds();
+    return ids.length > 0 ? ids[0] : null;
+  });
   readonly currentTool = this._currentTool.asReadonly();
   readonly isDrawing = this._isDrawing.asReadonly();
   readonly activeVertices = this._activeVertices.asReadonly();
@@ -120,8 +125,9 @@ export class SvgDrawingService {
 
   // Computed signals
   readonly selectedShape = computed(() => {
-    const id = this._selectedShapeId();
-    return this._shapes().find((shape) => shape.id === id) || null;
+    const ids = this._selectedShapeIds();
+    const id = ids.length > 0 ? ids[0] : null;
+    return id ? this._shapes().find((shape) => shape.id === id) || null : null;
   });
 
   readonly canUndo = computed(() => this._commandHistory().length > 0);
@@ -146,7 +152,7 @@ export class SvgDrawingService {
 
   readonly drawingState = computed<DrawingState>(() => ({
     shapes: this._shapes(),
-    selectedShapeId: this._selectedShapeId(),
+    selectedShapeId: this.selectedShapeId(), // Use computed property for backward compatibility
     currentTool: this._currentTool(),
     isDrawing: this._isDrawing(),
     activeVertices: this._activeVertices(),
@@ -210,7 +216,7 @@ export class SvgDrawingService {
     } else {
       // Reset state on initialization
       this._shapes.set([]);
-      this._selectedShapeId.set(null);
+      this._selectedShapeIds.set([]);
       this._currentTool.set('line');
       this._isDrawing.set(false);
       this._snapEnabled.set(true);
@@ -251,7 +257,7 @@ export class SvgDrawingService {
     this._shapes.update((shapes) => [...shapes, shape]);
     this._isDrawing.set(false);
     // Auto-select the newly created shape for immediate editing
-    this._selectedShapeId.set(shape.id);
+    this._selectedShapeIds.set([shape.id]);
   }
 
   /**
@@ -275,17 +281,106 @@ export class SvgDrawingService {
    */
   removeShape(shapeId: string): void {
     this._shapes.update((shapes) => shapes.filter((s) => s.id !== shapeId));
-    if (this._selectedShapeId() === shapeId) {
-      this._selectedShapeId.set(null);
+    // Remove from selection if selected
+    this._selectedShapeIds.update((ids) => ids.filter((id) => id !== shapeId));
+  }
+
+  /**
+   * Selects a shape by ID (replaces current selection).
+   * If the shape is part of a group, selects the entire group.
+   * @param shapeId - ID of the shape to select, or null to clear selection
+   */
+  selectShape(shapeId: string | null): void {
+    if (!shapeId) {
+      this._selectedShapeIds.set([]);
+      return;
+    }
+
+    const shape = this._shapes().find((s) => s.id === shapeId);
+    if (!shape) {
+      this._selectedShapeIds.set([shapeId]);
+      return;
+    }
+
+    // If shape is in a group, select all shapes in the group
+    if (shape.groupId) {
+      this.selectGroup(shapeId);
+    } else {
+      this._selectedShapeIds.set([shapeId]);
     }
   }
 
   /**
-   * Selects a shape by ID.
-   * @param shapeId - ID of the shape to select
+   * Toggles a shape's selection state.
+   * If the shape is part of a group, toggles the entire group.
+   * @param shapeId - ID of the shape to toggle
+   * @param multiSelect - If true, adds to selection; if false, replaces selection
    */
-  selectShape(shapeId: string | null): void {
-    this._selectedShapeId.set(shapeId);
+  toggleShapeSelection(shapeId: string, multiSelect: boolean = false): void {
+    const shape = this._shapes().find((s) => s.id === shapeId);
+    if (!shape) return;
+
+    if (!multiSelect) {
+      // Replace selection with this shape (or group)
+      this.selectShape(shapeId);
+      return;
+    }
+
+    // Toggle in multi-select mode
+    if (shape.groupId) {
+      // Toggle entire group
+      const groupShapes = this._shapes().filter((s) => s.groupId === shape.groupId);
+      const groupShapeIds = groupShapes.map((s) => s.id);
+      const allSelected = groupShapeIds.every((id) => this._selectedShapeIds().includes(id));
+
+      this._selectedShapeIds.update((ids) => {
+        if (allSelected) {
+          // Deselect all shapes in the group
+          return ids.filter((id) => !groupShapeIds.includes(id));
+        } else {
+          // Select all shapes in the group
+          const newIds = [...ids];
+          groupShapeIds.forEach((id) => {
+            if (!newIds.includes(id)) {
+              newIds.push(id);
+            }
+          });
+          return newIds;
+        }
+      });
+    } else {
+      // Toggle single shape
+      this._selectedShapeIds.update((ids) => {
+        if (ids.includes(shapeId)) {
+          return ids.filter((id) => id !== shapeId);
+        } else {
+          return [...ids, shapeId];
+        }
+      });
+    }
+  }
+
+  /**
+   * Selects multiple shapes at once.
+   * @param shapeIds - Array of shape IDs to select
+   */
+  selectMultipleShapes(shapeIds: string[]): void {
+    this._selectedShapeIds.set(shapeIds);
+  }
+
+  /**
+   * Clears the current selection.
+   */
+  clearSelection(): void {
+    this._selectedShapeIds.set([]);
+  }
+
+  /**
+   * Checks if a shape is currently selected.
+   * @param shapeId - ID of the shape to check
+   */
+  isShapeSelected(shapeId: string): boolean {
+    return this._selectedShapeIds().includes(shapeId);
   }
 
   /**
@@ -406,7 +501,7 @@ export class SvgDrawingService {
    */
   clearAll(): void {
     this._shapes.set([]);
-    this._selectedShapeId.set(null);
+    this._selectedShapeIds.set([]);
     this._isDrawing.set(false);
   }
 
@@ -456,7 +551,7 @@ export class SvgDrawingService {
     this._activeVertices.set([]);
     this._isDrawing.set(false);
     // Auto-select the newly created polygon for immediate editing
-    this._selectedShapeId.set(polygon.id);
+    this._selectedShapeIds.set([polygon.id]);
 
     return polygon;
   }
@@ -523,7 +618,7 @@ export class SvgDrawingService {
     this._activeVertices.set([]);
     this._isDrawing.set(false);
     // Auto-select the newly created polyline for immediate editing
-    this._selectedShapeId.set(polyline.id);
+    this._selectedShapeIds.set([polyline.id]);
 
     return polyline;
   }
@@ -816,23 +911,27 @@ export class SvgDrawingService {
    */
   removeShapeFromState(shapeId: string): void {
     this._shapes.update((shapes) => shapes.filter((s) => s.id !== shapeId));
-    if (this._selectedShapeId() === shapeId) {
-      this._selectedShapeId.set(null);
-    }
+    // Remove from selection if selected
+    this._selectedShapeIds.update((ids) => ids.filter((id) => id !== shapeId));
   }
 
   /**
-   * Deletes the currently selected shape.
+   * Deletes the currently selected shape(s).
    */
   deleteSelectedShape(): void {
-    const shapeId = this._selectedShapeId();
-    if (!shapeId) return;
+    const shapeIds = this._selectedShapeIds();
+    if (shapeIds.length === 0) return;
 
-    const shape = this._shapes().find((s) => s.id === shapeId);
-    if (!shape) return;
+    // Delete all selected shapes
+    const shapesToDelete = this._shapes().filter((s) => shapeIds.includes(s.id));
+    if (shapesToDelete.length === 0) return;
 
-    this.executeCommand(new DeleteShapeCommand(this, shape));
-    this._selectedShapeId.set(null);
+    // Execute delete command for each shape
+    shapesToDelete.forEach((shape) => {
+      this.executeCommand(new DeleteShapeCommand(this, shape));
+    });
+
+    this._selectedShapeIds.set([]);
   }
 
   /**
@@ -971,7 +1070,7 @@ export class SvgDrawingService {
     }
 
     this.executeCommand(new AddShapeCommand(this, duplicatedShape));
-    this._selectedShapeId.set(duplicatedShape.id);
+    this._selectedShapeIds.set([duplicatedShape.id]);
   }
 
   /**
@@ -1119,6 +1218,7 @@ export class SvgDrawingService {
 
   /**
    * Moves a shape by a delta offset.
+   * If the shape is part of a group, moves the entire group.
    * @param shapeId - ID of the shape to move
    * @param deltaX - X offset in pixels
    * @param deltaY - Y offset in pixels
@@ -1126,6 +1226,12 @@ export class SvgDrawingService {
   moveShape(shapeId: string, deltaX: number, deltaY: number): void {
     const shape = this._shapes().find((s) => s.id === shapeId);
     if (!shape) return;
+
+    // If shape is part of a group, move the entire group
+    if (shape.groupId) {
+      this.moveGroup(shape.groupId, deltaX, deltaY);
+      return;
+    }
 
     let movedShape: Shape;
 
@@ -1490,11 +1596,505 @@ export class SvgDrawingService {
    * Selects all shapes on the canvas.
    */
   selectAllShapes(): void {
-    // For now, we'll select the first shape if available
-    // Full multi-select could be implemented in a future enhancement
     const shapes = this._shapes();
-    if (shapes.length > 0) {
-      this._selectedShapeId.set(shapes[0].id);
+    const allShapeIds = shapes.filter((s) => s.visible !== false).map((s) => s.id);
+    this._selectedShapeIds.set(allShapeIds);
+  }
+
+  /**
+   * Groups the currently selected shapes together.
+   * Grouped shapes will move together as one unit.
+   * @returns The group ID, or null if grouping failed
+   */
+  groupSelectedShapes(): string | null {
+    const selectedIds = this._selectedShapeIds();
+
+    if (selectedIds.length < 2) {
+      console.warn('Need at least 2 shapes to group');
+      return null;
+    }
+
+    // Generate unique group ID
+    const groupId = this.generateShapeId();
+
+    // Update all selected shapes with the group ID
+    this._shapes.update((shapes) =>
+      shapes.map((shape) => (selectedIds.includes(shape.id) ? { ...shape, groupId } : shape)),
+    );
+
+    return groupId;
+  }
+
+  /**
+   * Ungroups the currently selected shapes.
+   * Removes group ID from all selected shapes.
+   */
+  ungroupSelectedShapes(): void {
+    const selectedIds = this._selectedShapeIds();
+
+    if (selectedIds.length === 0) {
+      return;
+    }
+
+    // Remove group ID from all selected shapes
+    this._shapes.update((shapes) =>
+      shapes.map((shape) =>
+        selectedIds.includes(shape.id) ? { ...shape, groupId: undefined } : shape,
+      ),
+    );
+  }
+
+  /**
+   * Selects all shapes in the same group as the given shape.
+   * @param shapeId - ID of a shape in the group
+   */
+  selectGroup(shapeId: string): void {
+    const shape = this._shapes().find((s) => s.id === shapeId);
+    if (!shape || !shape.groupId) {
+      return;
+    }
+
+    // Find all shapes with the same group ID
+    const groupShapeIds = this._shapes()
+      .filter((s) => s.groupId === shape.groupId)
+      .map((s) => s.id);
+
+    this._selectedShapeIds.set(groupShapeIds);
+  }
+
+  /**
+   * Checks if selected shapes are all in the same group.
+   * @returns Group ID if all selected shapes share a group, null otherwise
+   */
+  getSelectedGroupId(): string | null {
+    const selectedIds = this._selectedShapeIds();
+    if (selectedIds.length === 0) return null;
+
+    const selectedShapes = this._shapes().filter((s) => selectedIds.includes(s.id));
+    const groupIds = selectedShapes.map((s) => s.groupId).filter((id) => id !== undefined);
+
+    // Check if all shapes have the same group ID
+    if (groupIds.length === selectedShapes.length && groupIds.length > 0) {
+      const firstGroupId = groupIds[0];
+      if (groupIds.every((id) => id === firstGroupId)) {
+        return firstGroupId as string;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Moves all shapes in a group by the specified offset.
+   * @param groupId - ID of the group to move
+   * @param dx - X offset in pixels
+   * @param dy - Y offset in pixels
+   */
+  moveGroup(groupId: string, dx: number, dy: number): void {
+    this._shapes.update((shapes) =>
+      shapes.map((shape) => {
+        if (shape.groupId !== groupId) return shape;
+
+        // Move shape based on its type
+        return this.moveShapeByOffset(shape, dx, dy);
+      }),
+    );
+  }
+
+  /**
+   * Removes a single shape from its group.
+   * @param shapeId - ID of the shape to remove from group
+   */
+  removeShapeFromGroup(shapeId: string): void {
+    this._shapes.update((shapes) =>
+      shapes.map((shape) => {
+        if (shape.id === shapeId && shape.groupId) {
+          // Remove groupId from this shape
+          const { groupId, ...shapeWithoutGroup } = shape;
+          return shapeWithoutGroup as Shape;
+        }
+        return shape;
+      }),
+    );
+  }
+
+  /**
+   * Moves a single shape by the specified offset.
+   * Helper method for moving shapes in groups.
+   */
+  private moveShapeByOffset(shape: Shape, dx: number, dy: number): Shape {
+    switch (shape.type) {
+      case 'line': {
+        const line = shape as LineShape;
+        return {
+          ...line,
+          start: { x: line.start.x + dx, y: line.start.y + dy },
+          end: { x: line.end.x + dx, y: line.end.y + dy },
+        } as LineShape;
+      }
+      case 'polyline': {
+        const polyline = shape as PolylineShape;
+        return {
+          ...polyline,
+          vertices: polyline.vertices.map((v) => ({ x: v.x + dx, y: v.y + dy })),
+        } as PolylineShape;
+      }
+      case 'polygon': {
+        const polygon = shape as PolygonShape;
+        return {
+          ...polygon,
+          vertices: polygon.vertices.map((v) => ({ x: v.x + dx, y: v.y + dy })),
+        } as PolygonShape;
+      }
+      case 'rectangle':
+      case 'rounded-rectangle':
+      case 'circle':
+      case 'ellipse':
+      case 'triangle':
+      case 'arc':
+      case 'arrow':
+      case 'bezier':
+      case 'star':
+      case 'cylinder':
+      case 'cone':
+        // For all other shape types, use the existing moveShape logic
+        // by creating a temporary copy with the updates
+        return this.getMovedShapeInternal(shape, dx, dy);
+      default:
+        return shape;
+    }
+  }
+
+  /**
+   * Internal helper to move a shape by offset using the same logic as moveShape.
+   * This avoids code duplication and type issues.
+   */
+  private getMovedShapeInternal(shape: Shape, deltaX: number, deltaY: number): Shape {
+    // Use similar logic to moveShape but return the new shape instead of executing command
+    if (shape.type === 'rectangle') {
+      const rect = shape as any;
+      return {
+        ...rect,
+        topLeft: { x: rect.topLeft.x + deltaX, y: rect.topLeft.y + deltaY },
+      } as Shape;
+    } else if (shape.type === 'circle') {
+      const circle = shape as any;
+      return {
+        ...circle,
+        center: { x: circle.center.x + deltaX, y: circle.center.y + deltaY },
+      } as Shape;
+    } else if (shape.type === 'ellipse') {
+      const ellipse = shape as any;
+      return {
+        ...ellipse,
+        center: { x: ellipse.center.x + deltaX, y: ellipse.center.y + deltaY },
+      } as Shape;
+    } else if (shape.type === 'triangle') {
+      const triangle = shape as any;
+      return {
+        ...triangle,
+        vertices: triangle.vertices.map((v: Point) => ({ x: v.x + deltaX, y: v.y + deltaY })),
+      } as Shape;
+    } else if (shape.type === 'rounded-rectangle') {
+      const roundedRect = shape as any;
+      return {
+        ...roundedRect,
+        topLeft: { x: roundedRect.topLeft.x + deltaX, y: roundedRect.topLeft.y + deltaY },
+      } as Shape;
+    } else if (shape.type === 'arc') {
+      const arc = shape as any;
+      return {
+        ...arc,
+        start: { x: arc.start.x + deltaX, y: arc.start.y + deltaY },
+        end: { x: arc.end.x + deltaX, y: arc.end.y + deltaY },
+      } as Shape;
+    } else if (shape.type === 'bezier') {
+      const bezier = shape as any;
+      return {
+        ...bezier,
+        start: { x: bezier.start.x + deltaX, y: bezier.start.y + deltaY },
+        end: { x: bezier.end.x + deltaX, y: bezier.end.y + deltaY },
+        controlPoint1: {
+          x: bezier.controlPoint1.x + deltaX,
+          y: bezier.controlPoint1.y + deltaY,
+        },
+        controlPoint2: {
+          x: bezier.controlPoint2.x + deltaX,
+          y: bezier.controlPoint2.y + deltaY,
+        },
+      } as Shape;
+    } else if (shape.type === 'star') {
+      const star = shape as any;
+      return {
+        ...star,
+        center: { x: star.center.x + deltaX, y: star.center.y + deltaY },
+      } as Shape;
+    } else if (shape.type === 'arrow') {
+      const arrow = shape as any;
+      return {
+        ...arrow,
+        start: { x: arrow.start.x + deltaX, y: arrow.start.y + deltaY },
+        end: { x: arrow.end.x + deltaX, y: arrow.end.y + deltaY },
+      } as Shape;
+    } else if (shape.type === 'cylinder') {
+      const cylinder = shape as any;
+      return {
+        ...cylinder,
+        topLeft: { x: cylinder.topLeft.x + deltaX, y: cylinder.topLeft.y + deltaY },
+      } as Shape;
+    } else if (shape.type === 'cone') {
+      const cone = shape as any;
+      return {
+        ...cone,
+        apex: { x: cone.apex.x + deltaX, y: cone.apex.y + deltaY },
+        baseCenter: { x: cone.baseCenter.x + deltaX, y: cone.baseCenter.y + deltaY },
+      } as Shape;
+    }
+
+    return shape;
+  }
+
+  /**
+   * Merges the currently selected shapes into a single polyline or polygon.
+   * Intelligently connects shapes by finding endpoints and maintaining structure.
+   * @param closeShape - If true, creates a polygon (closed); otherwise creates polyline (open)
+   * @returns The merged shape, or null if merge failed
+   */
+  mergeSelectedShapes(closeShape: boolean = false): Shape | null {
+    const selectedIds = this._selectedShapeIds();
+
+    if (selectedIds.length < 2) {
+      console.warn('Need at least 2 shapes to merge');
+      return null;
+    }
+
+    const selectedShapes = this._shapes().filter((s) => selectedIds.includes(s.id));
+    if (selectedShapes.length < 2) {
+      return null;
+    }
+
+    // Extract paths from each shape (preserving order and structure)
+    const shapePaths: Point[][] = [];
+    for (const shape of selectedShapes) {
+      const points = this.extractPointsFromShape(shape);
+      if (points.length > 0) {
+        shapePaths.push(points);
+      }
+    }
+
+    if (shapePaths.length === 0) {
+      console.warn('No points found in selected shapes');
+      return null;
+    }
+
+    // Smart path connection: Try to connect shapes by finding closest endpoints
+    const mergedPath = this.connectPaths(shapePaths);
+
+    // Calculate average style from selected shapes
+    const avgColor = selectedShapes[0].color; // Use first shape's color
+    const avgStrokeWidth = Math.round(
+      selectedShapes.reduce((sum, s) => sum + s.strokeWidth, 0) / selectedShapes.length,
+    );
+    const hasFillColor = selectedShapes.some((s) => s.fillColor);
+    const avgFillColor = hasFillColor
+      ? selectedShapes.find((s) => s.fillColor)?.fillColor
+      : undefined;
+
+    // Create merged shape (polyline or polygon)
+    const mergedShape: PolylineShape | PolygonShape = closeShape
+      ? {
+          id: this.generateShapeId(),
+          type: 'polygon',
+          vertices: mergedPath,
+          color: avgColor,
+          strokeWidth: avgStrokeWidth,
+          fillColor: avgFillColor,
+          createdAt: new Date(),
+        }
+      : {
+          id: this.generateShapeId(),
+          type: 'polyline',
+          vertices: mergedPath,
+          color: avgColor,
+          strokeWidth: avgStrokeWidth,
+          fillColor: avgFillColor,
+          createdAt: new Date(),
+        };
+
+    // Execute merge command (handles undo/redo)
+    this.executeCommand(new MergeShapesCommand(this, selectedShapes, mergedShape));
+
+    // Select the new merged shape
+    this._selectedShapeIds.set([mergedShape.id]);
+
+    return mergedShape;
+  }
+
+  /**
+   * Intelligently connects multiple paths by finding closest endpoints.
+   * This preserves the visual structure of merged shapes.
+   * Only connects paths if their endpoints are close enough (within threshold).
+   * @param paths - Array of point arrays to connect
+   * @returns Connected path
+   */
+  private connectPaths(paths: Point[][]): Point[] {
+    if (paths.length === 0) return [];
+    if (paths.length === 1) return paths[0];
+
+    // Connection threshold - only connect if endpoints are this close (10 pixels)
+    const CONNECTION_THRESHOLD = 10;
+
+    // Start with the first path
+    const result: Point[] = [...paths[0]];
+    const remainingPaths = paths.slice(1);
+    const used = new Set<number>();
+
+    // Connect remaining paths by finding closest endpoints
+    while (used.size < remainingPaths.length) {
+      const lastPoint = result[result.length - 1];
+      let bestIndex = -1;
+      let bestDistance = Infinity;
+      let shouldReverse = false;
+
+      // Find the closest unused path
+      for (let i = 0; i < remainingPaths.length; i++) {
+        if (used.has(i)) continue;
+
+        const path = remainingPaths[i];
+        const firstPoint = path[0];
+        const lastPathPoint = path[path.length - 1];
+
+        // Check distance to first point
+        const distToFirst = this.distance(lastPoint, firstPoint);
+        if (distToFirst < bestDistance) {
+          bestDistance = distToFirst;
+          bestIndex = i;
+          shouldReverse = false;
+        }
+
+        // Check distance to last point (would need to reverse path)
+        const distToLast = this.distance(lastPoint, lastPathPoint);
+        if (distToLast < bestDistance) {
+          bestDistance = distToLast;
+          bestIndex = i;
+          shouldReverse = true;
+        }
+      }
+
+      // Only connect if distance is within threshold
+      // This prevents connecting shapes that don't actually touch (like a plus sign)
+      if (bestIndex !== -1 && bestDistance <= CONNECTION_THRESHOLD) {
+        used.add(bestIndex);
+        const pathToAdd = remainingPaths[bestIndex];
+
+        if (shouldReverse) {
+          // Add reversed path (skip first point to avoid duplicates at connection)
+          for (let i = pathToAdd.length - 1; i >= 1; i--) {
+            result.push(pathToAdd[i]);
+          }
+        } else {
+          // Add path as-is (skip first point to avoid duplicates at connection)
+          for (let i = 1; i < pathToAdd.length; i++) {
+            result.push(pathToAdd[i]);
+          }
+        }
+      } else {
+        // No nearby paths found - paths are disconnected
+        // For shapes like a plus sign, just concatenate remaining paths
+        // This will create a valid polyline but with visual "jumps" between disconnected parts
+        for (let i = 0; i < remainingPaths.length; i++) {
+          if (!used.has(i)) {
+            result.push(...remainingPaths[i]);
+          }
+        }
+        break;
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Calculates Euclidean distance between two points.
+   */
+  private distance(p1: Point, p2: Point): number {
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  /**
+   * Extracts all points from a shape, converting it to a point array.
+   * @param shape - Shape to extract points from
+   * @returns Array of points
+   */
+  private extractPointsFromShape(shape: Shape): Point[] {
+    switch (shape.type) {
+      case 'line': {
+        const line = shape as LineShape;
+        return [line.start, line.end];
+      }
+      case 'polyline':
+      case 'polygon': {
+        const poly = shape as PolylineShape | PolygonShape;
+        return [...poly.vertices];
+      }
+      case 'rectangle':
+      case 'rounded-rectangle': {
+        const rect = shape as any;
+        const { topLeft, width, height } = rect;
+        return [
+          topLeft,
+          { x: topLeft.x + width, y: topLeft.y },
+          { x: topLeft.x + width, y: topLeft.y + height },
+          { x: topLeft.x, y: topLeft.y + height },
+        ];
+      }
+      case 'triangle': {
+        const triangle = shape as any;
+        return [...triangle.vertices];
+      }
+      case 'circle':
+      case 'ellipse': {
+        // Approximate circle/ellipse with 16 points
+        const circ = shape as any;
+        const { center, radius, radiusX, radiusY } = circ;
+        const rx = radiusX || radius;
+        const ry = radiusY || radius;
+        const points: Point[] = [];
+        const numPoints = 16;
+        for (let i = 0; i < numPoints; i++) {
+          const angle = (i / numPoints) * 2 * Math.PI;
+          points.push({
+            x: center.x + rx * Math.cos(angle),
+            y: center.y + ry * Math.sin(angle),
+          });
+        }
+        return points;
+      }
+      case 'arc':
+      case 'arrow':
+      case 'bezier': {
+        const curve = shape as any;
+        // For arcs/arrows/bezier, use start and end points
+        return [curve.start, curve.end];
+      }
+      case 'star': {
+        const star = shape as any;
+        // Approximate star with outer points
+        const { center, outerRadius, points: numPoints } = star;
+        const starPoints: Point[] = [];
+        for (let i = 0; i < numPoints; i++) {
+          const angle = (i / numPoints) * 2 * Math.PI - Math.PI / 2;
+          starPoints.push({
+            x: center.x + outerRadius * Math.cos(angle),
+            y: center.y + outerRadius * Math.sin(angle),
+          });
+        }
+        return starPoints;
+      }
+      default:
+        return [];
     }
   }
 
@@ -1978,6 +2578,36 @@ class CutLineCommand implements Command {
   undo(): void {
     this.newLines.forEach((line) => this.service.removeShapeFromState(line.id));
     this.service.addShapeToState(this.originalLine);
+  }
+
+  redo(): void {
+    this.execute();
+  }
+}
+
+/**
+ * Command for merging multiple shapes into a single polyline or polygon.
+ * Supports undo/redo functionality.
+ */
+class MergeShapesCommand implements Command {
+  constructor(
+    private service: SvgDrawingService,
+    private originalShapes: Shape[],
+    private mergedShape: PolylineShape | PolygonShape,
+  ) {}
+
+  execute(): void {
+    // Remove all original shapes
+    this.originalShapes.forEach((shape) => this.service.removeShapeFromState(shape.id));
+    // Add the merged shape
+    this.service.addShapeToState(this.mergedShape);
+  }
+
+  undo(): void {
+    // Remove the merged shape
+    this.service.removeShapeFromState(this.mergedShape.id);
+    // Restore all original shapes
+    this.originalShapes.forEach((shape) => this.service.addShapeToState(shape));
   }
 
   redo(): void {

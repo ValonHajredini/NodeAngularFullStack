@@ -1,0 +1,206 @@
+<div class="svg-drawing-container w-full h-full relative">
+  @if (loading()) {
+    <div class="flex items-center justify-center h-full">
+      <p-message severity="info" text="Loading SVG Drawing..." [closable]="false"></p-message>
+    </div>
+  } @else if (error()) {
+    <div class="flex items-center justify-center h-full">
+      <p-message
+        severity="error"
+        [text]="error() || 'An error occurred'"
+        [closable]="false"
+      ></p-message>
+    </div>
+  } @else {
+    <!-- Toast for notifications -->
+    <p-toast position="top-right"></p-toast>
+
+    <!-- Top Toolbar -->
+    <div class="top-toolbar">
+      <div class="toolbar-content">
+        <div class="flex items-center gap-4">
+          <button
+            pButton
+            type="button"
+            label="New Drawing"
+            icon="pi pi-plus"
+            severity="secondary"
+            [outlined]="true"
+            (click)="onNewDrawing()"
+          ></button>
+        </div>
+
+        <div class="text-sm text-gray-600">
+          <span class="hidden md:inline">{{ svgDrawingService.shapes().length }} shapes</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="main-content">
+      <!-- Left Sidebar - Tools -->
+      <app-tools-sidebar
+        [currentTool]="svgDrawingService.currentTool"
+        [canUndo]="svgDrawingService.canUndo"
+        [canRedo]="svgDrawingService.canRedo"
+        [strokeColor]="svgDrawingService.strokeColor()"
+        [strokeWidth]="svgDrawingService.strokeWidth()"
+        [fillColor]="svgDrawingService.fillColor()"
+        [fillEnabled]="svgDrawingService.fillEnabled()"
+        (toolSelected)="onToolSelected($event)"
+        (undoClicked)="onUndo()"
+        (redoClicked)="onRedo()"
+        (clearAllClicked)="onClearAll()"
+        (strokeColorChanged)="onStrokeColorChanged($event)"
+        (strokeWidthChanged)="onStrokeWidthChanged($event)"
+        (fillColorChanged)="onFillColorChanged($event)"
+        (fillEnabledChanged)="onFillEnabledChanged($event)"
+      ></app-tools-sidebar>
+
+      <!-- Canvas Area -->
+      <div class="canvas-area">
+        <app-canvas-renderer></app-canvas-renderer>
+      </div>
+
+      <!-- Right Sidebar - Collapsible Sections -->
+      <div class="right-sidebar">
+        <div class="accordion" role="region" aria-label="Drawing sidebar sections">
+          <section class="accordion-section" [class.is-open]="isSectionOpen('shapeProperties')">
+            <button
+              type="button"
+              class="accordion-toggle"
+              (click)="toggleSection('shapeProperties')"
+              [attr.aria-expanded]="isSectionOpen('shapeProperties')"
+              aria-controls="shape-properties-panel"
+              id="shape-properties-toggle"
+            >
+              <span class="accordion-toggle-number">1</span>
+              <span class="accordion-toggle-text">Shape Properties</span>
+              <span class="accordion-toggle-icon" aria-hidden="true"></span>
+            </button>
+            <div
+              id="shape-properties-panel"
+              class="accordion-content"
+              role="region"
+              [attr.aria-labelledby]="'shape-properties-toggle'"
+              *ngIf="isSectionOpen('shapeProperties')"
+            >
+              <app-shape-properties
+                [selectedShape]="getSelectedShape()"
+                (propertiesChanged)="onShapePropertiesChanged($event)"
+              ></app-shape-properties>
+            </div>
+          </section>
+
+          <section class="accordion-section" [class.is-open]="isSectionOpen('shapes')">
+            <button
+              type="button"
+              class="accordion-toggle"
+              (click)="toggleSection('shapes')"
+              [attr.aria-expanded]="isSectionOpen('shapes')"
+              aria-controls="shapes-panel"
+              id="shapes-toggle"
+            >
+              <span class="accordion-toggle-number">2</span>
+              <span class="accordion-toggle-text">Shapes</span>
+              <span class="accordion-toggle-icon" aria-hidden="true"></span>
+            </button>
+            <div
+              id="shapes-panel"
+              class="accordion-content accordion-content-scrollable"
+              role="region"
+              [attr.aria-labelledby]="'shapes-toggle'"
+              *ngIf="isSectionOpen('shapes')"
+            >
+              <app-shapes-list
+                [shapes]="svgDrawingService.shapes()"
+                [selectedShapeIds]="svgDrawingService.selectedShapeIds()"
+                (shapeSelect)="onShapeSelect($event)"
+                (selectAll)="onSelectAll()"
+                (mergeShapes)="onMergeShapes()"
+                (groupShapes)="onGroupShapes()"
+                (ungroupShapes)="onUngroupShapes()"
+                (removeFromGroup)="onRemoveFromGroup($event)"
+                (shapeToggleVisibility)="onShapeToggleVisibility($event)"
+                (shapeDuplicate)="onShapeDuplicate($event)"
+                (shapeDelete)="onShapeDelete($event)"
+              ></app-shapes-list>
+            </div>
+          </section>
+
+          <section class="accordion-section" [class.is-open]="isSectionOpen('backgroundImage')">
+            <button
+              type="button"
+              class="accordion-toggle"
+              (click)="toggleSection('backgroundImage')"
+              [attr.aria-expanded]="isSectionOpen('backgroundImage')"
+              aria-controls="background-image-panel"
+              id="background-image-toggle"
+            >
+              <span class="accordion-toggle-number">3</span>
+              <span class="accordion-toggle-text">Background Image</span>
+              <span class="accordion-toggle-icon" aria-hidden="true"></span>
+            </button>
+            <div
+              id="background-image-panel"
+              class="accordion-content"
+              role="region"
+              [attr.aria-labelledby]="'background-image-toggle'"
+              *ngIf="isSectionOpen('backgroundImage')"
+            >
+              <app-background-image-panel></app-background-image-panel>
+            </div>
+          </section>
+
+          <section class="accordion-section" [class.is-open]="isSectionOpen('exportToSvg')">
+            <button
+              type="button"
+              class="accordion-toggle"
+              (click)="toggleSection('exportToSvg')"
+              [attr.aria-expanded]="isSectionOpen('exportToSvg')"
+              aria-controls="export-to-svg-panel"
+              id="export-to-svg-toggle"
+            >
+              <span class="accordion-toggle-number">4</span>
+              <span class="accordion-toggle-text">Export to SVG</span>
+              <span class="accordion-toggle-icon" aria-hidden="true"></span>
+            </button>
+            <div
+              id="export-to-svg-panel"
+              class="accordion-content"
+              role="region"
+              [attr.aria-labelledby]="'export-to-svg-toggle'"
+              *ngIf="isSectionOpen('exportToSvg')"
+            >
+              <app-export-options (export)="onExport($event)"></app-export-options>
+            </div>
+          </section>
+
+          <section class="accordion-section" [class.is-open]="isSectionOpen('helpShortcuts')">
+            <button
+              type="button"
+              class="accordion-toggle"
+              (click)="toggleSection('helpShortcuts')"
+              [attr.aria-expanded]="isSectionOpen('helpShortcuts')"
+              aria-controls="help-shortcuts-panel"
+              id="help-shortcuts-toggle"
+            >
+              <span class="accordion-toggle-number">5</span>
+              <span class="accordion-toggle-text">Help &amp; Shortcuts</span>
+              <span class="accordion-toggle-icon" aria-hidden="true"></span>
+            </button>
+            <div
+              id="help-shortcuts-panel"
+              class="accordion-content"
+              role="region"
+              [attr.aria-labelledby]="'help-shortcuts-toggle'"
+              *ngIf="isSectionOpen('helpShortcuts')"
+            >
+              <app-help-panel></app-help-panel>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  }
+</div>

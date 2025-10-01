@@ -547,6 +547,8 @@ export interface Shape {
   lineStyle?: LineStyle;
   /** Whether the shape is visible on the canvas (default: true) */
   visible?: boolean;
+  /** Group ID if this shape belongs to a group (for locked movement) */
+  groupId?: string;
   /** Shape creation timestamp */
   createdAt: Date;
 }

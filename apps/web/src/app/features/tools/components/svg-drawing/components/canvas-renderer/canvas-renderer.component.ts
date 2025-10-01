@@ -79,7 +79,7 @@ import {
                 [attr.stroke]="shape.color"
                 [attr.stroke-width]="shape.strokeWidth"
                 [attr.stroke-dasharray]="getStrokeDashArray(shape.lineStyle)"
-                [class.shape-selected]="drawingService.selectedShapeId() === shape.id"
+                [class.shape-selected]="isShapeSelected(shape.id)"
                 stroke-linecap="round"
                 (click)="onShapeClick($event, shape)"
               />
@@ -105,7 +105,7 @@ import {
               [attr.fill]="shape.fillColor || 'transparent'"
               [attr.stroke]="shape.color"
               [attr.stroke-width]="shape.strokeWidth"
-              [class.shape-selected]="drawingService.selectedShapeId() === shape.id"
+              [class.shape-selected]="isShapeSelected(shape.id)"
               stroke-linejoin="round"
               (click)="onShapeClick($event, shape)"
             />
@@ -117,7 +117,7 @@ import {
               [attr.stroke]="shape.color"
               [attr.stroke-width]="shape.strokeWidth"
               [attr.stroke-dasharray]="getStrokeDashArray(shape.lineStyle)"
-              [class.shape-selected]="drawingService.selectedShapeId() === shape.id"
+              [class.shape-selected]="isShapeSelected(shape.id)"
               stroke-linejoin="round"
               stroke-linecap="round"
               (click)="onShapeClick($event, shape)"
@@ -132,7 +132,7 @@ import {
               [attr.fill]="shape.fillColor || 'transparent'"
               [attr.stroke]="shape.color"
               [attr.stroke-width]="shape.strokeWidth"
-              [class.shape-selected]="drawingService.selectedShapeId() === shape.id"
+              [class.shape-selected]="isShapeSelected(shape.id)"
               (click)="onShapeClick($event, shape)"
             />
           }
@@ -144,7 +144,7 @@ import {
               [attr.fill]="shape.fillColor || 'transparent'"
               [attr.stroke]="shape.color"
               [attr.stroke-width]="shape.strokeWidth"
-              [class.shape-selected]="drawingService.selectedShapeId() === shape.id"
+              [class.shape-selected]="isShapeSelected(shape.id)"
               (click)="onShapeClick($event, shape)"
             />
           }
@@ -157,7 +157,7 @@ import {
               [attr.fill]="shape.fillColor || 'transparent'"
               [attr.stroke]="shape.color"
               [attr.stroke-width]="shape.strokeWidth"
-              [class.shape-selected]="drawingService.selectedShapeId() === shape.id"
+              [class.shape-selected]="isShapeSelected(shape.id)"
               (click)="onShapeClick($event, shape)"
             />
           }
@@ -167,7 +167,7 @@ import {
               [attr.fill]="shape.fillColor || 'transparent'"
               [attr.stroke]="shape.color"
               [attr.stroke-width]="shape.strokeWidth"
-              [class.shape-selected]="drawingService.selectedShapeId() === shape.id"
+              [class.shape-selected]="isShapeSelected(shape.id)"
               stroke-linejoin="round"
               (click)="onShapeClick($event, shape)"
             />
@@ -179,11 +179,11 @@ import {
                 [attr.fill]="'none'"
                 [attr.stroke]="shape.color"
                 [attr.stroke-width]="shape.strokeWidth"
-                [class.shape-selected]="drawingService.selectedShapeId() === shape.id"
+                [class.shape-selected]="isShapeSelected(shape.id)"
                 stroke-linecap="round"
               />
               <!-- Show control points when selected -->
-              @if (drawingService.selectedShapeId() === shape.id) {
+              @if (isShapeSelected(shape.id)) {
                 <!-- Control lines -->
                 <line
                   [attr.x1]="asBezierShape(shape).start.x"
@@ -765,6 +765,13 @@ export class CanvasRendererComponent implements OnInit, OnDestroy {
   readonly canvasWidth = signal<number>(800);
   readonly canvasHeight = signal<number>(600);
   readonly previewLine = signal<{ start: Point; end: Point } | null>(null);
+
+  /**
+   * Helper method to check if a shape is selected (supports multi-select).
+   */
+  isShapeSelected(shapeId: string): boolean {
+    return this.drawingService.selectedShapeIds().includes(shapeId);
+  }
   readonly previewShape = signal<Shape | null>(null);
   readonly angleIndicator = signal<{ x: number; y: number; angle: number } | null>(null);
   readonly showSnapGuide = signal<boolean>(false);

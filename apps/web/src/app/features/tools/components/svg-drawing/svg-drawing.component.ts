@@ -53,361 +53,8 @@ type SidebarSection =
     ShapePropertiesComponent,
   ],
   providers: [MessageService],
-  template: `
-    <div class="svg-drawing-container w-full h-full relative">
-      @if (loading()) {
-        <div class="flex items-center justify-center h-full">
-          <p-message severity="info" text="Loading SVG Drawing..." [closable]="false"></p-message>
-        </div>
-      } @else if (error()) {
-        <div class="flex items-center justify-center h-full">
-          <p-message
-            severity="error"
-            [text]="error() || 'An error occurred'"
-            [closable]="false"
-          ></p-message>
-        </div>
-      } @else {
-        <!-- Toast for notifications -->
-        <p-toast position="top-right"></p-toast>
-
-        <!-- Top Toolbar -->
-        <div class="top-toolbar">
-          <div class="toolbar-content">
-            <div class="flex items-center gap-4">
-              <button
-                pButton
-                type="button"
-                label="New Drawing"
-                icon="pi pi-plus"
-                severity="secondary"
-                [outlined]="true"
-                (click)="onNewDrawing()"
-              ></button>
-            </div>
-
-            <div class="text-sm text-gray-600">
-              <span class="hidden md:inline">{{ svgDrawingService.shapes().length }} shapes</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Main Content Area -->
-        <div class="main-content">
-          <!-- Left Sidebar - Tools -->
-          <app-tools-sidebar
-            [currentTool]="svgDrawingService.currentTool"
-            [canUndo]="svgDrawingService.canUndo"
-            [canRedo]="svgDrawingService.canRedo"
-            [strokeColor]="svgDrawingService.strokeColor()"
-            [strokeWidth]="svgDrawingService.strokeWidth()"
-            [fillColor]="svgDrawingService.fillColor()"
-            [fillEnabled]="svgDrawingService.fillEnabled()"
-            (toolSelected)="onToolSelected($event)"
-            (undoClicked)="onUndo()"
-            (redoClicked)="onRedo()"
-            (clearAllClicked)="onClearAll()"
-            (strokeColorChanged)="onStrokeColorChanged($event)"
-            (strokeWidthChanged)="onStrokeWidthChanged($event)"
-            (fillColorChanged)="onFillColorChanged($event)"
-            (fillEnabledChanged)="onFillEnabledChanged($event)"
-          ></app-tools-sidebar>
-
-          <!-- Canvas Area -->
-          <div class="canvas-area">
-            <app-canvas-renderer></app-canvas-renderer>
-          </div>
-
-          <!-- Right Sidebar - Collapsible Sections -->
-          <div class="right-sidebar">
-            <div class="accordion" role="region" aria-label="Drawing sidebar sections">
-              <section class="accordion-section" [class.is-open]="isSectionOpen('shapeProperties')">
-                <button
-                  type="button"
-                  class="accordion-toggle"
-                  (click)="toggleSection('shapeProperties')"
-                  [attr.aria-expanded]="isSectionOpen('shapeProperties')"
-                  aria-controls="shape-properties-panel"
-                  id="shape-properties-toggle"
-                >
-                  <span class="accordion-toggle-number">1</span>
-                  <span class="accordion-toggle-text">Shape Properties</span>
-                  <span class="accordion-toggle-icon" aria-hidden="true"></span>
-                </button>
-                <div
-                  id="shape-properties-panel"
-                  class="accordion-content"
-                  role="region"
-                  [attr.aria-labelledby]="'shape-properties-toggle'"
-                  *ngIf="isSectionOpen('shapeProperties')"
-                >
-                  <app-shape-properties
-                    [selectedShape]="getSelectedShape()"
-                    (propertiesChanged)="onShapePropertiesChanged($event)"
-                  ></app-shape-properties>
-                </div>
-              </section>
-
-              <section class="accordion-section" [class.is-open]="isSectionOpen('shapes')">
-                <button
-                  type="button"
-                  class="accordion-toggle"
-                  (click)="toggleSection('shapes')"
-                  [attr.aria-expanded]="isSectionOpen('shapes')"
-                  aria-controls="shapes-panel"
-                  id="shapes-toggle"
-                >
-                  <span class="accordion-toggle-number">2</span>
-                  <span class="accordion-toggle-text">Shapes</span>
-                  <span class="accordion-toggle-icon" aria-hidden="true"></span>
-                </button>
-                <div
-                  id="shapes-panel"
-                  class="accordion-content"
-                  role="region"
-                  [attr.aria-labelledby]="'shapes-toggle'"
-                  *ngIf="isSectionOpen('shapes')"
-                >
-                  <app-shapes-list
-                    [shapes]="svgDrawingService.shapes()"
-                    [selectedShapeId]="svgDrawingService.selectedShapeId()"
-                    (shapeSelect)="onShapeSelect($event)"
-                    (shapeToggleVisibility)="onShapeToggleVisibility($event)"
-                    (shapeDuplicate)="onShapeDuplicate($event)"
-                    (shapeDelete)="onShapeDelete($event)"
-                  ></app-shapes-list>
-                </div>
-              </section>
-
-              <section class="accordion-section" [class.is-open]="isSectionOpen('backgroundImage')">
-                <button
-                  type="button"
-                  class="accordion-toggle"
-                  (click)="toggleSection('backgroundImage')"
-                  [attr.aria-expanded]="isSectionOpen('backgroundImage')"
-                  aria-controls="background-image-panel"
-                  id="background-image-toggle"
-                >
-                  <span class="accordion-toggle-number">3</span>
-                  <span class="accordion-toggle-text">Background Image</span>
-                  <span class="accordion-toggle-icon" aria-hidden="true"></span>
-                </button>
-                <div
-                  id="background-image-panel"
-                  class="accordion-content"
-                  role="region"
-                  [attr.aria-labelledby]="'background-image-toggle'"
-                  *ngIf="isSectionOpen('backgroundImage')"
-                >
-                  <app-background-image-panel></app-background-image-panel>
-                </div>
-              </section>
-
-              <section class="accordion-section" [class.is-open]="isSectionOpen('exportToSvg')">
-                <button
-                  type="button"
-                  class="accordion-toggle"
-                  (click)="toggleSection('exportToSvg')"
-                  [attr.aria-expanded]="isSectionOpen('exportToSvg')"
-                  aria-controls="export-to-svg-panel"
-                  id="export-to-svg-toggle"
-                >
-                  <span class="accordion-toggle-number">4</span>
-                  <span class="accordion-toggle-text">Export to SVG</span>
-                  <span class="accordion-toggle-icon" aria-hidden="true"></span>
-                </button>
-                <div
-                  id="export-to-svg-panel"
-                  class="accordion-content"
-                  role="region"
-                  [attr.aria-labelledby]="'export-to-svg-toggle'"
-                  *ngIf="isSectionOpen('exportToSvg')"
-                >
-                  <app-export-options (export)="onExport($event)"></app-export-options>
-                </div>
-              </section>
-
-              <section class="accordion-section" [class.is-open]="isSectionOpen('helpShortcuts')">
-                <button
-                  type="button"
-                  class="accordion-toggle"
-                  (click)="toggleSection('helpShortcuts')"
-                  [attr.aria-expanded]="isSectionOpen('helpShortcuts')"
-                  aria-controls="help-shortcuts-panel"
-                  id="help-shortcuts-toggle"
-                >
-                  <span class="accordion-toggle-number">5</span>
-                  <span class="accordion-toggle-text">Help &amp; Shortcuts</span>
-                  <span class="accordion-toggle-icon" aria-hidden="true"></span>
-                </button>
-                <div
-                  id="help-shortcuts-panel"
-                  class="accordion-content"
-                  role="region"
-                  [attr.aria-labelledby]="'help-shortcuts-toggle'"
-                  *ngIf="isSectionOpen('helpShortcuts')"
-                >
-                  <app-help-panel></app-help-panel>
-                </div>
-              </section>
-            </div>
-          </div>
-        </div>
-      }
-    </div>
-  `,
-  styles: [
-    `
-      .svg-drawing-container {
-        height: 100vh;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        background: #f3f4f6;
-      }
-
-      .top-toolbar {
-        height: 60px;
-        background: white;
-        border-bottom: 1px solid #e5e7eb;
-        flex-shrink: 0;
-        z-index: 10;
-      }
-
-      .toolbar-content {
-        height: 100%;
-        padding: 0 1rem;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-      }
-
-      .main-content {
-        flex: 1;
-        display: flex;
-        min-height: 0;
-      }
-
-      .canvas-area {
-        flex: 1;
-        position: relative;
-        overflow: auto;
-        background: #f3f4f6;
-        padding: 1rem;
-        display: flex;
-        align-items: flex-start;
-        justify-content: center;
-        min-height: 0;
-      }
-
-      .canvas-area > app-canvas-renderer {
-        width: 100%;
-        max-width: 2100px;
-        max-height: 900px;
-        aspect-ratio: 16 / 9;
-        align-self: flex-start;
-      }
-
-      .right-sidebar {
-        width: 350px;
-        background: white;
-        border-left: 1px solid #e5e7eb;
-        flex-shrink: 0;
-        overflow-y: auto;
-        overflow-x: hidden;
-      }
-
-      .accordion {
-        display: flex;
-        flex-direction: column;
-        width: 100%;
-      }
-
-      .accordion-section {
-        border-bottom: 1px solid #e5e7eb;
-      }
-
-      .accordion-section:last-of-type {
-        border-bottom: none;
-      }
-
-      .accordion-toggle {
-        width: 100%;
-        background: white;
-        border: none;
-        padding: 1rem 1.25rem;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        font-weight: 600;
-        color: #111827;
-        cursor: pointer;
-        text-align: left;
-        transition: background-color 0.15s ease;
-      }
-
-      .accordion-toggle:focus-visible {
-        outline: 2px solid #6366f1;
-        outline-offset: -2px;
-      }
-
-      .accordion-toggle:hover {
-        background: #f3f4f6;
-      }
-
-      .accordion-section.is-open .accordion-toggle {
-        background: #f9fafb;
-      }
-
-      .accordion-toggle-number {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 1.75rem;
-        height: 1.75rem;
-        border-radius: 9999px;
-        background: #eef2ff;
-        color: #4338ca;
-        font-size: 0.875rem;
-        font-weight: 600;
-      }
-
-      .accordion-toggle-text {
-        flex: 1;
-        font-size: 0.95rem;
-      }
-
-      .accordion-toggle-icon {
-        width: 0.75rem;
-        height: 0.75rem;
-        border-right: 2px solid currentColor;
-        border-bottom: 2px solid currentColor;
-        transform: rotate(-45deg);
-        transition: transform 0.2s ease;
-      }
-
-      .accordion-section.is-open .accordion-toggle-icon {
-        transform: rotate(135deg);
-      }
-
-      .accordion-content {
-        padding: 1rem 1.25rem 1.5rem;
-        background: white;
-      }
-
-      @media (max-width: 1024px) {
-        .right-sidebar {
-          width: 280px;
-        }
-      }
-
-      @media (max-width: 768px) {
-        .right-sidebar {
-          display: none;
-        }
-      }
-    `,
-  ],
+  templateUrl: './svg-drawing.component.html',
+  styleUrl: './svg-drawing.component.scss',
 })
 export class SvgDrawingComponent implements OnInit, OnDestroy {
   readonly svgDrawingService = inject(SvgDrawingService);
@@ -416,13 +63,7 @@ export class SvgDrawingComponent implements OnInit, OnDestroy {
   // Component state
   readonly loading = signal<boolean>(false);
   readonly error = signal<string | null>(null);
-  readonly openSections = signal<SidebarSection[]>([
-    'shapeProperties',
-    'shapes',
-    'backgroundImage',
-    'exportToSvg',
-    'helpShortcuts',
-  ]);
+  readonly openSections = signal<SidebarSection[]>([]);
 
   ngOnInit(): void {
     this.initializeTool();
@@ -456,6 +97,17 @@ export class SvgDrawingComponent implements OnInit, OnDestroy {
     this.openSections.update((current) =>
       current.includes(section) ? current.filter((s) => s !== section) : [...current, section],
     );
+  }
+
+  /**
+   * Ensures that a section remains expanded.
+   */
+  private openSection(section: SidebarSection): void {
+    if (this.isSectionOpen(section)) {
+      return;
+    }
+
+    this.openSections.update((current) => [...current, section]);
   }
 
   /**
@@ -603,8 +255,148 @@ export class SvgDrawingComponent implements OnInit, OnDestroy {
   /**
    * Handles shape selection from shapes list.
    */
-  onShapeSelect(shapeId: string): void {
-    this.svgDrawingService.selectShape(shapeId);
+  onShapeSelect(event: { shapeId: string; multiSelect: boolean }): void {
+    this.svgDrawingService.toggleShapeSelection(event.shapeId, event.multiSelect);
+    if (!event.multiSelect || this.svgDrawingService.selectedShapeIds().length === 1) {
+      this.openSection('shapeProperties');
+    }
+  }
+
+  /**
+   * Handles select all from shapes list.
+   */
+  onSelectAll(): void {
+    const selectedIds = this.svgDrawingService.selectedShapeIds();
+    const allIds = this.svgDrawingService
+      .shapes()
+      .filter((s) => s.visible !== false)
+      .map((s) => s.id);
+
+    if (selectedIds.length === allIds.length) {
+      // Deselect all
+      this.svgDrawingService.clearSelection();
+    } else {
+      // Select all
+      this.svgDrawingService.selectAllShapes();
+    }
+  }
+
+  /**
+   * Handles merge shapes from shapes list.
+   */
+  onMergeShapes(): void {
+    const selectedIds = this.svgDrawingService.selectedShapeIds();
+    if (selectedIds.length < 2) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Invalid Selection',
+        detail: 'Please select at least 2 shapes to merge',
+        life: 3000,
+      });
+      return;
+    }
+
+    // Show info about merge limitations
+    const userChoice = confirm(
+      'Merge shapes into one?\n\n' +
+        'Note: Shapes will be connected by their closest endpoints.\n' +
+        'For best results, select shapes that touch at their endpoints.\n\n' +
+        'Click OK to merge as polyline (open) or Cancel to abort.',
+    );
+
+    if (!userChoice) {
+      return;
+    }
+
+    const mergedShape = this.svgDrawingService.mergeSelectedShapes(false);
+
+    if (mergedShape) {
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Shapes Merged',
+        detail: `${selectedIds.length} shapes merged into one polyline`,
+        life: 3000,
+      });
+      this.openSection('shapeProperties');
+    } else {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Merge Failed',
+        detail: 'Could not merge selected shapes',
+        life: 3000,
+      });
+    }
+  }
+
+  /**
+   * Handles group shapes from shapes list.
+   */
+  onGroupShapes(): void {
+    const selectedIds = this.svgDrawingService.selectedShapeIds();
+    if (selectedIds.length < 2) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Invalid Selection',
+        detail: 'Please select at least 2 shapes to group',
+        life: 3000,
+      });
+      return;
+    }
+
+    const groupId = this.svgDrawingService.groupSelectedShapes();
+
+    if (groupId) {
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Shapes Grouped',
+        detail: `${selectedIds.length} shapes grouped together. Move one to move all!`,
+        life: 3000,
+      });
+    } else {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Group Failed',
+        detail: 'Could not group selected shapes',
+        life: 3000,
+      });
+    }
+  }
+
+  /**
+   * Handles ungroup shapes from shapes list.
+   */
+  onUngroupShapes(): void {
+    const selectedIds = this.svgDrawingService.selectedShapeIds();
+    if (selectedIds.length === 0) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Invalid Selection',
+        detail: 'Please select grouped shapes to ungroup',
+        life: 3000,
+      });
+      return;
+    }
+
+    this.svgDrawingService.ungroupSelectedShapes();
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Shapes Ungrouped',
+      detail: 'Shapes have been ungrouped',
+      life: 3000,
+    });
+  }
+
+  /**
+   * Handles removing a shape from its group.
+   */
+  onRemoveFromGroup(shapeId: string): void {
+    this.svgDrawingService.removeShapeFromGroup(shapeId);
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Shape Removed',
+      detail: 'Shape has been removed from the group',
+      life: 2000,
+    });
   }
 
   /**
@@ -751,6 +543,18 @@ export class SvgDrawingComponent implements OnInit, OnDestroy {
         // Ctrl+Y = Redo
         event.preventDefault();
         this.svgDrawingService.redo();
+      } else if (event.key === 'm' || event.key === 'M') {
+        // Ctrl+M = Merge selected shapes
+        event.preventDefault();
+        this.onMergeShapes();
+      } else if (event.key === 'g' || event.key === 'G') {
+        // Ctrl+G = Group selected shapes
+        event.preventDefault();
+        this.onGroupShapes();
+      } else if (event.key === 'u' || event.key === 'U') {
+        // Ctrl+U = Ungroup selected shapes
+        event.preventDefault();
+        this.onUngroupShapes();
       } else if (event.key === '+' || event.key === '=') {
         // Ctrl++ = Zoom In
         event.preventDefault();
