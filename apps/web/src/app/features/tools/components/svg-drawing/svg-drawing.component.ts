@@ -170,36 +170,52 @@ export class SvgDrawingComponent implements OnInit, OnDestroy {
   /**
    * Handles export action.
    */
-  onExport(options: ExportOptions): void {
+  async onExport(options: ExportOptions): Promise<void> {
     try {
-      const svgContent = this.svgDrawingService.exportToSVG(options);
+      if (options.format === 'svg') {
+        // Export as SVG
+        const svgContent = this.svgDrawingService.exportToSVG(options);
 
-      // Validate SVG
-      if (!this.svgDrawingService.validateSVG(svgContent)) {
+        // Validate SVG
+        if (!this.svgDrawingService.validateSVG(svgContent)) {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Export Failed',
+            detail: 'Generated SVG is invalid',
+            life: 3000,
+          });
+          return;
+        }
+
+        // Download SVG
+        this.svgDrawingService.downloadSVG(svgContent, options.filename);
+
         this.messageService.add({
-          severity: 'error',
-          summary: 'Export Failed',
-          detail: 'Generated SVG is invalid',
+          severity: 'success',
+          summary: 'Export Successful',
+          detail: `${options.filename} has been downloaded`,
           life: 3000,
         });
-        return;
+      } else if (options.format === 'png') {
+        // Export as PNG
+        const pngBlob = await this.svgDrawingService.exportToPNG(options);
+
+        // Download PNG
+        this.svgDrawingService.downloadPNG(pngBlob, options.filename);
+
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Export Successful',
+          detail: `${options.filename} has been downloaded`,
+          life: 3000,
+        });
       }
-
-      // Download SVG
-      this.svgDrawingService.downloadSVG(svgContent, options.filename);
-
-      this.messageService.add({
-        severity: 'success',
-        summary: 'Export Successful',
-        detail: `${options.filename} has been downloaded`,
-        life: 3000,
-      });
     } catch (error) {
       console.error('Export error:', error);
       this.messageService.add({
         severity: 'error',
         summary: 'Export Failed',
-        detail: 'An error occurred during export',
+        detail: `An error occurred during ${options.format.toUpperCase()} export`,
         life: 3000,
       });
     }

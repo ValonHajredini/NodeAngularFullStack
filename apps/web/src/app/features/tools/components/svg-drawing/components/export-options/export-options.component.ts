@@ -6,7 +6,7 @@ import { InputNumber } from 'primeng/inputnumber';
 import { Select } from 'primeng/select';
 import { ButtonDirective } from 'primeng/button';
 import { Checkbox } from 'primeng/checkbox';
-import { ExportOptions, OptimizationLevel } from '@nodeangularfullstack/shared';
+import { ExportOptions, OptimizationLevel, ExportFormat } from '@nodeangularfullstack/shared';
 import { SvgDrawingService } from '../../svg-drawing.service';
 
 /**
@@ -21,10 +21,26 @@ import { SvgDrawingService } from '../../svg-drawing.service';
     <div class="export-options-panel p-4">
       <!-- Header -->
       <div class="mb-4">
-        <h3 class="text-lg font-semibold text-gray-900 mb-2">Export to SVG</h3>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">Export Drawing</h3>
         <p class="text-sm text-gray-600">
-          Configure your export settings and download your drawing as an SVG file.
+          Configure your export settings and download your drawing as
+          {{ exportOptions.format === 'svg' ? 'an SVG' : 'a PNG' }} file.
         </p>
+      </div>
+
+      <!-- Format Selection -->
+      <div class="flex flex-col gap-2 mb-4">
+        <label for="format" class="font-semibold text-sm text-gray-700">Format</label>
+        <p-select
+          inputId="format"
+          [options]="formatOptions"
+          [(ngModel)]="exportOptions.format"
+          (ngModelChange)="onFormatChange($event)"
+          optionLabel="label"
+          optionValue="value"
+          [style]="{ width: '100%' }"
+          placeholder="Select format"
+        ></p-select>
       </div>
 
       <!-- Filename -->
@@ -35,7 +51,7 @@ import { SvgDrawingService } from '../../svg-drawing.service';
           type="text"
           pInputText
           [(ngModel)]="exportOptions.filename"
-          placeholder="drawing.svg"
+          [placeholder]="exportOptions.format === 'svg' ? 'drawing.svg' : 'drawing.png'"
           class="w-full"
         />
       </div>
@@ -85,8 +101,8 @@ import { SvgDrawingService } from '../../svg-drawing.service';
         ></p-inputNumber>
       </div>
 
-      <!-- Optimization Level -->
-      <div class="flex flex-col gap-2 mb-4">
+      <!-- Optimization Level (SVG only) -->
+      <div class="flex flex-col gap-2 mb-4" *ngIf="exportOptions.format === 'svg'">
         <label for="optimization" class="font-semibold text-sm text-gray-700">Optimization</label>
         <p-select
           inputId="optimization"
@@ -112,7 +128,7 @@ import { SvgDrawingService } from '../../svg-drawing.service';
         <button
           pButton
           type="button"
-          [label]="isExporting() ? 'Exporting...' : 'Export SVG'"
+          [label]="isExporting() ? 'Exporting...' : 'Export ' + exportOptions.format.toUpperCase()"
           icon="pi pi-download"
           severity="primary"
           (click)="onExport()"
@@ -150,6 +166,7 @@ export class ExportOptionsComponent implements OnInit {
     filename: 'drawing.svg',
     width: 800,
     height: 600,
+    format: 'svg',
     optimizationLevel: 'basic',
     padding: 20,
   };
@@ -167,12 +184,27 @@ export class ExportOptionsComponent implements OnInit {
   /** Loading state during export */
   isExporting = signal<boolean>(false);
 
+  /** Available export formats */
+  formatOptions = [
+    { label: 'SVG (Vector)', value: 'svg' as ExportFormat },
+    { label: 'PNG (Image)', value: 'png' as ExportFormat },
+  ];
+
   /** Available optimization levels */
   optimizationLevels = [
     { label: 'None', value: 'none' as OptimizationLevel },
     { label: 'Basic', value: 'basic' as OptimizationLevel },
     { label: 'Aggressive', value: 'aggressive' as OptimizationLevel },
   ];
+
+  /**
+   * Handles format change and updates filename extension.
+   */
+  onFormatChange(format: ExportFormat): void {
+    const currentFilename = this.exportOptions.filename;
+    const nameWithoutExt = currentFilename.replace(/\.(svg|png)$/i, '');
+    this.exportOptions.filename = `${nameWithoutExt}.${format}`;
+  }
 
   /**
    * Handles width change and updates service.
@@ -220,9 +252,12 @@ export class ExportOptionsComponent implements OnInit {
   onExport(): void {
     if (!this.isValid()) return;
 
-    // Ensure filename has .svg extension
-    if (!this.exportOptions.filename.endsWith('.svg')) {
-      this.exportOptions.filename += '.svg';
+    // Ensure filename has correct extension
+    const expectedExt = `.${this.exportOptions.format}`;
+    if (!this.exportOptions.filename.toLowerCase().endsWith(expectedExt)) {
+      // Remove any existing extension and add the correct one
+      const nameWithoutExt = this.exportOptions.filename.replace(/\.(svg|png)$/i, '');
+      this.exportOptions.filename = `${nameWithoutExt}${expectedExt}`;
     }
 
     this.isExporting.set(true);
@@ -244,6 +279,7 @@ export class ExportOptionsComponent implements OnInit {
       filename: 'drawing.svg',
       width: 800,
       height: 600,
+      format: 'svg',
       optimizationLevel: 'basic',
       padding: 20,
     };

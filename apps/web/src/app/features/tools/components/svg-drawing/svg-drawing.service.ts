@@ -1565,7 +1565,7 @@ export class SvgDrawingService {
 
     svg += '</svg>';
 
-    if (options.optimizationLevel !== 'none') {
+    if (options.optimizationLevel && options.optimizationLevel !== 'none') {
       svg = this.optimizeSVG(svg, options.optimizationLevel);
     }
 
@@ -1607,6 +1607,94 @@ export class SvgDrawingService {
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('SVG download error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Exports the drawing to PNG format with transparent background.
+   * @param options - Export options for PNG generation
+   * @returns Promise resolving to PNG blob
+   */
+  async exportToPNG(options: ExportOptions): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      try {
+        // Generate SVG content
+        const svgContent = this.exportToSVG(options);
+
+        // Create an image element to load the SVG
+        const img = new Image();
+        const svgBlob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(svgBlob);
+
+        img.onload = () => {
+          try {
+            // Create canvas with specified dimensions
+            const canvas = document.createElement('canvas');
+            canvas.width = options.width;
+            canvas.height = options.height;
+            const ctx = canvas.getContext('2d');
+
+            if (!ctx) {
+              URL.revokeObjectURL(url);
+              reject(new Error('Failed to get canvas context'));
+              return;
+            }
+
+            // Clear canvas with transparent background
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw the SVG image onto the canvas
+            ctx.drawImage(img, 0, 0, options.width, options.height);
+
+            // Convert canvas to blob
+            canvas.toBlob(
+              (blob) => {
+                URL.revokeObjectURL(url);
+                if (blob) {
+                  resolve(blob);
+                } else {
+                  reject(new Error('Failed to create PNG blob'));
+                }
+              },
+              'image/png',
+              1.0,
+            );
+          } catch (error) {
+            URL.revokeObjectURL(url);
+            reject(error);
+          }
+        };
+
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject(new Error('Failed to load SVG image'));
+        };
+
+        img.src = url;
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  /**
+   * Downloads PNG blob as a file.
+   * @param blob - PNG blob to download
+   * @param filename - Filename for the download
+   */
+  downloadPNG(blob: Blob, filename: string): void {
+    try {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('PNG download error:', error);
       throw error;
     }
   }

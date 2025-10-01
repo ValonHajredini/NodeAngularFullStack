@@ -813,17 +813,24 @@ export interface Command {
 export type OptimizationLevel = 'none' | 'basic' | 'aggressive';
 
 /**
- * Export options for SVG generation.
+ * Export format type for drawing export.
+ */
+export type ExportFormat = 'svg' | 'png';
+
+/**
+ * Export options for drawing generation.
  */
 export interface ExportOptions {
-  /** Output filename (including .svg extension) */
+  /** Output filename (including .svg or .png extension) */
   filename: string;
   /** Canvas width in pixels */
   width: number;
   /** Canvas height in pixels */
   height: number;
-  /** Optimization level for SVG output */
-  optimizationLevel: OptimizationLevel;
+  /** Export format (SVG or PNG) */
+  format: ExportFormat;
+  /** Optimization level for SVG output (only applicable when format is 'svg') */
+  optimizationLevel?: OptimizationLevel;
   /** Padding around shapes in pixels */
   padding?: number;
 }
