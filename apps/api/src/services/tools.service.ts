@@ -6,6 +6,10 @@ import {
   UpdateToolData,
 } from '../repositories/tools.repository';
 import {
+  ToolConfigsRepository,
+  CreateToolConfigData,
+} from '../repositories/tool-configs.repository';
+import {
   Tool,
   GetToolsResponse,
   UpdateToolStatusRequest,
@@ -29,10 +33,12 @@ interface ToolsCacheEntry {
 export class ToolsService {
   private static readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
   private toolsRepository: ToolsRepository;
+  private toolConfigsRepository: ToolConfigsRepository;
   private cache: ToolsCacheEntry | null = null;
 
   constructor() {
     this.toolsRepository = new ToolsRepository();
+    this.toolConfigsRepository = new ToolConfigsRepository();
   }
 
   /**
@@ -295,8 +301,34 @@ export class ToolsService {
         active: request.active ?? true,
       };
 
-      // Create in database
+      // Create tool in database
       const createdEntity = await this.toolsRepository.create(createData);
+
+      // Create default configuration for the tool (application-level failsafe)
+      // Note: Database trigger should also create this, but we do it here too for reliability
+      try {
+        const defaultConfig: CreateToolConfigData = {
+          toolId: createdEntity.id,
+          version: '1.0.0',
+          displayMode: 'standard',
+          layoutSettings: {
+            maxWidth: '1200px',
+            padding: '2rem',
+          },
+          isActive: true,
+        };
+        await this.toolConfigsRepository.create(defaultConfig);
+        console.log(
+          `[ToolsService] Default config created for tool '${request.key}'`
+        );
+      } catch (configError) {
+        // Log but don't fail tool creation if config creation fails
+        // The database trigger or service-level failsafe will handle it
+        console.warn(
+          `[ToolsService] Failed to create default config for tool '${request.key}':`,
+          configError instanceof Error ? configError.message : 'Unknown error'
+        );
+      }
 
       // Invalidate cache since data changed
       this.invalidateCache();

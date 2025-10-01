@@ -12,17 +12,23 @@ import { Message } from 'primeng/message';
 import { Toast } from 'primeng/toast';
 import { ButtonDirective } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
-import { Tabs, TabList, Tab, TabPanels, TabPanel } from 'primeng/tabs';
 import { MessageService } from 'primeng/api';
 import { SvgDrawingService } from './svg-drawing.service';
 import { CanvasRendererComponent } from './components/canvas-renderer/canvas-renderer.component';
 import { ToolsSidebarComponent } from './components/tools-sidebar/tools-sidebar.component';
-import { ShapePropertiesComponent } from './components/shape-properties/shape-properties.component';
 import { BackgroundImagePanelComponent } from './components/background-image-panel/background-image-panel.component';
 import { ExportOptionsComponent } from './components/export-options/export-options.component';
 import { HelpPanelComponent } from './components/help-panel/help-panel.component';
 import { ShapesListComponent } from './components/shapes-list/shapes-list.component';
+import { ShapePropertiesComponent } from './components/shape-properties/shape-properties.component';
 import { ShapeStyle, ExportOptions } from '@nodeangularfullstack/shared';
+
+type SidebarSection =
+  | 'shapeProperties'
+  | 'shapes'
+  | 'backgroundImage'
+  | 'exportToSvg'
+  | 'helpShortcuts';
 
 /**
  * SVG Drawing tool component.
@@ -38,18 +44,13 @@ import { ShapeStyle, ExportOptions } from '@nodeangularfullstack/shared';
     Toast,
     ButtonDirective,
     TooltipModule,
-    Tabs,
-    TabList,
-    Tab,
-    TabPanels,
-    TabPanel,
     CanvasRendererComponent,
     ToolsSidebarComponent,
-    ShapePropertiesComponent,
     BackgroundImagePanelComponent,
     ExportOptionsComponent,
     HelpPanelComponent,
     ShapesListComponent,
+    ShapePropertiesComponent,
   ],
   providers: [MessageService],
   template: `
@@ -117,41 +118,56 @@ import { ShapeStyle, ExportOptions } from '@nodeangularfullstack/shared';
             <app-canvas-renderer></app-canvas-renderer>
           </div>
 
-          <!-- Right Sidebar - Tabs -->
+          <!-- Right Sidebar - Collapsible Sections -->
           <div class="right-sidebar">
-            <p-tabs [value]="0">
-              <p-tablist>
-                <p-tab [value]="0">
-                  <i class="pi pi-pencil mr-2"></i>
-                  Edit
-                </p-tab>
-                <p-tab [value]="1">
-                  <i class="pi pi-list mr-2"></i>
-                  Shapes
-                </p-tab>
-                <p-tab [value]="2">
-                  <i class="pi pi-image mr-2"></i>
-                  Background
-                </p-tab>
-                <p-tab [value]="3">
-                  <i class="pi pi-download mr-2"></i>
-                  Export
-                </p-tab>
-                <p-tab [value]="4">
-                  <i class="pi pi-question-circle mr-2"></i>
-                  Help
-                </p-tab>
-              </p-tablist>
-
-              <p-tabpanels>
-                <p-tabpanel [value]="0">
+            <div class="accordion" role="region" aria-label="Drawing sidebar sections">
+              <section class="accordion-section" [class.is-open]="isSectionOpen('shapeProperties')">
+                <button
+                  type="button"
+                  class="accordion-toggle"
+                  (click)="toggleSection('shapeProperties')"
+                  [attr.aria-expanded]="isSectionOpen('shapeProperties')"
+                  aria-controls="shape-properties-panel"
+                  id="shape-properties-toggle"
+                >
+                  <span class="accordion-toggle-number">1</span>
+                  <span class="accordion-toggle-text">Shape Properties</span>
+                  <span class="accordion-toggle-icon" aria-hidden="true"></span>
+                </button>
+                <div
+                  id="shape-properties-panel"
+                  class="accordion-content"
+                  role="region"
+                  [attr.aria-labelledby]="'shape-properties-toggle'"
+                  *ngIf="isSectionOpen('shapeProperties')"
+                >
                   <app-shape-properties
-                    [selectedShape]="svgDrawingService.selectedShape()"
-                    (propertiesChanged)="onPropertiesChanged($event)"
+                    [selectedShape]="getSelectedShape()"
+                    (propertiesChanged)="onShapePropertiesChanged($event)"
                   ></app-shape-properties>
-                </p-tabpanel>
+                </div>
+              </section>
 
-                <p-tabpanel [value]="1">
+              <section class="accordion-section" [class.is-open]="isSectionOpen('shapes')">
+                <button
+                  type="button"
+                  class="accordion-toggle"
+                  (click)="toggleSection('shapes')"
+                  [attr.aria-expanded]="isSectionOpen('shapes')"
+                  aria-controls="shapes-panel"
+                  id="shapes-toggle"
+                >
+                  <span class="accordion-toggle-number">2</span>
+                  <span class="accordion-toggle-text">Shapes</span>
+                  <span class="accordion-toggle-icon" aria-hidden="true"></span>
+                </button>
+                <div
+                  id="shapes-panel"
+                  class="accordion-content"
+                  role="region"
+                  [attr.aria-labelledby]="'shapes-toggle'"
+                  *ngIf="isSectionOpen('shapes')"
+                >
                   <app-shapes-list
                     [shapes]="svgDrawingService.shapes()"
                     [selectedShapeId]="svgDrawingService.selectedShapeId()"
@@ -160,21 +176,81 @@ import { ShapeStyle, ExportOptions } from '@nodeangularfullstack/shared';
                     (shapeDuplicate)="onShapeDuplicate($event)"
                     (shapeDelete)="onShapeDelete($event)"
                   ></app-shapes-list>
-                </p-tabpanel>
+                </div>
+              </section>
 
-                <p-tabpanel [value]="2">
+              <section class="accordion-section" [class.is-open]="isSectionOpen('backgroundImage')">
+                <button
+                  type="button"
+                  class="accordion-toggle"
+                  (click)="toggleSection('backgroundImage')"
+                  [attr.aria-expanded]="isSectionOpen('backgroundImage')"
+                  aria-controls="background-image-panel"
+                  id="background-image-toggle"
+                >
+                  <span class="accordion-toggle-number">3</span>
+                  <span class="accordion-toggle-text">Background Image</span>
+                  <span class="accordion-toggle-icon" aria-hidden="true"></span>
+                </button>
+                <div
+                  id="background-image-panel"
+                  class="accordion-content"
+                  role="region"
+                  [attr.aria-labelledby]="'background-image-toggle'"
+                  *ngIf="isSectionOpen('backgroundImage')"
+                >
                   <app-background-image-panel></app-background-image-panel>
-                </p-tabpanel>
+                </div>
+              </section>
 
-                <p-tabpanel [value]="3">
+              <section class="accordion-section" [class.is-open]="isSectionOpen('exportToSvg')">
+                <button
+                  type="button"
+                  class="accordion-toggle"
+                  (click)="toggleSection('exportToSvg')"
+                  [attr.aria-expanded]="isSectionOpen('exportToSvg')"
+                  aria-controls="export-to-svg-panel"
+                  id="export-to-svg-toggle"
+                >
+                  <span class="accordion-toggle-number">4</span>
+                  <span class="accordion-toggle-text">Export to SVG</span>
+                  <span class="accordion-toggle-icon" aria-hidden="true"></span>
+                </button>
+                <div
+                  id="export-to-svg-panel"
+                  class="accordion-content"
+                  role="region"
+                  [attr.aria-labelledby]="'export-to-svg-toggle'"
+                  *ngIf="isSectionOpen('exportToSvg')"
+                >
                   <app-export-options (export)="onExport($event)"></app-export-options>
-                </p-tabpanel>
+                </div>
+              </section>
 
-                <p-tabpanel [value]="4">
+              <section class="accordion-section" [class.is-open]="isSectionOpen('helpShortcuts')">
+                <button
+                  type="button"
+                  class="accordion-toggle"
+                  (click)="toggleSection('helpShortcuts')"
+                  [attr.aria-expanded]="isSectionOpen('helpShortcuts')"
+                  aria-controls="help-shortcuts-panel"
+                  id="help-shortcuts-toggle"
+                >
+                  <span class="accordion-toggle-number">5</span>
+                  <span class="accordion-toggle-text">Help &amp; Shortcuts</span>
+                  <span class="accordion-toggle-icon" aria-hidden="true"></span>
+                </button>
+                <div
+                  id="help-shortcuts-panel"
+                  class="accordion-content"
+                  role="region"
+                  [attr.aria-labelledby]="'help-shortcuts-toggle'"
+                  *ngIf="isSectionOpen('helpShortcuts')"
+                >
                   <app-help-panel></app-help-panel>
-                </p-tabpanel>
-              </p-tabpanels>
-            </p-tabs>
+                </div>
+              </section>
+            </div>
           </div>
         </div>
       }
@@ -237,22 +313,86 @@ import { ShapeStyle, ExportOptions } from '@nodeangularfullstack/shared';
         background: white;
         border-left: 1px solid #e5e7eb;
         flex-shrink: 0;
-        overflow: hidden;
+        overflow-y: auto;
+        overflow-x: hidden;
       }
 
-      :host ::ng-deep .right-sidebar .p-tabs {
-        height: 100%;
+      .accordion {
         display: flex;
         flex-direction: column;
+        width: 100%;
       }
 
-      :host ::ng-deep .right-sidebar .p-tabpanels {
-        flex: 1;
-        overflow-y: auto;
-      }
-
-      :host ::ng-deep .right-sidebar .p-tablist {
+      .accordion-section {
         border-bottom: 1px solid #e5e7eb;
+      }
+
+      .accordion-section:last-of-type {
+        border-bottom: none;
+      }
+
+      .accordion-toggle {
+        width: 100%;
+        background: white;
+        border: none;
+        padding: 1rem 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-weight: 600;
+        color: #111827;
+        cursor: pointer;
+        text-align: left;
+        transition: background-color 0.15s ease;
+      }
+
+      .accordion-toggle:focus-visible {
+        outline: 2px solid #6366f1;
+        outline-offset: -2px;
+      }
+
+      .accordion-toggle:hover {
+        background: #f3f4f6;
+      }
+
+      .accordion-section.is-open .accordion-toggle {
+        background: #f9fafb;
+      }
+
+      .accordion-toggle-number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.75rem;
+        height: 1.75rem;
+        border-radius: 9999px;
+        background: #eef2ff;
+        color: #4338ca;
+        font-size: 0.875rem;
+        font-weight: 600;
+      }
+
+      .accordion-toggle-text {
+        flex: 1;
+        font-size: 0.95rem;
+      }
+
+      .accordion-toggle-icon {
+        width: 0.75rem;
+        height: 0.75rem;
+        border-right: 2px solid currentColor;
+        border-bottom: 2px solid currentColor;
+        transform: rotate(-45deg);
+        transition: transform 0.2s ease;
+      }
+
+      .accordion-section.is-open .accordion-toggle-icon {
+        transform: rotate(135deg);
+      }
+
+      .accordion-content {
+        padding: 1rem 1.25rem 1.5rem;
+        background: white;
       }
 
       @media (max-width: 1024px) {
@@ -276,6 +416,13 @@ export class SvgDrawingComponent implements OnInit, OnDestroy {
   // Component state
   readonly loading = signal<boolean>(false);
   readonly error = signal<string | null>(null);
+  readonly openSections = signal<SidebarSection[]>([
+    'shapeProperties',
+    'shapes',
+    'backgroundImage',
+    'exportToSvg',
+    'helpShortcuts',
+  ]);
 
   ngOnInit(): void {
     this.initializeTool();
@@ -300,6 +447,22 @@ export class SvgDrawingComponent implements OnInit, OnDestroy {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  /**
+   * Toggles the visibility of the requested sidebar section.
+   */
+  toggleSection(section: SidebarSection): void {
+    this.openSections.update((current) =>
+      current.includes(section) ? current.filter((s) => s !== section) : [...current, section],
+    );
+  }
+
+  /**
+   * Checks if a sidebar section is currently expanded.
+   */
+  isSectionOpen(section: SidebarSection): boolean {
+    return this.openSections().includes(section);
   }
 
   /**
@@ -350,13 +513,6 @@ export class SvgDrawingComponent implements OnInit, OnDestroy {
     if (confirm('Are you sure you want to clear all shapes?')) {
       this.svgDrawingService.clearAll();
     }
-  }
-
-  /**
-   * Handles shape properties changes.
-   */
-  onPropertiesChanged(event: { shapeId: string; updates: Partial<ShapeStyle> }): void {
-    this.svgDrawingService.updateShapeProperties(event.shapeId, event.updates);
   }
 
   /**
@@ -487,6 +643,23 @@ export class SvgDrawingComponent implements OnInit, OnDestroy {
         life: 2000,
       });
     }
+  }
+
+  /**
+   * Gets the currently selected shape.
+   * @returns Selected shape or null
+   */
+  getSelectedShape() {
+    const selectedId = this.svgDrawingService.selectedShapeId();
+    if (!selectedId) return null;
+    return this.svgDrawingService.shapes().find((s) => s.id === selectedId) || null;
+  }
+
+  /**
+   * Handles shape properties changes from the edit panel.
+   */
+  onShapePropertiesChanged(event: { shapeId: string; updates: Partial<ShapeStyle> }): void {
+    this.svgDrawingService.updateShapeProperties(event.shapeId, event.updates);
   }
 
   /**

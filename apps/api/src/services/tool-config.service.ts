@@ -75,9 +75,41 @@ export class ToolConfigService {
       }
 
       // Fetch all configs for this tool
-      const configEntities = await this.toolConfigsRepository.findByToolId(
+      let configEntities = await this.toolConfigsRepository.findByToolId(
         tool.id
       );
+
+      // If no configs exist, create a default one (failsafe)
+      if (configEntities.length === 0) {
+        console.log(
+          `[ToolConfigService] No configs found for tool '${toolKey}', creating default config`
+        );
+        try {
+          const defaultConfig: CreateToolConfigData = {
+            toolId: tool.id,
+            version: '1.0.0',
+            displayMode: 'standard',
+            layoutSettings: {
+              maxWidth: '1200px',
+              padding: '2rem',
+            },
+            isActive: true,
+          };
+          const createdEntity =
+            await this.toolConfigsRepository.create(defaultConfig);
+          configEntities = [createdEntity];
+          console.log(
+            `[ToolConfigService] Default config created successfully for tool '${toolKey}'`
+          );
+        } catch (createError) {
+          console.error(
+            `[ToolConfigService] Failed to create default config for tool '${toolKey}':`,
+            createError
+          );
+          // Continue with empty configs if creation fails
+        }
+      }
+
       const configs = configEntities.map((entity) =>
         this.entityToConfig(entity)
       );
