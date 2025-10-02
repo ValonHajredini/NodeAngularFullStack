@@ -332,6 +332,141 @@ import {
           }
         }
 
+        <!-- Render in-progress triangle -->
+        @if (
+          drawingService.currentTool() === 'triangle' && drawingService.activeVertices().length > 0
+        ) {
+          <!-- Lines connecting vertices -->
+          @for (vertex of drawingService.activeVertices(); track $index) {
+            @if ($index > 0) {
+              <line
+                [attr.x1]="drawingService.activeVertices()[$index - 1].x"
+                [attr.y1]="drawingService.activeVertices()[$index - 1].y"
+                [attr.x2]="vertex.x"
+                [attr.y2]="vertex.y"
+                stroke="#3b82f6"
+                stroke-width="2"
+                stroke-dasharray="5,5"
+              />
+            }
+          }
+
+          <!-- Preview line from last vertex to cursor with angle and snap indication -->
+          @if (lastMousePos() && drawingService.activeVertices().length > 0) {
+            @let lastVertex =
+              drawingService.activeVertices()[drawingService.activeVertices().length - 1];
+            @let angle = drawingService.calculateAngle(lastVertex, lastMousePos()!);
+            @let isSnapped = drawingService.shouldSnap(angle);
+            @let snappedPoint =
+              drawingService.snapEnabled()
+                ? drawingService.applySnapToPoint(lastVertex, lastMousePos()!)
+                : lastMousePos()!;
+
+            <!-- Preview line (snapped if enabled) -->
+            <line
+              [attr.x1]="lastVertex.x"
+              [attr.y1]="lastVertex.y"
+              [attr.x2]="snappedPoint.x"
+              [attr.y2]="snappedPoint.y"
+              [attr.stroke]="isSnapped ? '#10b981' : '#3b82f6'"
+              [attr.stroke-width]="isSnapped ? '3' : '2'"
+              stroke-dasharray="5,5"
+            />
+
+            <!-- Closing line preview (back to first vertex) if we have 2 vertices -->
+            @if (drawingService.activeVertices().length === 2) {
+              @let firstVertex = drawingService.activeVertices()[0];
+              @let closingAngle = drawingService.calculateAngle(snappedPoint, firstVertex);
+              @let closingSnapped = drawingService.shouldSnap(closingAngle);
+              @let closingSnappedPoint =
+                drawingService.snapEnabled()
+                  ? drawingService.applySnapToPoint(snappedPoint, firstVertex)
+                  : firstVertex;
+
+              <line
+                [attr.x1]="snappedPoint.x"
+                [attr.y1]="snappedPoint.y"
+                [attr.x2]="closingSnappedPoint.x"
+                [attr.y2]="closingSnappedPoint.y"
+                [attr.stroke]="closingSnapped ? '#10b981' : '#3b82f6'"
+                [attr.stroke-width]="closingSnapped ? '3' : '2'"
+                stroke-dasharray="5,5"
+                opacity="0.5"
+              />
+            }
+
+            <!-- Angle indicator circle and text -->
+            @let midX = (lastVertex.x + snappedPoint.x) / 2;
+            @let midY = (lastVertex.y + snappedPoint.y) / 2;
+            @let displayAngle = isSnapped ? drawingService.snapToNearest(angle) : angle;
+
+            <!-- Angle background circle -->
+            <circle
+              [attr.cx]="midX"
+              [attr.cy]="midY"
+              r="25"
+              [attr.fill]="isSnapped ? '#d1fae5' : '#dbeafe'"
+              [attr.stroke]="isSnapped ? '#10b981' : '#3b82f6'"
+              stroke-width="2"
+              opacity="0.9"
+            />
+
+            <!-- Angle text -->
+            <text
+              [attr.x]="midX"
+              [attr.y]="midY + 5"
+              text-anchor="middle"
+              [attr.fill]="isSnapped ? '#047857' : '#1e40af'"
+              font-size="14"
+              font-weight="bold"
+              font-family="Arial, sans-serif"
+            >
+              {{ displayAngle }}°
+            </text>
+
+            <!-- Snap indicator at cursor position -->
+            @if (isSnapped) {
+              <g>
+                <!-- Green indicator circle at snapped position -->
+                <circle
+                  [attr.cx]="snappedPoint.x"
+                  [attr.cy]="snappedPoint.y"
+                  r="8"
+                  fill="#10b981"
+                  stroke="white"
+                  stroke-width="2"
+                  opacity="0.8"
+                />
+                <!-- Snap direction label -->
+                @let directionLabel = getSnapDirectionLabel(displayAngle);
+                <text
+                  [attr.x]="snappedPoint.x"
+                  [attr.y]="snappedPoint.y - 15"
+                  text-anchor="middle"
+                  fill="#047857"
+                  font-size="12"
+                  font-weight="bold"
+                  font-family="Arial, sans-serif"
+                >
+                  {{ directionLabel }}
+                </text>
+              </g>
+            }
+          }
+
+          <!-- Vertex markers -->
+          @for (vertex of drawingService.activeVertices(); track $index) {
+            <circle
+              [attr.cx]="vertex.x"
+              [attr.cy]="vertex.y"
+              [attr.r]="$index === 0 ? 6 : 4"
+              [attr.fill]="$index === 0 ? '#3b82f6' : '#60a5fa'"
+              stroke="white"
+              stroke-width="2"
+            />
+          }
+        }
+
         <!-- Render in-progress polyline -->
         @if (
           drawingService.currentTool() === 'polyline' && drawingService.activeVertices().length > 0
@@ -1344,17 +1479,26 @@ export class CanvasRendererComponent implements OnInit, OnDestroy {
       // Triangle uses click-based drawing (3 clicks)
       const vertices = this.drawingService.activeVertices();
       if (vertices.length < 2) {
-        this.drawingService.addPolygonVertex(point);
+        // First or second click - add vertex with snap
+        const lastVertex = vertices.length > 0 ? vertices[vertices.length - 1] : null;
+        const snappedPoint = lastVertex
+          ? this.drawingService.applySnapToPoint(lastVertex, point)
+          : point;
+
+        this.drawingService.addPolygonVertex(snappedPoint);
         if (vertices.length === 0) {
-          this.drawingService.startDrawing(point);
+          this.drawingService.startDrawing(snappedPoint);
         }
       } else {
-        // Third click - complete triangle
+        // Third click - complete triangle with snap applied
+        const lastVertex = vertices[1];
+        const snappedPoint = this.drawingService.applySnapToPoint(lastVertex, point);
+
         const style = this.drawingService.currentStyle();
         const triangle: TriangleShape = {
           id: this.drawingService.generateShapeId(),
           type: 'triangle',
-          vertices: [vertices[0], vertices[1], point],
+          vertices: [vertices[0], vertices[1], snappedPoint],
           color: style.color,
           strokeWidth: style.strokeWidth,
           fillColor: style.fillColor,
