@@ -507,7 +507,8 @@ export type ShapeType =
   | 'star'
   | 'arrow'
   | 'cylinder'
-  | 'cone';
+  | 'cone'
+  | 'svg-symbol';
 
 /**
  * Line style types for stroke rendering.
@@ -755,6 +756,36 @@ export interface ConeShape extends Shape {
   baseWidth: number;
   /** Height of the base ellipse */
   baseHeight: number;
+}
+
+/**
+ * Represents an imported SVG symbol that can be placed, resized, and recolored.
+ */
+export interface SVGSymbolShape extends Shape {
+  /** Shape type discriminator */
+  type: 'svg-symbol';
+  /** Position where the symbol is placed (top-left corner) */
+  position: Point;
+  /** Current width of the symbol */
+  width: number;
+  /** Current height of the symbol */
+  height: number;
+  /** Original SVG viewBox width */
+  originalWidth: number;
+  /** Original SVG viewBox height */
+  originalHeight: number;
+  /** Parsed and sanitized SVG content (inner elements only) */
+  svgContent: string;
+  /** Whether to maintain aspect ratio when resizing */
+  preserveAspectRatio: boolean;
+  /** Rotation angle in degrees (0-360) */
+  rotation?: number;
+  /** Uniform scale factor (1.0 = 100%) */
+  scale?: number;
+  /** Symbol name/label for identification */
+  symbolName?: string;
+  /** Original SVG viewBox string */
+  viewBox?: string;
 }
 
 /**
