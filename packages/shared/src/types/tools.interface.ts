@@ -815,23 +815,23 @@ export type OptimizationLevel = 'none' | 'basic' | 'aggressive';
 /**
  * Export format type for drawing export.
  */
-export type ExportFormat = 'svg' | 'png';
+export type ExportFormat = 'svg' | 'png' | 'json';
 
 /**
  * Export options for drawing generation.
  */
 export interface ExportOptions {
-  /** Output filename (including .svg or .png extension) */
+  /** Output filename (including .svg, .png, or .json extension) */
   filename: string;
-  /** Canvas width in pixels */
+  /** Canvas width in pixels (not used for JSON format) */
   width: number;
-  /** Canvas height in pixels */
+  /** Canvas height in pixels (not used for JSON format) */
   height: number;
-  /** Export format (SVG or PNG) */
+  /** Export format (SVG, PNG, or JSON) */
   format: ExportFormat;
   /** Optimization level for SVG output (only applicable when format is 'svg') */
   optimizationLevel?: OptimizationLevel;
-  /** Padding around shapes in pixels */
+  /** Padding around shapes in pixels (not used for JSON format) */
   padding?: number;
 }
 
@@ -911,4 +911,156 @@ export interface BackgroundImageSettings {
   position: { x: number; y: number };
   /** Whether image is locked from manipulation */
   locked: boolean;
+}
+
+/**
+ * Drawing template data structure for export/import as JSON.
+ * Complete snapshot of drawing state for saving and loading templates.
+ */
+export interface DrawingTemplate {
+  /** Template version for future compatibility */
+  version: string;
+  /** Template metadata */
+  metadata: {
+    /** Template name */
+    name: string;
+    /** Optional description */
+    description?: string;
+    /** Creation timestamp */
+    created: Date;
+    /** Last modification timestamp */
+    modified: Date;
+  };
+  /** Array of all shapes */
+  shapes: Shape[];
+  /** Drawing settings */
+  settings: DrawingSettings;
+  /** Background image settings (optional) */
+  backgroundImage?: BackgroundImageSettings;
+  /** Canvas state */
+  canvas: {
+    /** Zoom level (0.1 - 5) */
+    zoom: number;
+    /** Pan offset */
+    offset: { x: number; y: number };
+  };
+  /** Export bounds configuration */
+  exportBounds: {
+    /** Export width in pixels */
+    width: number;
+    /** Export height in pixels */
+    height: number;
+    /** Export padding in pixels */
+    padding: number;
+  };
+}
+
+// Drawing Projects Types (Server-Side Persistence)
+
+/**
+ * Represents a saved drawing project in the database.
+ * Projects are tied to specific users and store complete drawing state.
+ */
+export interface DrawingProject {
+  /** Unique identifier (UUID v4) */
+  id: string;
+  /** User who owns this project (UUID) */
+  userId: string;
+  /** Project name */
+  name: string;
+  /** Optional project description */
+  description?: string;
+  /** Complete drawing template data (JSONB in database) */
+  templateData: DrawingTemplate;
+  /** Optional thumbnail image (base64 PNG) for preview */
+  thumbnail?: string;
+  /** Whether project is active */
+  isActive: boolean;
+  /** Creation timestamp */
+  createdAt: Date;
+  /** Last modification timestamp */
+  updatedAt: Date;
+}
+
+/**
+ * Request payload for creating a new drawing project.
+ */
+export interface CreateDrawingProjectRequest {
+  /** Project name (1-255 characters) */
+  name: string;
+  /** Optional project description */
+  description?: string;
+  /** Complete drawing template data */
+  templateData: DrawingTemplate;
+  /** Optional thumbnail image (base64 PNG) */
+  thumbnail?: string;
+}
+
+/**
+ * Request payload for updating an existing drawing project.
+ */
+export interface UpdateDrawingProjectRequest {
+  /** Updated project name (optional) */
+  name?: string;
+  /** Updated project description (optional) */
+  description?: string;
+  /** Updated drawing template data (optional) */
+  templateData?: DrawingTemplate;
+  /** Updated thumbnail image (optional) */
+  thumbnail?: string;
+  /** Updated active status (optional) */
+  isActive?: boolean;
+}
+
+/**
+ * Response containing a single drawing project.
+ */
+export interface GetDrawingProjectResponse {
+  /** Success status of the retrieval operation */
+  success: boolean;
+  /** Response data containing the project */
+  data: {
+    /** The drawing project */
+    project: DrawingProject;
+  };
+}
+
+/**
+ * Response containing list of user's drawing projects.
+ */
+export interface GetDrawingProjectsResponse {
+  /** Success status of the retrieval operation */
+  success: boolean;
+  /** Response data containing projects list */
+  data: {
+    /** Array of drawing projects */
+    projects: DrawingProject[];
+    /** Total count of projects */
+    total: number;
+  };
+}
+
+/**
+ * Response after creating or updating a drawing project.
+ */
+export interface SaveDrawingProjectResponse {
+  /** Success status of the operation */
+  success: boolean;
+  /** Response data containing the saved project */
+  data: {
+    /** The saved drawing project */
+    project: DrawingProject;
+  };
+  /** Success message */
+  message: string;
+}
+
+/**
+ * Response after deleting a drawing project.
+ */
+export interface DeleteDrawingProjectResponse {
+  /** Success status of the operation */
+  success: boolean;
+  /** Response message */
+  message: string;
 }

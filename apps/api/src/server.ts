@@ -20,6 +20,7 @@ import tokensRoutes from './routes/tokens.routes';
 import toolsRoutes from './routes/tools.routes';
 import publicToolsRoutes from './routes/public-tools.routes';
 import shortLinksRoutes from './routes/short-links.routes';
+import drawingProjectsRoutes from './routes/drawing-projects.routes';
 import { shortLinksController } from './controllers/short-links.controller';
 import { resolveShortLinkValidator } from './validators/url.validators';
 
@@ -147,13 +148,23 @@ class Server {
     );
 
     // API v1 routes
-    this.app.use('/api/v1', healthRoutes);
     this.app.use('/api/v1/auth', authRoutes);
     this.app.use('/api/v1/users', usersRoutes);
     this.app.use('/api/v1/tokens', tokensRoutes);
     this.app.use('/api/v1/tools/short-links', shortLinksRoutes);
+    console.log(
+      '📐 Registering drawing project routes at /api/v1/drawing-projects'
+    );
+    console.log(
+      '   Route type:',
+      typeof drawingProjectsRoutes,
+      'keys:',
+      Object.keys(drawingProjectsRoutes as any)
+    );
+    this.app.use('/api/v1/drawing-projects', drawingProjectsRoutes);
     this.app.use('/api/v1/admin/tools', toolsRoutes);
     this.app.use('/api/v1/tools', publicToolsRoutes);
+    this.app.use('/api/v1', healthRoutes);
 
     // API root endpoint
     this.app.get('/api', (_req, res: Response) => {

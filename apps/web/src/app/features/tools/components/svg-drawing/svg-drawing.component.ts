@@ -6,6 +6,7 @@ import {
   signal,
   ChangeDetectionStrategy,
   HostListener,
+  ViewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Message } from 'primeng/message';
@@ -18,16 +19,21 @@ import { CanvasRendererComponent } from './components/canvas-renderer/canvas-ren
 import { ToolsSidebarComponent } from './components/tools-sidebar/tools-sidebar.component';
 import { BackgroundImagePanelComponent } from './components/background-image-panel/background-image-panel.component';
 import { ExportOptionsComponent } from './components/export-options/export-options.component';
+import { ImportTemplateComponent } from './components/import-template/import-template.component';
+import { SaveProjectComponent } from './components/save-project/save-project.component';
+import { LoadProjectComponent } from './components/load-project/load-project.component';
 import { HelpPanelComponent } from './components/help-panel/help-panel.component';
 import { ShapesListComponent } from './components/shapes-list/shapes-list.component';
 import { ShapePropertiesComponent } from './components/shape-properties/shape-properties.component';
-import { ShapeStyle, ExportOptions } from '@nodeangularfullstack/shared';
+import { ShapeStyle, ExportOptions, DrawingProject } from '@nodeangularfullstack/shared';
 
 type SidebarSection =
   | 'shapeProperties'
   | 'shapes'
   | 'backgroundImage'
   | 'exportToSvg'
+  | 'importTemplate'
+  | 'myProjects'
   | 'helpShortcuts';
 
 /**
@@ -48,6 +54,9 @@ type SidebarSection =
     ToolsSidebarComponent,
     BackgroundImagePanelComponent,
     ExportOptionsComponent,
+    ImportTemplateComponent,
+    SaveProjectComponent,
+    LoadProjectComponent,
     HelpPanelComponent,
     ShapesListComponent,
     ShapePropertiesComponent,
@@ -59,6 +68,9 @@ type SidebarSection =
 export class SvgDrawingComponent implements OnInit, OnDestroy {
   readonly svgDrawingService = inject(SvgDrawingService);
   private readonly messageService = inject(MessageService);
+
+  // ViewChild references for child components
+  @ViewChild(LoadProjectComponent) loadProjectComponent?: LoadProjectComponent;
 
   // Component state
   readonly loading = signal<boolean>(false);
@@ -209,6 +221,19 @@ export class SvgDrawingComponent implements OnInit, OnDestroy {
           detail: `${options.filename} has been downloaded`,
           life: 3000,
         });
+      } else if (options.format === 'json') {
+        // Export as JSON template
+        const jsonContent = this.svgDrawingService.exportToJSON(options.filename);
+
+        // Download JSON
+        this.svgDrawingService.downloadJSON(jsonContent, options.filename);
+
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Template Saved',
+          detail: `${options.filename} template has been downloaded`,
+          life: 3000,
+        });
       }
     } catch (error) {
       console.error('Export error:', error);
@@ -219,6 +244,151 @@ export class SvgDrawingComponent implements OnInit, OnDestroy {
         life: 3000,
       });
     }
+  }
+
+  /**
+   * Handles template import from JSON file.
+   */
+  onImport(file: File): void {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const jsonContent = e.target?.result as string;
+        this.svgDrawingService.importFromJSON(jsonContent);
+
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Template Loaded',
+          detail: 'Drawing template imported successfully',
+          life: 3000,
+        });
+      } catch (error) {
+        console.error('Import error:', error);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Import Failed',
+          detail: error instanceof Error ? error.message : 'Failed to import template',
+          life: 3000,
+        });
+      }
+    };
+    reader.onerror = () => {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Import Failed',
+        detail: 'Failed to read file',
+        life: 3000,
+      });
+    };
+    reader.readAsText(file);
+  }
+
+  /**
+   * Handles saving project to server.
+   */
+  onSaveProject(data: { name: string; description?: string }): void {
+    this.svgDrawingService.saveProjectToServer(data.name, data.description).subscribe({
+      next: (project) => {
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Project Saved',
+          detail: `"${project.name}" has been saved to the server`,
+          life: 3000,
+        });
+
+        // Refresh projects list if component is available
+        this.loadProjectComponent?.onRefresh();
+      },
+      error: (error) => {
+        console.error('Save project error:', error);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Save Failed',
+          detail: error.error?.message || 'Failed to save project to server',
+          life: 3000,
+        });
+      },
+    });
+  }
+
+  /**
+   * Handles loading projects list from server.
+   */
+  onLoadProjects(): void {
+    this.loadProjectComponent?.setLoading(true);
+
+    this.svgDrawingService.getMyProjects(false).subscribe({
+      next: (projects) => {
+        this.loadProjectComponent?.setProjects(projects);
+        this.loadProjectComponent?.setLoading(false);
+      },
+      error: (error) => {
+        console.error('Load projects error:', error);
+        this.loadProjectComponent?.setLoading(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Load Failed',
+          detail: error.error?.message || 'Failed to load projects from server',
+          life: 3000,
+        });
+      },
+    });
+  }
+
+  /**
+   * Handles loading a specific project from server.
+   */
+  onLoadProject(project: DrawingProject): void {
+    this.svgDrawingService.loadProjectFromServer(project.id).subscribe({
+      next: (loadedProject) => {
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Project Loaded',
+          detail: `"${loadedProject.name}" has been loaded`,
+          life: 3000,
+        });
+
+        this.loadProjectComponent?.resetLoadingState();
+      },
+      error: (error) => {
+        console.error('Load project error:', error);
+        this.loadProjectComponent?.resetLoadingState();
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Load Failed',
+          detail: error.error?.message || 'Failed to load project from server',
+          life: 3000,
+        });
+      },
+    });
+  }
+
+  /**
+   * Handles deleting a project from server.
+   */
+  onDeleteProject(project: DrawingProject): void {
+    this.svgDrawingService.deleteProject(project.id).subscribe({
+      next: () => {
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Project Deleted',
+          detail: `"${project.name}" has been deleted`,
+          life: 3000,
+        });
+
+        // Refresh projects list
+        this.loadProjectComponent?.onRefresh();
+      },
+      error: (error) => {
+        console.error('Delete project error:', error);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Delete Failed',
+          detail: error.error?.message || 'Failed to delete project from server',
+          life: 3000,
+        });
+      },
+    });
   }
 
   /**
@@ -519,12 +689,20 @@ export class SvgDrawingComponent implements OnInit, OnDestroy {
       event.preventDefault();
       this.svgDrawingService.toggleGrid();
     } else if (event.key === 'Escape') {
-      // Cancel polygon drawing or deselect
+      // Cancel line, polygon drawing, or deselect
       event.preventDefault();
-      if (this.svgDrawingService.currentTool() === 'polygon') {
+      if (
+        this.svgDrawingService.currentTool() === 'line' &&
+        this.svgDrawingService.lineStartPoint()
+      ) {
+        // Cancel line drawing in progress
+        this.svgDrawingService.setLineStartPoint(null);
+        this.svgDrawingService.cancelDrawing();
+      } else if (this.svgDrawingService.currentTool() === 'polygon') {
         this.svgDrawingService.cancelPolygon();
+      } else {
+        this.svgDrawingService.selectShape(null);
       }
-      this.svgDrawingService.selectShape(null);
     } else if (event.key === 'Delete' || event.key === 'Backspace') {
       // Delete selected shape
       if (

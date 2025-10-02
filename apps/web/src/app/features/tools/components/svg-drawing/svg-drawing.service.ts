@@ -1,6 +1,6 @@
-import { Injectable, signal, computed, effect } from '@angular/core';
-import { Subject } from 'rxjs';
-import { debounceTime } from 'rxjs/operators';
+import { Injectable, signal, computed, effect, inject } from '@angular/core';
+import { Subject, Observable } from 'rxjs';
+import { debounceTime, tap, catchError } from 'rxjs/operators';
 import {
   Shape,
   LineShape,
@@ -16,7 +16,12 @@ import {
   StoredDrawing,
   DrawingSettings,
   DrawingStyleSettings,
+  DrawingTemplate,
+  DrawingProject,
+  CreateDrawingProjectRequest,
+  UpdateDrawingProjectRequest,
 } from '@nodeangularfullstack/shared';
+import { DrawingProjectsApiService } from '../../../../core/api/drawing-projects-api.service';
 
 /**
  * Service for SVG Drawing tool functionality.
@@ -26,6 +31,8 @@ import {
   providedIn: 'root',
 })
 export class SvgDrawingService {
+  private readonly drawingProjectsApi = inject(DrawingProjectsApiService);
+
   // Reactive state signals
   private readonly _shapes = signal<Shape[]>([]);
   private readonly _selectedShapeIds = signal<string[]>([]);
@@ -51,6 +58,7 @@ export class SvgDrawingService {
   >('line');
   private readonly _isDrawing = signal<boolean>(false);
   private readonly _activeVertices = signal<Point[]>([]);
+  private readonly _lineStartPoint = signal<Point | null>(null); // Track first click for line tool
   private readonly _snapEnabled = signal<boolean>(true);
   private readonly _snapThreshold = signal<number>(5);
   private readonly _commandHistory = signal<Command[]>([]);
@@ -96,6 +104,7 @@ export class SvgDrawingService {
   readonly currentTool = this._currentTool.asReadonly();
   readonly isDrawing = this._isDrawing.asReadonly();
   readonly activeVertices = this._activeVertices.asReadonly();
+  readonly lineStartPoint = this._lineStartPoint.asReadonly();
   readonly snapEnabled = this._snapEnabled.asReadonly();
   readonly snapThreshold = this._snapThreshold.asReadonly();
   readonly gridVisible = this._gridVisible.asReadonly();
@@ -429,6 +438,15 @@ export class SvgDrawingService {
     this._currentTool.set(tool);
     this._isDrawing.set(false);
     this._activeVertices.set([]);
+    this._lineStartPoint.set(null); // Clear line start point when changing tools
+  }
+
+  /**
+   * Sets the line start point for two-click line drawing.
+   * @param point - Starting point for the line
+   */
+  setLineStartPoint(point: Point | null): void {
+    this._lineStartPoint.set(point);
   }
 
   /**
@@ -1697,6 +1715,414 @@ export class SvgDrawingService {
       console.error('PNG download error:', error);
       throw error;
     }
+  }
+
+  /**
+   * Exports the drawing to JSON template format.
+   * Includes all shapes, settings, background image, and canvas state.
+   * @param filename - Filename for the template (without extension)
+   * @returns JSON string representation of the drawing template
+   */
+  exportToJSON(filename: string): string {
+    try {
+      // Remove file extension if provided
+      const nameWithoutExt = filename.replace(/\.(json|svg|png)$/i, '');
+
+      const template: DrawingTemplate = {
+        version: '1.0',
+        metadata: {
+          name: nameWithoutExt,
+          description: `SVG Drawing Template - ${this._shapes().length} shapes`,
+          created: new Date(),
+          modified: new Date(),
+        },
+        shapes: this._shapes(), // Include ALL shapes, even hidden ones
+        settings: {
+          snapEnabled: this._snapEnabled(),
+          snapThreshold: this._snapThreshold(),
+          gridVisible: this._gridVisible(),
+          style: {
+            strokeColor: this._strokeColor(),
+            strokeWidth: this._strokeWidth(),
+            fillColor: this._fillColor(),
+            fillEnabled: this._fillEnabled(),
+          },
+        },
+        backgroundImage: this._backgroundImage()
+          ? {
+              data: this._backgroundImage(),
+              opacity: this._imageOpacity(),
+              scale: this._imageScale(),
+              position: this._imagePosition(),
+              locked: this._imageLocked(),
+            }
+          : undefined,
+        canvas: {
+          zoom: this._canvasZoom(),
+          offset: this._canvasOffset(),
+        },
+        exportBounds: {
+          width: this._exportWidth(),
+          height: this._exportHeight(),
+          padding: this._exportPadding(),
+        },
+      };
+
+      // Format JSON with proper indentation for readability
+      return JSON.stringify(template, null, 2);
+    } catch (error) {
+      console.error('JSON export error:', error);
+      throw new Error('Failed to export drawing template');
+    }
+  }
+
+  /**
+   * Validates a JSON template structure.
+   * @param jsonContent - JSON string to validate
+   * @returns True if valid, false otherwise
+   */
+  validateJSONTemplate(jsonContent: string): boolean {
+    try {
+      const template = JSON.parse(jsonContent) as DrawingTemplate;
+
+      // Check required fields
+      if (!template.version || !template.metadata || !template.shapes || !template.settings) {
+        return false;
+      }
+
+      // Check version compatibility
+      if (template.version !== '1.0') {
+        console.warn('Template version mismatch');
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Template validation error:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Imports a drawing from JSON template.
+   * Replaces current drawing state with template data.
+   * @param jsonContent - JSON string containing the template
+   */
+  importFromJSON(jsonContent: string): void {
+    try {
+      // Validate JSON structure
+      if (!this.validateJSONTemplate(jsonContent)) {
+        throw new Error('Invalid template format or incompatible version');
+      }
+
+      const template = JSON.parse(jsonContent) as DrawingTemplate;
+
+      // Convert timestamp strings back to Date objects
+      if (typeof template.metadata.created === 'string') {
+        template.metadata.created = new Date(template.metadata.created);
+      }
+      if (typeof template.metadata.modified === 'string') {
+        template.metadata.modified = new Date(template.metadata.modified);
+      }
+
+      // Convert shape timestamps
+      template.shapes = template.shapes.map((shape) => ({
+        ...shape,
+        createdAt:
+          typeof shape.createdAt === 'string' ? new Date(shape.createdAt) : shape.createdAt,
+      }));
+
+      // Clear current state
+      this._shapes.set([]);
+      this._selectedShapeIds.set([]);
+      this._commandHistory.set([]);
+      this._redoStack.set([]);
+
+      // Restore shapes
+      this._shapes.set(template.shapes);
+
+      // Restore settings
+      this._snapEnabled.set(template.settings.snapEnabled);
+      this._snapThreshold.set(template.settings.snapThreshold);
+      this._gridVisible.set(template.settings.gridVisible);
+      this._strokeColor.set(template.settings.style.strokeColor);
+      this._strokeWidth.set(template.settings.style.strokeWidth);
+      this._fillColor.set(template.settings.style.fillColor);
+      this._fillEnabled.set(template.settings.style.fillEnabled);
+
+      // Restore background image if present
+      if (template.backgroundImage) {
+        this._backgroundImage.set(template.backgroundImage.data);
+        this._imageOpacity.set(template.backgroundImage.opacity);
+        this._imageScale.set(template.backgroundImage.scale);
+        this._imagePosition.set(template.backgroundImage.position);
+        this._imageLocked.set(template.backgroundImage.locked);
+      } else {
+        this._backgroundImage.set(null);
+      }
+
+      // Restore canvas state
+      this._canvasZoom.set(template.canvas.zoom);
+      this._canvasOffset.set(template.canvas.offset);
+
+      // Restore export bounds
+      this._exportWidth.set(template.exportBounds.width);
+      this._exportHeight.set(template.exportBounds.height);
+      this._exportPadding.set(template.exportBounds.padding);
+    } catch (error) {
+      console.error('Import error:', error);
+      throw error instanceof Error ? error : new Error('Failed to import template');
+    }
+  }
+
+  /**
+   * Downloads JSON template as a file.
+   * @param jsonContent - JSON string to download
+   * @param filename - Filename for the download
+   */
+  downloadJSON(jsonContent: string, filename: string): void {
+    try {
+      const blob = new Blob([jsonContent], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('JSON download error:', error);
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // Server-Side Project Management
+  // ============================================================================
+
+  /**
+   * Saves the current drawing as a project to the server.
+   * Requires user authentication.
+   * @param name - Project name (1-255 characters)
+   * @param description - Optional project description
+   * @param thumbnail - Optional thumbnail image (base64 PNG)
+   * @returns Observable containing the saved project
+   * @throws {HttpErrorResponse} When save fails or user not authenticated
+   * @example
+   * service.saveProjectToServer('My Drawing', 'A great drawing', thumbnail)
+   *   .subscribe({
+   *     next: (project) => console.log('Saved:', project),
+   *     error: (err) => console.error('Save failed:', err)
+   *   });
+   */
+  saveProjectToServer(
+    name: string,
+    description?: string,
+    thumbnail?: string,
+  ): Observable<DrawingProject> {
+    // Create template data from current drawing state
+    const templateData: DrawingTemplate = {
+      version: '1.0',
+      metadata: {
+        name,
+        description: description || '',
+        created: new Date(),
+        modified: new Date(),
+      },
+      shapes: this._shapes(), // Include ALL shapes
+      settings: {
+        snapEnabled: this._snapEnabled(),
+        snapThreshold: this._snapThreshold(),
+        gridVisible: this._gridVisible(),
+        style: {
+          strokeColor: this._strokeColor(),
+          strokeWidth: this._strokeWidth(),
+          fillColor: this._fillColor(),
+          fillEnabled: this._fillEnabled(),
+        },
+      },
+      backgroundImage: this._backgroundImage()
+        ? {
+            data: this._backgroundImage()!,
+            opacity: this._imageOpacity(),
+            scale: this._imageScale(),
+            position: this._imagePosition(),
+            locked: this._imageLocked(),
+          }
+        : undefined,
+      canvas: {
+        zoom: this._canvasZoom(),
+        offset: this._canvasOffset(),
+      },
+      exportBounds: {
+        width: this._exportWidth(),
+        height: this._exportHeight(),
+        padding: this._exportPadding(),
+      },
+    };
+
+    const projectData: CreateDrawingProjectRequest = {
+      name,
+      description,
+      templateData,
+      thumbnail,
+    };
+
+    return this.drawingProjectsApi.createProject(projectData);
+  }
+
+  /**
+   * Updates an existing project on the server.
+   * @param projectId - Project UUID to update
+   * @param name - Optional updated name
+   * @param description - Optional updated description
+   * @param thumbnail - Optional updated thumbnail
+   * @returns Observable containing the updated project
+   * @example
+   * service.updateProjectOnServer('project-id', 'New Name')
+   *   .subscribe(project => console.log('Updated:', project));
+   */
+  updateProjectOnServer(
+    projectId: string,
+    name?: string,
+    description?: string,
+    thumbnail?: string,
+  ): Observable<DrawingProject> {
+    // Create template data from current drawing state
+    const templateData: DrawingTemplate = {
+      version: '1.0',
+      metadata: {
+        name: name || 'Untitled',
+        description: description || '',
+        created: new Date(),
+        modified: new Date(),
+      },
+      shapes: this._shapes(),
+      settings: {
+        snapEnabled: this._snapEnabled(),
+        snapThreshold: this._snapThreshold(),
+        gridVisible: this._gridVisible(),
+        style: {
+          strokeColor: this._strokeColor(),
+          strokeWidth: this._strokeWidth(),
+          fillColor: this._fillColor(),
+          fillEnabled: this._fillEnabled(),
+        },
+      },
+      backgroundImage: this._backgroundImage()
+        ? {
+            data: this._backgroundImage()!,
+            opacity: this._imageOpacity(),
+            scale: this._imageScale(),
+            position: this._imagePosition(),
+            locked: this._imageLocked(),
+          }
+        : undefined,
+      canvas: {
+        zoom: this._canvasZoom(),
+        offset: this._canvasOffset(),
+      },
+      exportBounds: {
+        width: this._exportWidth(),
+        height: this._exportHeight(),
+        padding: this._exportPadding(),
+      },
+    };
+
+    const updateData: UpdateDrawingProjectRequest = {
+      name,
+      description,
+      templateData,
+      thumbnail,
+    };
+
+    return this.drawingProjectsApi.updateProject(projectId, updateData);
+  }
+
+  /**
+   * Loads a project from the server and applies it to the current drawing.
+   * Clears current state and restores all project data.
+   * @param projectId - Project UUID to load
+   * @returns Observable containing the loaded project
+   * @example
+   * service.loadProjectFromServer('project-id')
+   *   .subscribe({
+   *     next: (project) => console.log('Loaded:', project),
+   *     error: (err) => console.error('Load failed:', err)
+   *   });
+   */
+  loadProjectFromServer(projectId: string): Observable<DrawingProject> {
+    return this.drawingProjectsApi.getProjectById(projectId).pipe(
+      tap((project) => {
+        // Apply the template data to current drawing
+        const template = project.templateData;
+
+        // Clear current state
+        this._shapes.set([]);
+        this._selectedShapeIds.set([]);
+        this._commandHistory.set([]);
+        this._redoStack.set([]);
+
+        // Restore shapes
+        this._shapes.set(template.shapes);
+
+        // Restore settings
+        this._snapEnabled.set(template.settings.snapEnabled);
+        this._snapThreshold.set(template.settings.snapThreshold);
+        this._gridVisible.set(template.settings.gridVisible);
+        this._strokeColor.set(template.settings.style.strokeColor);
+        this._strokeWidth.set(template.settings.style.strokeWidth);
+        this._fillColor.set(template.settings.style.fillColor);
+        this._fillEnabled.set(template.settings.style.fillEnabled);
+
+        // Restore background image if present
+        if (template.backgroundImage) {
+          this._backgroundImage.set(template.backgroundImage.data);
+          this._imageOpacity.set(template.backgroundImage.opacity);
+          this._imageScale.set(template.backgroundImage.scale);
+          this._imagePosition.set(template.backgroundImage.position);
+          this._imageLocked.set(template.backgroundImage.locked);
+        } else {
+          this._backgroundImage.set(null);
+        }
+
+        // Restore canvas state
+        this._canvasZoom.set(template.canvas.zoom);
+        this._canvasOffset.set(template.canvas.offset);
+
+        // Restore export bounds
+        this._exportWidth.set(template.exportBounds.width);
+        this._exportHeight.set(template.exportBounds.height);
+        this._exportPadding.set(template.exportBounds.padding);
+      }),
+    );
+  }
+
+  /**
+   * Retrieves all projects for the authenticated user.
+   * @param activeOnly - If true, only return active projects
+   * @returns Observable containing array of projects
+   * @example
+   * service.getMyProjects(true).subscribe(projects => {
+   *   console.log('My active projects:', projects);
+   * });
+   */
+  getMyProjects(activeOnly: boolean = false): Observable<DrawingProject[]> {
+    return this.drawingProjectsApi.getProjects(activeOnly);
+  }
+
+  /**
+   * Deletes a project from the server.
+   * @param projectId - Project UUID to delete
+   * @returns Observable that completes when deletion is successful
+   * @example
+   * service.deleteProject('project-id').subscribe(() => {
+   *   console.log('Project deleted');
+   * });
+   */
+  deleteProject(projectId: string): Observable<void> {
+    return this.drawingProjectsApi.deleteProject(projectId);
   }
 
   /**

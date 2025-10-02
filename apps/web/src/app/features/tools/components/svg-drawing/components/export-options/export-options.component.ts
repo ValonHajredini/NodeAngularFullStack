@@ -24,7 +24,14 @@ import { SvgDrawingService } from '../../svg-drawing.service';
         <h3 class="text-lg font-semibold text-gray-900 mb-2">Export Drawing</h3>
         <p class="text-sm text-gray-600">
           Configure your export settings and download your drawing as
-          {{ exportOptions.format === 'svg' ? 'an SVG' : 'a PNG' }} file.
+          {{
+            exportOptions.format === 'svg'
+              ? 'an SVG'
+              : exportOptions.format === 'png'
+                ? 'a PNG'
+                : 'a JSON template'
+          }}
+          file.
         </p>
       </div>
 
@@ -51,13 +58,19 @@ import { SvgDrawingService } from '../../svg-drawing.service';
           type="text"
           pInputText
           [(ngModel)]="exportOptions.filename"
-          [placeholder]="exportOptions.format === 'svg' ? 'drawing.svg' : 'drawing.png'"
+          [placeholder]="
+            exportOptions.format === 'svg'
+              ? 'drawing.svg'
+              : exportOptions.format === 'png'
+                ? 'drawing.png'
+                : 'drawing.json'
+          "
           class="w-full"
         />
       </div>
 
-      <!-- Dimensions -->
-      <div class="grid grid-cols-2 gap-4 mb-4">
+      <!-- Dimensions (SVG and PNG only) -->
+      <div class="grid grid-cols-2 gap-4 mb-4" *ngIf="exportOptions.format !== 'json'">
         <div class="flex flex-col gap-2">
           <label for="width" class="font-semibold text-sm text-gray-700">Width (px)</label>
           <p-inputNumber
@@ -86,8 +99,8 @@ import { SvgDrawingService } from '../../svg-drawing.service';
         </div>
       </div>
 
-      <!-- Padding -->
-      <div class="flex flex-col gap-2 mb-4">
+      <!-- Padding (SVG and PNG only) -->
+      <div class="flex flex-col gap-2 mb-4" *ngIf="exportOptions.format !== 'json'">
         <label for="padding" class="font-semibold text-sm text-gray-700">Padding (px)</label>
         <p-inputNumber
           inputId="padding"
@@ -188,6 +201,7 @@ export class ExportOptionsComponent implements OnInit {
   formatOptions = [
     { label: 'SVG (Vector)', value: 'svg' as ExportFormat },
     { label: 'PNG (Image)', value: 'png' as ExportFormat },
+    { label: 'JSON (Template)', value: 'json' as ExportFormat },
   ];
 
   /** Available optimization levels */
@@ -202,7 +216,7 @@ export class ExportOptionsComponent implements OnInit {
    */
   onFormatChange(format: ExportFormat): void {
     const currentFilename = this.exportOptions.filename;
-    const nameWithoutExt = currentFilename.replace(/\.(svg|png)$/i, '');
+    const nameWithoutExt = currentFilename.replace(/\.(svg|png|json)$/i, '');
     this.exportOptions.filename = `${nameWithoutExt}.${format}`;
   }
 
@@ -256,7 +270,7 @@ export class ExportOptionsComponent implements OnInit {
     const expectedExt = `.${this.exportOptions.format}`;
     if (!this.exportOptions.filename.toLowerCase().endsWith(expectedExt)) {
       // Remove any existing extension and add the correct one
-      const nameWithoutExt = this.exportOptions.filename.replace(/\.(svg|png)$/i, '');
+      const nameWithoutExt = this.exportOptions.filename.replace(/\.(svg|png|json)$/i, '');
       this.exportOptions.filename = `${nameWithoutExt}${expectedExt}`;
     }
 

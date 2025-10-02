@@ -1277,7 +1277,40 @@ export class CanvasRendererComponent implements OnInit, OnDestroy {
       }
     }
 
-    if (tool === 'line' || tool === 'rectangle' || tool === 'circle' || tool === 'ellipse') {
+    if (tool === 'line') {
+      // Two-click line drawing: first click sets start, second click completes
+      const lineStart = this.drawingService.lineStartPoint();
+
+      if (!lineStart) {
+        // First click - set start point
+        this.drawingService.setLineStartPoint(point);
+        this.drawingService.startDrawing(point);
+      } else {
+        // Second click - complete the line with snap applied
+        const snappedPoint = this.drawingService.applySnapToPoint(lineStart, point);
+        const style = this.drawingService.currentStyle();
+
+        const shape: LineShape = {
+          id: this.drawingService.generateShapeId(),
+          type: 'line',
+          start: lineStart,
+          end: snappedPoint,
+          color: style.color,
+          strokeWidth: style.strokeWidth,
+          createdAt: new Date(),
+        };
+
+        this.drawingService.finishDrawing(shape);
+        this.drawingService.setLineStartPoint(null);
+        this.drawingService.cancelDrawing();
+
+        // Clear preview states
+        this.previewLine.set(null);
+        this.angleIndicator.set(null);
+        this.showSnapGuide.set(false);
+      }
+      return; // Don't continue to other drawing logic
+    } else if (tool === 'rectangle' || tool === 'circle' || tool === 'ellipse') {
       this.startPoint = point;
       this.drawingService.startDrawing(point);
     } else if (tool === 'bezier') {
@@ -1399,37 +1432,44 @@ export class CanvasRendererComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Handle line drawing preview (works with two-click mode)
+    if (tool === 'line') {
+      const lineStart = this.drawingService.lineStartPoint();
+
+      if (lineStart) {
+        // Show preview from start point to current mouse position
+        const snappedPoint = this.drawingService.applySnapToPoint(lineStart, currentPoint);
+
+        // Update preview line
+        this.previewLine.set({
+          start: lineStart,
+          end: snappedPoint,
+        });
+
+        // Calculate and display angle
+        const angle = this.drawingService.calculateAngle(lineStart, snappedPoint);
+        this.angleIndicator.set({
+          x: currentPoint.x,
+          y: currentPoint.y,
+          angle,
+        });
+
+        // Show snap guide if applicable
+        if (this.drawingService.snapEnabled() && this.drawingService.shouldSnap(angle)) {
+          this.showSnapGuide.set(true);
+          this.updateSnapGuideLine(lineStart, snappedPoint);
+        } else {
+          this.showSnapGuide.set(false);
+        }
+      }
+      return;
+    }
+
     if (!this.drawingService.isDrawing() || !this.startPoint) {
       return;
     }
 
-    // Handle line drawing preview
-    if (tool === 'line') {
-      // Apply snap if enabled
-      const snappedPoint = this.drawingService.applySnapToPoint(this.startPoint, currentPoint);
-
-      // Update preview line
-      this.previewLine.set({
-        start: this.startPoint,
-        end: snappedPoint,
-      });
-
-      // Calculate and display angle
-      const angle = this.drawingService.calculateAngle(this.startPoint, snappedPoint);
-      this.angleIndicator.set({
-        x: currentPoint.x,
-        y: currentPoint.y,
-        angle,
-      });
-
-      // Show snap guide if applicable
-      if (this.drawingService.snapEnabled() && this.drawingService.shouldSnap(angle)) {
-        this.showSnapGuide.set(true);
-        this.updateSnapGuideLine(this.startPoint, snappedPoint);
-      } else {
-        this.showSnapGuide.set(false);
-      }
-    } else if (tool === 'rectangle') {
+    if (tool === 'rectangle') {
       // Preview rectangle
       const style = this.drawingService.currentStyle();
       const width = Math.abs(currentPoint.x - this.startPoint.x);
@@ -1561,28 +1601,23 @@ export class CanvasRendererComponent implements OnInit, OnDestroy {
       // Don't return here - allow drawing operations to continue
     }
 
+    // Line tool now uses two-click mode, so don't complete on mouseup
+    const tool = this.drawingService.currentTool();
+    if (tool === 'line') {
+      // Line completion is handled in onMouseDown for two-click mode
+      return;
+    }
+
     if (!this.drawingService.isDrawing() || !this.startPoint) {
       return;
     }
 
     const endPoint = this.getMousePosition(event);
-    const tool = this.drawingService.currentTool();
     const style = this.drawingService.currentStyle();
 
     let shape: Shape | null = null;
 
-    if (tool === 'line') {
-      const snappedPoint = this.drawingService.applySnapToPoint(this.startPoint, endPoint);
-      shape = {
-        id: this.drawingService.generateShapeId(),
-        type: 'line',
-        start: this.startPoint,
-        end: snappedPoint,
-        color: style.color,
-        strokeWidth: style.strokeWidth,
-        createdAt: new Date(),
-      } as LineShape;
-    } else if (tool === 'rectangle') {
+    if (tool === 'rectangle') {
       const width = Math.abs(endPoint.x - this.startPoint.x);
       const height = Math.abs(endPoint.y - this.startPoint.y);
       const topLeft = {
@@ -1663,6 +1698,13 @@ export class CanvasRendererComponent implements OnInit, OnDestroy {
       this.isDrawingSelectionRect.set(false);
       this.selectionRectStart.set(null);
       this.selectionRectEnd.set(null);
+    }
+
+    // Clear line drawing preview if active
+    if (this.drawingService.currentTool() === 'line' && this.drawingService.lineStartPoint()) {
+      this.previewLine.set(null);
+      this.angleIndicator.set(null);
+      this.showSnapGuide.set(false);
     }
 
     if (this.drawingService.isDrawing()) {

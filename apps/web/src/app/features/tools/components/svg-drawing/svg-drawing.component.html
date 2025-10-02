@@ -162,7 +162,7 @@
               id="export-to-svg-toggle"
             >
               <span class="accordion-toggle-number">4</span>
-              <span class="accordion-toggle-text">Export to SVG</span>
+              <span class="accordion-toggle-text">Export Drawing</span>
               <span class="accordion-toggle-icon" aria-hidden="true"></span>
             </button>
             <div
@@ -176,6 +176,67 @@
             </div>
           </section>
 
+          <section class="accordion-section" [class.is-open]="isSectionOpen('importTemplate')">
+            <button
+              type="button"
+              class="accordion-toggle"
+              (click)="toggleSection('importTemplate')"
+              [attr.aria-expanded]="isSectionOpen('importTemplate')"
+              aria-controls="import-template-panel"
+              id="import-template-toggle"
+            >
+              <span class="accordion-toggle-number">5</span>
+              <span class="accordion-toggle-text">Import Template</span>
+              <span class="accordion-toggle-icon" aria-hidden="true"></span>
+            </button>
+            <div
+              id="import-template-panel"
+              class="accordion-content"
+              role="region"
+              [attr.aria-labelledby]="'import-template-toggle'"
+              *ngIf="isSectionOpen('importTemplate')"
+            >
+              <app-import-template (import)="onImport($event)"></app-import-template>
+            </div>
+          </section>
+
+          <section class="accordion-section" [class.is-open]="isSectionOpen('myProjects')">
+            <button
+              type="button"
+              class="accordion-toggle"
+              (click)="toggleSection('myProjects')"
+              [attr.aria-expanded]="isSectionOpen('myProjects')"
+              aria-controls="my-projects-panel"
+              id="my-projects-toggle"
+            >
+              <span class="accordion-toggle-number">6</span>
+              <span class="accordion-toggle-text">My Projects</span>
+              <span class="accordion-toggle-icon" aria-hidden="true"></span>
+            </button>
+            <div
+              id="my-projects-panel"
+              class="accordion-content"
+              role="region"
+              [attr.aria-labelledby]="'my-projects-toggle'"
+              *ngIf="isSectionOpen('myProjects')"
+            >
+              <!-- Save Project Section -->
+              <div class="mb-6">
+                <app-save-project (save)="onSaveProject($event)"></app-save-project>
+              </div>
+
+              <!-- Divider -->
+              <div class="border-t border-gray-200 my-6"></div>
+
+              <!-- Load Project Section -->
+              <app-load-project
+                (loadProjects)="onLoadProjects()"
+                (load)="onLoadProject($event)"
+                (delete)="onDeleteProject($event)"
+              ></app-load-project>
+            </div>
+          </section>
+
           <section class="accordion-section" [class.is-open]="isSectionOpen('helpShortcuts')">
             <button
               type="button"
@@ -185,7 +246,7 @@
               aria-controls="help-shortcuts-panel"
               id="help-shortcuts-toggle"
             >
-              <span class="accordion-toggle-number">5</span>
+              <span class="accordion-toggle-number">7</span>
               <span class="accordion-toggle-text">Help &amp; Shortcuts</span>
               <span class="accordion-toggle-icon" aria-hidden="true"></span>
             </button>
