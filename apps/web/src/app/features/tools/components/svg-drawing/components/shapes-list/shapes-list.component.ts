@@ -794,6 +794,7 @@ export class ShapesListComponent {
       arrow: 'Arrow',
       cylinder: 'Cylinder',
       cone: 'Cone',
+      'svg-symbol': 'SVG Symbol',
     };
     return `${typeNames[shape.type]} ${index + 1}`;
   }
@@ -831,6 +832,7 @@ export class ShapesListComponent {
       arrow: 'pi pi-arrow-right',
       cylinder: 'pi pi-box',
       cone: 'pi pi-filter',
+      'svg-symbol': 'pi pi-image',
     };
     return iconMap[shapeType] || 'pi pi-circle';
   }
@@ -980,6 +982,7 @@ export class ShapesListComponent {
       arrow: 'Arrow',
       cylinder: 'Cylinder',
       cone: 'Cone',
+      'svg-symbol': 'SVG Symbol',
     };
     return `${typeNames[shape.type]}`;
   }
