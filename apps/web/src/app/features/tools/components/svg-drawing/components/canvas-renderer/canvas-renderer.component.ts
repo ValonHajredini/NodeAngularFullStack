@@ -24,9 +24,12 @@ import {
   EllipseShape,
   TriangleShape,
   BezierShape,
+  SVGSymbolShape,
   Shape,
   ShapeStyle,
 } from '@nodeangularfullstack/shared';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { getSVGSymbolTransform } from '../../utils/svg-parser.util';
 
 /**
  * Canvas renderer component for SVG drawing.
@@ -221,6 +224,28 @@ import {
                   stroke-width="2"
                 />
               }
+            </g>
+          }
+          @if (shape.type === 'svg-symbol') {
+            <g
+              [attr.transform]="getSVGSymbolTransform(asSVGSymbolShape(shape))"
+              (click)="onShapeClick($event, shape)"
+              [class.shape-selected]="isShapeSelected(shape.id)"
+              class="svg-symbol-shape"
+            >
+              <!-- SVG symbol content with color overrides -->
+              <svg
+                [attr.viewBox]="asSVGSymbolShape(shape).viewBox"
+                [attr.width]="asSVGSymbolShape(shape).width"
+                [attr.height]="asSVGSymbolShape(shape).height"
+                [attr.fill]="shape.fillColor || shape.color"
+                [attr.stroke]="shape.color"
+                [attr.stroke-width]="shape.strokeWidth"
+                xmlns="http://www.w3.org/2000/svg"
+                preserveAspectRatio="xMidYMid meet"
+              >
+                <g [innerHTML]="sanitizeSVGContent(asSVGSymbolShape(shape).svgContent)"></g>
+              </svg>
             </g>
           }
         }
@@ -929,6 +954,7 @@ import {
 export class CanvasRendererComponent implements OnInit, OnDestroy {
   readonly drawingService = inject(SvgDrawingService);
   private readonly elementRef = inject(ElementRef);
+  private readonly sanitizer = inject(DomSanitizer);
 
   // ViewChild for SVG element
   private readonly canvasRef = viewChild<ElementRef<SVGSVGElement>>('canvas');
@@ -2089,6 +2115,33 @@ export class CanvasRendererComponent implements OnInit, OnDestroy {
    */
   asBezierShape(shape: Shape): BezierShape {
     return shape as BezierShape;
+  }
+
+  /**
+   * Type-safe helper to cast Shape to SVGSymbolShape.
+   */
+  asSVGSymbolShape(shape: Shape): SVGSymbolShape {
+    return shape as SVGSymbolShape;
+  }
+
+  /**
+   * Gets SVG transform string for symbol positioning.
+   */
+  getSVGSymbolTransform(symbol: SVGSymbolShape): string {
+    return getSVGSymbolTransform(
+      symbol.position,
+      symbol.width,
+      symbol.height,
+      symbol.rotation || 0,
+      symbol.scale || 1,
+    );
+  }
+
+  /**
+   * Sanitizes SVG content for safe rendering.
+   */
+  sanitizeSVGContent(content: string): SafeHtml {
+    return this.sanitizer.bypassSecurityTrustHtml(content);
   }
 
   /**
