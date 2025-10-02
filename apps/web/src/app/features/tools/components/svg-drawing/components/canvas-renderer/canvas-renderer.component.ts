@@ -664,12 +664,12 @@ import {
         }
       </svg>
 
-      <!-- Angle indicator -->
+      <!-- Angle indicator - positioned 20px below cursor -->
       @if (angleIndicator()) {
         <div
-          class="absolute bg-gray-800 text-white px-2 py-1 rounded text-sm pointer-events-none"
-          [style.left.px]="angleIndicator()!.x + 10"
-          [style.top.px]="angleIndicator()!.y - 30"
+          class="absolute bg-gray-800 text-white px-2 py-1 rounded text-sm pointer-events-none z-50"
+          [style.left.px]="angleIndicator()!.x - 20"
+          [style.top.px]="angleIndicator()!.y + 20"
         >
           {{ angleIndicator()!.angle }}°
         </div>
@@ -1470,14 +1470,38 @@ export class CanvasRendererComponent implements OnInit, OnDestroy {
     }
 
     if (tool === 'rectangle') {
-      // Preview rectangle
+      // Preview rectangle with angle display and snap
       const style = this.drawingService.currentStyle();
-      const width = Math.abs(currentPoint.x - this.startPoint.x);
-      const height = Math.abs(currentPoint.y - this.startPoint.y);
+
+      // Calculate angle from start point to current point
+      const angle = this.drawingService.calculateAngle(this.startPoint, currentPoint);
+
+      // Apply snap to cursor position for rectangle corners
+      let snappedPoint = currentPoint;
+      if (this.drawingService.snapEnabled() && this.drawingService.shouldSnap(angle)) {
+        snappedPoint = this.drawingService.applySnapToPoint(this.startPoint, currentPoint);
+
+        // Show snap guide
+        this.showSnapGuide.set(true);
+        this.updateSnapGuideLine(this.startPoint, snappedPoint);
+      } else {
+        this.showSnapGuide.set(false);
+      }
+
+      const width = Math.abs(snappedPoint.x - this.startPoint.x);
+      const height = Math.abs(snappedPoint.y - this.startPoint.y);
       const topLeft = {
-        x: Math.min(this.startPoint.x, currentPoint.x),
-        y: Math.min(this.startPoint.y, currentPoint.y),
+        x: Math.min(this.startPoint.x, snappedPoint.x),
+        y: Math.min(this.startPoint.y, snappedPoint.y),
       };
+
+      // Show angle indicator
+      this.angleIndicator.set({
+        x: currentPoint.x,
+        y: currentPoint.y,
+        angle,
+      });
+
       this.previewShape.set({
         id: 'preview',
         type: 'rectangle',
@@ -1490,12 +1514,36 @@ export class CanvasRendererComponent implements OnInit, OnDestroy {
         createdAt: new Date(),
       } as RectangleShape);
     } else if (tool === 'circle') {
-      // Preview circle
+      // Preview circle with angle display and snap
       const style = this.drawingService.currentStyle();
+
+      // Calculate angle from center to edge point
+      const angle = this.drawingService.calculateAngle(this.startPoint, currentPoint);
+
+      // Apply snap to edge point
+      let snappedPoint = currentPoint;
+      if (this.drawingService.snapEnabled() && this.drawingService.shouldSnap(angle)) {
+        snappedPoint = this.drawingService.applySnapToPoint(this.startPoint, currentPoint);
+
+        // Show snap guide
+        this.showSnapGuide.set(true);
+        this.updateSnapGuideLine(this.startPoint, snappedPoint);
+      } else {
+        this.showSnapGuide.set(false);
+      }
+
       const radius = Math.sqrt(
-        Math.pow(currentPoint.x - this.startPoint.x, 2) +
-          Math.pow(currentPoint.y - this.startPoint.y, 2),
+        Math.pow(snappedPoint.x - this.startPoint.x, 2) +
+          Math.pow(snappedPoint.y - this.startPoint.y, 2),
       );
+
+      // Show angle indicator
+      this.angleIndicator.set({
+        x: currentPoint.x,
+        y: currentPoint.y,
+        angle,
+      });
+
       this.previewShape.set({
         id: 'preview',
         type: 'circle',
@@ -1507,10 +1555,34 @@ export class CanvasRendererComponent implements OnInit, OnDestroy {
         createdAt: new Date(),
       } as CircleShape);
     } else if (tool === 'ellipse') {
-      // Preview ellipse
+      // Preview ellipse with angle display and snap
       const style = this.drawingService.currentStyle();
-      const radiusX = Math.abs(currentPoint.x - this.startPoint.x);
-      const radiusY = Math.abs(currentPoint.y - this.startPoint.y);
+
+      // Calculate angle from center to edge point
+      const angle = this.drawingService.calculateAngle(this.startPoint, currentPoint);
+
+      // Apply snap to edge point
+      let snappedPoint = currentPoint;
+      if (this.drawingService.snapEnabled() && this.drawingService.shouldSnap(angle)) {
+        snappedPoint = this.drawingService.applySnapToPoint(this.startPoint, currentPoint);
+
+        // Show snap guide
+        this.showSnapGuide.set(true);
+        this.updateSnapGuideLine(this.startPoint, snappedPoint);
+      } else {
+        this.showSnapGuide.set(false);
+      }
+
+      const radiusX = Math.abs(snappedPoint.x - this.startPoint.x);
+      const radiusY = Math.abs(snappedPoint.y - this.startPoint.y);
+
+      // Show angle indicator
+      this.angleIndicator.set({
+        x: currentPoint.x,
+        y: currentPoint.y,
+        angle,
+      });
+
       this.previewShape.set({
         id: 'preview',
         type: 'ellipse',
@@ -1615,14 +1687,21 @@ export class CanvasRendererComponent implements OnInit, OnDestroy {
     const endPoint = this.getMousePosition(event);
     const style = this.drawingService.currentStyle();
 
+    // Apply snap to endpoint if enabled
+    const angle = this.drawingService.calculateAngle(this.startPoint, endPoint);
+    const snappedPoint =
+      this.drawingService.snapEnabled() && this.drawingService.shouldSnap(angle)
+        ? this.drawingService.applySnapToPoint(this.startPoint, endPoint)
+        : endPoint;
+
     let shape: Shape | null = null;
 
     if (tool === 'rectangle') {
-      const width = Math.abs(endPoint.x - this.startPoint.x);
-      const height = Math.abs(endPoint.y - this.startPoint.y);
+      const width = Math.abs(snappedPoint.x - this.startPoint.x);
+      const height = Math.abs(snappedPoint.y - this.startPoint.y);
       const topLeft = {
-        x: Math.min(this.startPoint.x, endPoint.x),
-        y: Math.min(this.startPoint.y, endPoint.y),
+        x: Math.min(this.startPoint.x, snappedPoint.x),
+        y: Math.min(this.startPoint.y, snappedPoint.y),
       };
       shape = {
         id: this.drawingService.generateShapeId(),
@@ -1637,7 +1716,8 @@ export class CanvasRendererComponent implements OnInit, OnDestroy {
       } as RectangleShape;
     } else if (tool === 'circle') {
       const radius = Math.sqrt(
-        Math.pow(endPoint.x - this.startPoint.x, 2) + Math.pow(endPoint.y - this.startPoint.y, 2),
+        Math.pow(snappedPoint.x - this.startPoint.x, 2) +
+          Math.pow(snappedPoint.y - this.startPoint.y, 2),
       );
       shape = {
         id: this.drawingService.generateShapeId(),
@@ -1650,8 +1730,8 @@ export class CanvasRendererComponent implements OnInit, OnDestroy {
         createdAt: new Date(),
       } as CircleShape;
     } else if (tool === 'ellipse') {
-      const radiusX = Math.abs(endPoint.x - this.startPoint.x);
-      const radiusY = Math.abs(endPoint.y - this.startPoint.y);
+      const radiusX = Math.abs(snappedPoint.x - this.startPoint.x);
+      const radiusY = Math.abs(snappedPoint.y - this.startPoint.y);
       shape = {
         id: this.drawingService.generateShapeId(),
         type: 'ellipse',
