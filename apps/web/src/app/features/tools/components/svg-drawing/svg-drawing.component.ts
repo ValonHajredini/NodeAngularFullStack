@@ -25,6 +25,8 @@ import { LoadProjectComponent } from './components/load-project/load-project.com
 import { HelpPanelComponent } from './components/help-panel/help-panel.component';
 import { ShapesListComponent } from './components/shapes-list/shapes-list.component';
 import { ShapePropertiesComponent } from './components/shape-properties/shape-properties.component';
+import { ImportSvgSymbolComponent } from './components/import-svg-symbol/import-svg-symbol.component';
+import { SvgSymbolLibraryComponent } from './components/svg-symbol-library/svg-symbol-library.component';
 import { ShapeStyle, ExportOptions, DrawingProject } from '@nodeangularfullstack/shared';
 
 type SidebarSection =
@@ -33,6 +35,8 @@ type SidebarSection =
   | 'backgroundImage'
   | 'exportToSvg'
   | 'importTemplate'
+  | 'importSvgSymbol'
+  | 'svgSymbolLibrary'
   | 'myProjects'
   | 'helpShortcuts';
 
@@ -60,6 +64,8 @@ type SidebarSection =
     HelpPanelComponent,
     ShapesListComponent,
     ShapePropertiesComponent,
+    ImportSvgSymbolComponent,
+    SvgSymbolLibraryComponent,
   ],
   providers: [MessageService],
   templateUrl: './svg-drawing.component.html',
@@ -150,6 +156,7 @@ export class SvgDrawingComponent implements OnInit, OnDestroy {
       | 'cone'
       | 'select'
       | 'move'
+      | 'fill'
       | 'delete'
       | 'cut',
   ): void {
@@ -436,6 +443,13 @@ export class SvgDrawingComponent implements OnInit, OnDestroy {
    */
   onFillEnabledChanged(enabled: boolean): void {
     this.svgDrawingService.setFillEnabled(enabled);
+  }
+
+  /**
+   * Handles rotation change.
+   */
+  onRotationChanged(rotation: number): void {
+    this.svgDrawingService.setRotation(rotation);
   }
 
   /**

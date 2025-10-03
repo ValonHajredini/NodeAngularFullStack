@@ -6,6 +6,7 @@ import {
   LineShape,
   PolygonShape,
   PolylineShape,
+  SVGSymbolShape,
   Point,
   DrawingState,
   Command,
@@ -53,6 +54,7 @@ export class SvgDrawingService {
     | 'cone'
     | 'select'
     | 'move'
+    | 'fill'
     | 'delete'
     | 'cut'
   >('line');
@@ -71,6 +73,7 @@ export class SvgDrawingService {
   private readonly _strokeWidth = signal<number>(2);
   private readonly _fillColor = signal<string>('#cccccc');
   private readonly _fillEnabled = signal<boolean>(false);
+  private readonly _rotation = signal<number>(0);
 
   // Background image state
   private readonly _backgroundImage = signal<string | null>(null);
@@ -115,6 +118,7 @@ export class SvgDrawingService {
   readonly strokeWidth = this._strokeWidth.asReadonly();
   readonly fillColor = this._fillColor.asReadonly();
   readonly fillEnabled = this._fillEnabled.asReadonly();
+  readonly rotation = this._rotation.asReadonly();
 
   // Background image public signals
   readonly backgroundImage = this._backgroundImage.asReadonly();
@@ -221,6 +225,14 @@ export class SvgDrawingService {
         this._canvasOffset.set(stored.canvasOffset);
       }
 
+      // Restore export dimensions if available
+      if (stored.exportWidth !== undefined) {
+        this._exportWidth.set(stored.exportWidth);
+      }
+      if (stored.exportHeight !== undefined) {
+        this._exportHeight.set(stored.exportHeight);
+      }
+
       console.log('SvgDrawingService initialized with stored data');
     } else {
       // Reset state on initialization
@@ -292,6 +304,17 @@ export class SvgDrawingService {
     this._shapes.update((shapes) => shapes.filter((s) => s.id !== shapeId));
     // Remove from selection if selected
     this._selectedShapeIds.update((ids) => ids.filter((id) => id !== shapeId));
+  }
+
+  /**
+   * Updates the fill color of a shape.
+   * @param shapeId - ID of the shape to update
+   * @param fillColor - New fill color
+   */
+  updateShapeFillColor(shapeId: string, fillColor: string): void {
+    this._shapes.update((shapes) =>
+      shapes.map((shape) => (shape.id === shapeId ? { ...shape, fillColor } : shape)),
+    );
   }
 
   /**
@@ -432,6 +455,7 @@ export class SvgDrawingService {
       | 'cone'
       | 'select'
       | 'move'
+      | 'fill'
       | 'delete'
       | 'cut',
   ): void {
@@ -786,6 +810,17 @@ export class SvgDrawingService {
           { x: cone.baseCenter.x + width / 2, y: cone.baseCenter.y },
         ];
         if (this.isPointInPolygon(point, vertices)) {
+          return shape.id;
+        }
+      } else if (shape.type === 'svg-symbol') {
+        const symbol = shape as SVGSymbolShape;
+        // Check if point is inside the symbol's bounding box
+        if (
+          point.x >= symbol.position.x &&
+          point.x <= symbol.position.x + symbol.width &&
+          point.y >= symbol.position.y &&
+          point.y <= symbol.position.y + symbol.height
+        ) {
           return shape.id;
         }
       }
@@ -1243,6 +1278,35 @@ export class SvgDrawingService {
       } else {
         return;
       }
+    } else if (shape.type === 'svg-symbol') {
+      const symbol = shape as SVGSymbolShape;
+      const position = { ...symbol.position };
+      let width = symbol.width;
+      let height = symbol.height;
+
+      // Handle corner and edge resizing
+      if (handlePosition.includes('n')) {
+        const deltaY = newPoint.y - position.y;
+        position.y = newPoint.y;
+        height -= deltaY;
+      }
+      if (handlePosition.includes('s')) {
+        height = newPoint.y - position.y;
+      }
+      if (handlePosition.includes('w')) {
+        const deltaX = newPoint.x - position.x;
+        position.x = newPoint.x;
+        width -= deltaX;
+      }
+      if (handlePosition.includes('e')) {
+        width = newPoint.x - position.x;
+      }
+
+      // Ensure minimum size
+      width = Math.max(10, width);
+      height = Math.max(10, height);
+
+      resizedShape = { ...symbol, position, width, height } as SVGSymbolShape;
     } else {
       // For polygon and triangle, we don't support uniform resizing
       // They can be moved, but not resized uniformly
@@ -1368,6 +1432,12 @@ export class SvgDrawingService {
         apex: { x: cone.apex.x + deltaX, y: cone.apex.y + deltaY },
         baseCenter: { x: cone.baseCenter.x + deltaX, y: cone.baseCenter.y + deltaY },
       } as Shape;
+    } else if (shape.type === 'svg-symbol') {
+      const symbol = shape as SVGSymbolShape;
+      movedShape = {
+        ...symbol,
+        position: { x: symbol.position.x + deltaX, y: symbol.position.y + deltaY },
+      } as SVGSymbolShape;
     } else {
       return;
     }
@@ -2759,6 +2829,16 @@ export class SvgDrawingService {
     this._fillEnabled.set(enabled);
   }
 
+  /**
+   * Sets the rotation angle for new shapes.
+   * @param rotation - Rotation angle in degrees (0-360)
+   */
+  setRotation(rotation: number): void {
+    // Normalize rotation to 0-360 range
+    const normalized = ((rotation % 360) + 360) % 360;
+    this._rotation.set(normalized);
+  }
+
   // ===== Export Configuration Methods =====
 
   /**
@@ -3000,6 +3080,8 @@ export class SvgDrawingService {
         },
         canvasZoom: this._canvasZoom(),
         canvasOffset: this._canvasOffset(),
+        exportWidth: this._exportWidth(),
+        exportHeight: this._exportHeight(),
         timestamp: new Date(),
       };
 

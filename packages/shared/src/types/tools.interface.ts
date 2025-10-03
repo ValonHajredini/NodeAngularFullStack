@@ -552,6 +552,8 @@ export interface Shape {
   groupId?: string;
   /** Parent group ID for nested groups - allows groups to be grouped together */
   parentGroupId?: string;
+  /** Rotation angle in degrees (0-360) */
+  rotation?: number;
   /** Shape creation timestamp */
   createdAt: Date;
 }
@@ -814,6 +816,7 @@ export interface DrawingState {
     | 'cone'
     | 'select'
     | 'move'
+    | 'fill'
     | 'delete'
     | 'cut';
   /** Whether drawing is in progress */
@@ -896,6 +899,10 @@ export interface StoredDrawing {
   canvasZoom?: number;
   /** Canvas pan offset */
   canvasOffset?: { x: number; y: number };
+  /** Export width in pixels */
+  exportWidth?: number;
+  /** Export height in pixels */
+  exportHeight?: number;
   /** Timestamp when saved */
   timestamp: Date;
 }

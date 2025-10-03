@@ -30,6 +30,7 @@ import {
 } from '@nodeangularfullstack/shared';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { getSVGSymbolTransform } from '../../utils/svg-parser.util';
+import { SvgSymbolLibraryService } from '../../services/svg-symbol-library.service';
 
 /**
  * Canvas renderer component for SVG drawing.
@@ -39,7 +40,6 @@ import { getSVGSymbolTransform } from '../../utils/svg-parser.util';
   selector: 'app-canvas-renderer',
   standalone: true,
   imports: [CommonModule, ZoomControlsComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
       class="canvas-container relative w-full h-full"
@@ -73,7 +73,7 @@ import { getSVGSymbolTransform } from '../../utils/svg-parser.util';
         <!-- Render all completed shapes (only visible ones) -->
         @for (shape of visibleShapes(); track shape.id) {
           @if (shape.type === 'line') {
-            <g>
+            <g [attr.transform]="getShapeTransform(shape)">
               <line
                 [attr.x1]="asLineShape(shape).start.x"
                 [attr.y1]="asLineShape(shape).start.y"
@@ -103,80 +103,92 @@ import { getSVGSymbolTransform } from '../../utils/svg-parser.util';
             </g>
           }
           @if (shape.type === 'polygon') {
-            <polygon
-              [attr.points]="getPolygonPoints(asPolygonShape(shape))"
-              [attr.fill]="shape.fillColor || 'transparent'"
-              [attr.stroke]="shape.color"
-              [attr.stroke-width]="shape.strokeWidth"
-              [class.shape-selected]="isShapeSelected(shape.id)"
-              stroke-linejoin="round"
-              (click)="onShapeClick($event, shape)"
-            />
+            <g [attr.transform]="getShapeTransform(shape)">
+              <polygon
+                [attr.points]="getPolygonPoints(asPolygonShape(shape))"
+                [attr.fill]="shape.fillColor || 'transparent'"
+                [attr.stroke]="shape.color"
+                [attr.stroke-width]="shape.strokeWidth"
+                [class.shape-selected]="isShapeSelected(shape.id)"
+                stroke-linejoin="round"
+                (click)="onShapeClick($event, shape)"
+              />
+            </g>
           }
           @if (shape.type === 'polyline') {
-            <polyline
-              [attr.points]="getPolylinePoints(asPolylineShape(shape))"
-              [attr.fill]="'none'"
-              [attr.stroke]="shape.color"
-              [attr.stroke-width]="shape.strokeWidth"
-              [attr.stroke-dasharray]="getStrokeDashArray(shape.lineStyle)"
-              [class.shape-selected]="isShapeSelected(shape.id)"
-              stroke-linejoin="round"
-              stroke-linecap="round"
-              (click)="onShapeClick($event, shape)"
-            />
+            <g [attr.transform]="getShapeTransform(shape)">
+              <polyline
+                [attr.points]="getPolylinePoints(asPolylineShape(shape))"
+                [attr.fill]="'none'"
+                [attr.stroke]="shape.color"
+                [attr.stroke-width]="shape.strokeWidth"
+                [attr.stroke-dasharray]="getStrokeDashArray(shape.lineStyle)"
+                [class.shape-selected]="isShapeSelected(shape.id)"
+                stroke-linejoin="round"
+                stroke-linecap="round"
+                (click)="onShapeClick($event, shape)"
+              />
+            </g>
           }
           @if (shape.type === 'rectangle') {
-            <rect
-              [attr.x]="asRectangleShape(shape).topLeft.x"
-              [attr.y]="asRectangleShape(shape).topLeft.y"
-              [attr.width]="asRectangleShape(shape).width"
-              [attr.height]="asRectangleShape(shape).height"
-              [attr.fill]="shape.fillColor || 'transparent'"
-              [attr.stroke]="shape.color"
-              [attr.stroke-width]="shape.strokeWidth"
-              [class.shape-selected]="isShapeSelected(shape.id)"
-              (click)="onShapeClick($event, shape)"
-            />
+            <g [attr.transform]="getShapeTransform(shape)">
+              <rect
+                [attr.x]="asRectangleShape(shape).topLeft.x"
+                [attr.y]="asRectangleShape(shape).topLeft.y"
+                [attr.width]="asRectangleShape(shape).width"
+                [attr.height]="asRectangleShape(shape).height"
+                [attr.fill]="shape.fillColor || 'transparent'"
+                [attr.stroke]="shape.color"
+                [attr.stroke-width]="shape.strokeWidth"
+                [class.shape-selected]="isShapeSelected(shape.id)"
+                (click)="onShapeClick($event, shape)"
+              />
+            </g>
           }
           @if (shape.type === 'circle') {
-            <circle
-              [attr.cx]="asCircleShape(shape).center.x"
-              [attr.cy]="asCircleShape(shape).center.y"
-              [attr.r]="asCircleShape(shape).radius"
-              [attr.fill]="shape.fillColor || 'transparent'"
-              [attr.stroke]="shape.color"
-              [attr.stroke-width]="shape.strokeWidth"
-              [class.shape-selected]="isShapeSelected(shape.id)"
-              (click)="onShapeClick($event, shape)"
-            />
+            <g [attr.transform]="getShapeTransform(shape)">
+              <circle
+                [attr.cx]="asCircleShape(shape).center.x"
+                [attr.cy]="asCircleShape(shape).center.y"
+                [attr.r]="asCircleShape(shape).radius"
+                [attr.fill]="shape.fillColor || 'transparent'"
+                [attr.stroke]="shape.color"
+                [attr.stroke-width]="shape.strokeWidth"
+                [class.shape-selected]="isShapeSelected(shape.id)"
+                (click)="onShapeClick($event, shape)"
+              />
+            </g>
           }
           @if (shape.type === 'ellipse') {
-            <ellipse
-              [attr.cx]="asEllipseShape(shape).center.x"
-              [attr.cy]="asEllipseShape(shape).center.y"
-              [attr.rx]="asEllipseShape(shape).radiusX"
-              [attr.ry]="asEllipseShape(shape).radiusY"
-              [attr.fill]="shape.fillColor || 'transparent'"
-              [attr.stroke]="shape.color"
-              [attr.stroke-width]="shape.strokeWidth"
-              [class.shape-selected]="isShapeSelected(shape.id)"
-              (click)="onShapeClick($event, shape)"
-            />
+            <g [attr.transform]="getShapeTransform(shape)">
+              <ellipse
+                [attr.cx]="asEllipseShape(shape).center.x"
+                [attr.cy]="asEllipseShape(shape).center.y"
+                [attr.rx]="asEllipseShape(shape).radiusX"
+                [attr.ry]="asEllipseShape(shape).radiusY"
+                [attr.fill]="shape.fillColor || 'transparent'"
+                [attr.stroke]="shape.color"
+                [attr.stroke-width]="shape.strokeWidth"
+                [class.shape-selected]="isShapeSelected(shape.id)"
+                (click)="onShapeClick($event, shape)"
+              />
+            </g>
           }
           @if (shape.type === 'triangle') {
-            <polygon
-              [attr.points]="getTrianglePoints(asTriangleShape(shape))"
-              [attr.fill]="shape.fillColor || 'transparent'"
-              [attr.stroke]="shape.color"
-              [attr.stroke-width]="shape.strokeWidth"
-              [class.shape-selected]="isShapeSelected(shape.id)"
-              stroke-linejoin="round"
-              (click)="onShapeClick($event, shape)"
-            />
+            <g [attr.transform]="getShapeTransform(shape)">
+              <polygon
+                [attr.points]="getTrianglePoints(asTriangleShape(shape))"
+                [attr.fill]="shape.fillColor || 'transparent'"
+                [attr.stroke]="shape.color"
+                [attr.stroke-width]="shape.strokeWidth"
+                [class.shape-selected]="isShapeSelected(shape.id)"
+                stroke-linejoin="round"
+                (click)="onShapeClick($event, shape)"
+              />
+            </g>
           }
           @if (shape.type === 'bezier') {
-            <g (click)="onShapeClick($event, shape)">
+            <g [attr.transform]="getShapeTransform(shape)" (click)="onShapeClick($event, shape)">
               <path
                 [attr.d]="getBezierPath(asBezierShape(shape))"
                 [attr.fill]="'none'"
@@ -789,10 +801,12 @@ import { getSVGSymbolTransform } from '../../utils/svg-parser.util';
                   <circle
                     [attr.cx]="handle.x"
                     [attr.cy]="handle.y"
-                    r="6"
+                    [attr.r]="6 / drawingService.canvasZoom()"
                     fill="white"
+                    fill-opacity="0.4"
                     stroke="#3b82f6"
-                    stroke-width="2"
+                    stroke-opacity="0.6"
+                    [attr.stroke-width]="2 / drawingService.canvasZoom()"
                     [attr.cursor]="handle.cursor"
                     class="resize-handle"
                     [attr.data-handle]="handle.id"
@@ -894,7 +908,7 @@ import { getSVGSymbolTransform } from '../../utils/svg-parser.util';
       }
 
       .shape-selected {
-        filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6));
+        filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.3));
       }
 
       /* Make all shapes appear draggable with hover effect */
@@ -928,17 +942,19 @@ import { getSVGSymbolTransform } from '../../utils/svg-parser.util';
       /* Resize handles */
       .resize-handle {
         pointer-events: all;
-        transition: transform 0.1s ease;
+        transition:
+          fill-opacity 0.1s ease,
+          stroke-opacity 0.1s ease;
       }
 
       .resize-handle:hover {
-        transform: scale(1.3);
-        stroke-width: 3;
+        fill-opacity: 0.7;
+        stroke-opacity: 0.9;
       }
 
       .resize-handle:active {
-        fill: #3b82f6;
-        transform: scale(1.1);
+        fill-opacity: 0.9;
+        stroke-opacity: 1;
       }
 
       .resize-handles {
@@ -953,6 +969,7 @@ import { getSVGSymbolTransform } from '../../utils/svg-parser.util';
 })
 export class CanvasRendererComponent implements OnInit, OnDestroy {
   readonly drawingService = inject(SvgDrawingService);
+  private readonly symbolLibrary = inject(SvgSymbolLibraryService);
   private readonly elementRef = inject(ElementRef);
   private readonly sanitizer = inject(DomSanitizer);
 
@@ -1262,6 +1279,14 @@ export class CanvasRendererComponent implements OnInit, OnDestroy {
       });
 
       return { minX, minY, maxX, maxY };
+    } else if (shape.type === 'svg-symbol') {
+      const symbol = shape as SVGSymbolShape;
+      return {
+        minX: symbol.position.x,
+        minY: symbol.position.y,
+        maxX: symbol.position.x + symbol.width,
+        maxY: symbol.position.y + symbol.height,
+      };
     }
 
     return null;
@@ -1366,6 +1391,24 @@ export class CanvasRendererComponent implements OnInit, OnDestroy {
         { id: 'cp1', x: bezier.controlPoint1.x, y: bezier.controlPoint1.y, cursor: 'move' },
         { id: 'cp2', x: bezier.controlPoint2.x, y: bezier.controlPoint2.y, cursor: 'move' },
       );
+    } else if (shape.type === 'svg-symbol') {
+      const symbol = shape as SVGSymbolShape;
+      const { position, width, height } = symbol;
+
+      // Corner handles for resizing
+      handles.push(
+        { id: 'nw', x: position.x, y: position.y, cursor: 'nw-resize' },
+        { id: 'ne', x: position.x + width, y: position.y, cursor: 'ne-resize' },
+        { id: 'sw', x: position.x, y: position.y + height, cursor: 'sw-resize' },
+        { id: 'se', x: position.x + width, y: position.y + height, cursor: 'se-resize' },
+      );
+      // Edge handles
+      handles.push(
+        { id: 'n', x: position.x + width / 2, y: position.y, cursor: 'n-resize' },
+        { id: 's', x: position.x + width / 2, y: position.y + height, cursor: 's-resize' },
+        { id: 'w', x: position.x, y: position.y + height / 2, cursor: 'w-resize' },
+        { id: 'e', x: position.x + width, y: position.y + height / 2, cursor: 'e-resize' },
+      );
     }
     // For polygons and triangles, return empty array (they can be moved but not resized with handles)
 
@@ -1397,6 +1440,50 @@ export class CanvasRendererComponent implements OnInit, OnDestroy {
     // Don't interfere with resize handle interactions
     if (this.isResizing) {
       return;
+    }
+
+    // Check if a symbol is selected for placement - handle this FIRST before shape detection
+    const selectedSymbolId = this.symbolLibrary.selectedSymbolId();
+    if (selectedSymbolId) {
+      const symbol = this.symbolLibrary.symbols().find((s) => s.id === selectedSymbolId);
+      if (symbol) {
+        // Place the symbol at the clicked position
+        const style = this.drawingService.currentStyle();
+        const symbolShape: SVGSymbolShape = {
+          id: this.drawingService.generateShapeId(),
+          type: 'svg-symbol',
+          position: point,
+          width: symbol.width,
+          height: symbol.height,
+          originalWidth: symbol.width,
+          originalHeight: symbol.height,
+          svgContent: symbol.content,
+          viewBox: symbol.viewBox,
+          preserveAspectRatio: true,
+          rotation: 0,
+          scale: 1,
+          symbolName: symbol.name,
+          color: style.color,
+          strokeWidth: style.strokeWidth,
+          fillColor: style.fillColor,
+          createdAt: new Date(),
+        };
+
+        this.drawingService.finishDrawing(symbolShape);
+        // Deselect the symbol after placing
+        this.symbolLibrary.selectSymbol(null);
+        return; // Don't continue to other drawing logic
+      }
+    }
+
+    // FILL TOOL: Fill shape with color on click
+    if (tool === 'fill') {
+      const shapeId = this.drawingService.findShapeAtPoint(point);
+      if (shapeId) {
+        const fillColor = this.drawingService.fillColor();
+        this.drawingService.updateShapeFillColor(shapeId, fillColor);
+      }
+      return; // Don't continue to other drawing logic
     }
 
     // UNIVERSAL DRAGGING: Check if clicking on an existing shape
@@ -2177,6 +2264,69 @@ export class CanvasRendererComponent implements OnInit, OnDestroy {
    */
   getPreviewBezierPath(start: Point, cp1: Point, cp2: Point, end: Point): string {
     return `M ${start.x} ${start.y} C ${cp1.x} ${cp1.y}, ${cp2.x} ${cp2.y}, ${end.x} ${end.y}`;
+  }
+
+  /**
+   * Gets the rotation transform for a shape.
+   * @param shape - Shape to get rotation transform for
+   * @returns SVG transform string or undefined if no rotation
+   */
+  getShapeTransform(shape: Shape): string | undefined {
+    if (!shape.rotation || shape.rotation === 0) {
+      return undefined;
+    }
+
+    // Calculate center point based on shape type
+    let centerX = 0;
+    let centerY = 0;
+
+    switch (shape.type) {
+      case 'line': {
+        const line = shape as LineShape;
+        centerX = (line.start.x + line.end.x) / 2;
+        centerY = (line.start.y + line.end.y) / 2;
+        break;
+      }
+      case 'rectangle':
+      case 'rounded-rectangle': {
+        const rect = shape as RectangleShape;
+        centerX = rect.topLeft.x + rect.width / 2;
+        centerY = rect.topLeft.y + rect.height / 2;
+        break;
+      }
+      case 'circle':
+      case 'ellipse': {
+        const centered = shape as CircleShape | EllipseShape;
+        centerX = centered.center.x;
+        centerY = centered.center.y;
+        break;
+      }
+      case 'triangle': {
+        const triangle = shape as TriangleShape;
+        centerX = (triangle.vertices[0].x + triangle.vertices[1].x + triangle.vertices[2].x) / 3;
+        centerY = (triangle.vertices[0].y + triangle.vertices[1].y + triangle.vertices[2].y) / 3;
+        break;
+      }
+      case 'polygon':
+      case 'polyline': {
+        const poly = shape as PolygonShape | PolylineShape;
+        const sumX = poly.vertices.reduce((sum, v) => sum + v.x, 0);
+        const sumY = poly.vertices.reduce((sum, v) => sum + v.y, 0);
+        centerX = sumX / poly.vertices.length;
+        centerY = sumY / poly.vertices.length;
+        break;
+      }
+      case 'bezier': {
+        const bezier = shape as BezierShape;
+        centerX = (bezier.start.x + bezier.end.x) / 2;
+        centerY = (bezier.start.y + bezier.end.y) / 2;
+        break;
+      }
+      default:
+        return undefined;
+    }
+
+    return `rotate(${shape.rotation} ${centerX} ${centerY})`;
   }
 
   /**

@@ -33,11 +33,50 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="tools-sidebar">
-      <!-- Drawing Tools Section -->
+      <!-- Selection & Editing Tools -->
       <div class="tools-section">
-        <h3 class="section-title">Basic Shapes</h3>
+        <h3 class="section-title">
+          <i class="pi pi-cursor section-icon"></i>
+          <span>SELECTION</span>
+        </h3>
 
-        <div class="tools-grid">
+        <div class="tools-grid-2col">
+          <button
+            pButton
+            type="button"
+            [class.active]="currentTool() === 'select'"
+            class="tool-button primary"
+            (click)="onToolSelect('select')"
+            pTooltip="Select Tool (S)"
+            tooltipPosition="right"
+          >
+            <i class="pi pi-arrow-up-right"></i>
+          </button>
+
+          <button
+            pButton
+            type="button"
+            [class.active]="currentTool() === 'move'"
+            class="tool-button"
+            (click)="onToolSelect('move')"
+            pTooltip="Move Tool (M)"
+            tooltipPosition="right"
+          >
+            <i class="pi pi-arrows-alt"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <!-- Basic Shapes Section -->
+      <div class="tools-section">
+        <h3 class="section-title">
+          <i class="pi pi-stop section-icon"></i>
+          <span>BASIC SHAPES</span>
+        </h3>
+
+        <div class="tools-grid-2col">
           <button
             pButton
             type="button"
@@ -45,7 +84,7 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
             class="tool-button"
             (click)="onToolSelect('line')"
             pTooltip="Line (L)"
-            tooltipPosition="bottom"
+            tooltipPosition="right"
           >
             <i class="pi pi-minus"></i>
           </button>
@@ -57,7 +96,7 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
             class="tool-button"
             (click)="onToolSelect('rectangle')"
             pTooltip="Rectangle (R)"
-            tooltipPosition="bottom"
+            tooltipPosition="right"
           >
             <i class="pi pi-stop"></i>
           </button>
@@ -69,7 +108,7 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
             class="tool-button"
             (click)="onToolSelect('circle')"
             pTooltip="Circle (C)"
-            tooltipPosition="bottom"
+            tooltipPosition="right"
           >
             <i class="pi pi-circle"></i>
           </button>
@@ -81,9 +120,9 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
             class="tool-button"
             (click)="onToolSelect('ellipse')"
             pTooltip="Ellipse (E)"
-            tooltipPosition="bottom"
+            tooltipPosition="right"
           >
-            <i class="pi pi-ellipsis-h"></i>
+            <i class="pi pi-circle-fill"></i>
           </button>
 
           <button
@@ -93,7 +132,7 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
             class="tool-button"
             (click)="onToolSelect('triangle')"
             pTooltip="Triangle (T)"
-            tooltipPosition="bottom"
+            tooltipPosition="right"
           >
             <i class="pi pi-caret-up"></i>
           </button>
@@ -105,9 +144,9 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
             class="tool-button"
             (click)="onToolSelect('polygon')"
             pTooltip="Polygon (P)"
-            tooltipPosition="bottom"
+            tooltipPosition="right"
           >
-            <i class="pi pi-slack"></i>
+            <i class="pi pi-star"></i>
           </button>
 
           <button
@@ -117,7 +156,7 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
             class="tool-button"
             (click)="onToolSelect('polyline')"
             pTooltip="Polyline (Y)"
-            tooltipPosition="bottom"
+            tooltipPosition="right"
           >
             <i class="pi pi-chart-bar"></i>
           </button>
@@ -128,41 +167,34 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
             [class.active]="currentTool() === 'bezier'"
             class="tool-button"
             (click)="onToolSelect('bezier')"
-            pTooltip="Curve (B)"
-            tooltipPosition="bottom"
+            pTooltip="Bezier Curve (B)"
+            tooltipPosition="right"
           >
             <i class="pi pi-chart-line"></i>
           </button>
         </div>
       </div>
 
-      <!-- Tools Section -->
+      <div class="section-divider"></div>
+
+      <!-- Edit Tools Section -->
       <div class="tools-section">
-        <h3 class="section-title">Tools</h3>
+        <h3 class="section-title">
+          <i class="pi pi-pencil section-icon"></i>
+          <span>EDIT TOOLS</span>
+        </h3>
 
-        <div class="tools-grid">
+        <div class="tools-grid-2col">
           <button
             pButton
             type="button"
-            [class.active]="currentTool() === 'select'"
+            [class.active]="currentTool() === 'fill'"
             class="tool-button"
-            (click)="onToolSelect('select')"
-            pTooltip="Select (S)"
-            tooltipPosition="bottom"
+            (click)="onToolSelect('fill')"
+            pTooltip="Fill Tool (F)"
+            tooltipPosition="right"
           >
-            <i class="pi pi-arrow-up-right"></i>
-          </button>
-
-          <button
-            pButton
-            type="button"
-            [class.active]="currentTool() === 'move'"
-            class="tool-button"
-            (click)="onToolSelect('move')"
-            pTooltip="Move (M)"
-            tooltipPosition="bottom"
-          >
-            <i class="pi pi-arrows-alt"></i>
+            <i class="pi pi-inbox"></i>
           </button>
 
           <button
@@ -172,7 +204,7 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
             class="tool-button"
             (click)="onToolSelect('cut')"
             pTooltip="Cut Line (X)"
-            tooltipPosition="bottom"
+            tooltipPosition="right"
           >
             <i class="pi pi-scissors"></i>
           </button>
@@ -183,144 +215,189 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
             [class.active]="currentTool() === 'delete'"
             class="tool-button danger"
             (click)="onToolSelect('delete')"
-            pTooltip="Delete (Del)"
-            tooltipPosition="bottom"
+            pTooltip="Delete Tool (Del)"
+            tooltipPosition="right"
           >
             <i class="pi pi-trash"></i>
           </button>
         </div>
       </div>
 
+      <div class="section-divider"></div>
+
       <!-- Style Settings Section -->
       <div class="tools-section">
-        <h3 class="section-title">Style Settings</h3>
+        <h3 class="section-title">
+          <i class="pi pi-palette section-icon"></i>
+          <span>STYLE</span>
+        </h3>
 
-        <!-- Stroke Color -->
-        <div class="style-control">
-          <label class="control-label">Stroke Color</label>
-          <div class="color-picker-wrapper">
-            <p-colorPicker
-              [(ngModel)]="localStrokeColor"
-              (onChange)="onStrokeColorChange($event)"
-              [inline]="false"
-              appendTo="body"
-            />
-            <span class="color-preview" [style.background-color]="localStrokeColor"></span>
+        <!-- Compact Color Controls -->
+        <div class="style-control-compact">
+          <div class="color-row">
+            <label class="control-label-inline">Stroke</label>
+            <div class="color-input-wrapper">
+              <p-colorPicker
+                [(ngModel)]="localStrokeColor"
+                (onChange)="onStrokeColorChange($event)"
+                [inline]="false"
+                appendTo="body"
+              />
+            </div>
           </div>
-        </div>
 
-        <!-- Stroke Width -->
-        <div class="style-control">
-          <label class="control-label">Stroke Width ({{ localStrokeWidth }}px)</label>
-          <p-slider
-            [(ngModel)]="localStrokeWidth"
-            (onChange)="onStrokeWidthChange($event)"
-            [min]="1"
-            [max]="10"
-            [step]="1"
-            class="w-full"
-          />
-        </div>
-
-        <!-- Fill Toggle -->
-        <div class="style-control">
-          <label class="control-label">Fill</label>
-          <p-toggleswitch [(ngModel)]="localFillEnabled" (onChange)="onFillEnabledChange($event)" />
-        </div>
-
-        <!-- Fill Color (only when enabled) -->
-        @if (localFillEnabled) {
-          <div class="style-control">
-            <label class="control-label">Fill Color</label>
-            <div class="color-picker-wrapper">
+          <div class="color-row">
+            <label class="control-label-inline">Fill</label>
+            <div class="color-input-wrapper">
               <p-colorPicker
                 [(ngModel)]="localFillColor"
                 (onChange)="onFillColorChange($event)"
                 [inline]="false"
                 appendTo="body"
               />
-              <span class="color-preview" [style.background-color]="localFillColor"></span>
+              <p-toggleswitch
+                [(ngModel)]="localFillEnabled"
+                (onChange)="onFillEnabledChange($event)"
+                class="fill-toggle"
+                pTooltip="Enable/Disable Fill"
+                tooltipPosition="right"
+              />
             </div>
           </div>
-        }
+        </div>
+
+        <!-- Stroke Width -->
+        <div class="style-control-compact">
+          <label class="control-label-slider">
+            <span>Width</span>
+            <span class="value-badge">{{ localStrokeWidth }}px</span>
+          </label>
+          <p-slider
+            [(ngModel)]="localStrokeWidth"
+            (onChange)="onStrokeWidthChange($event)"
+            [min]="1"
+            [max]="10"
+            [step]="1"
+            class="compact-slider"
+          />
+        </div>
+
+        <!-- Rotation -->
+        <div class="style-control-compact">
+          <label class="control-label-slider">
+            <span>Rotation</span>
+            <span class="value-badge">{{ localRotation }}°</span>
+          </label>
+          <p-slider
+            [(ngModel)]="localRotation"
+            (onChange)="onRotationChange($event)"
+            [min]="0"
+            [max]="360"
+            [step]="1"
+            class="compact-slider"
+          />
+        </div>
       </div>
+
+      <div class="section-divider"></div>
 
       <!-- Actions Section -->
       <div class="tools-section">
-        <h3 class="section-title">Actions</h3>
+        <h3 class="section-title">
+          <i class="pi pi-history section-icon"></i>
+          <span>ACTIONS</span>
+        </h3>
 
-        <button
-          pButton
-          type="button"
-          class="action-button"
-          [disabled]="!canUndo()"
-          (click)="onUndo()"
-          pTooltip="Ctrl+Z"
-          tooltipPosition="right"
-        >
-          <i class="pi pi-undo"></i>
-          <span>Undo</span>
-        </button>
+        <div class="action-buttons-compact">
+          <button
+            pButton
+            type="button"
+            class="action-button-compact"
+            [disabled]="!canUndo()"
+            (click)="onUndo()"
+            pTooltip="Undo (Ctrl+Z)"
+            tooltipPosition="right"
+          >
+            <i class="pi pi-undo"></i>
+          </button>
 
-        <button
-          pButton
-          type="button"
-          class="action-button"
-          [disabled]="!canRedo()"
-          (click)="onRedo()"
-          pTooltip="Ctrl+Y"
-          tooltipPosition="right"
-        >
-          <i class="pi pi-replay"></i>
-          <span>Redo</span>
-        </button>
+          <button
+            pButton
+            type="button"
+            class="action-button-compact"
+            [disabled]="!canRedo()"
+            (click)="onRedo()"
+            pTooltip="Redo (Ctrl+Y)"
+            tooltipPosition="right"
+          >
+            <i class="pi pi-replay"></i>
+          </button>
 
-        <button
-          pButton
-          type="button"
-          class="action-button danger"
-          (click)="onClearAll()"
-          pTooltip="Clear all shapes"
-          tooltipPosition="right"
-        >
-          <i class="pi pi-times"></i>
-          <span>Clear All</span>
-        </button>
+          <button
+            pButton
+            type="button"
+            class="action-button-compact danger"
+            (click)="onClearAll()"
+            pTooltip="Clear All"
+            tooltipPosition="right"
+          >
+            <i class="pi pi-times"></i>
+          </button>
+        </div>
       </div>
     </div>
   `,
   styles: [
     `
       .tools-sidebar {
-        width: 180px;
-        background: #f9fafb;
-        border-right: 1px solid #e5e7eb;
-        padding: 1rem;
+        width: 145px;
+        background: linear-gradient(to bottom, #f8fafc 0%, #f1f5f9 100%);
+        border-right: 1px solid #cbd5e1;
+        padding: 0.75rem 0.5rem;
         display: flex;
         flex-direction: column;
-        gap: 1.5rem;
+        gap: 0.625rem;
         overflow-y: auto;
+        box-shadow: inset -1px 0 0 rgba(203, 213, 225, 0.5);
       }
 
       .tools-section {
         display: flex;
         flex-direction: column;
-        gap: 0.5rem;
+        gap: 0.625rem;
       }
 
       .section-title {
-        font-size: 0.75rem;
-        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+        font-size: 0.625rem;
+        font-weight: 700;
         text-transform: uppercase;
-        color: #6b7280;
-        margin-bottom: 0.5rem;
+        color: #475569;
+        margin-bottom: 0.25rem;
         letter-spacing: 0.05em;
+        padding: 0.25rem 0.375rem;
+        background: rgba(255, 255, 255, 0.6);
+        border-radius: 0.25rem;
+        border: 1px solid #e2e8f0;
       }
 
-      .tools-grid {
+      .section-icon {
+        font-size: 0.875rem;
+        color: #64748b;
+      }
+
+      .section-divider {
+        height: 1px;
+        background: linear-gradient(to right, transparent, #cbd5e1, transparent);
+        margin: 0.25rem 0;
+      }
+
+      .tools-grid-2col {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 0.5rem;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.3rem;
       }
 
       .tool-button {
@@ -329,37 +406,70 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
         align-items: center;
         justify-content: center;
         padding: 0;
-        border: 2px solid #d1d5db;
-        border-radius: 0.5rem;
-        background: #f3f4f6;
+        border: 1.5px solid #cbd5e1;
+        border-radius: 0.375rem;
+        background: #ffffff;
         cursor: pointer;
-        transition: all 0.2s;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        height: 60px;
+      }
+
+      .tool-button::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, transparent 100%);
+        opacity: 0;
+        transition: opacity 0.2s;
+      }
+
+      .tool-button:hover::before {
+        opacity: 1;
       }
 
       .tool-button i {
-        font-size: 1.5rem;
-        color: #374151;
+        font-size: 1.2rem;
+        color: #475569;
+        transition: all 0.2s;
+        position: relative;
+        z-index: 1;
       }
 
       .tool-button:hover {
         border-color: #3b82f6;
-        background: #eff6ff;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        background: #f0f9ff;
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: 0 4px 12px -2px rgba(59, 130, 246, 0.25);
       }
 
       .tool-button:hover i {
         color: #3b82f6;
+        transform: scale(1.1);
+      }
+
+      .tool-button.primary {
+        border-color: #3b82f6;
+        background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+
+      .tool-button.primary i {
+        color: #2563eb;
       }
 
       .tool-button.active {
         border-color: #3b82f6;
-        background: #dbeafe;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        box-shadow:
+          0 0 0 3px rgba(59, 130, 246, 0.15),
+          inset 0 2px 4px rgba(59, 130, 246, 0.1);
       }
 
       .tool-button.active i {
-        color: #2563eb;
+        color: #1e40af;
+        font-weight: 600;
       }
 
       .tool-button.danger:hover {
@@ -373,104 +483,143 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
 
       .tool-button.danger.active {
         border-color: #ef4444;
-        background: #fee2e2;
-        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
       }
 
       .tool-button.danger.active i {
         color: #dc2626;
       }
 
-      .action-button {
-        width: 100%;
+      /* Style Settings */
+      .style-control-compact {
+        display: flex;
+        flex-direction: column;
+        gap: 0.625rem;
+        padding: 0.5rem;
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 0.5rem;
+        border: 1px solid #e2e8f0;
+      }
+
+      .color-row {
         display: flex;
         align-items: center;
-        justify-content: flex-start;
+        justify-content: space-between;
         gap: 0.5rem;
-        padding: 0.625rem 0.75rem;
-        border: 1.5px solid #3b82f6;
+      }
+
+      .control-label-inline {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #475569;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+        min-width: 50px;
+      }
+
+      .color-input-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+      }
+
+      .fill-toggle {
+        transform: scale(0.75);
+        flex-shrink: 0;
+      }
+
+      .control-label-slider {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 0.375rem;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+      }
+
+      .value-badge {
+        display: inline-block;
+        padding: 0.125rem 0.5rem;
+        background: #3b82f6;
+        color: white;
+        border-radius: 1rem;
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0;
+        text-transform: none;
+        min-width: 42px;
+        text-align: center;
+      }
+
+      .compact-slider {
+        width: 100%;
+      }
+
+      /* Action Buttons */
+      .action-buttons-compact {
+        display: flex;
+        gap: 0.25rem;
+        padding: 0.25rem;
+        background: rgba(255, 255, 255, 0.6);
         border-radius: 0.375rem;
-        background: #f0f9ff;
+        border: 1px solid #e2e8f0;
+      }
+
+      .action-button-compact {
+        flex: 1;
+        aspect-ratio: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        border: 1.5px solid #cbd5e1;
+        border-radius: 0.25rem;
+        background: #ffffff;
         cursor: pointer;
         transition: all 0.2s;
+      }
+
+      .action-button-compact i {
         font-size: 0.875rem;
-        font-weight: 500;
-        color: #1e40af;
+        color: #64748b;
+        transition: all 0.2s;
       }
 
-      .action-button i {
-        font-size: 1rem;
+      .action-button-compact:hover:not(:disabled) {
+        border-color: #3b82f6;
+        background: #f0f9ff;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px -2px rgba(59, 130, 246, 0.25);
+      }
+
+      .action-button-compact:hover:not(:disabled) i {
         color: #3b82f6;
+        transform: scale(1.15);
       }
 
-      .action-button:hover:not(:disabled) {
-        border-color: #2563eb;
-        background: #dbeafe;
-        transform: translateY(-1px);
-        box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
-      }
-
-      .action-button:hover:not(:disabled) i {
-        color: #2563eb;
-      }
-
-      .action-button.danger {
+      .action-button-compact.danger:hover:not(:disabled) {
         border-color: #ef4444;
         background: #fef2f2;
-        color: #991b1b;
+        box-shadow: 0 4px 8px -2px rgba(239, 68, 68, 0.25);
       }
 
-      .action-button.danger i {
+      .action-button-compact.danger:hover:not(:disabled) i {
         color: #ef4444;
       }
 
-      .action-button.danger:hover:not(:disabled) {
-        border-color: #dc2626;
-        background: #fee2e2;
-        box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
-      }
-
-      .action-button.danger:hover:not(:disabled) i {
-        color: #dc2626;
-      }
-
-      .action-button:disabled {
-        opacity: 0.4;
+      .action-button-compact:disabled {
+        opacity: 0.3;
         cursor: not-allowed;
-        border-color: #d1d5db;
-        background: #f9fafb;
-        color: #9ca3af;
+        border-color: #e2e8f0;
+        background: #f8fafc;
       }
 
-      .action-button:disabled i {
-        color: #d1d5db;
-      }
-
-      .style-control {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-        margin-bottom: 1rem;
-      }
-
-      .control-label {
-        font-size: 0.75rem;
-        font-weight: 500;
-        color: #4b5563;
-      }
-
-      .color-picker-wrapper {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-      }
-
-      .color-preview {
-        width: 30px;
-        height: 30px;
-        border: 2px solid #d1d5db;
-        border-radius: 0.375rem;
-        display: inline-block;
+      .action-button-compact:disabled i {
+        color: #cbd5e1;
       }
 
       @media (max-width: 768px) {
@@ -479,19 +628,19 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
           padding: 0.5rem;
         }
 
-        .section-title,
-        .action-button span,
-        .style-control {
+        .section-title span,
+        .section-icon,
+        .section-divider,
+        .style-control-compact {
           display: none;
         }
 
-        .tools-grid {
+        .tools-grid-2col {
           grid-template-columns: 1fr;
         }
 
-        .action-button {
-          justify-content: center;
-          padding: 0.625rem;
+        .action-buttons-compact {
+          flex-direction: column;
         }
       }
     `,
@@ -516,6 +665,7 @@ export class ToolsSidebarComponent {
     | 'cone'
     | 'select'
     | 'move'
+    | 'fill'
     | 'delete'
     | 'cut';
 
@@ -545,6 +695,11 @@ export class ToolsSidebarComponent {
     this.localFillEnabled = value;
   }
 
+  /** Current rotation angle */
+  @Input() set rotation(value: number) {
+    this.localRotation = value;
+  }
+
   /** Tool selection event */
   @Output() toolSelected = new EventEmitter<
     | 'line'
@@ -563,6 +718,7 @@ export class ToolsSidebarComponent {
     | 'cone'
     | 'select'
     | 'move'
+    | 'fill'
     | 'delete'
     | 'cut'
   >();
@@ -581,12 +737,14 @@ export class ToolsSidebarComponent {
   @Output() strokeWidthChanged = new EventEmitter<number>();
   @Output() fillColorChanged = new EventEmitter<string>();
   @Output() fillEnabledChanged = new EventEmitter<boolean>();
+  @Output() rotationChanged = new EventEmitter<number>();
 
   // Local state for style controls
   localStrokeColor = '#000000';
   localStrokeWidth = 2;
   localFillColor = '#cccccc';
   localFillEnabled = false;
+  localRotation = 0;
 
   /**
    * Handles tool selection.
@@ -609,6 +767,7 @@ export class ToolsSidebarComponent {
       | 'cone'
       | 'select'
       | 'move'
+      | 'fill'
       | 'delete'
       | 'cut',
   ): void {
@@ -666,5 +825,12 @@ export class ToolsSidebarComponent {
    */
   onFillEnabledChange(event: any): void {
     this.fillEnabledChanged.emit(event.checked);
+  }
+
+  /**
+   * Handles rotation change.
+   */
+  onRotationChange(event: any): void {
+    this.rotationChanged.emit(event.value);
   }
 }
