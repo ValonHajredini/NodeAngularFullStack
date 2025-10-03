@@ -1,0 +1,114 @@
+<p-toolbar styleClass="border-none shadow-md">
+  <div class="flex items-center gap-2 w-full">
+    <!-- Drawing Tools -->
+    <div class="flex gap-1">
+      <p-button
+        [outlined]="!isToolActive('line')"
+        [severity]="isToolActive('line') ? 'primary' : 'secondary'"
+        icon="pi pi-minus"
+        (onClick)="onToolSelect('line')"
+        pTooltip="Line Tool (L)"
+        tooltipPosition="bottom"
+        [rounded]="true"
+        [text]="!isToolActive('line')"
+        aria-label="Line tool"
+      >
+      </p-button>
+
+      <p-button
+        [outlined]="!isToolActive('polygon')"
+        [severity]="isToolActive('polygon') ? 'primary' : 'secondary'"
+        icon="pi pi-stop"
+        (onClick)="onToolSelect('polygon')"
+        pTooltip="Polygon Tool (P)"
+        tooltipPosition="bottom"
+        [rounded]="true"
+        [text]="!isToolActive('polygon')"
+        aria-label="Polygon tool"
+      >
+      </p-button>
+
+      <p-button
+        [outlined]="!isToolActive('select')"
+        [severity]="isToolActive('select') ? 'primary' : 'secondary'"
+        icon="pi pi-arrow-up-right"
+        (onClick)="onToolSelect('select')"
+        pTooltip="Select Tool (S)"
+        tooltipPosition="bottom"
+        [rounded]="true"
+        [text]="!isToolActive('select')"
+        aria-label="Select tool"
+      >
+      </p-button>
+
+      <p-button
+        [outlined]="!isToolActive('delete')"
+        [severity]="isToolActive('delete') ? 'danger' : 'secondary'"
+        icon="pi pi-trash"
+        (onClick)="onToolSelect('delete')"
+        pTooltip="Delete Tool (Delete)"
+        tooltipPosition="bottom"
+        [rounded]="true"
+        [text]="!isToolActive('delete')"
+        aria-label="Delete tool"
+      >
+      </p-button>
+    </div>
+
+    <div class="border-l border-gray-300 h-8 mx-2"></div>
+
+    <!-- Undo/Redo -->
+    <div class="flex gap-1">
+      <p-button
+        icon="pi pi-undo"
+        (onClick)="onUndo()"
+        [disabled]="!canUndo()"
+        pTooltip="Undo (Ctrl+Z)"
+        tooltipPosition="bottom"
+        [rounded]="true"
+        [outlined]="true"
+        severity="secondary"
+        aria-label="Undo"
+      >
+      </p-button>
+
+      <p-button
+        icon="pi pi-replay"
+        (onClick)="onRedo()"
+        [disabled]="!canRedo()"
+        pTooltip="Redo (Ctrl+Y)"
+        tooltipPosition="bottom"
+        [rounded]="true"
+        [outlined]="true"
+        severity="secondary"
+        aria-label="Redo"
+      >
+      </p-button>
+    </div>
+
+    <div class="border-l border-gray-300 h-8 mx-2"></div>
+
+    <!-- Clear All -->
+    <p-button
+      icon="pi pi-times"
+      label="Clear All"
+      (onClick)="onClearAll()"
+      pTooltip="Clear all shapes"
+      tooltipPosition="bottom"
+      [outlined]="true"
+      severity="danger"
+      aria-label="Clear all shapes"
+    >
+    </p-button>
+
+    <!-- Spacer -->
+    <div class="flex-1"></div>
+
+    <!-- Info -->
+    <div class="text-sm text-gray-600">
+      <span class="hidden md:inline"
+        >ESC to cancel | Click vertices to draw polygon | Double-click to close</span
+      >
+    </div>
+  </div>
+</p-toolbar>

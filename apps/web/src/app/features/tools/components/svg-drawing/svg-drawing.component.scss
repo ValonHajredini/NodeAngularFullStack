@@ -1,0 +1,250 @@
+.svg-drawing-container {
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #f3f4f6;
+}
+
+.top-toolbar {
+  height: 60px;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1000;
+}
+
+.toolbar-content {
+  height: 100%;
+  padding: 0 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.toolbar-separator {
+  width: 1px;
+  height: 28px;
+  background: #e5e7eb;
+  margin: 0 0.5rem;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.canvas-area {
+  flex: 1;
+  position: relative;
+  overflow: auto;
+  background: #f3f4f6;
+  padding: 1rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 0;
+}
+
+.canvas-area > app-canvas-renderer {
+  width: 100%;
+  max-width: 2100px;
+  max-height: 900px;
+  aspect-ratio: 16 / 9;
+  align-self: flex-start;
+}
+
+.right-sidebar {
+  width: 350px;
+  background: white;
+  border-left: 1px solid #e5e7eb;
+  flex-shrink: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.accordion {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.accordion-section {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.accordion-section:last-of-type {
+  border-bottom: none;
+}
+
+.accordion-toggle {
+  width: 100%;
+  background: white;
+  border: none;
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 600;
+  color: #111827;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.15s ease;
+}
+
+.accordion-toggle:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: -2px;
+}
+
+.accordion-toggle:hover {
+  background: #f3f4f6;
+}
+
+.accordion-section.is-open .accordion-toggle {
+  background: #f9fafb;
+}
+
+.accordion-toggle-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.accordion-toggle-text {
+  flex: 1;
+  font-size: 0.95rem;
+}
+
+.accordion-toggle-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.2s ease;
+}
+
+.accordion-section.is-open .accordion-toggle-icon {
+  transform: rotate(135deg);
+}
+
+.accordion-content {
+  padding: 1rem 1.25rem 1.5rem;
+  background: white;
+}
+
+.accordion-content-scrollable {
+  max-height: 700px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+@media (max-width: 1024px) {
+  .right-sidebar {
+    width: 280px;
+  }
+}
+
+@media (max-width: 768px) {
+  .right-sidebar {
+    display: none;
+  }
+}
+
+/* Export Dialog Modal Styles */
+:host ::ng-deep .p-dialog {
+  .p-dialog-header {
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .p-dialog-content {
+    padding: 0;
+    background: white;
+    overflow: hidden; /* Remove outer modal scrollbar */
+  }
+}
+
+/* Responsive modal for mobile devices */
+@media (max-width: 640px) {
+  :host ::ng-deep .p-dialog {
+    width: 95vw !important;
+    max-width: 95vw !important;
+  }
+}
+
+/* Menu Bar Styles */
+.menu-dropdown {
+  position: relative;
+}
+
+.menu-button {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: none;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border-radius: 0;
+}
+
+.menu-button:hover {
+  background: #f3f4f6;
+}
+
+.menu-button.active {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.menu-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 250px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  margin-top: 2px;
+  z-index: 10000;
+  padding: 0.75rem;
+}
+
+.menu-panel-wide {
+  min-width: 400px;
+  max-width: 500px;
+}
+
+.menu-section {
+  padding: 0.5rem 0;
+}
+
+.menu-section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.75rem;
+}
+
+.menu-divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 1rem 0;
+}

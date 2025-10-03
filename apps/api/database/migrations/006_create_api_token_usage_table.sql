@@ -64,6 +64,7 @@ COMMENT ON COLUMN api_token_usage.tenant_id IS 'Optional tenant context for mult
 ALTER TABLE api_token_usage ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy: Users can only see usage for their own tokens
+DROP POLICY IF EXISTS api_token_usage_tenant_isolation ON api_token_usage;
 CREATE POLICY api_token_usage_tenant_isolation ON api_token_usage
     FOR ALL
     TO authenticated

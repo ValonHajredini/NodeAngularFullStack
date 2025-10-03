@@ -1,19 +1,49 @@
-import { Component, ChangeDetectionStrategy, inject, OnInit, signal } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  inject,
+  OnInit,
+  signal,
+  computed,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { TableModule } from 'primeng/table';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { ToggleButtonModule } from 'primeng/togglebutton';
+import { TableModule } from 'primeng/table';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { DialogModule } from 'primeng/dialog';
+import { InputTextModule } from 'primeng/inputtext';
+import { CheckboxModule } from 'primeng/checkbox';
+import { BadgeModule } from 'primeng/badge';
+import { ChipModule } from 'primeng/chip';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { ToolsService } from '../../services/tools.service';
 import { Tool } from '@nodeangularfullstack/shared';
+import {
+  StatsCardComponent,
+  ToolCardComponent,
+  SearchFilterComponent,
+  BulkAction,
+} from '../../../../shared/components';
+import { ToolConfigService } from '../../../../core/services/tool-config.service';
+import {
+  ToolConfig,
+  DisplayMode,
+  CreateToolConfigRequest,
+  UpdateToolConfigRequest,
+  ComponentExistenceCheck,
+} from '@nodeangularfullstack/shared';
+import { SelectButtonModule } from 'primeng/selectbutton';
+import { DividerModule } from 'primeng/divider';
+import { TooltipModule } from 'primeng/tooltip';
 
 /**
  * Tools Settings page component for super admin tools management.
- * Provides interface for enabling/disabling system-wide tools.
+ * Provides interface for enabling/disabling system-wide tools and managing configurations.
  */
 @Component({
   selector: 'app-tools-settings',
@@ -21,284 +51,134 @@ import { Tool } from '@nodeangularfullstack/shared';
   imports: [
     CommonModule,
     FormsModule,
-    TableModule,
+    ReactiveFormsModule,
     ButtonModule,
-    ToggleSwitchModule,
+    ToggleButtonModule,
+    TableModule,
     ProgressSpinnerModule,
     ToastModule,
     ConfirmDialogModule,
+    DialogModule,
+    InputTextModule,
+    CheckboxModule,
+    BadgeModule,
+    ChipModule,
+    SelectButtonModule,
+    DividerModule,
+    TooltipModule,
+    StatsCardComponent,
+    ToolCardComponent,
+    SearchFilterComponent,
   ],
   providers: [MessageService, ConfirmationService],
-  template: `
-    <div class="tools-settings">
-      <div class="max-w-6xl mx-auto">
-        <!-- Header -->
-        <div class="mb-8">
-          <div class="flex items-center justify-between">
-            <div>
-              <h2 class="text-2xl font-bold text-gray-900">Tools Management</h2>
-              <p class="mt-1 text-sm text-gray-600">
-                Enable or disable modular tools across the entire application.
-              </p>
-            </div>
-            <div class="flex items-center space-x-3">
-              <p-button
-                icon="pi pi-refresh"
-                [text]="true"
-                [rounded]="true"
-                pTooltip="Refresh tools list"
-                (onClick)="refreshTools()"
-                [loading]="toolsService.loading()"
-              />
-            </div>
-          </div>
-        </div>
-
-        <!-- Error Message -->
-        <div
-          *ngIf="toolsService.error()"
-          class="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg"
-        >
-          <div class="flex items-center">
-            <i class="pi pi-exclamation-triangle text-red-500 mr-2"></i>
-            <span>{{ toolsService.error() }}</span>
-            <button
-              type="button"
-              class="ml-auto text-red-500 hover:text-red-700"
-              (click)="toolsService.clearError()"
-            >
-              <i class="pi pi-times"></i>
-            </button>
-          </div>
-        </div>
-
-        <!-- Tools Table -->
-        <div class="bg-white shadow rounded-lg overflow-hidden">
-          <p-table
-            [value]="toolsService.tools()"
-            [loading]="toolsService.loading()"
-            [paginator]="false"
-            [rows]="10"
-            styleClass="p-datatable-sm"
-            [tableStyle]="{ 'min-width': '60rem' }"
-          >
-            <!-- Loading Template -->
-            <ng-template pTemplate="loadingicon">
-              <p-progressSpinner styleClass="w-8 h-8" strokeWidth="4" animationDuration="1s" />
-            </ng-template>
-
-            <!-- Empty State -->
-            <ng-template pTemplate="emptymessage">
-              <tr>
-                <td colspan="4" class="text-center py-8">
-                  <div class="flex flex-col items-center">
-                    <i class="pi pi-inbox text-gray-400 text-4xl mb-3"></i>
-                    <p class="text-gray-500 text-lg font-medium">No tools found</p>
-                    <p class="text-gray-400 text-sm">
-                      Tools will appear here once they are registered in the system.
-                    </p>
-                  </div>
-                </td>
-              </tr>
-            </ng-template>
-
-            <!-- Table Header -->
-            <ng-template pTemplate="header">
-              <tr>
-                <th style="width: 25%">Tool Name</th>
-                <th style="width: 15%">Key</th>
-                <th style="width: 45%">Description</th>
-                <th style="width: 15%" class="text-center">Status</th>
-              </tr>
-            </ng-template>
-
-            <!-- Table Body -->
-            <ng-template pTemplate="body" let-tool>
-              <tr>
-                <!-- Tool Name -->
-                <td>
-                  <div class="flex items-center">
-                    <div>
-                      <div class="font-medium text-gray-900">{{ tool.name }}</div>
-                      <div class="text-xs text-gray-500">
-                        Created {{ tool.createdAt | date: 'short' }}
-                      </div>
-                    </div>
-                  </div>
-                </td>
-
-                <!-- Tool Key -->
-                <td>
-                  <span
-                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
-                  >
-                    {{ tool.key }}
-                  </span>
-                </td>
-
-                <!-- Description -->
-                <td>
-                  <p class="text-sm text-gray-700 line-clamp-2">
-                    {{ tool.description }}
-                  </p>
-                  <div class="text-xs text-gray-500 mt-1">
-                    Updated {{ tool.updatedAt | date: 'short' }}
-                  </div>
-                </td>
-
-                <!-- Status Toggle -->
-                <td class="text-center">
-                  <div class="flex items-center justify-center space-x-2">
-                    <p-toggleswitch
-                      [ngModel]="tool.active"
-                      (ngModelChange)="onToggleStatus(tool, $event)"
-                      [disabled]="isUpdating(tool.key)"
-                    />
-                    <span
-                      class="text-xs font-medium"
-                      [class.text-green-600]="tool.active"
-                      [class.text-gray-500]="!tool.active"
-                    >
-                      {{ tool.active ? 'Enabled' : 'Disabled' }}
-                    </span>
-                  </div>
-
-                  <!-- Loading indicator for individual tool -->
-                  <div *ngIf="isUpdating(tool.key)" class="mt-1">
-                    <p-progressSpinner
-                      styleClass="w-4 h-4"
-                      strokeWidth="6"
-                      animationDuration="1s"
-                    />
-                  </div>
-                </td>
-              </tr>
-            </ng-template>
-          </p-table>
-        </div>
-
-        <!-- Summary Statistics -->
-        <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div class="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
-            <div class="flex items-center">
-              <div class="flex-shrink-0">
-                <i class="pi pi-check-circle text-green-500 text-xl"></i>
-              </div>
-              <div class="ml-3">
-                <p class="text-sm font-medium text-gray-500">Active Tools</p>
-                <p class="text-lg font-semibold text-gray-900">
-                  {{ toolsService.activeTools().length }}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div class="bg-white p-4 rounded-lg shadow border-l-4 border-red-500">
-            <div class="flex items-center">
-              <div class="flex-shrink-0">
-                <i class="pi pi-times-circle text-red-500 text-xl"></i>
-              </div>
-              <div class="ml-3">
-                <p class="text-sm font-medium text-gray-500">Inactive Tools</p>
-                <p class="text-lg font-semibold text-gray-900">
-                  {{ toolsService.inactiveTools().length }}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div class="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
-            <div class="flex items-center">
-              <div class="flex-shrink-0">
-                <i class="pi pi-cog text-blue-500 text-xl"></i>
-              </div>
-              <div class="ml-3">
-                <p class="text-sm font-medium text-gray-500">Total Tools</p>
-                <p class="text-lg font-semibold text-gray-900">
-                  {{ toolsService.tools().length }}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Information Section -->
-        <div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <div class="flex">
-            <div class="flex-shrink-0">
-              <i class="pi pi-info-circle text-blue-400 text-lg"></i>
-            </div>
-            <div class="ml-3">
-              <h3 class="text-sm font-medium text-blue-800">Tools Management Information</h3>
-              <div class="mt-2 text-sm text-blue-700">
-                <ul class="list-disc pl-5 space-y-1">
-                  <li>Changes take effect immediately across the entire application</li>
-                  <li>Disabled tools will be hidden from all users</li>
-                  <li>Only super administrators can manage tools settings</li>
-                  <li>Tool status changes are logged for audit purposes</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Toast messages -->
-      <p-toast position="top-right" />
-
-      <!-- Confirmation dialogs -->
-      <p-confirmDialog />
-    </div>
-  `,
-  styles: [
-    `
-      .tools-settings {
-        padding: 2rem 1rem;
-      }
-
-      .line-clamp-2 {
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-      }
-
-      ::ng-deep .p-datatable .p-datatable-tbody > tr > td {
-        padding: 1rem 0.75rem;
-        vertical-align: top;
-      }
-
-      ::ng-deep .p-datatable .p-datatable-thead > tr > th {
-        padding: 1rem 0.75rem;
-        background-color: #f9fafb;
-        font-weight: 600;
-        border-bottom: 2px solid #e5e7eb;
-      }
-
-      ::ng-deep .p-toggleswitch.p-toggleswitch-checked .p-toggleswitch-slider {
-        background: #10b981;
-      }
-
-      ::ng-deep .p-toggleswitch:not(.p-disabled):hover .p-toggleswitch-slider {
-        background: #6b7280;
-      }
-
-      ::ng-deep
-        .p-toggleswitch.p-toggleswitch-checked:not(.p-disabled):hover
-        .p-toggleswitch-slider {
-        background: #059669;
-      }
-    `,
-  ],
+  templateUrl: './tools-settings.page.html',
+  styleUrl: './tools-settings.page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ToolsSettingsPage implements OnInit {
   protected readonly toolsService = inject(ToolsService);
+  protected readonly toolConfigService = inject(ToolConfigService);
   private readonly messageService = inject(MessageService);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly router = inject(Router);
 
   // Track which tools are currently being updated
   private readonly updatingTools = signal<Set<string>>(new Set());
+
+  // Search and filter state
+  searchQuery = signal('');
+  statusFilter = signal<'all' | 'active' | 'inactive'>('all');
+
+  // Selection state
+  private readonly selectedToolsKeys = signal<Set<string>>(new Set());
+
+  // Modal state
+  showDetailsModal = signal(false);
+  selectedToolForDetails = signal<Tool | null>(null);
+
+  // Delete modal state
+  showDeleteModal = signal(false);
+  selectedToolForDelete = signal<Tool | null>(null);
+  deleteConfirmationText = signal('');
+  private readonly deletingTool = signal(false);
+
+  // Bulk actions for search filter
+  enableBulkActions = signal<BulkAction[]>([
+    {
+      label: 'Enable Selected',
+      icon: 'pi pi-check',
+      severity: 'success',
+    },
+  ]);
+
+  disableBulkActions = signal<BulkAction[]>([
+    {
+      label: 'Disable Selected',
+      icon: 'pi pi-times',
+      severity: 'danger',
+    },
+  ]);
+
+  // Configuration modal state
+  showConfigModal = signal(false);
+  selectedToolForConfig = signal<Tool | null>(null);
+  toolConfigs = signal<ToolConfig[]>([]);
+  activeConfig = signal<ToolConfig | null>(null);
+  configFormData = signal<CreateToolConfigRequest>({
+    version: '1.0.0',
+    displayMode: 'standard',
+    layoutSettings: {
+      maxWidth: '1200px',
+      padding: '2rem',
+    },
+    isActive: false,
+  });
+  editingConfig = signal<ToolConfig | null>(null);
+  savingConfig = signal(false);
+
+  // Component existence dialog state
+  showComponentExistsDialog = signal(false);
+  componentExistenceData = signal<ComponentExistenceCheck | null>(null);
+  processingComponentDecision = signal(false);
+  pendingToolData: any = null;
+
+  // Display mode options
+  displayModeOptions = [
+    { label: 'Standard', value: 'standard', icon: 'pi pi-window-maximize' },
+    { label: 'Full Width', value: 'full-width', icon: 'pi pi-arrows-h' },
+    { label: 'Compact', value: 'compact', icon: 'pi pi-window-minimize' },
+    { label: 'Modal', value: 'modal', icon: 'pi pi-external-link' },
+    { label: 'Embedded', value: 'embedded', icon: 'pi pi-box' },
+  ];
+
+  // Computed properties
+  readonly selectedTools = computed(() => {
+    const keys = this.selectedToolsKeys();
+    return this.toolsService.tools().filter((tool) => keys.has(tool.key));
+  });
+
+  readonly filteredTools = computed(() => {
+    const tools = this.toolsService.tools();
+    const query = this.searchQuery().toLowerCase().trim();
+    const status = this.statusFilter();
+
+    return tools.filter((tool) => {
+      // Status filter
+      const statusMatch =
+        status === 'all' ||
+        (status === 'active' && tool.active) ||
+        (status === 'inactive' && !tool.active);
+
+      // Search filter
+      const searchMatch =
+        !query ||
+        tool.name.toLowerCase().includes(query) ||
+        tool.key.toLowerCase().includes(query) ||
+        (tool.description && tool.description.toLowerCase().includes(query));
+
+      return statusMatch && searchMatch;
+    });
+  });
 
   ngOnInit(): void {
     this.loadTools();
@@ -344,6 +224,17 @@ export class ToolsSettingsPage implements OnInit {
         });
       },
     });
+  }
+
+  /**
+   * Handles bulk action clicks from search filter.
+   */
+  onBulkAction(action: 'enable' | 'disable'): void {
+    if (action === 'enable') {
+      this.bulkUpdateStatus(true);
+    } else {
+      this.bulkUpdateStatus(false);
+    }
   }
 
   /**
@@ -409,5 +300,617 @@ export class ToolsSettingsPage implements OnInit {
    */
   isUpdating(toolKey: string): boolean {
     return this.updatingTools().has(toolKey);
+  }
+
+  /**
+   * Navigates to the tool creation wizard.
+   */
+  navigateToCreateTool(): void {
+    this.router.navigate(['/app/admin/tools/create']);
+  }
+
+  /**
+   * Handles component decision from the existence dialog.
+   * @param decision - User's choice: 'reuse', 'overwrite', or 'cancel'
+   */
+  handleComponentDecision(decision: 'reuse' | 'overwrite' | 'cancel'): void {
+    if (decision === 'cancel') {
+      this.showComponentExistsDialog.set(false);
+      this.componentExistenceData.set(null);
+      this.pendingToolData = null;
+      return;
+    }
+
+    // Store the decision and proceed with tool creation
+    const componentOptions = {
+      reuseExisting: decision === 'reuse',
+      overwrite: decision === 'overwrite',
+    };
+
+    this.showComponentExistsDialog.set(false);
+
+    // Navigate to create tool wizard with component options in state
+    this.router.navigate(['/app/admin/tools/create'], {
+      state: {
+        componentOptions,
+        existingComponentData: this.componentExistenceData(),
+      },
+    });
+
+    // Reset state
+    this.componentExistenceData.set(null);
+    this.pendingToolData = null;
+  }
+
+  /**
+   * Gets the icon class for a tool based on its key or category.
+   */
+  getToolIcon(tool: Tool): string {
+    // Map tool keys to specific icons, with fallback to generic tool icon
+    const iconMap: Record<string, string> = {
+      'short-link': 'pi pi-link',
+      'url-shortener': 'pi pi-link',
+      'file-manager': 'pi pi-folder',
+      'text-editor': 'pi pi-file-edit',
+      calculator: 'pi pi-calculator',
+      'password-generator': 'pi pi-key',
+      'qr-code': 'pi pi-qrcode',
+      'image-editor': 'pi pi-image',
+      'color-picker': 'pi pi-palette',
+      'json-formatter': 'pi pi-code',
+      'base64-encoder': 'pi pi-lock',
+      'regex-tester': 'pi pi-search',
+    };
+
+    return iconMap[tool.key] || 'pi pi-wrench';
+  }
+
+  /**
+   * Track function for ngFor performance.
+   */
+  trackByTool(_index: number, tool: Tool): string {
+    return tool.key;
+  }
+
+  /**
+   * Checks if a tool is selected.
+   */
+  isToolSelected(toolKey: string): boolean {
+    return this.selectedToolsKeys().has(toolKey);
+  }
+
+  /**
+   * Gets count of active selected tools.
+   */
+  getActiveSelectedCount(): number {
+    return this.selectedTools().filter((tool) => tool.active).length;
+  }
+
+  /**
+   * Gets count of inactive selected tools.
+   */
+  getInactiveSelectedCount(): number {
+    return this.selectedTools().filter((tool) => !tool.active).length;
+  }
+
+  /**
+   * Toggles tool selection.
+   */
+  toggleToolSelection(toolKey: string, selected: boolean): void {
+    const currentSelection = new Set(this.selectedToolsKeys());
+
+    if (selected) {
+      currentSelection.add(toolKey);
+    } else {
+      currentSelection.delete(toolKey);
+    }
+
+    this.selectedToolsKeys.set(currentSelection);
+  }
+
+  /**
+   * Clears all tool selections.
+   */
+  clearSelection(): void {
+    this.selectedToolsKeys.set(new Set());
+  }
+
+  /**
+   * Performs bulk status update on selected tools.
+   */
+  bulkUpdateStatus(active: boolean): void {
+    const selectedTools = this.selectedTools();
+    if (selectedTools.length === 0) return;
+
+    const action = active ? 'enable' : 'disable';
+    const actionPast = active ? 'enabled' : 'disabled';
+
+    this.confirmationService.confirm({
+      message: `Are you sure you want to ${action} ${selectedTools.length} selected tool(s)? This change will affect all users immediately.`,
+      header: `Bulk ${action.charAt(0).toUpperCase() + action.slice(1)} Tools`,
+      icon: 'pi pi-question-circle',
+      accept: () => {
+        this.performBulkUpdate(selectedTools, active, actionPast);
+      },
+    });
+  }
+
+  /**
+   * Performs the actual bulk update operation.
+   */
+  private performBulkUpdate(tools: Tool[], active: boolean, actionPast: string): void {
+    let successCount = 0;
+    let errorCount = 0;
+    let completed = 0;
+    const total = tools.length;
+
+    tools.forEach((tool) => {
+      // Add tool to updating set
+      const updating = new Set(this.updatingTools());
+      updating.add(tool.key);
+      this.updatingTools.set(updating);
+
+      this.toolsService.updateToolStatus(tool.key, active).subscribe({
+        next: () => {
+          successCount++;
+          completed++;
+          this.checkBulkUpdateCompletion(completed, total, successCount, errorCount, actionPast);
+        },
+        error: (error) => {
+          errorCount++;
+          completed++;
+          console.error(`Failed to update ${tool.name}:`, error);
+          this.checkBulkUpdateCompletion(completed, total, successCount, errorCount, actionPast);
+        },
+        complete: () => {
+          // Remove tool from updating set
+          const updating = new Set(this.updatingTools());
+          updating.delete(tool.key);
+          this.updatingTools.set(updating);
+        },
+      });
+    });
+  }
+
+  /**
+   * Checks if bulk update is complete and shows summary message.
+   */
+  private checkBulkUpdateCompletion(
+    completed: number,
+    total: number,
+    successCount: number,
+    errorCount: number,
+    actionPast: string,
+  ): void {
+    if (completed === total) {
+      // Clear selection after bulk operation
+      this.clearSelection();
+
+      if (errorCount === 0) {
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Bulk Update Complete',
+          detail: `Successfully ${actionPast} ${successCount} tool(s).`,
+        });
+      } else if (successCount === 0) {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Bulk Update Failed',
+          detail: `Failed to update ${errorCount} tool(s). Please try again.`,
+        });
+      } else {
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Bulk Update Partial',
+          detail: `${successCount} tool(s) ${actionPast}, ${errorCount} failed. Check individual tools.`,
+        });
+      }
+    }
+  }
+
+  /**
+   * Shows detailed information for a tool in a modal.
+   */
+  showToolDetails(tool: Tool): void {
+    this.selectedToolForDetails.set(tool);
+    this.showDetailsModal.set(true);
+  }
+
+  /**
+   * Opens tool configuration modal.
+   */
+  configureTool(tool: Tool): void {
+    this.selectedToolForConfig.set(tool);
+    this.editingConfig.set(null);
+    this.loadToolConfigs(tool.key);
+    this.showConfigModal.set(true);
+  }
+
+  /**
+   * Loads configurations for a tool.
+   */
+  private loadToolConfigs(toolKey: string): void {
+    this.toolConfigService.getToolConfigs(toolKey).subscribe({
+      next: (response) => {
+        this.toolConfigs.set(response.data.configs);
+        this.activeConfig.set(response.data.activeConfig);
+
+        // Initialize form with active config or defaults
+        if (response.data.activeConfig) {
+          const nextVersion = this.getNextVersion(response.data.activeConfig.version);
+          this.configFormData.set({
+            version: nextVersion,
+            displayMode: response.data.activeConfig.displayMode,
+            layoutSettings: { ...response.data.activeConfig.layoutSettings },
+            isActive: false,
+          });
+        } else {
+          this.resetConfigForm();
+        }
+      },
+      error: (error) => {
+        console.error('Failed to load tool configs:', error);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to load tool configurations. Please try again.',
+        });
+      },
+    });
+  }
+
+  /**
+   * Gets the next semantic version number.
+   */
+  private getNextVersion(currentVersion: string): string {
+    const parts = currentVersion.split('.').map(Number);
+    parts[2]++; // Increment patch version
+    return parts.join('.');
+  }
+
+  /**
+   * Resets the configuration form to defaults.
+   */
+  private resetConfigForm(): void {
+    const defaultFormData = {
+      version: '1.0.0',
+      displayMode: 'standard' as const,
+      layoutSettings: {
+        maxWidth: '1200px',
+        padding: '2rem',
+      },
+      isActive: false,
+    };
+    console.log('[ToolsSettingsPage] Resetting config form to:', defaultFormData);
+    this.configFormData.set(defaultFormData);
+  }
+
+  /**
+   * Closes the configuration modal.
+   */
+  closeConfigModal(): void {
+    this.showConfigModal.set(false);
+    this.selectedToolForConfig.set(null);
+    this.editingConfig.set(null);
+    this.toolConfigs.set([]);
+    this.activeConfig.set(null);
+    this.resetConfigForm();
+  }
+
+  /**
+   * Saves a new or updated configuration.
+   */
+  saveConfiguration(): void {
+    const tool = this.selectedToolForConfig();
+    if (!tool) {
+      console.error('[ToolsSettingsPage] No tool selected for config');
+      return;
+    }
+
+    const formData = this.configFormData();
+    const editingConfig = this.editingConfig();
+
+    console.log('[ToolsSettingsPage] Saving configuration:', {
+      tool: tool.key,
+      formData,
+      editing: !!editingConfig,
+    });
+
+    // Validate version format
+    if (!/^\d+\.\d+\.\d+$/.test(formData.version)) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Invalid Version',
+        detail: 'Version must be in format X.Y.Z (e.g., 1.0.0)',
+      });
+      return;
+    }
+
+    // Ensure layoutSettings has default values if empty
+    const requestData: CreateToolConfigRequest = {
+      version: formData.version,
+      displayMode: formData.displayMode,
+      layoutSettings:
+        formData.layoutSettings && Object.keys(formData.layoutSettings).length > 0
+          ? formData.layoutSettings
+          : { maxWidth: '1200px', padding: '2rem' },
+      isActive: formData.isActive ?? false,
+    };
+
+    console.log('[ToolsSettingsPage] Request payload:', requestData);
+
+    this.savingConfig.set(true);
+
+    if (editingConfig) {
+      // Update existing config
+      const updateRequest: UpdateToolConfigRequest = {
+        version: formData.version !== editingConfig.version ? formData.version : undefined,
+        displayMode:
+          formData.displayMode !== editingConfig.displayMode ? formData.displayMode : undefined,
+        layoutSettings: formData.layoutSettings,
+        isActive: formData.isActive,
+      };
+
+      this.toolConfigService.updateConfig(tool.key, editingConfig.id, updateRequest).subscribe({
+        next: () => {
+          this.savingConfig.set(false);
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Configuration Updated',
+            detail: `Configuration for "${tool.name}" has been updated successfully.`,
+          });
+          this.loadToolConfigs(tool.key);
+          this.editingConfig.set(null);
+          this.resetConfigForm();
+        },
+        error: (error) => {
+          this.savingConfig.set(false);
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Update Failed',
+            detail: error.message || 'Failed to update configuration. Please try again.',
+          });
+        },
+      });
+    } else {
+      // Create new config
+      this.toolConfigService.createConfig(tool.key, requestData).subscribe({
+        next: () => {
+          this.savingConfig.set(false);
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Configuration Created',
+            detail: `New configuration for "${tool.name}" has been created successfully.`,
+          });
+          this.loadToolConfigs(tool.key);
+          this.resetConfigForm();
+        },
+        error: (error) => {
+          this.savingConfig.set(false);
+          console.error('[ToolsSettingsPage] Failed to create config:', error);
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Creation Failed',
+            detail: error.message || 'Failed to create configuration. Please try again.',
+          });
+        },
+      });
+    }
+  }
+
+  /**
+   * Activates a configuration.
+   */
+  activateConfiguration(config: ToolConfig): void {
+    const tool = this.selectedToolForConfig();
+    if (!tool) return;
+
+    this.confirmationService.confirm({
+      message: `Are you sure you want to activate version ${config.version}? This will deactivate the current active configuration.`,
+      header: 'Activate Configuration',
+      icon: 'pi pi-exclamation-triangle',
+      accept: () => {
+        this.toolConfigService.activateConfig(tool.key, config.id).subscribe({
+          next: () => {
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Configuration Activated',
+              detail: `Version ${config.version} is now active for "${tool.name}".`,
+            });
+            this.loadToolConfigs(tool.key);
+          },
+          error: (error) => {
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Activation Failed',
+              detail: error.message || 'Failed to activate configuration. Please try again.',
+            });
+          },
+        });
+      },
+    });
+  }
+
+  /**
+   * Edits an existing configuration.
+   */
+  editConfiguration(config: ToolConfig): void {
+    this.editingConfig.set(config);
+    this.configFormData.set({
+      version: config.version,
+      displayMode: config.displayMode,
+      layoutSettings: { ...config.layoutSettings },
+      isActive: config.isActive,
+    });
+  }
+
+  /**
+   * Cancels editing a configuration.
+   */
+  cancelEditConfiguration(): void {
+    this.editingConfig.set(null);
+    this.resetConfigForm();
+  }
+
+  /**
+   * Deletes a configuration.
+   */
+  deleteConfiguration(config: ToolConfig): void {
+    const tool = this.selectedToolForConfig();
+    if (!tool) return;
+
+    if (config.isActive) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Cannot Delete',
+        detail: 'Cannot delete the active configuration. Activate another configuration first.',
+      });
+      return;
+    }
+
+    this.confirmationService.confirm({
+      message: `Are you sure you want to delete version ${config.version}? This action cannot be undone.`,
+      header: 'Delete Configuration',
+      icon: 'pi pi-exclamation-triangle',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.toolConfigService.deleteConfig(tool.key, config.id).subscribe({
+          next: () => {
+            this.messageService.add({
+              severity: 'success',
+              summary: 'Configuration Deleted',
+              detail: `Version ${config.version} has been deleted successfully.`,
+            });
+            this.loadToolConfigs(tool.key);
+          },
+          error: (error) => {
+            this.messageService.add({
+              severity: 'error',
+              summary: 'Deletion Failed',
+              detail: error.message || 'Failed to delete configuration. Please try again.',
+            });
+          },
+        });
+      },
+    });
+  }
+
+  /**
+   * Gets display mode label.
+   */
+  getDisplayModeLabel(mode: DisplayMode): string {
+    const option = this.displayModeOptions.find((o) => o.value === mode);
+    return option?.label || mode;
+  }
+
+  /**
+   * Gets display mode icon.
+   */
+  getDisplayModeIcon(mode: DisplayMode): string {
+    const option = this.displayModeOptions.find((o) => o.value === mode);
+    return option?.icon || 'pi pi-cog';
+  }
+
+  /**
+   * Updates layout setting in form.
+   */
+  updateLayoutSetting(key: string, value: any): void {
+    const currentSettings = this.configFormData().layoutSettings || {};
+    const updatedSettings = { ...currentSettings, [key]: value };
+    this.configFormData.update((data) => ({
+      ...data,
+      layoutSettings: updatedSettings,
+    }));
+  }
+
+  /**
+   * Updates the version field in config form.
+   */
+  updateConfigVersion(version: string): void {
+    this.configFormData.update((data) => ({ ...data, version }));
+  }
+
+  /**
+   * Updates the display mode field in config form.
+   */
+  updateConfigDisplayMode(displayMode: any): void {
+    this.configFormData.update((data) => ({ ...data, displayMode }));
+  }
+
+  /**
+   * Updates the isActive field in config form.
+   */
+  updateConfigIsActive(isActive: boolean): void {
+    this.configFormData.update((data) => ({ ...data, isActive }));
+  }
+
+  /**
+   * Shows delete confirmation modal for a tool.
+   */
+  showDeleteConfirmation(tool: Tool): void {
+    this.selectedToolForDelete.set(tool);
+    this.deleteConfirmationText.set('');
+    this.showDeleteModal.set(true);
+  }
+
+  /**
+   * Cancels the delete operation and closes the modal.
+   */
+  cancelDelete(): void {
+    this.showDeleteModal.set(false);
+    this.selectedToolForDelete.set(null);
+    this.deleteConfirmationText.set('');
+  }
+
+  /**
+   * Confirms and executes the tool deletion.
+   */
+  confirmDeleteTool(): void {
+    const tool = this.selectedToolForDelete();
+    if (!tool || this.deleteConfirmationText() !== tool.name) {
+      return;
+    }
+
+    this.deletingTool.set(true);
+
+    this.toolsService.deleteTool(tool.key).subscribe({
+      next: () => {
+        this.deletingTool.set(false);
+        this.showDeleteModal.set(false);
+        this.selectedToolForDelete.set(null);
+        this.deleteConfirmationText.set('');
+
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Tool Deleted',
+          detail: `"${tool.name}" has been permanently deleted from the system.`,
+        });
+      },
+      error: (error) => {
+        this.deletingTool.set(false);
+
+        console.error('Failed to delete tool:', error);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Delete Failed',
+          detail: `Failed to delete "${tool.name}". Please try again.`,
+        });
+      },
+    });
+  }
+
+  /**
+   * Checks if a tool is currently being deleted.
+   */
+  isDeletingTool(): boolean {
+    return this.deletingTool();
+  }
+
+  /**
+   * Clears all search and filter criteria.
+   */
+  clearFilters(): void {
+    this.searchQuery.set('');
+    this.statusFilter.set('all');
   }
 }

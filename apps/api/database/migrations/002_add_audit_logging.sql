@@ -71,6 +71,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create trigger for automatic deleted_at management
+DROP TRIGGER IF EXISTS trigger_update_deleted_at ON users;
 CREATE TRIGGER trigger_update_deleted_at
   BEFORE UPDATE ON users
   FOR EACH ROW

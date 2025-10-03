@@ -3,6 +3,7 @@ import { Observable, throwError, BehaviorSubject } from 'rxjs';
 import { map, catchError, tap } from 'rxjs/operators';
 import { ApiClientService } from '../../../core/api/api-client.service';
 import { ToolsService } from '../../../core/services/tools.service';
+import { environment } from '@env/environment';
 import {
   CreateShortLinkRequest,
   CreateShortLinkResponse,
@@ -67,7 +68,7 @@ export class ShortLinkService {
   readonly isToolEnabled = computed(() => this.toolsService.isToolEnabled('short-link'));
 
   // Environment-specific base URL for short links
-  private readonly baseUrl = window.location.origin;
+  private readonly shortLinkBaseUrl = this.resolveShortLinkBaseUrl();
 
   constructor() {
     // Initialize recent links if needed
@@ -162,7 +163,7 @@ export class ShortLinkService {
    *   error: (error) => console.error('Retrieval failed:', error)
    * });
    */
-  getUserShortLinks(limit: number = 20, offset: number = 0): Observable<ShortLink[]> {
+  getUserShortLinks(limit = 20, offset = 0): Observable<ShortLink[]> {
     this.loadingSignal.set(true);
     this.errorSignal.set(null);
 
@@ -218,7 +219,7 @@ export class ShortLinkService {
    * // Returns: "https://example.com/s/abc123"
    */
   generateShortUrl(code: string): string {
-    return `${this.baseUrl}/s/${code}`;
+    return `${this.shortLinkBaseUrl}/s/${code}`;
   }
 
   /**
@@ -340,5 +341,31 @@ export class ShortLinkService {
         error: () => {}, // Silent initial load
       });
     }
+  }
+
+  /**
+   * Determines the base URL for short links based on environment configuration.
+   * Falls back to the current window origin if parsing fails.
+   */
+  private resolveShortLinkBaseUrl(): string {
+    const configured = environment.shortLinkBaseUrl?.trim();
+    if (configured) {
+      return this.normalizeBaseUrl(configured);
+    }
+
+    try {
+      const apiUrl = new URL(environment.apiUrl);
+      return `${apiUrl.protocol}//${apiUrl.host}`;
+    } catch (error) {
+      console.warn('Unable to parse environment.apiUrl, falling back to window origin.', error);
+      return this.normalizeBaseUrl(window.location.origin);
+    }
+  }
+
+  /**
+   * Ensures the base URL has no trailing slash to prevent double slashes.
+   */
+  private normalizeBaseUrl(url: string): string {
+    return url.endsWith('/') ? url.slice(0, -1) : url;
   }
 }

@@ -1,13 +1,10 @@
-import { Component, ChangeDetectionStrategy, inject, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterOutlet } from '@angular/router';
 import { SettingsService } from './settings.service';
 import { SettingsSidebarComponent } from '@shared/components/settings-sidebar';
-import { GeneralSettingsComponent } from './components/general-settings/general-settings.component';
-import { SecuritySettingsComponent } from './components/security-settings/security-settings.component';
-import { ApiTokensSettingsComponent } from './components/api-tokens-settings/api-tokens-settings.component';
-import { AppearanceSettingsComponent } from './components/appearance-settings/appearance-settings.component';
-import { ToolsSettingsPage } from '../admin/pages/tools-settings/tools-settings.page';
 import { SettingsSection } from './types/settings.types';
+import { ThemeService } from '@core/services/theme.service';
 
 /**
  * Main settings component with sidebar navigation and dynamic content area.
@@ -16,49 +13,37 @@ import { SettingsSection } from './types/settings.types';
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [
-    CommonModule,
-    SettingsSidebarComponent,
-    GeneralSettingsComponent,
-    SecuritySettingsComponent,
-    ApiTokensSettingsComponent,
-    AppearanceSettingsComponent,
-    ToolsSettingsPage,
-  ],
+  imports: [CommonModule, RouterOutlet, SettingsSidebarComponent],
   template: `
     <div class="settings-page">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div class="settings-container">
         <!-- Desktop Layout -->
-        <div class="lg:grid lg:grid-cols-4 lg:gap-8">
+        <div class="settings-layout">
           <!-- Sidebar -->
-          <div class="lg:col-span-1">
-            <div class="sticky top-8">
-              <div class="hidden lg:block">
-                <div class="bg-white shadow rounded-lg min-h-[600px]">
-                  <app-settings-sidebar
-                    [navigationItems]="settingsService.navigationItems()"
-                    [activeSection]="settingsService.activeSection()"
-                    [isMobileOpen]="isMobileSidebarOpen()"
-                    (sectionChange)="onSectionChange($event)"
-                    (toggleMobile)="onToggleMobileSidebar()"
-                    (closeMobile)="onCloseMobileSidebar()"
-                  />
-                </div>
-              </div>
+          <aside class="settings-sidebar-wrapper">
+            <div class="hidden lg:block h-full">
+              <app-settings-sidebar
+                [navigationItems]="settingsService.navigationItems()"
+                [activeSection]="settingsService.activeSection()"
+                [isMobileOpen]="isMobileSidebarOpen()"
+                [theme]="currentTheme()"
+                (toggleMobile)="onToggleMobileSidebar()"
+                (closeMobile)="onCloseMobileSidebar()"
+              />
             </div>
-          </div>
+          </aside>
 
           <!-- Main Content -->
-          <div class="lg:col-span-3">
+          <main class="settings-main">
             <!-- Mobile Header -->
-            <div class="lg:hidden mb-6">
-              <div class="bg-white shadow rounded-lg p-4">
+            <div class="lg:hidden mb-6 px-4">
+              <div class="settings-mobile-header">
                 <div class="flex items-center justify-between">
                   <h1 class="text-xl font-semibold text-gray-900">Settings</h1>
                   <button
                     type="button"
                     (click)="onToggleMobileSidebar()"
-                    class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                    class="settings-menu-button"
                   >
                     <i class="pi pi-bars mr-2"></i>
                     Menu
@@ -69,85 +54,9 @@ import { SettingsSection } from './types/settings.types';
 
             <!-- Dynamic Content Area -->
             <div class="settings-content">
-              @switch (settingsService.activeSection()) {
-                @case ('general') {
-                  <app-general-settings />
-                }
-                @case ('security') {
-                  <app-security-settings />
-                }
-                @case ('api-tokens') {
-                  <app-api-tokens-settings />
-                }
-                @case ('appearance') {
-                  <app-appearance-settings />
-                }
-                @case ('notifications') {
-                  <div class="max-w-4xl">
-                    <div class="mb-8">
-                      <h2 class="text-2xl font-bold text-gray-900">Notifications</h2>
-                      <p class="mt-1 text-sm text-gray-600">
-                        Manage your email, push, and in-app notification preferences.
-                      </p>
-                    </div>
-                    <div class="bg-white shadow rounded-lg p-8 text-center">
-                      <div class="text-gray-400 mb-4">
-                        <i class="pi pi-bell text-4xl"></i>
-                      </div>
-                      <h3 class="text-lg font-medium text-gray-900 mb-2">Coming Soon</h3>
-                      <p class="text-gray-500">
-                        Notification preferences will be available in a future update.
-                      </p>
-                    </div>
-                  </div>
-                }
-                @case ('privacy') {
-                  <div class="max-w-4xl">
-                    <div class="mb-8">
-                      <h2 class="text-2xl font-bold text-gray-900">Privacy Settings</h2>
-                      <p class="mt-1 text-sm text-gray-600">
-                        Control your privacy and data sharing preferences.
-                      </p>
-                    </div>
-                    <div class="bg-white shadow rounded-lg p-8 text-center">
-                      <div class="text-gray-400 mb-4">
-                        <i class="pi pi-eye-slash text-4xl"></i>
-                      </div>
-                      <h3 class="text-lg font-medium text-gray-900 mb-2">Coming Soon</h3>
-                      <p class="text-gray-500">
-                        Privacy settings will be available in a future update.
-                      </p>
-                    </div>
-                  </div>
-                }
-                @case ('advanced') {
-                  <div class="max-w-4xl">
-                    <div class="mb-8">
-                      <h2 class="text-2xl font-bold text-gray-900">Advanced Settings</h2>
-                      <p class="mt-1 text-sm text-gray-600">
-                        Advanced options, data export, and account management.
-                      </p>
-                    </div>
-                    <div class="bg-white shadow rounded-lg p-8 text-center">
-                      <div class="text-gray-400 mb-4">
-                        <i class="pi pi-wrench text-4xl"></i>
-                      </div>
-                      <h3 class="text-lg font-medium text-gray-900 mb-2">Coming Soon</h3>
-                      <p class="text-gray-500">
-                        Advanced settings will be available in a future update.
-                      </p>
-                    </div>
-                  </div>
-                }
-                @case ('admin') {
-                  <app-tools-settings />
-                }
-                @default {
-                  <app-general-settings />
-                }
-              }
+              <router-outlet />
             </div>
-          </div>
+          </main>
         </div>
 
         <!-- Mobile Sidebar Overlay -->
@@ -162,12 +71,12 @@ import { SettingsSection } from './types/settings.types';
               ></div>
 
               <!-- Sidebar Panel -->
-              <div class="relative flex-1 flex flex-col max-w-xs w-full bg-white shadow-xl">
+              <div class="settings-mobile-sidebar">
                 <app-settings-sidebar
                   [navigationItems]="settingsService.navigationItems()"
                   [activeSection]="settingsService.activeSection()"
                   [isMobileOpen]="isMobileSidebarOpen()"
-                  (sectionChange)="onSectionChange($event)"
+                  [theme]="currentTheme()"
                   (toggleMobile)="onToggleMobileSidebar()"
                   (closeMobile)="onCloseMobileSidebar()"
                 />
@@ -181,31 +90,94 @@ import { SettingsSection } from './types/settings.types';
   styles: [
     `
       .settings-page {
-        @apply min-h-screen bg-gray-50;
+        @apply min-h-screen;
+        background-color: var(--color-background);
+        transition: var(--transition-colors);
+      }
+
+      .settings-container {
+        @apply w-full h-full;
+      }
+
+      .settings-layout {
+        @apply flex h-full;
+      }
+
+      /* Sidebar */
+      .settings-sidebar-wrapper {
+        @apply hidden lg:block;
+        width: 360px;
+        min-width: 360px;
+        max-width: 360px;
+        height: 100vh;
+        position: sticky;
+        top: 0;
+        overflow-y: auto;
+      }
+
+      /* Main Content */
+      .settings-main {
+        @apply flex-1 min-w-0;
+        background-color: var(--color-background);
       }
 
       .settings-content {
-        @apply space-y-8;
+        @apply w-full h-full;
       }
 
-      /* Ensure sticky positioning works correctly */
-      .sticky {
-        position: -webkit-sticky;
-        position: sticky;
+      .settings-mobile-header {
+        background-color: var(--color-surface);
+        box-shadow: var(--shadow-base);
+        border-radius: var(--border-radius-lg);
+        padding: 1rem;
+        border: 1px solid var(--color-border-light);
+        transition: var(--transition-colors);
+      }
+
+      .settings-menu-button {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid var(--color-border);
+        box-shadow: var(--shadow-sm);
+        font-size: 0.875rem;
+        font-weight: 500;
+        border-radius: var(--border-radius-md);
+        color: var(--color-text-secondary);
+        background-color: var(--color-surface);
+        transition: var(--transition-colors);
+
+        &:hover {
+          background-color: var(--color-gray-50);
+        }
+
+        &:focus {
+          outline: none;
+          box-shadow: 0 0 0 2px var(--color-focus-ring);
+          outline-offset: 2px;
+        }
+      }
+
+      .settings-mobile-sidebar {
+        position: relative;
+        flex: 1 1 0%;
+        display: flex;
+        flex-direction: column;
+        max-width: 20rem;
+        width: 100%;
+        background-color: var(--color-surface);
+        box-shadow: var(--shadow-xl);
+        transition: var(--transition-colors);
       }
 
       /* Mobile sidebar animations */
       @media (max-width: 1023px) {
-        .settings-sidebar {
-          @apply transform transition-transform duration-300 ease-in-out;
+        .settings-sidebar-wrapper {
+          display: none;
         }
 
-        .settings-sidebar.mobile-open {
-          @apply translate-x-0;
-        }
-
-        .settings-sidebar.mobile-closed {
-          @apply -translate-x-full;
+        .settings-main {
+          width: 100%;
         }
       }
 
@@ -213,27 +185,21 @@ import { SettingsSection } from './types/settings.types';
       button:focus {
         @apply outline-none ring-2 ring-primary-500 ring-offset-2;
       }
-
-      /* Smooth transitions */
-      .settings-content > * {
-        @apply transition-all duration-200 ease-in-out;
-      }
     `,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SettingsComponent {
   protected readonly settingsService = inject(SettingsService);
+  private readonly themeService = inject(ThemeService);
 
   // Mobile sidebar state
   public readonly isMobileSidebarOpen = signal(false);
 
-  /**
-   * Handle settings section change
-   */
-  public onSectionChange(section: SettingsSection): void {
-    this.settingsService.setActiveSection(section);
-  }
+  // Computed theme signal for sidebar
+  protected readonly currentTheme = computed(() => {
+    return this.themeService.isDarkMode() ? 'dark' : 'light';
+  });
 
   /**
    * Toggle mobile sidebar

@@ -1,0 +1,84 @@
+.search-filter-container {
+  // Connected toggle group container
+  .status-toggle-group {
+    @apply inline-flex h-8;
+  }
+
+  // Status filter toggle buttons - connected design
+  .status-toggle {
+    @apply flex items-center gap-1 px-3 text-xs font-medium;
+    @apply bg-gray-50 text-gray-600 border border-gray-200;
+    @apply transition-all duration-150 hover:bg-gray-100;
+    @apply h-8 relative;
+
+    // Remove borders between buttons
+    &:not(:first-child) {
+      @apply -ml-px;
+    }
+
+    // Rounded corners for first button
+    &-left {
+      @apply rounded-l-lg;
+    }
+
+    // No rounding for middle button
+    &-middle {
+      @apply rounded-none;
+    }
+
+    // Rounded corners for last button
+    &-right {
+      @apply rounded-r-lg;
+    }
+
+    // Active state
+    &-active {
+      @apply bg-blue-50 text-blue-600 border-blue-300 z-10;
+    }
+
+    // Success variant
+    &-success {
+      &.status-toggle-active {
+        @apply bg-green-50 text-green-600 border-green-300;
+      }
+      &:not(.status-toggle-active):hover {
+        @apply bg-green-50/50;
+      }
+    }
+
+    // Inactive variant
+    &-inactive {
+      &.status-toggle-active {
+        @apply bg-gray-100 text-gray-700 border-gray-300;
+      }
+      &:not(.status-toggle-active):hover {
+        @apply bg-gray-100/50;
+      }
+    }
+  }
+
+  // Action buttons - icon only compact design (32px height to match input)
+  .action-btn {
+    @apply flex items-center justify-center w-8 h-8 rounded-lg;
+    @apply bg-gray-50 text-gray-600 border border-gray-200;
+    @apply transition-all duration-150 hover:bg-gray-100 hover:text-gray-800;
+    @apply disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-gray-50;
+
+    &-success {
+      @apply bg-green-50 text-green-600 border-green-200;
+      @apply hover:bg-green-100 hover:border-green-300;
+      @apply disabled:hover:bg-green-50 disabled:hover:border-green-200;
+    }
+
+    &-danger {
+      @apply bg-red-50 text-red-600 border-red-200;
+      @apply hover:bg-red-100 hover:border-red-300;
+      @apply disabled:hover:bg-red-50 disabled:hover:border-red-200;
+    }
+  }
+
+  // Input focus states
+  input[pInputText]:focus {
+    @apply ring-1 ring-blue-400 border-blue-400;
+  }
+}

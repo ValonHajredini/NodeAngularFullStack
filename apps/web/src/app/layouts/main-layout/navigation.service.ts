@@ -218,12 +218,12 @@ export class NavigationService {
    * Gets suggested navigation based on user role and current context.
    * @returns Array of suggested navigation items
    */
-  getSuggestedNavigation(): Array<{
+  getSuggestedNavigation(): {
     label: string;
     route: string;
     icon: string;
     description: string;
-  }> {
+  }[] {
     const user = this.authService.user();
     if (!user) return [];
 
@@ -277,7 +277,7 @@ export class NavigationService {
    * @param includeQueryParams - Whether to include current query parameters
    * @returns Shareable URL
    */
-  createShareableLink(includeQueryParams: boolean = false): string {
+  createShareableLink(includeQueryParams = false): string {
     const baseUrl = window.location.origin;
     const currentPath = this.currentRouteSignal();
 

@@ -222,14 +222,14 @@ import { Subject, takeUntil } from 'rxjs';
                       <code
                         class="text-sm text-blue-600 font-mono bg-blue-50 px-2 py-1 rounded truncate"
                       >
-                        {{ link.shortUrl ? link.shortUrl : generateShortUrl(link.code) }}
+                        {{ generateShortUrl(link.code) }}
                       </code>
                     </div>
                     <p-button
                       icon="pi pi-copy"
                       size="small"
                       severity="secondary"
-                      (onClick)="copyShortUrl(link.shortUrl ? link.shortUrl : link.code)"
+                      (onClick)="copyShortUrl(generateShortUrl(link.code))"
                       pTooltip="Copy to clipboard"
                       outlined="true"
                     />
@@ -308,7 +308,7 @@ import { Subject, takeUntil } from 'rxjs';
   styles: [
     `
       .short-link-container {
-        max-width: 1000px;
+        // max-width: 1000px;
         margin: 0 auto;
         padding: 1rem;
       }
@@ -592,7 +592,7 @@ export class ShortLinkComponent implements OnInit, OnDestroy {
   /**
    * Truncates a URL to a maximum length and adds ellipsis if needed.
    */
-  getTruncatedUrl(url: string, maxLength: number = 80): string {
+  getTruncatedUrl(url: string, maxLength = 80): string {
     if (url.length <= maxLength) {
       return url;
     }

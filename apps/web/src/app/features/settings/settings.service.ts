@@ -1,7 +1,8 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Router, NavigationEnd } from '@angular/router';
 import { Observable, of } from 'rxjs';
-import { tap, catchError } from 'rxjs/operators';
+import { tap, catchError, filter, map } from 'rxjs/operators';
 import { AuthService } from '@core/auth/auth.service';
 import {
   SettingsSection,
@@ -22,6 +23,7 @@ import {
 })
 export class SettingsService {
   private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
 
   // State signals
@@ -101,14 +103,78 @@ export class SettingsService {
 
   constructor() {
     this.loadSettings();
+    this.initializeRouteTracking();
   }
 
   /**
-   * Set the active settings section
+   * Initialize route tracking to sync active section with URL
+   */
+  private initializeRouteTracking(): void {
+    this.router.events
+      .pipe(
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+        map((event) => this.extractSectionFromUrl(event.url)),
+      )
+      .subscribe((section) => {
+        if (section) {
+          this.activeSection.set(section);
+        }
+      });
+
+    // Set initial section from current URL
+    const currentSection = this.extractSectionFromUrl(this.router.url);
+    if (currentSection) {
+      this.activeSection.set(currentSection);
+    }
+  }
+
+  /**
+   * Extract settings section from URL path
+   */
+  private extractSectionFromUrl(url: string): SettingsSection | null {
+    const settingsMatch = url.match(/\/app\/settings\/([^\/\?]+)/);
+    if (!settingsMatch) return null;
+
+    const segment = settingsMatch[1];
+
+    // Map URL segments to settings sections
+    const sectionMap: Record<string, SettingsSection> = {
+      general: 'general',
+      security: 'security',
+      'api-tokens': 'api-tokens',
+      notifications: 'notifications',
+      appearance: 'appearance',
+      privacy: 'privacy',
+      advanced: 'advanced',
+      administration: 'admin',
+    };
+
+    return sectionMap[segment] || null;
+  }
+
+  /**
+   * Set the active settings section by navigating to the appropriate route
    */
   public setActiveSection(section: SettingsSection): void {
-    this.activeSection.set(section);
     this.clearMessages();
+
+    // Map settings sections to URL segments
+    const sectionRouteMap: Record<SettingsSection, string> = {
+      general: 'general',
+      security: 'security',
+      'api-tokens': 'api-tokens',
+      notifications: 'notifications',
+      appearance: 'appearance',
+      privacy: 'privacy',
+      advanced: 'advanced',
+      admin: 'administration',
+      'admin-tools': 'administration', // Legacy mapping
+    };
+
+    const routeSegment = sectionRouteMap[section];
+    if (routeSegment) {
+      this.router.navigate(['/app/settings', routeSegment]);
+    }
   }
 
   /**

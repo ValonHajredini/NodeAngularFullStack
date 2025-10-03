@@ -8,7 +8,7 @@ import { takeUntil, debounceTime, startWith } from 'rxjs/operators';
  */
 @Directive({
   selector: '[appResponsiveEnhancements]',
-  standalone: true
+  standalone: true,
 })
 export class ResponsiveEnhancementsDirective implements OnInit, OnDestroy {
   private readonly el = inject(ElementRef);
@@ -18,31 +18,31 @@ export class ResponsiveEnhancementsDirective implements OnInit, OnDestroy {
   /**
    * Enable touch-friendly enhancements (larger touch targets, etc.)
    */
-  @Input() touchFriendly: boolean = true;
+  @Input() touchFriendly = true;
 
   /**
    * Enable keyboard navigation enhancements
    */
-  @Input() keyboardFriendly: boolean = true;
+  @Input() keyboardFriendly = true;
 
   /**
    * Enable responsive text scaling
    */
-  @Input() responsiveText: boolean = true;
+  @Input() responsiveText = true;
 
   /**
    * Enable swipe gesture support for mobile
    */
-  @Input() swipeGestures: boolean = false;
+  @Input() swipeGestures = false;
 
   /**
    * Minimum touch target size in pixels (following WCAG guidelines)
    */
-  @Input() minTouchTarget: number = 44;
+  @Input() minTouchTarget = 44;
 
-  private swipeStartX: number = 0;
-  private swipeStartY: number = 0;
-  private isCurrentlyTouching: boolean = false;
+  private swipeStartX = 0;
+  private swipeStartY = 0;
+  private isCurrentlyTouching = false;
 
   ngOnInit(): void {
     this.setupResponsiveEnhancements();
@@ -90,14 +90,9 @@ export class ResponsiveEnhancementsDirective implements OnInit, OnDestroy {
    * Monitors screen size changes and applies appropriate classes
    */
   private setupScreenSizeMonitoring(): void {
-    const resize$ = fromEvent(window, 'resize').pipe(
-      debounceTime(100),
-      startWith(null)
-    );
+    const resize$ = fromEvent(window, 'resize').pipe(debounceTime(100), startWith(null));
 
-    const orientationChange$ = fromEvent(window, 'orientationchange').pipe(
-      debounceTime(200)
-    );
+    const orientationChange$ = fromEvent(window, 'orientationchange').pipe(debounceTime(200));
 
     merge(resize$, orientationChange$)
       .pipe(takeUntil(this.destroy$))
@@ -156,7 +151,7 @@ export class ResponsiveEnhancementsDirective implements OnInit, OnDestroy {
 
     // Find all interactive elements
     const interactiveElements = element.querySelectorAll(
-      'button, a, input, select, textarea, [tabindex], [role="button"], [role="link"]'
+      'button, a, input, select, textarea, [tabindex], [role="button"], [role="link"]',
     );
 
     interactiveElements.forEach((el: HTMLElement) => {
@@ -165,7 +160,10 @@ export class ResponsiveEnhancementsDirective implements OnInit, OnDestroy {
       // Check if element is smaller than minimum touch target
       if (rect.width < this.minTouchTarget || rect.height < this.minTouchTarget) {
         // Add touch-friendly padding
-        const paddingNeeded = Math.max(0, (this.minTouchTarget - Math.max(rect.width, rect.height)) / 2);
+        const paddingNeeded = Math.max(
+          0,
+          (this.minTouchTarget - Math.max(rect.width, rect.height)) / 2,
+        );
 
         this.renderer.setStyle(el, 'padding', `${paddingNeeded}px`);
         this.renderer.setStyle(el, 'min-width', `${this.minTouchTarget}px`);
@@ -215,20 +213,24 @@ export class ResponsiveEnhancementsDirective implements OnInit, OnDestroy {
 
     // Improve focus visibility
     const focusableElements = element.querySelectorAll(
-      'button, a, input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      'button, a, input, select, textarea, [tabindex]:not([tabindex="-1"])',
     );
 
     focusableElements.forEach((el: HTMLElement) => {
       this.renderer.addClass(el, 'keyboard-focusable');
 
       // Add focus indicators
-      fromEvent(el, 'focus').pipe(takeUntil(this.destroy$)).subscribe(() => {
-        this.renderer.addClass(el, 'keyboard-focused');
-      });
+      fromEvent(el, 'focus')
+        .pipe(takeUntil(this.destroy$))
+        .subscribe(() => {
+          this.renderer.addClass(el, 'keyboard-focused');
+        });
 
-      fromEvent(el, 'blur').pipe(takeUntil(this.destroy$)).subscribe(() => {
-        this.renderer.removeClass(el, 'keyboard-focused');
-      });
+      fromEvent(el, 'blur')
+        .pipe(takeUntil(this.destroy$))
+        .subscribe(() => {
+          this.renderer.removeClass(el, 'keyboard-focused');
+        });
     });
   }
 
@@ -389,7 +391,7 @@ export class ResponsiveEnhancementsDirective implements OnInit, OnDestroy {
   private dispatchCustomEvent(eventName: string, element: HTMLElement): void {
     const customEvent = new CustomEvent(eventName, {
       bubbles: true,
-      cancelable: true
+      cancelable: true,
     });
     element.dispatchEvent(customEvent);
   }
@@ -450,7 +452,9 @@ export class ResponsiveEnhancementsDirective implements OnInit, OnDestroy {
    * Detects if the current device is mobile
    */
   private isMobileDevice(): boolean {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-           window.innerWidth <= 768;
+    return (
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+      window.innerWidth <= 768
+    );
   }
 }

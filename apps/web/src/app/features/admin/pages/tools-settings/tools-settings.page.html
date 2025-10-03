@@ -1,0 +1,761 @@
+<div class="tools-settings">
+  <div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 class="text-2xl font-bold text-gray-900">Tools Management</h2>
+          <p class="mt-1 text-sm text-gray-600">
+            Manage, enable, and create modular tools across the entire application.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary Statistics -->
+    <div class="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+      <app-stats-card
+        [label]="'Active Tools'"
+        [value]="toolsService.activeTools().length"
+        [icon]="'pi pi-check-circle'"
+        [colorVariant]="'success'"
+      />
+
+      <app-stats-card
+        [label]="'Inactive Tools'"
+        [value]="toolsService.inactiveTools().length"
+        [icon]="'pi pi-times-circle'"
+        [colorVariant]="'danger'"
+      />
+
+      <app-stats-card
+        [label]="'Total Tools'"
+        [value]="toolsService.tools().length"
+        [icon]="'pi pi-cog'"
+        [colorVariant]="'info'"
+      />
+    </div>
+
+    <!-- Search and Filter Controls -->
+    <app-search-filter
+      [(searchQuery)]="searchQuery"
+      [(statusFilter)]="statusFilter"
+      [showStatusFilter]="true"
+      [showRefreshButton]="true"
+      [showBulkActions]="true"
+      [enableBulkActions]="enableBulkActions()"
+      [disableBulkActions]="disableBulkActions()"
+      [selectedCount]="selectedTools().length"
+      (refresh)="refreshTools()"
+      (bulkActionClick)="onBulkAction($event)"
+      (clearSelection)="clearSelection()"
+    >
+      <div slot="actions">
+        <p-button
+          label="Create New Tool"
+          icon="pi pi-plus"
+          [raised]="true"
+          severity="success"
+          (onClick)="navigateToCreateTool()"
+          class="create-tool-btn"
+        />
+      </div>
+    </app-search-filter>
+
+    <!-- Error Message -->
+    <div
+      *ngIf="toolsService.error()"
+      class="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg"
+    >
+      <div class="flex items-center">
+        <i class="pi pi-exclamation-triangle text-red-500 mr-2"></i>
+        <span>{{ toolsService.error() }}</span>
+        <button
+          type="button"
+          class="ml-auto text-red-500 hover:text-red-700"
+          (click)="toolsService.clearError()"
+        >
+          <i class="pi pi-times"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="toolsService.loading()" class="flex justify-center py-12">
+      <p-progressSpinner styleClass="w-12 h-12" strokeWidth="4" animationDuration="1s" />
+    </div>
+
+    <!-- Tools Grid -->
+    <div
+      *ngIf="!toolsService.loading()"
+      class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+    >
+      <app-tool-card
+        *ngFor="let tool of filteredTools(); trackBy: trackByTool"
+        [tool]="tool"
+        [selected]="isToolSelected(tool.key)"
+        [updating]="isUpdating(tool.key)"
+        [showSelection]="true"
+        [showActions]="true"
+        (toggleStatus)="onToggleStatus(tool, $event)"
+        (toggleSelection)="toggleToolSelection(tool.key, $event)"
+        (viewDetails)="showToolDetails($event)"
+        (configure)="configureTool($event)"
+        (delete)="showDeleteConfirmation($event)"
+        (cardClick)="showToolDetails($event)"
+      />
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="!toolsService.loading() && filteredTools().length === 0" class="text-center py-12">
+      <div class="flex flex-col items-center">
+        <i class="pi pi-inbox text-gray-400 text-6xl mb-4"></i>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">
+          {{ toolsService.tools().length === 0 ? 'No tools found' : 'No tools match your search' }}
+        </h3>
+        <p class="text-gray-500 text-sm mb-6 max-w-md">
+          {{ toolsService.tools().length === 0
+              ? 'Tools will appear here once they are registered in the system.'
+              : 'Try adjusting your search criteria or filters to find the tools you're looking for.' }}
+        </p>
+        <p-button
+          *ngIf="toolsService.tools().length === 0"
+          label="Create Your First Tool"
+          icon="pi pi-plus"
+          (onClick)="navigateToCreateTool()"
+        />
+        <p-button
+          *ngIf="toolsService.tools().length > 0"
+          label="Clear Filters"
+          icon="pi pi-filter-slash"
+          [text]="true"
+          (onClick)="clearFilters()"
+        />
+      </div>
+    </div>
+
+    <!-- Information Section -->
+    <div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <i class="pi pi-info-circle text-blue-400 text-lg"></i>
+        </div>
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-blue-800">Tools Management Information</h3>
+          <div class="mt-2 text-sm text-blue-700">
+            <ul class="list-disc pl-5 space-y-1">
+              <li>Changes take effect immediately across the entire application</li>
+              <li>Disabled tools will be hidden from all users</li>
+              <li>Only super administrators can manage tools settings</li>
+              <li>Tool status changes are logged for audit purposes</li>
+              <li>Click on any tool card to view detailed information</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tool Details Modal -->
+  <p-dialog
+    [(visible)]="showDetailsModal"
+    [modal]="true"
+    [draggable]="false"
+    [resizable]="false"
+    [dismissableMask]="true"
+    styleClass="max-w-2xl"
+    header="Tool Details"
+  >
+    <div *ngIf="selectedToolForDetails()" class="space-y-6">
+      <!-- Tool Header -->
+      <div class="flex items-start space-x-4">
+        <i [class]="getToolIcon(selectedToolForDetails()!)" class="text-3xl text-blue-600 mt-1"></i>
+        <div class="flex-1">
+          <h3 class="text-xl font-semibold text-gray-900">
+            {{ selectedToolForDetails()!.name }}
+          </h3>
+          <div class="flex items-center space-x-3 mt-2">
+            <p-chip [label]="selectedToolForDetails()!.key" icon="pi pi-tag" />
+            <p-badge
+              [value]="selectedToolForDetails()!.active ? 'Active' : 'Inactive'"
+              [severity]="selectedToolForDetails()!.active ? 'success' : 'secondary'"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div>
+        <h4 class="font-medium text-gray-900 mb-2">Description</h4>
+        <p class="text-gray-700">
+          {{ selectedToolForDetails()!.description || 'No description available for this tool.' }}
+        </p>
+      </div>
+
+      <!-- Metadata -->
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <h4 class="font-medium text-gray-900 mb-2">Created</h4>
+          <p class="text-gray-600">{{ selectedToolForDetails()!.createdAt | date: 'full' }}</p>
+        </div>
+        <div>
+          <h4 class="font-medium text-gray-900 mb-2">Last Updated</h4>
+          <p class="text-gray-600">{{ selectedToolForDetails()!.updatedAt | date: 'full' }}</p>
+        </div>
+      </div>
+
+      <!-- Code Path -->
+      <div *ngIf="selectedToolForDetails()!.codePath">
+        <h4 class="font-medium text-gray-900 mb-2">Code Path</h4>
+        <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
+          <div class="flex items-center space-x-2">
+            <i class="pi pi-code text-gray-500"></i>
+            <code class="text-sm text-gray-700 font-mono break-all">{{
+              selectedToolForDetails()!.codePath
+            }}</code>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex justify-between items-center pt-4 border-t">
+        <div class="flex items-center space-x-3">
+          <p-checkbox
+            [binary]="true"
+            [ngModel]="selectedToolForDetails()!.active"
+            (ngModelChange)="onToggleStatus(selectedToolForDetails()!, $event)"
+            [disabled]="isUpdating(selectedToolForDetails()!.key)"
+          />
+          <span class="text-sm font-medium">
+            {{ selectedToolForDetails()!.active ? 'Tool is enabled' : 'Tool is disabled' }}
+          </span>
+        </div>
+        <p-button
+          label="Configure"
+          icon="pi pi-cog"
+          [text]="true"
+          (onClick)="configureTool(selectedToolForDetails()!)"
+        />
+      </div>
+    </div>
+  </p-dialog>
+
+  <!-- Delete Confirmation Modal -->
+  <p-dialog
+    [(visible)]="showDeleteModal"
+    [modal]="true"
+    [draggable]="false"
+    [resizable]="false"
+    [dismissableMask]="false"
+    [closable]="false"
+    styleClass="max-w-md"
+    header="Delete Tool"
+  >
+    <div *ngIf="selectedToolForDelete()" class="space-y-6">
+      <!-- Warning Header -->
+      <div class="flex items-start space-x-3">
+        <i class="pi pi-exclamation-triangle text-3xl text-red-500 mt-1"></i>
+        <div class="flex-1">
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">
+            Are you sure you want to delete this tool?
+          </h3>
+          <p class="text-sm text-gray-600">
+            This action cannot be undone. The tool will be permanently removed from the system.
+          </p>
+        </div>
+      </div>
+
+      <!-- Tool Information -->
+      <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+        <div class="flex items-center space-x-3 mb-3">
+          <i [class]="getToolIcon(selectedToolForDelete()!)" class="text-2xl text-gray-600"></i>
+          <div>
+            <h4 class="font-medium text-gray-900">{{ selectedToolForDelete()!.name }}</h4>
+            <p class="text-sm text-gray-500">{{ selectedToolForDelete()!.key }}</p>
+          </div>
+        </div>
+        <p class="text-sm text-gray-700">
+          {{ selectedToolForDelete()!.description || 'No description available.' }}
+        </p>
+      </div>
+
+      <!-- Name Confirmation -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          To confirm deletion, type "<strong>{{ selectedToolForDelete()!.name }}</strong
+          >" below:
+        </label>
+        <input
+          pInputText
+          [(ngModel)]="deleteConfirmationText"
+          placeholder="Enter tool name to confirm"
+          class="w-full"
+          [class.border-red-300]="
+            deleteConfirmationText() && deleteConfirmationText() !== selectedToolForDelete()!.name
+          "
+          [class.border-green-300]="deleteConfirmationText() === selectedToolForDelete()!.name"
+        />
+        <p class="text-xs text-gray-500 mt-1">
+          This confirmation helps prevent accidental deletions.
+        </p>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex justify-between items-center pt-4 border-t">
+        <p-button label="Cancel" icon="pi pi-times" [text]="true" (onClick)="cancelDelete()" />
+        <p-button
+          label="Delete Tool"
+          icon="pi pi-trash"
+          severity="danger"
+          [disabled]="
+            deleteConfirmationText() !== selectedToolForDelete()!.name || isDeletingTool()
+          "
+          [loading]="isDeletingTool()"
+          (onClick)="confirmDeleteTool()"
+        />
+      </div>
+    </div>
+  </p-dialog>
+
+  <!-- Toast messages -->
+  <p-toast position="top-right" />
+
+  <!-- Confirmation dialogs -->
+  <p-confirmDialog />
+
+  <!-- Tool Configuration Modal -->
+  <p-dialog
+    [(visible)]="showConfigModal"
+    [modal]="true"
+    [draggable]="false"
+    [resizable]="false"
+    [dismissableMask]="false"
+    [closable]="true"
+    styleClass="config-modal"
+    [header]="'Configure ' + (selectedToolForConfig()?.name || 'Tool')"
+    (onHide)="closeConfigModal()"
+  >
+    <div *ngIf="selectedToolForConfig()" class="config-modal-content">
+      <!-- Active Configuration Summary -->
+      <div *ngIf="activeConfig()" class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <div class="flex items-center justify-between">
+          <div>
+            <h4 class="text-sm font-semibold text-blue-900 mb-1">
+              <i class="pi pi-check-circle mr-2"></i>
+              Active Configuration
+            </h4>
+            <div class="flex items-center space-x-4 text-sm text-blue-700">
+              <span><i class="pi pi-tag mr-1"></i>Version: {{ activeConfig()!.version }}</span>
+              <span>
+                <i [class]="getDisplayModeIcon(activeConfig()!.displayMode)" class="mr-1"></i>
+                {{ getDisplayModeLabel(activeConfig()!.displayMode) }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Configuration Form -->
+      <div class="config-form mb-6">
+        <h4 class="text-lg font-semibold text-gray-900 mb-4">
+          {{ editingConfig() ? 'Edit Configuration' : 'Create New Configuration' }}
+        </h4>
+
+        <!-- Version Input -->
+        <div class="mb-4">
+          <label for="config-version" class="block text-sm font-medium text-gray-700 mb-2">
+            <i class="pi pi-tag text-gray-400 mr-1"></i>
+            Version (Semantic Versioning)
+          </label>
+          <input
+            pInputText
+            id="config-version"
+            [ngModel]="configFormData().version"
+            (ngModelChange)="updateConfigVersion($event)"
+            placeholder="1.0.0"
+            class="w-full"
+            [disabled]="savingConfig()"
+          />
+          <small class="text-gray-500 mt-1 block">Format: X.Y.Z (e.g., 1.0.0, 2.1.3)</small>
+        </div>
+
+        <!-- Display Mode Selector -->
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            <i class="pi pi-window-maximize text-gray-400 mr-1"></i>
+            Display Mode
+          </label>
+          <p-selectButton
+            [options]="displayModeOptions"
+            [ngModel]="configFormData().displayMode"
+            (ngModelChange)="updateConfigDisplayMode($event)"
+            optionLabel="label"
+            optionValue="value"
+            [disabled]="savingConfig()"
+          >
+            <ng-template let-item pTemplate>
+              <i [class]="item.icon" class="mr-2"></i>
+              <span>{{ item.label }}</span>
+            </ng-template>
+          </p-selectButton>
+          <small class="text-gray-500 mt-2 block">
+            Choose how this tool will be displayed to users
+          </small>
+        </div>
+
+        <p-divider />
+
+        <!-- Layout Settings -->
+        <div class="mb-4">
+          <h5 class="text-md font-semibold text-gray-800 mb-3">
+            <i class="pi pi-cog text-gray-400 mr-1"></i>
+            Layout Settings
+          </h5>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Max Width -->
+            <div>
+              <label for="config-maxWidth" class="block text-sm font-medium text-gray-700 mb-2">
+                Max Width
+              </label>
+              <input
+                pInputText
+                id="config-maxWidth"
+                [ngModel]="configFormData().layoutSettings?.maxWidth || ''"
+                (ngModelChange)="updateLayoutSetting('maxWidth', $event)"
+                placeholder="1200px, 100%, auto"
+                class="w-full"
+                [disabled]="savingConfig()"
+              />
+            </div>
+
+            <!-- Padding -->
+            <div>
+              <label for="config-padding" class="block text-sm font-medium text-gray-700 mb-2">
+                Padding
+              </label>
+              <input
+                pInputText
+                id="config-padding"
+                [ngModel]="configFormData().layoutSettings?.padding || ''"
+                (ngModelChange)="updateLayoutSetting('padding', $event)"
+                placeholder="2rem, 1rem 2rem"
+                class="w-full"
+                [disabled]="savingConfig()"
+              />
+            </div>
+
+            <!-- Margin -->
+            <div>
+              <label for="config-margin" class="block text-sm font-medium text-gray-700 mb-2">
+                Margin
+              </label>
+              <input
+                pInputText
+                id="config-margin"
+                [ngModel]="configFormData().layoutSettings?.margin || ''"
+                (ngModelChange)="updateLayoutSetting('margin', $event)"
+                placeholder="0 auto, 1rem"
+                class="w-full"
+                [disabled]="savingConfig()"
+              />
+            </div>
+
+            <!-- Background Color -->
+            <div>
+              <label
+                for="config-backgroundColor"
+                class="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Background Color
+              </label>
+              <input
+                pInputText
+                id="config-backgroundColor"
+                [ngModel]="configFormData().layoutSettings?.backgroundColor || ''"
+                (ngModelChange)="updateLayoutSetting('backgroundColor', $event)"
+                placeholder="#ffffff, transparent"
+                class="w-full"
+                [disabled]="savingConfig()"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Set as Active Checkbox -->
+        <div class="mb-4">
+          <div class="flex items-center space-x-2">
+            <p-checkbox
+              [binary]="true"
+              [ngModel]="configFormData().isActive"
+              (ngModelChange)="updateConfigIsActive($event)"
+              [disabled]="savingConfig()"
+              inputId="config-active"
+            />
+            <label for="config-active" class="text-sm font-medium text-gray-700">
+              Set as active configuration
+            </label>
+          </div>
+          <small class="text-gray-500 mt-1 block ml-6">
+            This will deactivate the current active configuration
+          </small>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="flex justify-between items-center pt-4 border-t">
+          <p-button
+            *ngIf="editingConfig()"
+            label="Cancel Edit"
+            icon="pi pi-times"
+            [text]="true"
+            (onClick)="cancelEditConfiguration()"
+            [disabled]="savingConfig()"
+          />
+          <div class="flex-1" *ngIf="!editingConfig()"></div>
+          <p-button
+            [label]="editingConfig() ? 'Update Configuration' : 'Create Configuration'"
+            icon="pi pi-save"
+            [loading]="savingConfig()"
+            (onClick)="saveConfiguration()"
+          />
+        </div>
+      </div>
+
+      <p-divider />
+
+      <!-- Configuration History -->
+      <div class="config-history">
+        <h4 class="text-lg font-semibold text-gray-900 mb-4">
+          <i class="pi pi-history text-gray-400 mr-2"></i>
+          Configuration History
+        </h4>
+
+        <div *ngIf="toolConfigs().length === 0" class="text-center py-8 text-gray-500">
+          <i class="pi pi-inbox text-4xl mb-2"></i>
+          <p>No configurations yet</p>
+        </div>
+
+        <div *ngIf="toolConfigs().length > 0" class="space-y-3">
+          <div
+            *ngFor="let config of toolConfigs()"
+            class="config-item p-4 border rounded-lg transition-all"
+            [class.border-blue-300]="config.isActive"
+            [class.bg-blue-50]="config.isActive"
+            [class.border-gray-200]="!config.isActive"
+            [class.bg-white]="!config.isActive"
+          >
+            <div class="flex items-center justify-between">
+              <div class="flex-1">
+                <div class="flex items-center space-x-3 mb-2">
+                  <span class="text-sm font-semibold text-gray-900">
+                    Version {{ config.version }}
+                  </span>
+                  <p-badge *ngIf="config.isActive" value="Active" severity="success" />
+                  <p-chip
+                    [label]="getDisplayModeLabel(config.displayMode)"
+                    [icon]="getDisplayModeIcon(config.displayMode)"
+                    styleClass="text-xs"
+                  />
+                </div>
+                <div class="text-xs text-gray-500 space-y-1">
+                  <div>
+                    <i class="pi pi-calendar mr-1"></i>
+                    Created: {{ config.createdAt | date: 'short' }}
+                  </div>
+                  <div *ngIf="config.layoutSettings?.maxWidth">
+                    <i class="pi pi-arrows-h mr-1"></i>
+                    Max Width: {{ config.layoutSettings.maxWidth }}
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex items-center space-x-2">
+                <p-button
+                  *ngIf="!config.isActive"
+                  icon="pi pi-check"
+                  [text]="true"
+                  [rounded]="true"
+                  severity="success"
+                  pTooltip="Activate this version"
+                  (onClick)="activateConfiguration(config)"
+                />
+                <p-button
+                  icon="pi pi-pencil"
+                  [text]="true"
+                  [rounded]="true"
+                  severity="secondary"
+                  pTooltip="Edit configuration"
+                  (onClick)="editConfiguration(config)"
+                />
+                <p-button
+                  *ngIf="!config.isActive"
+                  icon="pi pi-trash"
+                  [text]="true"
+                  [rounded]="true"
+                  severity="danger"
+                  pTooltip="Delete configuration"
+                  (onClick)="deleteConfiguration(config)"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </p-dialog>
+
+  <!-- Component Existence Dialog -->
+  <p-dialog
+    [(visible)]="showComponentExistsDialog"
+    [modal]="true"
+    [closable]="false"
+    [draggable]="false"
+    [resizable]="false"
+    [style]="{ width: '90vw', maxWidth: '600px' }"
+    header="Component Already Exists"
+    styleClass="component-exists-dialog"
+  >
+    <div class="py-4">
+      <!-- Warning Message -->
+      <div class="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <div class="flex items-start space-x-3">
+          <i class="pi pi-exclamation-triangle text-yellow-600 text-2xl mt-1"></i>
+          <div class="flex-1">
+            <h4 class="font-semibold text-yellow-900 mb-1">Component code already exists</h4>
+            <p class="text-sm text-yellow-700">
+              A component with the slug
+              <strong>{{ componentExistenceData()?.componentPath | slice: -50 }}</strong> already
+              exists in the codebase.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Component Details -->
+      <div class="mb-6 space-y-3">
+        <div class="flex items-center justify-between text-sm">
+          <span class="text-gray-600">
+            <i class="pi pi-file text-gray-400 mr-2"></i>
+            Files Found:
+          </span>
+          <span class="font-semibold text-gray-900">
+            {{ componentExistenceData()?.filesFound?.length || 0 }}
+          </span>
+        </div>
+
+        <div
+          *ngIf="componentExistenceData()?.lastModified"
+          class="flex items-center justify-between text-sm"
+        >
+          <span class="text-gray-600">
+            <i class="pi pi-calendar text-gray-400 mr-2"></i>
+            Last Modified:
+          </span>
+          <span class="font-semibold text-gray-900">
+            {{ componentExistenceData()?.lastModified | date: 'short' }}
+          </span>
+        </div>
+
+        <div
+          *ngIf="componentExistenceData()?.totalSize"
+          class="flex items-center justify-between text-sm"
+        >
+          <span class="text-gray-600">
+            <i class="pi pi-database text-gray-400 mr-2"></i>
+            Total Size:
+          </span>
+          <span class="font-semibold text-gray-900">
+            {{ (componentExistenceData()?.totalSize || 0) / 1024 | number: '1.0-2' }} KB
+          </span>
+        </div>
+
+        <!-- Files List -->
+        <div
+          *ngIf="
+            componentExistenceData()?.filesFound &&
+            (componentExistenceData()?.filesFound?.length ?? 0) > 0
+          "
+          class="mt-4"
+        >
+          <p class="text-sm font-medium text-gray-700 mb-2">Component Files:</p>
+          <div class="bg-gray-50 rounded-lg p-3 max-h-40 overflow-y-auto">
+            <ul class="space-y-1">
+              <li
+                *ngFor="let file of componentExistenceData()!.filesFound"
+                class="text-xs text-gray-600 flex items-center"
+              >
+                <i class="pi pi-file-o text-gray-400 mr-2 text-xs"></i>
+                {{ file }}
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Question -->
+      <div class="mb-6">
+        <p class="text-base font-medium text-gray-900 mb-2">How would you like to proceed?</p>
+        <p class="text-sm text-gray-600">
+          Choose one of the options below to continue with tool creation.
+        </p>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex flex-col space-y-3">
+        <p-button
+          label="Use Existing Component"
+          icon="pi pi-check-circle"
+          [outlined]="false"
+          severity="success"
+          [loading]="processingComponentDecision()"
+          (onClick)="handleComponentDecision('reuse')"
+          styleClass="w-full justify-center"
+        >
+          <ng-template pTemplate="content">
+            <div class="flex flex-col items-center py-2">
+              <div class="flex items-center space-x-2">
+                <i class="pi pi-check-circle text-lg"></i>
+                <span class="font-semibold">Use Existing Component</span>
+              </div>
+              <span class="text-xs mt-1 opacity-80">
+                Reuse the existing code and skip scaffolding
+              </span>
+            </div>
+          </ng-template>
+        </p-button>
+
+        <p-button
+          label="Overwrite Component"
+          icon="pi pi-refresh"
+          [outlined]="true"
+          severity="warn"
+          [loading]="processingComponentDecision()"
+          (onClick)="handleComponentDecision('overwrite')"
+          styleClass="w-full justify-center"
+        >
+          <ng-template pTemplate="content">
+            <div class="flex flex-col items-center py-2">
+              <div class="flex items-center space-x-2">
+                <i class="pi pi-refresh text-lg"></i>
+                <span class="font-semibold">Overwrite Component</span>
+              </div>
+              <span class="text-xs mt-1 opacity-80">
+                Delete existing code and regenerate from template
+              </span>
+            </div>
+          </ng-template>
+        </p-button>
+
+        <p-button
+          label="Cancel"
+          icon="pi pi-times"
+          [text]="true"
+          severity="secondary"
+          [loading]="processingComponentDecision()"
+          (onClick)="handleComponentDecision('cancel')"
+          styleClass="w-full justify-center"
+        />
+      </div>
+    </div>
+  </p-dialog>
+</div>

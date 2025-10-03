@@ -22,6 +22,12 @@
     "test": "npm run test:api && npm run test:web",
     "test:api": "npm --workspace=apps/api run test",
     "test:web": "npm --workspace=apps/web run test",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:chromium": "playwright test --project=chromium",
+    "test:e2e:firefox": "playwright test --project=firefox",
+    "test:e2e:webkit": "playwright test --project=webkit",
     "lint": "npm run lint:api && npm run lint:web",
     "lint:api": "npm --workspace=apps/api run lint",
     "lint:web": "npm --workspace=apps/web run lint",
@@ -41,7 +47,10 @@
     "feedback:dashboard": "node scripts/feedback-collector.js dashboard",
     "onboarding:setup": "npm run metrics:init && npm run feedback:init && node examples/tutorials/first-feature/validation.js",
     "onboarding:help": "echo 'Visit examples/tutorials/first-feature/README.md to get started!'",
-    "prepare": "husky"
+    "prepare": "husky",
+    "bmad:refresh": "bmad-method install -f -i codex",
+    "bmad:list": "bmad-method list:agents",
+    "bmad:validate": "bmad-method validate"
   },
   "lint-staged": {
     "apps/api/**/*.{ts,js}": [
@@ -68,5 +77,8 @@
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=9.0.0"
+  },
+  "dependencies": {
+    "@omnedia/ngx-dotpattern": "^3.0.0"
   }
 }

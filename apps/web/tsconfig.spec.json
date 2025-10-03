@@ -4,19 +4,17 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./out-tsc/spec",
-    "types": [
-      "jasmine"
-    ],
+    "types": ["jasmine", "node"],
     "baseUrl": ".",
     "paths": {
       "@core/*": ["src/app/core/*"],
       "@features/*": ["src/app/features/*"],
       "@shared/*": ["src/app/shared/*"],
       "@layouts/*": ["src/app/layouts/*"],
-      "@env/*": ["src/environments/*"]
+      "@env/*": ["src/environments/*"],
+      "@nodeangularfullstack/shared": ["../../packages/shared/src/index.ts"],
+      "@nodeangularfullstack/shared/*": ["../../packages/shared/src/*"]
     }
   },
-  "include": [
-    "src/**/*.ts"
-  ]
+  "include": ["src/**/*.ts"]
 }

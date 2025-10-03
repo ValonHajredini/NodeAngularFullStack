@@ -24,15 +24,31 @@ setup, and comprehensive testing.
 - `npm test` - Run all tests (backend + frontend)
 - `npm run test:api` - Backend tests only
 - `npm run test:web` - Frontend tests only
+- `npm run test:e2e` - Run Playwright E2E tests
+- `npm run test:e2e:ui` - Playwright E2E with UI mode
 - Backend specific: `npm run test:unit`, `npm run test:integration`, `npm run test:security`
+
+**Running Single Tests:**
+
+- Backend: `npm --workspace=apps/api run test -- --testPathPattern="filename.test.ts"`
+- Frontend: `npm --workspace=apps/web run test -- --include="**/component-name.spec.ts"`
+- Add `--watch=false` or `--passWithNoTests` flags as needed
 
 ### Build and Quality Commands
 
 - `npm run build` - Build all applications
+- `npm run build:shared` - Build shared package (required before backend/frontend)
 - `npm run lint` - Lint all applications
 - `npm run typecheck` - TypeScript checking for all apps
 - `npm run format` - Format code with Prettier
 - `npm run quality:check` - Run lint + typecheck + format check
+
+**Workspace-Specific:**
+
+- `npm --workspace=apps/api run lint` - Lint backend only
+- `npm --workspace=apps/web run lint` - Lint frontend only
+- `npm --workspace=apps/api run typecheck` - TypeScript check backend
+- `npm --workspace=apps/web run typecheck` - TypeScript check frontend
 
 ### Database Commands (run from root or in apps/api/)
 
@@ -77,6 +93,11 @@ packages/
 - NgRx Signals for state management
 - Reactive forms and validation
 - Proxy configuration for API calls (proxy.conf.json)
+- Feature-based architecture:
+  - `src/app/core/` - Core services, guards, and API layer
+  - `src/app/features/` - Feature modules (admin, auth, dashboard, profile, settings, tools)
+  - `src/app/shared/` - Shared components, directives, pipes, and utilities
+  - `src/app/layouts/` - Layout components
 
 **Shared Package (packages/shared/)**
 
@@ -105,18 +126,26 @@ packages/
 ### Backend Testing
 
 - Jest framework with TypeScript support
-- Unit tests: `src/**/*.test.ts`
-- Integration tests: `tests/integration/`
-- Performance tests: `tests/performance/`
+- Unit tests: `apps/api/tests/unit/` (controllers, repositories, validators)
+- Integration tests: `apps/api/tests/integration/`
+- Performance tests: `apps/api/tests/performance/`
 - Security tests: comprehensive auth and validation testing
-- Coverage reports available with `npm run test:coverage`
+- Coverage reports available with `npm --workspace=apps/api run test:coverage`
 
 ### Frontend Testing
 
 - Karma + Jasmine for unit tests
 - Angular testing utilities
-- Component and service testing
-- Coverage reports with `npm run test:coverage`
+- Component and service testing (\*.spec.ts files alongside components)
+- Coverage reports with `npm --workspace=apps/web run test:coverage`
+
+### E2E Testing
+
+- Playwright for cross-browser testing
+- Test directory: `tests/e2e/`
+- Configured for Chromium, Firefox, WebKit, Edge, and mobile browsers
+- Automatically starts backend and frontend servers before running tests
+- Run with `npm run test:e2e` or `npm run test:e2e:ui` for interactive mode
 
 ## Development Workflow
 
@@ -204,9 +233,9 @@ packages/
 
 **Test User Credentials:**
 
-- Admin: admin@example.com / Admin123!@#
-- User: user@example.com / User123!@#
-- ReadOnly: readonly@example.com / Read123!@#
+- Admin: admin@example.com / password123
+- User: user@example.com / password123
+- ReadOnly: readonly@example.com / password123
 
 ## Utility Scripts
 
@@ -219,3 +248,10 @@ The `scripts/` directory contains utility scripts for:
 - Database management (`pgweb-*.sh`)
 
 Run these scripts with appropriate npm commands as defined in the root package.json.
+
+# important-instruction-reminders
+
+Do what has been asked; nothing more, nothing less. NEVER create files unless they're absolutely
+necessary for achieving your goal. ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (\*.md) or README files. Only create documentation
+files if explicitly requested by the User.

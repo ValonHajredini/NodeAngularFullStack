@@ -345,7 +345,7 @@ export class PasswordResetConfirmComponent implements OnInit {
   protected readonly resetSuccess = signal(false);
   protected readonly passwordStrength = signal(0);
 
-  private resetToken: string = '';
+  private resetToken = '';
 
   constructor() {
     this.confirmForm = this.fb.group(
@@ -474,7 +474,7 @@ export class PasswordResetConfirmComponent implements OnInit {
   /**
    * Custom validator to check if passwords match.
    */
-  private passwordMatchValidator(control: AbstractControl): { [key: string]: any } | null {
+  private passwordMatchValidator(control: AbstractControl): Record<string, any> | null {
     const password = control.get('password');
     const confirmPassword = control.get('confirmPassword');
 

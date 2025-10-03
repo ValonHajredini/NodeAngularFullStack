@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, adminGuard, userGuard } from './core/guards/auth.guard';
+import { authGuard, adminGuard, userGuard, roleGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   // Debug route for testing
@@ -85,8 +85,8 @@ export const routes: Routes = [
       },
       {
         path: 'settings',
-        loadComponent: () =>
-          import('./features/settings/settings.component').then((m) => m.SettingsComponent),
+        loadChildren: () =>
+          import('./features/settings/settings.routes').then((m) => m.settingsRoutes),
       },
       {
         path: 'tools',
@@ -103,6 +103,11 @@ export const routes: Routes = [
           import('./features/documentation/documentation.component').then(
             (m) => m.DocumentationComponent,
           ),
+      },
+      {
+        path: 'admin',
+        loadChildren: () => import('./features/admin/admin.routes').then((m) => m.adminRoutes),
+        canActivate: [authGuard, roleGuard(['admin'])],
       },
       {
         path: '',

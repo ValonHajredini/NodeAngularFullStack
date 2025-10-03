@@ -157,7 +157,7 @@ export class ThemeService {
   /**
    * Set the current theme
    */
-  setTheme(theme: ThemeType, persist: boolean = true): void {
+  setTheme(theme: ThemeType, persist = true): void {
     this._currentTheme.set(theme);
 
     // Calculate if dark mode should be active

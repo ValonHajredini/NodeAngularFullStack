@@ -11,7 +11,7 @@ describe('LoadingSpinnerComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [LoadingSpinnerComponent]
+      imports: [LoadingSpinnerComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(LoadingSpinnerComponent);
@@ -56,15 +56,15 @@ describe('LoadingSpinnerComponent', () => {
   });
 
   it('should apply correct size classes', () => {
-    const sizes: Array<'sm' | 'md' | 'lg' | 'xl'> = ['sm', 'md', 'lg', 'xl'];
+    const sizes: ('sm' | 'md' | 'lg' | 'xl')[] = ['sm', 'md', 'lg', 'xl'];
     const expectedClasses = {
       sm: 'h-4 w-4',
       md: 'h-6 w-6',
       lg: 'h-8 w-8',
-      xl: 'h-12 w-12'
+      xl: 'h-12 w-12',
     };
 
-    sizes.forEach(size => {
+    sizes.forEach((size) => {
       component.size = size;
       fixture.detectChanges();
 
@@ -74,8 +74,14 @@ describe('LoadingSpinnerComponent', () => {
   });
 
   it('should apply correct color classes', () => {
-    const colors: Array<'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'white'> =
-      ['primary', 'secondary', 'success', 'warning', 'error', 'white'];
+    const colors: ('primary' | 'secondary' | 'success' | 'warning' | 'error' | 'white')[] = [
+      'primary',
+      'secondary',
+      'success',
+      'warning',
+      'error',
+      'white',
+    ];
 
     const expectedClasses = {
       primary: 'border-primary-200 border-t-primary-600',
@@ -83,10 +89,10 @@ describe('LoadingSpinnerComponent', () => {
       success: 'border-green-200 border-t-green-600',
       warning: 'border-yellow-200 border-t-yellow-600',
       error: 'border-red-200 border-t-red-600',
-      white: 'border-white/30 border-t-white'
+      white: 'border-white/30 border-t-white',
     };
 
-    colors.forEach(color => {
+    colors.forEach((color) => {
       component.color = color;
       fixture.detectChanges();
 

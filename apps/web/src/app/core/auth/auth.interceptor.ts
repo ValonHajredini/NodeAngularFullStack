@@ -1,12 +1,18 @@
 import { inject } from '@angular/core';
-import { HttpInterceptorFn, HttpRequest, HttpHandlerFn, HttpEvent, HttpErrorResponse } from '@angular/common/http';
+import {
+  HttpInterceptorFn,
+  HttpRequest,
+  HttpHandlerFn,
+  HttpEvent,
+  HttpErrorResponse,
+} from '@angular/common/http';
 import { Observable, throwError, BehaviorSubject } from 'rxjs';
 import { catchError, filter, take, switchMap } from 'rxjs/operators';
 import { AuthService } from './auth.service';
 
 // State for token refresh management
 let isRefreshing = false;
-let refreshTokenSubject: BehaviorSubject<any> = new BehaviorSubject<any>(null);
+const refreshTokenSubject: BehaviorSubject<any> = new BehaviorSubject<any>(null);
 
 /**
  * HTTP interceptor function that automatically adds JWT tokens to API requests
@@ -18,7 +24,10 @@ let refreshTokenSubject: BehaviorSubject<any> = new BehaviorSubject<any>(null);
  * - Request queuing during token refresh
  * - Excludes auth endpoints from token attachment
  */
-export const authInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next: HttpHandlerFn): Observable<HttpEvent<any>> => {
+export const authInterceptor: HttpInterceptorFn = (
+  req: HttpRequest<any>,
+  next: HttpHandlerFn,
+): Observable<HttpEvent<any>> => {
   const authService = inject(AuthService);
 
   // Skip auth endpoints to prevent infinite loops
@@ -30,13 +39,13 @@ export const authInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next: 
   const authReq = addTokenHeader(req, authService);
 
   return next(authReq).pipe(
-    catchError(error => {
+    catchError((error) => {
       if (error instanceof HttpErrorResponse && error.status === 401) {
         return handle401Error(authReq, next, authService);
       }
 
       return throwError(() => error);
-    })
+    }),
   );
 };
 
@@ -52,8 +61,8 @@ function addTokenHeader(request: HttpRequest<any>, authService: AuthService): Ht
   if (token) {
     return request.clone({
       setHeaders: {
-        Authorization: `Bearer ${token}`
-      }
+        Authorization: `Bearer ${token}`,
+      },
     });
   }
 
@@ -68,7 +77,11 @@ function addTokenHeader(request: HttpRequest<any>, authService: AuthService): Ht
  * @param authService - The authentication service instance
  * @returns Observable of HTTP events
  */
-function handle401Error(request: HttpRequest<any>, next: HttpHandlerFn, authService: AuthService): Observable<HttpEvent<any>> {
+function handle401Error(
+  request: HttpRequest<any>,
+  next: HttpHandlerFn,
+  authService: AuthService,
+): Observable<HttpEvent<any>> {
   if (!isRefreshing) {
     isRefreshing = true;
     refreshTokenSubject.next(null);
@@ -91,7 +104,7 @@ function handle401Error(request: HttpRequest<any>, next: HttpHandlerFn, authServ
           // If refresh fails, logout the user
           authService.logout().subscribe();
           return throwError(() => error);
-        })
+        }),
       );
     } else {
       // No refresh token available, logout immediately
@@ -103,9 +116,9 @@ function handle401Error(request: HttpRequest<any>, next: HttpHandlerFn, authServ
 
   // If already refreshing, wait for the refresh to complete
   return refreshTokenSubject.pipe(
-    filter(token => token !== null),
+    filter((token) => token !== null),
     take(1),
-    switchMap(() => next(addTokenHeader(request, authService)))
+    switchMap(() => next(addTokenHeader(request, authService))),
   );
 }
 
@@ -123,8 +136,8 @@ function isAuthEndpoint(url: string): boolean {
     '/auth/refresh',
     '/auth/forgot-password',
     '/auth/reset-password',
-    '/auth/verify-email'
+    '/auth/verify-email',
   ];
 
-  return authEndpoints.some(endpoint => url.includes(endpoint));
+  return authEndpoints.some((endpoint) => url.includes(endpoint));
 }

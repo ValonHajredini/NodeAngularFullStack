@@ -86,6 +86,7 @@ export class ToolsSeed {
           description = EXCLUDED.description,
           active = EXCLUDED.active,
           updated_at = CURRENT_TIMESTAMP
+        RETURNING id
       `;
 
       const params = [
@@ -96,11 +97,59 @@ export class ToolsSeed {
         tool.active,
       ];
 
-      await databaseService.query(query, params);
+      const result = await databaseService.query(query, params);
+      const toolId = result.rows[0]?.id;
+
       console.log(`✅ Created tool: ${tool.name} (${tool.key})`);
+
+      // Create default configuration for the tool
+      if (toolId) {
+        await this.createDefaultConfig(toolId, tool.key);
+      }
     } catch (error) {
       console.error(`❌ Failed to create tool ${tool.key}:`, error);
       throw error;
+    }
+  }
+
+  /**
+   * Creates a default configuration for a tool.
+   * @param toolId - Tool ID
+   * @param toolKey - Tool key for logging
+   * @returns Promise that resolves when config is created
+   */
+  private static async createDefaultConfig(
+    toolId: string,
+    toolKey: string
+  ): Promise<void> {
+    try {
+      const configQuery = `
+        INSERT INTO tool_configs (
+          tool_id,
+          version,
+          display_mode,
+          layout_settings,
+          is_active
+        ) VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT DO NOTHING
+      `;
+
+      const configParams = [
+        toolId,
+        '1.0.0',
+        'standard',
+        JSON.stringify({ maxWidth: '1200px', padding: '2rem' }),
+        true,
+      ];
+
+      await databaseService.query(configQuery, configParams);
+      console.log(`   ✅ Created default config for tool: ${toolKey}`);
+    } catch (error) {
+      // Don't fail tool creation if config creation fails
+      console.warn(
+        `   ⚠️ Failed to create default config for tool ${toolKey}:`,
+        error
+      );
     }
   }
 

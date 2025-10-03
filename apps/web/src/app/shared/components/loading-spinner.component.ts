@@ -12,14 +12,14 @@ import { CommonModule } from '@angular/common';
   template: `
     <!-- Overlay Mode -->
     @if (overlay) {
-      <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-           role="dialog"
-           aria-modal="true"
-           aria-label="Loading content">
+      <div
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Loading content"
+      >
         <div class="bg-white rounded-lg p-6 shadow-lg flex flex-col items-center space-y-3">
-          <div [class]="spinnerClasses"
-               role="status"
-               [attr.aria-label]="ariaLabel">
+          <div [class]="spinnerClasses" role="status" [attr.aria-label]="ariaLabel">
             <div [class]="innerSpinnerClasses"></div>
           </div>
           @if (message) {
@@ -30,9 +30,7 @@ import { CommonModule } from '@angular/common';
     } @else {
       <!-- Inline Mode -->
       <div [class]="containerClasses">
-        <div [class]="spinnerClasses"
-             role="status"
-             [attr.aria-label]="ariaLabel">
+        <div [class]="spinnerClasses" role="status" [attr.aria-label]="ariaLabel">
           <div [class]="innerSpinnerClasses"></div>
         </div>
         @if (message) {
@@ -41,49 +39,60 @@ import { CommonModule } from '@angular/common';
       </div>
     }
   `,
-  styles: [`
-    /* Custom spin animation */
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    .animate-spin {
-      animation: spin 1s linear infinite;
-    }
-
-    /* Pulse animation for overlay background */
-    @keyframes pulse {
-      0%, 100% { opacity: 0.3; }
-      50% { opacity: 0.6; }
-    }
-
-    .animate-pulse-bg {
-      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    }
-
-    /* High contrast mode support */
-    @media (prefers-contrast: high) {
-      .spinner-border {
-        border-color: currentColor;
-        border-top-color: transparent;
+  styles: [
+    `
+      /* Custom spin animation */
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
       }
-    }
 
-    /* Reduced motion support */
-    @media (prefers-reduced-motion: reduce) {
       .animate-spin {
-        animation: none;
+        animation: spin 1s linear infinite;
       }
 
-      .animate-spin::after {
-        content: '⏳';
-        display: block;
-        font-size: inherit;
+      /* Pulse animation for overlay background */
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 0.3;
+        }
+        50% {
+          opacity: 0.6;
+        }
       }
-    }
-  `],
-  changeDetection: ChangeDetectionStrategy.OnPush
+
+      .animate-pulse-bg {
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
+
+      /* High contrast mode support */
+      @media (prefers-contrast: high) {
+        .spinner-border {
+          border-color: currentColor;
+          border-top-color: transparent;
+        }
+      }
+
+      /* Reduced motion support */
+      @media (prefers-reduced-motion: reduce) {
+        .animate-spin {
+          animation: none;
+        }
+
+        .animate-spin::after {
+          content: '⏳';
+          display: block;
+          font-size: inherit;
+        }
+      }
+    `,
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LoadingSpinnerComponent {
   /**
@@ -104,17 +113,17 @@ export class LoadingSpinnerComponent {
   /**
    * Whether to show as overlay (modal-like) or inline
    */
-  @Input() overlay: boolean = false;
+  @Input() overlay = false;
 
   /**
    * Whether to center the spinner in its container
    */
-  @Input() centered: boolean = false;
+  @Input() centered = false;
 
   /**
    * Custom aria-label for accessibility
    */
-  @Input() ariaLabel: string = 'Loading content, please wait';
+  @Input() ariaLabel = 'Loading content, please wait';
 
   /**
    * Get CSS classes for the spinner container
@@ -136,7 +145,7 @@ export class LoadingSpinnerComponent {
       sm: 'h-4 w-4',
       md: 'h-6 w-6',
       lg: 'h-8 w-8',
-      xl: 'h-12 w-12'
+      xl: 'h-12 w-12',
     };
     const colors = {
       primary: 'border-primary-200 border-t-primary-600',
@@ -144,7 +153,7 @@ export class LoadingSpinnerComponent {
       success: 'border-green-200 border-t-green-600',
       warning: 'border-yellow-200 border-t-yellow-600',
       error: 'border-red-200 border-t-red-600',
-      white: 'border-white/30 border-t-white'
+      white: 'border-white/30 border-t-white',
     };
 
     return `${base} ${sizes[this.size]} ${colors[this.color]}`.trim();
@@ -166,7 +175,7 @@ export class LoadingSpinnerComponent {
       sm: 'text-xs',
       md: 'text-sm',
       lg: 'text-base',
-      xl: 'text-lg'
+      xl: 'text-lg',
     };
     const colors = {
       primary: 'text-primary-700',
@@ -174,7 +183,7 @@ export class LoadingSpinnerComponent {
       success: 'text-green-700',
       warning: 'text-yellow-700',
       error: 'text-red-700',
-      white: 'text-white'
+      white: 'text-white',
     };
 
     return `${base} ${sizes[this.size]} ${colors[this.color]}`.trim();

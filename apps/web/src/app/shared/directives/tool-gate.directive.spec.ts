@@ -40,6 +40,7 @@ describe('ToolGateDirective', () => {
     id: '1',
     key: 'test-tool',
     name: 'Test Tool',
+    slug: 'test-tool',
     description: 'A test tool',
     active: true,
     createdAt: new Date(),
@@ -49,7 +50,7 @@ describe('ToolGateDirective', () => {
   beforeEach(async () => {
     loadingSubject = new BehaviorSubject<boolean>(false);
     const spy = jasmine.createSpyObj('ToolsService', ['isToolEnabled', 'getToolStatus'], {
-      loading: loadingSubject.asReadonly(),
+      loading: loadingSubject.asObservable(),
     });
 
     await TestBed.configureTestingModule({
@@ -179,12 +180,10 @@ describe('ToolGateDirective', () => {
       component.toolKey = '';
       toolsServiceSpy.isToolEnabled.and.returnValue(false);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
       spyOn(console, 'warn');
 
       fixture.detectChanges();
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
       expect(console.warn).toHaveBeenCalledWith('ToolGateDirective: Empty tool key provided');
 
       const mainContent = fixture.debugElement.query(By.css('#main-content'));
@@ -195,12 +194,10 @@ describe('ToolGateDirective', () => {
       toolsServiceSpy.isToolEnabled.and.returnValue(false);
       toolsServiceSpy.getToolStatus.and.returnValue(throwError(() => new Error('API Error')));
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
       spyOn(console, 'error');
 
       fixture.detectChanges();
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
       expect(console.error).toHaveBeenCalled();
 
       const mainContent = fixture.debugElement.query(By.css('#main-content'));

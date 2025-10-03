@@ -9,6 +9,9 @@ export interface EnvironmentConfig {
   /** Base URL for API endpoints */
   apiUrl: string;
 
+  /** Base URL used when constructing public short links */
+  shortLinkBaseUrl: string;
+
   /** Application name for display */
   appName: string;
 
