@@ -8,4 +8,5 @@ export * from './types/api-token.interface';
 export * from './types/token-usage.interface';
 export * from './types/storage.interface';
 export * from './types/tools.interface';
+export * from './types/forms.types';
 export * from './utils/validation';
