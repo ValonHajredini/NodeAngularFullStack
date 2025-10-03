@@ -6,7 +6,8 @@ When this command is used, execute the following task:
 
 # review-story
 
-Perform a comprehensive test architecture review with quality gate decision. This adaptive, risk-aware review creates both a story update and a detailed gate file.
+Perform a comprehensive test architecture review with quality gate decision. This adaptive,
+risk-aware review creates both a story update and a detailed gate file.
 
 ## Inputs
 
@@ -40,7 +41,8 @@ required:
 
 **A. Requirements Traceability**
 
-- Map each acceptance criteria to its validating tests (document mapping with Given-When-Then, not test code)
+- Map each acceptance criteria to its validating tests (document mapping with Given-When-Then, not
+  test code)
 - Identify coverage gaps
 - Verify all requirements have corresponding test cases
 
@@ -112,7 +114,8 @@ required:
 
 ## Output 1: Update Story File - QA Results Section ONLY
 
-**CRITICAL**: You are ONLY authorized to update the "QA Results" section of the story file. DO NOT modify any other sections.
+**CRITICAL**: You are ONLY authorized to update the "QA Results" section of the story file. DO NOT
+modify any other sections.
 
 **QA Results Anchor Rule:**
 
@@ -173,16 +176,16 @@ After review and any refactoring, append your results to the story file in the Q
 
 ### Gate Status
 
-Gate: {STATUS} → qa.qaLocation/gates/{epic}.{story}-{slug}.yml
-Risk profile: qa.qaLocation/assessments/{epic}.{story}-risk-{YYYYMMDD}.md
-NFR assessment: qa.qaLocation/assessments/{epic}.{story}-nfr-{YYYYMMDD}.md
+Gate: {STATUS} → qa.qaLocation/gates/{epic}.{story}-{slug}.yml Risk profile:
+qa.qaLocation/assessments/{epic}.{story}-risk-{YYYYMMDD}.md NFR assessment:
+qa.qaLocation/assessments/{epic}.{story}-nfr-{YYYYMMDD}.md
 
 # Note: Paths should reference core-config.yaml for custom configurations
 
 ### Recommended Status
 
-[✓ Ready for Done] / [✗ Changes Required - See unchecked items above]
-(Story owner decides final status)
+[✓ Ready for Done] / [✗ Changes Required - See unchecked items above] (Story owner decides final
+status)
 ```
 
 ## Output 2: Create Quality Gate File
@@ -190,7 +193,7 @@ NFR assessment: qa.qaLocation/assessments/{epic}.{story}-nfr-{YYYYMMDD}.md
 **Template and Directory:**
 
 - Render from `../templates/qa-gate-tmpl.yaml`
-- Create directory defined in `qa.qaLocation/gates` (see `bmad-core/core-config.yaml`) if missing
+- Create directory defined in `qa.qaLocation/gates` (see `.bmad-core/core-config.yaml`) if missing
 - Save to: `qa.qaLocation/gates/{epic}.{story}-{slug}.yml`
 
 Gate file structure:
@@ -245,7 +248,8 @@ recommendations:
 
 **Deterministic rule (apply in order):**
 
-If risk_summary exists, apply its thresholds first (≥9 → FAIL, ≥6 → CONCERNS), then NFR statuses, then top_issues severity.
+If risk_summary exists, apply its thresholds first (≥9 → FAIL, ≥6 → CONCERNS), then NFR statuses,
+then top_issues severity.
 
 1. **Risk thresholds (if risk_summary present):**
    - If any risk score ≥ 9 → Gate = FAIL (unless waived)
