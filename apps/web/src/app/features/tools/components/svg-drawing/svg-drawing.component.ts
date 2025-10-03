@@ -14,6 +14,8 @@ import { Toast } from 'primeng/toast';
 import { ButtonDirective } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
+import { DialogModule } from 'primeng/dialog';
+import { Accordion, AccordionPanel } from 'primeng/accordion';
 import { SvgDrawingService } from './svg-drawing.service';
 import { CanvasRendererComponent } from './components/canvas-renderer/canvas-renderer.component';
 import { ToolsSidebarComponent } from './components/tools-sidebar/tools-sidebar.component';
@@ -29,16 +31,7 @@ import { ImportSvgSymbolComponent } from './components/import-svg-symbol/import-
 import { SvgSymbolLibraryComponent } from './components/svg-symbol-library/svg-symbol-library.component';
 import { ShapeStyle, ExportOptions, DrawingProject } from '@nodeangularfullstack/shared';
 
-type SidebarSection =
-  | 'shapeProperties'
-  | 'shapes'
-  | 'backgroundImage'
-  | 'exportToSvg'
-  | 'importTemplate'
-  | 'importSvgSymbol'
-  | 'svgSymbolLibrary'
-  | 'myProjects'
-  | 'helpShortcuts';
+type SidebarSection = 'shapeProperties' | 'shapes';
 
 /**
  * SVG Drawing tool component.
@@ -54,6 +47,9 @@ type SidebarSection =
     Toast,
     ButtonDirective,
     TooltipModule,
+    DialogModule,
+    Accordion,
+    AccordionPanel,
     CanvasRendererComponent,
     ToolsSidebarComponent,
     BackgroundImagePanelComponent,
@@ -82,6 +78,17 @@ export class SvgDrawingComponent implements OnInit, OnDestroy {
   readonly loading = signal<boolean>(false);
   readonly error = signal<string | null>(null);
   readonly openSections = signal<SidebarSection[]>([]);
+  readonly showExportDialog = signal<boolean>(false);
+  readonly showBackgroundImageDialog = signal<boolean>(false);
+  readonly showSvgSymbolsDialog = signal<boolean>(false);
+
+  // Menu dropdowns visibility
+  readonly showFileMenu = signal<boolean>(false);
+  readonly showProjectsMenu = signal<boolean>(false);
+  readonly showBackgroundMenu = signal<boolean>(false);
+  readonly showSymbolsMenu = signal<boolean>(false);
+  readonly showExportMenu = signal<boolean>(false);
+  readonly showHelpMenu = signal<boolean>(false);
 
   ngOnInit(): void {
     this.initializeTool();
@@ -136,6 +143,72 @@ export class SvgDrawingComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Toggle menu dropdown visibility
+   */
+  toggleFileMenu(): void {
+    this.showFileMenu.update((v) => !v);
+    this.showProjectsMenu.set(false);
+    this.showBackgroundMenu.set(false);
+    this.showSymbolsMenu.set(false);
+    this.showExportMenu.set(false);
+    this.showHelpMenu.set(false);
+  }
+
+  toggleProjectsMenu(): void {
+    this.showProjectsMenu.update((v) => !v);
+    this.showFileMenu.set(false);
+    this.showBackgroundMenu.set(false);
+    this.showSymbolsMenu.set(false);
+    this.showExportMenu.set(false);
+    this.showHelpMenu.set(false);
+  }
+
+  toggleBackgroundMenu(): void {
+    this.showBackgroundMenu.update((v) => !v);
+    this.showFileMenu.set(false);
+    this.showProjectsMenu.set(false);
+    this.showSymbolsMenu.set(false);
+    this.showExportMenu.set(false);
+    this.showHelpMenu.set(false);
+  }
+
+  toggleSymbolsMenu(): void {
+    this.showSymbolsMenu.update((v) => !v);
+    this.showFileMenu.set(false);
+    this.showProjectsMenu.set(false);
+    this.showBackgroundMenu.set(false);
+    this.showExportMenu.set(false);
+    this.showHelpMenu.set(false);
+  }
+
+  toggleExportMenu(): void {
+    this.showExportMenu.update((v) => !v);
+    this.showFileMenu.set(false);
+    this.showProjectsMenu.set(false);
+    this.showBackgroundMenu.set(false);
+    this.showSymbolsMenu.set(false);
+    this.showHelpMenu.set(false);
+  }
+
+  toggleHelpMenu(): void {
+    this.showHelpMenu.update((v) => !v);
+    this.showFileMenu.set(false);
+    this.showProjectsMenu.set(false);
+    this.showBackgroundMenu.set(false);
+    this.showSymbolsMenu.set(false);
+    this.showExportMenu.set(false);
+  }
+
+  closeAllMenus(): void {
+    this.showFileMenu.set(false);
+    this.showProjectsMenu.set(false);
+    this.showBackgroundMenu.set(false);
+    this.showSymbolsMenu.set(false);
+    this.showExportMenu.set(false);
+    this.showHelpMenu.set(false);
+  }
+
+  /**
    * Handles tool selection from toolbar.
    */
   onToolSelected(
@@ -184,6 +257,48 @@ export class SvgDrawingComponent implements OnInit, OnDestroy {
     if (confirm('Are you sure you want to clear all shapes?')) {
       this.svgDrawingService.clearAll();
     }
+  }
+
+  /**
+   * Opens the export dialog modal.
+   */
+  onOpenExportDialog(): void {
+    this.showExportDialog.set(true);
+  }
+
+  /**
+   * Closes the export dialog modal.
+   */
+  onCloseExportDialog(): void {
+    this.showExportDialog.set(false);
+  }
+
+  /**
+   * Opens the background image dialog modal.
+   */
+  onOpenBackgroundImageDialog(): void {
+    this.showBackgroundImageDialog.set(true);
+  }
+
+  /**
+   * Closes the background image dialog modal.
+   */
+  onCloseBackgroundImageDialog(): void {
+    this.showBackgroundImageDialog.set(false);
+  }
+
+  /**
+   * Opens the SVG symbols dialog modal.
+   */
+  onOpenSvgSymbolsDialog(): void {
+    this.showSvgSymbolsDialog.set(true);
+  }
+
+  /**
+   * Closes the SVG symbols dialog modal.
+   */
+  onCloseSvgSymbolsDialog(): void {
+    this.showSvgSymbolsDialog.set(false);
   }
 
   /**
@@ -242,6 +357,9 @@ export class SvgDrawingComponent implements OnInit, OnDestroy {
           life: 3000,
         });
       }
+
+      // Close the export menu after successful export
+      this.closeAllMenus();
     } catch (error) {
       console.error('Export error:', error);
       this.messageService.add({

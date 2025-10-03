@@ -136,8 +136,19 @@ import { SvgDrawingService } from '../../svg-drawing.service';
         </label>
       </div>
 
-      <!-- Export Button -->
+      <!-- Export Buttons -->
       <div class="flex gap-2">
+        <button
+          pButton
+          type="button"
+          label="Cancel"
+          icon="pi pi-times"
+          severity="secondary"
+          [outlined]="true"
+          (click)="onCancel()"
+          [disabled]="isExporting()"
+          class="flex-1"
+        ></button>
         <button
           pButton
           type="button"
@@ -146,7 +157,7 @@ import { SvgDrawingService } from '../../svg-drawing.service';
           severity="primary"
           (click)="onExport()"
           [disabled]="!isValid() || isExporting()"
-          class="w-full"
+          class="flex-1"
         ></button>
       </div>
     </div>
@@ -157,12 +168,185 @@ import { SvgDrawingService } from '../../svg-drawing.service';
         max-width: 500px;
       }
 
+      /* Dropdown (Select) Styling */
+      :host ::ng-deep .p-select {
+        width: 100%;
+        min-width: 320px;
+      }
+
+      :host ::ng-deep .p-select-dropdown {
+        border: 1.5px solid #cbd5e1;
+        border-radius: 0.5rem;
+        background: white;
+        padding: 0.625rem 1rem;
+        font-size: 0.9375rem;
+        transition: all 0.2s;
+      }
+
+      :host ::ng-deep .p-select-dropdown:hover {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+
+      :host ::ng-deep .p-select-dropdown:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+      }
+
+      :host ::ng-deep .p-select-label {
+        padding: 0.375rem 0;
+        color: #1f2937;
+        font-weight: 500;
+      }
+
+      :host ::ng-deep .p-select-overlay {
+        border: 1.5px solid #e5e7eb;
+        border-radius: 0.5rem;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        margin-top: 0.25rem;
+      }
+
+      :host ::ng-deep .p-select-option {
+        padding: 0.75rem 1rem;
+        font-size: 0.9375rem;
+        transition: all 0.15s;
+      }
+
+      :host ::ng-deep .p-select-option:hover {
+        background: #f0f9ff;
+        color: #1e40af;
+      }
+
+      :host ::ng-deep .p-select-option.p-selected {
+        background: #dbeafe;
+        color: #1e40af;
+        font-weight: 600;
+      }
+
+      /* Input Number Styling */
       :host ::ng-deep .p-inputnumber {
         width: 100%;
       }
 
       :host ::ng-deep .p-inputnumber-input {
         width: 100%;
+        border: 1.5px solid #cbd5e1;
+        border-radius: 0.5rem;
+        padding: 0.625rem 1rem;
+        font-size: 0.9375rem;
+        font-weight: 500;
+        color: #1f2937;
+        transition: all 0.2s;
+      }
+
+      :host ::ng-deep .p-inputnumber-input:hover {
+        border-color: #94a3b8;
+      }
+
+      :host ::ng-deep .p-inputnumber-input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+      }
+
+      /* Input Number Buttons (Spinners) */
+      :host ::ng-deep .p-inputnumber-buttons-stacked .p-inputnumber-button-group {
+        display: flex;
+        flex-direction: column;
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+      }
+
+      :host ::ng-deep .p-inputnumber-button {
+        width: 2.5rem;
+        height: 50%;
+        border: 1.5px solid #cbd5e1;
+        background: white;
+        color: #64748b;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      :host ::ng-deep .p-inputnumber-button:hover {
+        background: #f0f9ff;
+        border-color: #3b82f6;
+        color: #3b82f6;
+      }
+
+      :host ::ng-deep .p-inputnumber-button:active {
+        background: #dbeafe;
+        color: #1e40af;
+      }
+
+      :host ::ng-deep .p-inputnumber-button-up {
+        border-top-right-radius: 0.5rem;
+        border-bottom: none;
+      }
+
+      :host ::ng-deep .p-inputnumber-button-down {
+        border-bottom-right-radius: 0.5rem;
+        border-top: 0.75px solid #cbd5e1;
+      }
+
+      :host ::ng-deep .p-inputnumber-button .p-icon {
+        width: 0.875rem;
+        height: 0.875rem;
+        font-weight: bold;
+      }
+
+      /* Input Text Styling */
+      :host ::ng-deep input[pInputText] {
+        border: 1.5px solid #cbd5e1;
+        border-radius: 0.5rem;
+        padding: 0.625rem 1rem;
+        font-size: 0.9375rem;
+        font-weight: 500;
+        color: #1f2937;
+        transition: all 0.2s;
+      }
+
+      :host ::ng-deep input[pInputText]:hover {
+        border-color: #94a3b8;
+      }
+
+      :host ::ng-deep input[pInputText]:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+      }
+
+      /* Checkbox Styling */
+      :host ::ng-deep .p-checkbox-box {
+        width: 1.25rem;
+        height: 1.25rem;
+        border: 2px solid #cbd5e1;
+        border-radius: 0.375rem;
+        transition: all 0.2s;
+      }
+
+      :host ::ng-deep .p-checkbox-box:hover {
+        border-color: #3b82f6;
+        background: #f0f9ff;
+      }
+
+      :host ::ng-deep .p-checkbox-box.p-checked {
+        background: #3b82f6;
+        border-color: #2563eb;
+      }
+
+      /* Labels */
+      label {
+        font-weight: 600;
+        color: #374151;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
       }
     `,
   ],
@@ -173,6 +357,9 @@ export class ExportOptionsComponent implements OnInit {
 
   /** Event emitted when export is confirmed */
   @Output() export = new EventEmitter<ExportOptions>();
+
+  /** Event emitted to close the dialog */
+  @Output() closeDialog = new EventEmitter<void>();
 
   /** Export options configuration */
   exportOptions: ExportOptions = {
@@ -283,6 +470,13 @@ export class ExportOptionsComponent implements OnInit {
     setTimeout(() => {
       this.isExporting.set(false);
     }, 500);
+  }
+
+  /**
+   * Handles cancel button click.
+   */
+  onCancel(): void {
+    this.closeDialog.emit();
   }
 
   /**

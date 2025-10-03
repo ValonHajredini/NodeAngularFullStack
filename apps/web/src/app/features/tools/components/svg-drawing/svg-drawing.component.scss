@@ -11,7 +11,8 @@
   background: white;
   border-bottom: 1px solid #e5e7eb;
   flex-shrink: 0;
-  z-index: 10;
+  position: relative;
+  z-index: 1000;
 }
 
 .toolbar-content {
@@ -19,7 +20,14 @@
   padding: 0 1rem;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 1rem;
+}
+
+.toolbar-separator {
+  width: 1px;
+  height: 28px;
+  background: #e5e7eb;
+  margin: 0 0.5rem;
 }
 
 .main-content {
@@ -136,7 +144,7 @@
 }
 
 .accordion-content-scrollable {
-  max-height: 400px;
+  max-height: 700px;
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -151,4 +159,92 @@
   .right-sidebar {
     display: none;
   }
+}
+
+/* Export Dialog Modal Styles */
+:host ::ng-deep .p-dialog {
+  .p-dialog-header {
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .p-dialog-content {
+    padding: 0;
+    background: white;
+    overflow: hidden; /* Remove outer modal scrollbar */
+  }
+}
+
+/* Responsive modal for mobile devices */
+@media (max-width: 640px) {
+  :host ::ng-deep .p-dialog {
+    width: 95vw !important;
+    max-width: 95vw !important;
+  }
+}
+
+/* Menu Bar Styles */
+.menu-dropdown {
+  position: relative;
+}
+
+.menu-button {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: none;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border-radius: 0;
+}
+
+.menu-button:hover {
+  background: #f3f4f6;
+}
+
+.menu-button.active {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.menu-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 250px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  margin-top: 2px;
+  z-index: 10000;
+  padding: 0.75rem;
+}
+
+.menu-panel-wide {
+  min-width: 400px;
+  max-width: 500px;
+}
+
+.menu-section {
+  padding: 0.5rem 0;
+}
+
+.menu-section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.75rem;
+}
+
+.menu-divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 1rem 0;
 }

@@ -33,8 +33,6 @@ import { SvgDrawingService } from '../../svg-drawing.service';
 
       <!-- Upload Section -->
       <div class="upload-section">
-        <h3 class="section-title">Background Image</h3>
-
         @if (!svgDrawingService.backgroundImage()) {
           <!-- Upload Area -->
           <div
@@ -194,11 +192,10 @@ import { SvgDrawingService } from '../../svg-drawing.service';
   styles: [
     `
       .background-image-panel {
-        padding: 1rem;
+        padding: 0;
         display: flex;
         flex-direction: column;
         gap: 1rem;
-        height: 100%;
       }
 
       .section-title {

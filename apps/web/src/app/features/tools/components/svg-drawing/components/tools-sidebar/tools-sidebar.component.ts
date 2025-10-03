@@ -12,7 +12,7 @@ import { ButtonDirective } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { ColorPickerModule } from 'primeng/colorpicker';
 import { SliderModule } from 'primeng/slider';
-import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { CheckboxModule } from 'primeng/checkbox';
 
 /**
  * Tools sidebar component for SVG drawing.
@@ -28,7 +28,7 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
     TooltipModule,
     ColorPickerModule,
     SliderModule,
-    ToggleSwitchModule,
+    CheckboxModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -246,21 +246,22 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
             </div>
           </div>
 
-          <div class="color-row">
+          <div class="fill-section">
             <label class="control-label-inline">Fill</label>
-            <div class="color-input-wrapper">
+            <div class="fill-controls-row">
+              <p-checkbox
+                [(ngModel)]="localFillEnabled"
+                (onChange)="onFillEnabledChange($event)"
+                [binary]="true"
+                class="fill-checkbox"
+                pTooltip="Enable/Disable Fill"
+                tooltipPosition="right"
+              />
               <p-colorPicker
                 [(ngModel)]="localFillColor"
                 (onChange)="onFillColorChange($event)"
                 [inline]="false"
                 appendTo="body"
-              />
-              <p-toggleswitch
-                [(ngModel)]="localFillEnabled"
-                (onChange)="onFillEnabledChange($event)"
-                class="fill-toggle"
-                pTooltip="Enable/Disable Fill"
-                tooltipPosition="right"
               />
             </div>
           </div>
@@ -524,9 +525,63 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
         gap: 0.375rem;
       }
 
-      .fill-toggle {
-        transform: scale(0.75);
+      .fill-section {
+        display: flex;
+        flex-direction: column;
+        gap: 0.375rem;
+      }
+
+      .fill-section .control-label-inline {
+        margin-bottom: 0.125rem;
+      }
+
+      .fill-controls-row {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 0.5rem;
+      }
+
+      .fill-checkbox {
         flex-shrink: 0;
+        display: flex;
+        align-items: center;
+      }
+
+      .fill-checkbox ::ng-deep .p-checkbox {
+        width: 1.125rem;
+        height: 1.125rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .fill-checkbox ::ng-deep .p-checkbox-box {
+        width: 1.125rem;
+        height: 1.125rem;
+        border: 2px solid #94a3b8;
+        border-radius: 0.25rem;
+        background: white;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .fill-checkbox ::ng-deep .p-checkbox-box:hover {
+        border-color: #3b82f6;
+        background: #f0f9ff;
+      }
+
+      .fill-checkbox ::ng-deep .p-checkbox-box.p-checked {
+        background: #3b82f6;
+        border-color: #2563eb;
+      }
+
+      .fill-checkbox ::ng-deep .p-checkbox-box .p-checkbox-icon {
+        font-size: 0.875rem;
+        color: white;
+        font-weight: bold;
       }
 
       .control-label-slider {
