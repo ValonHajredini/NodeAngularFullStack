@@ -1596,6 +1596,41 @@ export class SvgDrawingService {
         .map((v: Point) => `${(v.x - offsetX).toFixed(2)},${(v.y - offsetY).toFixed(2)}`)
         .join(' ');
       return `<polygon points="${points}" stroke="${stroke}" stroke-width="${strokeWidth}" fill="${fill}"/>`;
+    } else if (shape.type === 'bezier') {
+      const bezier = shape as any; // BezierShape
+      const sx = (bezier.start.x - offsetX).toFixed(2);
+      const sy = (bezier.start.y - offsetY).toFixed(2);
+      const cp1x = (bezier.controlPoint1.x - offsetX).toFixed(2);
+      const cp1y = (bezier.controlPoint1.y - offsetY).toFixed(2);
+      const cp2x = (bezier.controlPoint2.x - offsetX).toFixed(2);
+      const cp2y = (bezier.controlPoint2.y - offsetY).toFixed(2);
+      const ex = (bezier.end.x - offsetX).toFixed(2);
+      const ey = (bezier.end.y - offsetY).toFixed(2);
+
+      // SVG path with cubic bezier curve: M (move to start) C (cubic bezier with two control points)
+      const pathData = `M ${sx} ${sy} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${ex} ${ey}`;
+      return `<path d="${pathData}" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round"/>`;
+    } else if (shape.type === 'svg-symbol') {
+      const symbol = shape as any; // SVGSymbolShape
+      const x = (symbol.position.x - offsetX).toFixed(2);
+      const y = (symbol.position.y - offsetY).toFixed(2);
+      const rotation = symbol.rotation || 0;
+      const scale = symbol.scale || 1;
+
+      // Build transform attribute for positioning, rotation, and scaling
+      let transform = `translate(${x}, ${y})`;
+      if (rotation !== 0) {
+        // Rotate around the center of the symbol
+        const centerX = symbol.width / 2;
+        const centerY = symbol.height / 2;
+        transform += ` rotate(${rotation} ${centerX} ${centerY})`;
+      }
+      if (scale !== 1) {
+        transform += ` scale(${scale})`;
+      }
+
+      // Construct the SVG symbol element
+      return `<g transform="${transform}"><svg viewBox="${symbol.viewBox || '0 0 ' + symbol.originalWidth + ' ' + symbol.originalHeight}" width="${symbol.width}" height="${symbol.height}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"><g>${symbol.svgContent}</g></svg></g>`;
     }
     return '';
   }
