@@ -3,6 +3,10 @@
  * Handles database connections, test data management, and environment setup.
  */
 
+// Load test environment variables BEFORE any other imports
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.test' });
+
 import { Pool } from 'pg';
 import { databaseService } from '../../src/services/database.service';
 

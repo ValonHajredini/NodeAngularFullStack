@@ -1,10 +1,8 @@
 /**
  * Main application configuration module.
  * Centralizes all environment variable validation and configuration management.
+ * NOTE: For tests, dotenv is pre-loaded in test-setup.ts
  */
-import dotenv from 'dotenv';
-dotenv.config();
-
 import Joi from 'joi';
 import { tenantConfig, TenantConfig } from './tenant.config';
 

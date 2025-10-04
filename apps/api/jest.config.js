@@ -21,6 +21,18 @@ module.exports = {
         },
       },
     ],
+    '^.+\\.js$': [
+      'ts-jest',
+      {
+        tsconfig: {
+          target: 'ES2020',
+          lib: ['ES2020'],
+          module: 'commonjs',
+          esModuleInterop: true,
+          allowSyntheticDefaultImports: true,
+        },
+      },
+    ],
   },
   transformIgnorePatterns: ['node_modules/(?!(nanoid)/)'],
   collectCoverageFrom: [
