@@ -1,0 +1,256 @@
+<div class="form-renderer-container min-h-screen bg-gray-50 py-8 px-4">
+  <!-- Loading State -->
+  @if (state.loading) {
+    <div class="flex justify-center items-center min-h-[400px]">
+      <p-progress-spinner />
+    </div>
+  }
+
+  <!-- Error State -->
+  @else if (state.error) {
+    <div class="max-w-2xl mx-auto">
+      <p-card>
+        <div class="text-center py-8">
+          @switch (state.errorType) {
+            @case (errorTypes.NOT_FOUND) {
+              <i class="pi pi-exclamation-circle text-6xl text-orange-500 mb-4"></i>
+              <h2 class="text-2xl font-bold text-gray-800 mb-2">Form Not Found</h2>
+            }
+            @case (errorTypes.EXPIRED) {
+              <i class="pi pi-clock text-6xl text-red-500 mb-4"></i>
+              <h2 class="text-2xl font-bold text-gray-800 mb-2">Form Expired</h2>
+            }
+            @case (errorTypes.INVALID_TOKEN) {
+              <i class="pi pi-times-circle text-6xl text-red-500 mb-4"></i>
+              <h2 class="text-2xl font-bold text-gray-800 mb-2">Invalid Form Link</h2>
+            }
+            @case (errorTypes.RATE_LIMITED) {
+              <i class="pi pi-ban text-6xl text-orange-500 mb-4"></i>
+              <h2 class="text-2xl font-bold text-gray-800 mb-2">Too Many Requests</h2>
+            }
+            @default {
+              <i class="pi pi-exclamation-triangle text-6xl text-gray-500 mb-4"></i>
+              <h2 class="text-2xl font-bold text-gray-800 mb-2">Error Loading Form</h2>
+            }
+          }
+          <p class="text-gray-600 mb-4">{{ state.error }}</p>
+          <p class="text-sm text-gray-500">
+            Please contact the form creator if you believe this is an error.
+          </p>
+        </div>
+      </p-card>
+    </div>
+  }
+
+  <!-- Form Content -->
+  @else if (formGroup && schema) {
+    <div class="max-w-6xl mx-auto">
+      <p-card>
+        <form [formGroup]="formGroup" (ngSubmit)="onSubmit()" class="space-y-6">
+          <!-- Form Fields Grid -->
+          <div class="form-fields-grid" [ngClass]="getGridClass()">
+            @for (field of getSortedFields(); track field.id) {
+              @if (isFieldVisible(field)) {
+                <div class="form-field" [ngClass]="getFieldSpacingClass()">
+                  <div class="field-wrapper">
+                    @if (
+                      field.type !== fieldTypes.DIVIDER &&
+                      field.type !== fieldTypes.CHECKBOX &&
+                      field.type !== fieldTypes.TOGGLE
+                    ) {
+                      <label [for]="field.fieldName" class="field-label">
+                        {{ field.label }}
+                        @if (field.required) {
+                          <span class="text-red-500">*</span>
+                        }
+                      </label>
+                    }
+
+                    <!-- Text Input -->
+                    @if (field.type === fieldTypes.TEXT) {
+                      <input
+                        type="text"
+                        [id]="field.fieldName"
+                        [formControlName]="field.fieldName"
+                        [placeholder]="field.placeholder || ''"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    }
+
+                    <!-- Email Input -->
+                    @if (field.type === fieldTypes.EMAIL) {
+                      <input
+                        type="email"
+                        [id]="field.fieldName"
+                        [formControlName]="field.fieldName"
+                        [placeholder]="field.placeholder || ''"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    }
+
+                    <!-- Number Input -->
+                    @if (field.type === fieldTypes.NUMBER) {
+                      <input
+                        type="number"
+                        [id]="field.fieldName"
+                        [formControlName]="field.fieldName"
+                        [placeholder]="field.placeholder || ''"
+                        [min]="field.validation?.min ?? null"
+                        [max]="field.validation?.max ?? null"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    }
+
+                    <!-- Textarea -->
+                    @if (field.type === fieldTypes.TEXTAREA) {
+                      <textarea
+                        [id]="field.fieldName"
+                        [formControlName]="field.fieldName"
+                        [placeholder]="field.placeholder || ''"
+                        rows="5"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      ></textarea>
+                    }
+
+                    <!-- Select Dropdown -->
+                    @if (field.type === fieldTypes.SELECT) {
+                      <select
+                        [id]="field.fieldName"
+                        [formControlName]="field.fieldName"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">{{ field.placeholder || 'Select an option' }}</option>
+                        @for (option of field.options; track option.value) {
+                          <option [value]="option.value">{{ option.label }}</option>
+                        }
+                      </select>
+                    }
+
+                    <!-- Radio Button Group -->
+                    @if (field.type === fieldTypes.RADIO) {
+                      <div class="space-y-2">
+                        @for (option of field.options; track option.value) {
+                          <div class="flex items-center">
+                            <input
+                              type="radio"
+                              [id]="field.fieldName + '-' + option.value"
+                              [formControlName]="field.fieldName"
+                              [value]="option.value"
+                              class="mr-2"
+                            />
+                            <label [for]="field.fieldName + '-' + option.value">
+                              {{ option.label }}
+                            </label>
+                          </div>
+                        }
+                      </div>
+                    }
+
+                    <!-- Checkbox -->
+                    @if (field.type === fieldTypes.CHECKBOX) {
+                      <div class="flex items-center">
+                        <input
+                          type="checkbox"
+                          [id]="field.fieldName"
+                          [formControlName]="field.fieldName"
+                          class="mr-2"
+                        />
+                        <label [for]="field.fieldName">
+                          {{ field.label }}
+                          @if (field.required) {
+                            <span class="text-red-500">*</span>
+                          }
+                        </label>
+                      </div>
+                    }
+
+                    <!-- Toggle Switch -->
+                    @if (field.type === fieldTypes.TOGGLE) {
+                      <div class="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          [id]="field.fieldName"
+                          [formControlName]="field.fieldName"
+                          class="toggle-switch"
+                        />
+                        <label [for]="field.fieldName">
+                          {{ field.label }}
+                          @if (field.required) {
+                            <span class="text-red-500">*</span>
+                          }
+                        </label>
+                      </div>
+                    }
+
+                    <!-- Date Picker -->
+                    @if (field.type === fieldTypes.DATE) {
+                      <input
+                        type="date"
+                        [id]="field.fieldName"
+                        [formControlName]="field.fieldName"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    }
+
+                    <!-- DateTime Picker -->
+                    @if (field.type === fieldTypes.DATETIME) {
+                      <input
+                        type="datetime-local"
+                        [id]="field.fieldName"
+                        [formControlName]="field.fieldName"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    }
+
+                    <!-- File Upload -->
+                    @if (field.type === fieldTypes.FILE) {
+                      <input
+                        type="file"
+                        [id]="field.fieldName"
+                        [accept]="field.validation?.acceptedFileTypes?.join(',') || '*'"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      />
+                    }
+
+                    <!-- Divider -->
+                    @if (field.type === fieldTypes.DIVIDER) {
+                      <hr class="col-span-full my-4 border-gray-300" />
+                    }
+
+                    @if (field.helpText) {
+                      <small class="text-gray-500 text-sm">{{ field.helpText }}</small>
+                    }
+
+                    @if (shouldShowError(field.fieldName)) {
+                      <div class="text-red-600 text-sm mt-1">
+                        {{ getErrorMessage(field) }}
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            }
+          </div>
+
+          <!-- Submit Button -->
+          <div class="flex justify-end mt-6">
+            <button
+              type="submit"
+              pButton
+              [disabled]="formGroup.invalid || state.submitting"
+              class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              @if (state.submitting) {
+                <i class="pi pi-spin pi-spinner mr-2"></i>
+                Submitting...
+              } @else {
+                <i class="pi pi-check mr-2"></i>
+                Submit
+              }
+            </button>
+          </div>
+        </form>
+      </p-card>
+    </div>
+  }
+</div>
