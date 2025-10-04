@@ -68,13 +68,13 @@ describe('CreateToolWizardComponent', () => {
       expect(component.configurationForm).toBeTruthy();
 
       // Check basic info form controls
-      expect(component.basicInfoForm.get('name')?.validators).toBeTruthy();
-      expect(component.basicInfoForm.get('description')?.validators).toBeTruthy();
-      expect(component.basicInfoForm.get('toolKey')?.validators).toBeTruthy();
+      expect(component.basicInfoForm.get('name')?.validator).toBeTruthy();
+      expect(component.basicInfoForm.get('description')?.validator).toBeTruthy();
+      expect(component.basicInfoForm.get('toolKey')?.validator).toBeTruthy();
 
       // Check configuration form controls
-      expect(component.configurationForm.get('slug')?.validators).toBeTruthy();
-      expect(component.configurationForm.get('category')?.validators).toBeTruthy();
+      expect(component.configurationForm.get('slug')?.validator).toBeTruthy();
+      expect(component.configurationForm.get('category')?.validator).toBeTruthy();
       expect(component.configurationForm.get('icon')?.value).toBe('pi pi-cog');
     });
 

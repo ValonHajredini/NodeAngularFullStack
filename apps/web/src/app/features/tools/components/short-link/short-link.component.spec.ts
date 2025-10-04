@@ -8,17 +8,7 @@ import { ShortLinkComponent } from './short-link.component';
 import { ShortLinkService } from '../../services/short-link.service';
 import { MessageService } from 'primeng/api';
 
-// Mock PrimeNG components
-jest.mock('primeng/inputtext', () => ({ InputTextModule: {} }));
-jest.mock('primeng/button', () => ({ ButtonModule: {} }));
-jest.mock('primeng/datepicker', () => ({ DatePickerModule: {} }));
-jest.mock('primeng/card', () => ({ CardModule: {} }));
-jest.mock('primeng/toast', () => ({ ToastModule: {} }));
-jest.mock('primeng/progressspinner', () => ({ ProgressSpinnerModule: {} }));
-jest.mock('primeng/divider', () => ({ DividerModule: {} }));
-jest.mock('primeng/chip', () => ({ ChipModule: {} }));
-jest.mock('primeng/dataview', () => ({ DataViewModule: {} }));
-jest.mock('primeng/tag', () => ({ TagModule: {} }));
+// PrimeNG components are mocked by Karma configuration
 
 /**
  * Unit tests for ShortLinkComponent
@@ -27,8 +17,8 @@ jest.mock('primeng/tag', () => ({ TagModule: {} }));
 describe('ShortLinkComponent', () => {
   let component: ShortLinkComponent;
   let fixture: ComponentFixture<ShortLinkComponent>;
-  let mockShortLinkService: jest.Mocked<ShortLinkService>;
-  let mockMessageService: jest.Mocked<MessageService>;
+  let mockShortLinkService: jasmine.SpyObj<ShortLinkService>;
+  let mockMessageService: jasmine.SpyObj<MessageService>;
 
   const mockShortLink = {
     id: 'test-id',
@@ -44,21 +34,24 @@ describe('ShortLinkComponent', () => {
 
   beforeEach(async () => {
     // Create mocks
-    mockShortLinkService = {
-      loading: signal(false),
-      error: signal(null),
-      recentLinks: signal([]),
-      isToolEnabled: signal(true),
-      createShortLink: jest.fn(),
-      clearError: jest.fn(),
-      copyToClipboard: jest.fn(),
-      refreshRecentLinks: jest.fn(),
-      generateShortUrl: jest.fn(),
-    } as any;
+    mockShortLinkService = jasmine.createSpyObj(
+      'ShortLinkService',
+      [
+        'createShortLink',
+        'clearError',
+        'copyToClipboard',
+        'refreshRecentLinks',
+        'generateShortUrl',
+      ],
+      {
+        loading: signal(false),
+        error: signal(null),
+        recentLinks: signal([]),
+        isToolEnabled: signal(true),
+      },
+    );
 
-    mockMessageService = {
-      add: jest.fn(),
-    } as any;
+    mockMessageService = jasmine.createSpyObj('MessageService', ['add']);
 
     await TestBed.configureTestingModule({
       imports: [ShortLinkComponent, ReactiveFormsModule, NoopAnimationsModule],
@@ -157,7 +150,10 @@ describe('ShortLinkComponent', () => {
     });
 
     it('should not submit when tool is disabled', () => {
-      mockShortLinkService.isToolEnabled = signal(false);
+      Object.defineProperty(mockShortLinkService, 'isToolEnabled', {
+        value: signal(false),
+        writable: true,
+      });
       component.onSubmit();
 
       expect(mockShortLinkService.createShortLink).not.toHaveBeenCalled();
@@ -166,10 +162,13 @@ describe('ShortLinkComponent', () => {
     it('should submit valid form and handle success', () => {
       const mockResponse = {
         success: true,
-        data: { shortLink: mockShortLink },
+        data: {
+          shortLink: mockShortLink,
+          shortUrl: 'http://localhost:4200/l/abc123def',
+        },
       };
 
-      mockShortLinkService.createShortLink.mockReturnValue(of(mockResponse));
+      mockShortLinkService.createShortLink.and.returnValue(of(mockResponse));
 
       component.onSubmit();
 
@@ -188,7 +187,7 @@ describe('ShortLinkComponent', () => {
 
     it('should handle submission error', () => {
       const error = new Error('Creation failed');
-      mockShortLinkService.createShortLink.mockReturnValue(throwError(() => error));
+      mockShortLinkService.createShortLink.and.returnValue(throwError(() => error));
 
       component.onSubmit();
 
@@ -204,8 +203,11 @@ describe('ShortLinkComponent', () => {
       futureDate.setDate(futureDate.getDate() + 30);
 
       component.expirationControl.setValue(futureDate);
-      mockShortLinkService.createShortLink.mockReturnValue(
-        of({ success: true, data: { shortLink: mockShortLink } }),
+      mockShortLinkService.createShortLink.and.returnValue(
+        of({
+          success: true,
+          data: { shortLink: mockShortLink, shortUrl: 'http://localhost:4200/l/abc123def' },
+        }),
       );
 
       component.onSubmit();
@@ -218,8 +220,11 @@ describe('ShortLinkComponent', () => {
 
     it('should trim URL before submission', () => {
       component.urlControl.setValue('  https://example.com  ');
-      mockShortLinkService.createShortLink.mockReturnValue(
-        of({ success: true, data: { shortLink: mockShortLink } }),
+      mockShortLinkService.createShortLink.and.returnValue(
+        of({
+          success: true,
+          data: { shortLink: mockShortLink, shortUrl: 'http://localhost:4200/l/abc123def' },
+        }),
       );
 
       component.onSubmit();
@@ -257,11 +262,11 @@ describe('ShortLinkComponent', () => {
   describe('Clipboard Functionality', () => {
     beforeEach(() => {
       component.createdShortLink.set(mockShortLink);
-      mockShortLinkService.generateShortUrl.mockReturnValue('https://localhost/s/abc123');
+      mockShortLinkService.generateShortUrl.and.returnValue('https://localhost/s/abc123');
     });
 
     it('should copy generated short URL to clipboard', async () => {
-      mockShortLinkService.copyToClipboard.mockResolvedValue(true);
+      mockShortLinkService.copyToClipboard.and.resolveTo(true);
 
       await component.copyShortUrl();
 
@@ -276,8 +281,8 @@ describe('ShortLinkComponent', () => {
     });
 
     it('should copy specific code when provided', async () => {
-      mockShortLinkService.copyToClipboard.mockResolvedValue(true);
-      mockShortLinkService.generateShortUrl.mockReturnValue('https://localhost/s/xyz789');
+      mockShortLinkService.copyToClipboard.and.resolveTo(true);
+      mockShortLinkService.generateShortUrl.and.returnValue('https://localhost/s/xyz789');
 
       await component.copyShortUrl('xyz789');
 
@@ -288,7 +293,7 @@ describe('ShortLinkComponent', () => {
     });
 
     it('should handle clipboard copy failure', async () => {
-      mockShortLinkService.copyToClipboard.mockResolvedValue(false);
+      mockShortLinkService.copyToClipboard.and.resolveTo(false);
 
       await component.copyShortUrl();
 
@@ -300,7 +305,7 @@ describe('ShortLinkComponent', () => {
     });
 
     it('should handle clipboard error', async () => {
-      mockShortLinkService.copyToClipboard.mockRejectedValue(new Error('Clipboard error'));
+      mockShortLinkService.copyToClipboard.and.rejectWith(new Error('Clipboard error'));
 
       await component.copyShortUrl();
 
@@ -325,7 +330,7 @@ describe('ShortLinkComponent', () => {
     });
 
     it('should generate short URL for given code', () => {
-      mockShortLinkService.generateShortUrl.mockReturnValue('https://localhost/s/test123');
+      mockShortLinkService.generateShortUrl.and.returnValue('https://localhost/s/test123');
 
       const result = component.generateShortUrl('test123');
 
@@ -379,7 +384,7 @@ describe('ShortLinkComponent', () => {
 
   describe('Computed Values', () => {
     it('should generate short URL when short link is created', () => {
-      mockShortLinkService.generateShortUrl.mockReturnValue('https://localhost/s/abc123');
+      mockShortLinkService.generateShortUrl.and.returnValue('https://localhost/s/abc123');
       component.createdShortLink.set(mockShortLink);
 
       const generatedUrl = component.generatedShortUrl();
@@ -396,14 +401,20 @@ describe('ShortLinkComponent', () => {
 
   describe('Tool Availability', () => {
     it('should show enabled state when tool is available', () => {
-      mockShortLinkService.isToolEnabled = signal(true);
+      Object.defineProperty(mockShortLinkService, 'isToolEnabled', {
+        value: signal(true),
+        writable: true,
+      });
       fixture.detectChanges();
 
       expect(component.isToolEnabled()).toBeTruthy();
     });
 
     it('should show disabled state when tool is not available', () => {
-      mockShortLinkService.isToolEnabled = signal(false);
+      Object.defineProperty(mockShortLinkService, 'isToolEnabled', {
+        value: signal(false),
+        writable: true,
+      });
       fixture.detectChanges();
 
       expect(component.isToolEnabled()).toBeFalsy();
@@ -419,13 +430,13 @@ describe('ShortLinkComponent', () => {
     });
 
     it('should clean up subscriptions on destroy', () => {
-      const destroySpy = jest.spyOn(component['destroy$'], 'next');
-      const completeSpy = jest.spyOn(component['destroy$'], 'complete');
+      spyOn(component['destroy$'], 'next');
+      spyOn(component['destroy$'], 'complete');
 
       component.ngOnDestroy();
 
-      expect(destroySpy).toHaveBeenCalled();
-      expect(completeSpy).toHaveBeenCalled();
+      expect(component['destroy$'].next).toHaveBeenCalled();
+      expect(component['destroy$'].complete).toHaveBeenCalled();
     });
   });
 });

@@ -18,7 +18,9 @@ describe('User Avatar Management Integration Tests', () => {
   let testInvalidFilePath: string;
 
   beforeAll(async () => {
-    // Create test users
+    // Create test users once for entire test suite
+    // NOTE: Global beforeEach cleanup has been removed from test-setup.ts
+    // to prevent race conditions, so these users persist throughout the suite
     const adminAuth = await createTestUser({ role: 'admin' });
     const userAuth = await createTestUser({ role: 'user' });
 
@@ -48,19 +50,6 @@ describe('User Avatar Management Integration Tests', () => {
     if (fs.existsSync(testInvalidFilePath)) {
       fs.unlinkSync(testInvalidFilePath);
     }
-
-    // Cleanup would be handled by Jest teardown if configured
-  });
-
-  beforeEach(async () => {
-    // Create fresh test users for each test
-    const adminAuth = await createTestUser({ role: 'admin' });
-    const userAuth = await createTestUser({ role: 'user' });
-
-    adminUser = adminAuth.user;
-    regularUser = userAuth.user;
-    adminToken = adminAuth.token;
-    userToken = userAuth.token;
   });
 
   describe('POST /api/v1/users/avatar', () => {

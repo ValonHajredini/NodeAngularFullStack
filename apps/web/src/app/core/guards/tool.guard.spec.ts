@@ -268,11 +268,14 @@ describe('Tool Guards', () => {
       if (typeof result === 'boolean') {
         expect(result).toBe(true);
         done();
-      } else {
+      } else if (isObservable(result)) {
         result.subscribe((allowed) => {
           expect(allowed).toBe(true);
           done();
         });
+      } else {
+        fail('Expected boolean or Observable result from guard');
+        done();
       }
     });
 
@@ -347,11 +350,14 @@ describe('Tool Guards', () => {
       if (typeof result === 'boolean') {
         expect(result).toBe(true);
         done();
-      } else {
+      } else if (isObservable(result)) {
         result.subscribe((allowed) => {
           expect(allowed).toBe(true);
           done();
         });
+      } else {
+        fail('Expected boolean or Observable result from guard');
+        done();
       }
     });
 
@@ -474,16 +480,18 @@ describe('Tool Guards', () => {
           done();
         }, 100); // Test timeout much shorter than guard timeout
 
-        result.subscribe({
-          next: () => {
-            clearTimeout(timeoutId);
-            done();
-          },
-          error: () => {
-            clearTimeout(timeoutId);
-            done();
-          },
-        });
+        if (isObservable(result)) {
+          result.subscribe({
+            next: () => {
+              clearTimeout(timeoutId);
+              done();
+            },
+            error: () => {
+              clearTimeout(timeoutId);
+              done();
+            },
+          });
+        }
       }
     });
   });

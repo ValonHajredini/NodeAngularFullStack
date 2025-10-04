@@ -26,6 +26,16 @@ describe('Forms Publishing Integration Tests', () => {
     app.use('/api/v1/auth', authRoutes);
     app.use('/api/forms', formsRoutes);
 
+    // Add error handling middleware
+    app.use((err: any, _req: any, res: any, _next: any) => {
+      console.error('Test error:', err.message);
+      res.status(err.statusCode || 500).json({
+        success: false,
+        message: err.message,
+        code: err.code,
+      });
+    });
+
     // Create a real test user via registration API
     const registrationResponse = await request(app)
       .post('/api/v1/auth/register')
@@ -118,6 +128,10 @@ describe('Forms Publishing Integration Tests', () => {
         .post(`/api/forms/${testFormId}/publish`)
         .set('Authorization', authToken)
         .send({ expiresInDays: 30 });
+
+      if (response.status !== 200) {
+        console.log('Error response:', response.body);
+      }
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);

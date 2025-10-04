@@ -151,6 +151,7 @@ const appConfigSchema = Joi.object({
   JWT_REFRESH_EXPIRES_IN: Joi.alternatives()
     .try(Joi.string().pattern(/^\d+[smhdw]$/), Joi.number().positive())
     .default('7d'),
+  FORM_RENDER_TOKEN_SECRET: Joi.string().min(32).required(),
 
   // Redis
   REDIS_HOST: Joi.string().default('localhost'),
@@ -450,3 +451,22 @@ export const clearConfigValidationCache = (): void => {
  * Validates configuration on module load and provides cached access.
  */
 export const appConfig = validateAppConfig();
+
+/**
+ * Static configuration accessors for common use cases.
+ * Provides type-safe access to specific configuration values.
+ */
+export class AppConfig {
+  /**
+   * Gets the form render token secret from environment.
+   * @returns {string} The form render token secret
+   * @throws {Error} If secret is not configured
+   */
+  static getFormRenderTokenSecret(): string {
+    const secret = process.env.FORM_RENDER_TOKEN_SECRET;
+    if (!secret) {
+      throw new Error('FORM_RENDER_TOKEN_SECRET is not configured');
+    }
+    return secret;
+  }
+}

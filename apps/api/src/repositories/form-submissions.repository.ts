@@ -34,7 +34,7 @@ export class FormSubmissionsRepository {
       const query = `
         INSERT INTO form_submissions (
           form_schema_id,
-          values,
+          values_json,
           submitter_ip,
           user_id,
           metadata,
@@ -44,7 +44,7 @@ export class FormSubmissionsRepository {
         RETURNING
           id,
           form_schema_id as "formSchemaId",
-          values,
+          values_json as "values",
           submitted_at as "submittedAt",
           submitter_ip as "submitterIp",
           user_id as "userId",
@@ -98,7 +98,7 @@ export class FormSubmissionsRepository {
         SELECT
           id,
           form_schema_id as "formSchemaId",
-          values,
+          values_json as "values",
           submitted_at as "submittedAt",
           submitter_ip as "submitterIp",
           user_id as "userId",
@@ -131,22 +131,41 @@ export class FormSubmissionsRepository {
   }
 
   /**
-   * Finds all submissions for a form (across all schema versions).
+   * Finds all submissions for a form (across all schema versions) with pagination.
    * @param formId - Form ID to find submissions for
-   * @returns Promise containing array of submissions ordered by submission date descending
+   * @param page - Page number (1-indexed)
+   * @param limit - Number of items per page
+   * @returns Promise containing array of submissions and total count
    * @throws {Error} When database query fails
    * @example
-   * const submissions = await formSubmissionsRepository.findByFormId('form-uuid');
+   * const { submissions, total } = await formSubmissionsRepository.findByFormId('form-uuid', 1, 10);
    */
-  async findByFormId(formId: string): Promise<FormSubmission[]> {
+  async findByFormId(
+    formId: string,
+    page = 1,
+    limit = 10
+  ): Promise<{ submissions: FormSubmission[]; total: number }> {
     const client = await this.pool.connect();
 
     try {
+      const offset = (page - 1) * limit;
+
+      // Get total count
+      const countQuery = `
+        SELECT COUNT(*) as count
+        FROM form_submissions fs
+        INNER JOIN form_schemas fsch ON fs.form_schema_id = fsch.id
+        WHERE fsch.form_id = $1
+      `;
+      const countResult = await client.query(countQuery, [formId]);
+      const total = parseInt(countResult.rows[0].count, 10);
+
+      // Get paginated submissions
       const query = `
         SELECT
           fs.id,
           fs.form_schema_id as "formSchemaId",
-          fs.values,
+          fs.values_json as "values",
           fs.submitted_at as "submittedAt",
           fs.submitter_ip as "submitterIp",
           fs.user_id as "userId",
@@ -155,14 +174,17 @@ export class FormSubmissionsRepository {
         INNER JOIN form_schemas fsch ON fs.form_schema_id = fsch.id
         WHERE fsch.form_id = $1
         ORDER BY fs.submitted_at DESC
+        LIMIT $2 OFFSET $3
       `;
 
-      const result = await client.query(query, [formId]);
-      return result.rows.map((row) => ({
+      const result = await client.query(query, [formId, limit, offset]);
+      const submissions = result.rows.map((row) => ({
         ...row,
         values: row.values,
         metadata: row.metadata || undefined,
       })) as FormSubmission[];
+
+      return { submissions, total };
     } catch (error: any) {
       throw new Error(
         `Failed to find submissions by form ID: ${error.message}`
@@ -196,6 +218,36 @@ export class FormSubmissionsRepository {
       throw new Error(
         `Failed to count submissions by schema ID: ${error.message}`
       );
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Counts submissions from a specific IP address within a time window.
+   * Used for rate limiting.
+   * @param submitterIp - IP address to check
+   * @param hoursAgo - Number of hours to look back
+   * @returns Promise containing submission count
+   * @throws {Error} When database query fails
+   * @example
+   * const count = await formSubmissionsRepository.countByIpSince('192.168.1.1', 1);
+   */
+  async countByIpSince(submitterIp: string, hoursAgo: number): Promise<number> {
+    const client = await this.pool.connect();
+
+    try {
+      const query = `
+        SELECT COUNT(*) as count
+        FROM form_submissions
+        WHERE submitter_ip = $1
+          AND submitted_at > NOW() - INTERVAL '${hoursAgo} hours'
+      `;
+
+      const result = await client.query(query, [submitterIp]);
+      return parseInt(result.rows[0].count, 10);
+    } catch (error: any) {
+      throw new Error(`Failed to count submissions by IP: ${error.message}`);
     } finally {
       client.release();
     }

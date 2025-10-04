@@ -94,12 +94,12 @@ describe('PublishDialogComponent', () => {
     });
 
     it('should emit visibleChange when dialog is hidden', () => {
-      const spy = jest.spyOn(component.visibleChange, 'emit');
+      spyOn(component.visibleChange, 'emit');
 
       component.visible = true;
       component.onHide();
 
-      expect(spy).toHaveBeenCalledWith(false);
+      expect(component.visibleChange.emit).toHaveBeenCalledWith(false);
       expect(component.visible).toBe(false);
     });
   });
@@ -139,27 +139,27 @@ describe('PublishDialogComponent', () => {
 
   describe('Publish Functionality', () => {
     it('should emit publish event with expiration date', () => {
-      const spy = jest.spyOn(component.publish, 'emit');
+      spyOn(component.publish, 'emit');
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 30);
 
       component.expirationDate.setValue(futureDate);
       component.onPublish();
 
-      expect(spy).toHaveBeenCalledWith(futureDate);
+      expect(component.publish.emit).toHaveBeenCalledWith(futureDate);
     });
 
     it('should not emit publish event when form is invalid', () => {
-      const spy = jest.spyOn(component.publish, 'emit');
+      spyOn(component.publish, 'emit');
 
       component.expirationDate.setValue(null);
       component.onPublish();
 
-      expect(spy).not.toHaveBeenCalled();
+      expect(component.publish.emit).not.toHaveBeenCalled();
     });
 
     it('should not emit publish event when loading', () => {
-      const spy = jest.spyOn(component.publish, 'emit');
+      spyOn(component.publish, 'emit');
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 30);
 
@@ -167,17 +167,17 @@ describe('PublishDialogComponent', () => {
       component.loading = true;
       component.onPublish();
 
-      expect(spy).not.toHaveBeenCalled();
+      expect(component.publish.emit).not.toHaveBeenCalled();
     });
   });
 
   describe('Copy URL Functionality', () => {
     it('should emit copyUrl event when copy button is clicked', () => {
-      const spy = jest.spyOn(component.copyUrl, 'emit');
+      spyOn(component.copyUrl, 'emit');
 
       component.onCopyUrl();
 
-      expect(spy).toHaveBeenCalled();
+      expect(component.copyUrl.emit).toHaveBeenCalled();
     });
   });
 

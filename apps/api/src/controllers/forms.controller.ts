@@ -1,8 +1,10 @@
 import { Response } from 'express';
 import { validationResult } from 'express-validator';
+import { Parser } from 'json2csv';
 import { formsService, ApiError } from '../services/forms.service';
 import { formsRepository } from '../repositories/forms.repository';
-import { FormStatus } from '@nodeangularfullstack/shared';
+import { formSubmissionsRepository } from '../repositories/form-submissions.repository';
+import { FormStatus, FormSubmission } from '@nodeangularfullstack/shared';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { AsyncHandler } from '../utils/async-handler.utils';
 
@@ -374,6 +376,176 @@ export class FormsController {
         data: updatedForm,
         timestamp: new Date().toISOString(),
       });
+    }
+  );
+
+  /**
+   * Gets submissions for a specific form.
+   * @route GET /api/forms/:id/submissions
+   * @param req - Express request object with form ID and query params
+   * @param res - Express response object
+   * @returns HTTP response with submissions list
+   * @throws {ApiError} 401 - Authentication required
+   * @throws {ApiError} 403 - User doesn't own this form
+   * @throws {ApiError} 404 - Form not found
+   * @example
+   * GET /api/forms/form-uuid/submissions?page=1&limit=10
+   * Authorization: Bearer <token>
+   */
+  getSubmissions = AsyncHandler(
+    async (req: AuthRequest, res: Response): Promise<void> => {
+      const { id } = req.params;
+      const userId = req.user?.id;
+
+      if (!userId) {
+        throw new ApiError('Authentication required', 401, 'UNAUTHORIZED');
+      }
+
+      // Verify form ownership
+      const form = await formsRepository.findFormById(id);
+
+      if (!form) {
+        throw new ApiError('Form not found', 404, 'FORM_NOT_FOUND');
+      }
+
+      if (form.userId !== userId && req.user?.role !== 'admin') {
+        throw new ApiError(
+          'You do not have permission to view these submissions',
+          403,
+          'FORBIDDEN'
+        );
+      }
+
+      // Parse pagination params
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+
+      // Get submissions
+      const { submissions, total } =
+        await formSubmissionsRepository.findByFormId(id, page, limit);
+
+      // Mask IP addresses for privacy
+      const maskedSubmissions = submissions.map(
+        (submission: FormSubmission) => {
+          const ipParts = submission.submitterIp.split('.');
+          const maskedIp =
+            ipParts.length >= 2
+              ? `${ipParts[0]}.${ipParts[1]}._._`
+              : submission.submitterIp;
+
+          // Truncate long field values
+          const truncatedValues: Record<string, unknown> = {};
+          for (const [key, value] of Object.entries(submission.values)) {
+            if (typeof value === 'string' && value.length > 100) {
+              truncatedValues[key] = value.substring(0, 100) + '...';
+            } else {
+              truncatedValues[key] = value;
+            }
+          }
+
+          return {
+            ...submission,
+            submitterIp: maskedIp,
+            values: truncatedValues,
+          };
+        }
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Submissions retrieved successfully',
+        data: maskedSubmissions,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+        timestamp: new Date().toISOString(),
+      });
+    }
+  );
+
+  /**
+   * Exports form submissions as CSV.
+   * @route GET /api/forms/:id/submissions/export
+   * @param req - Express request object with form ID
+   * @param res - Express response object
+   * @returns CSV file download
+   * @throws {ApiError} 401 - Authentication required
+   * @throws {ApiError} 403 - User doesn't own this form
+   * @throws {ApiError} 404 - Form not found
+   * @example
+   * GET /api/forms/form-uuid/submissions/export
+   * Authorization: Bearer <token>
+   */
+  exportSubmissions = AsyncHandler(
+    async (req: AuthRequest, res: Response): Promise<void> => {
+      const { id } = req.params;
+      const userId = req.user?.id;
+
+      if (!userId) {
+        throw new ApiError('Authentication required', 401, 'UNAUTHORIZED');
+      }
+
+      // Verify form ownership
+      const form = await formsRepository.findFormById(id);
+
+      if (!form) {
+        throw new ApiError('Form not found', 404, 'FORM_NOT_FOUND');
+      }
+
+      if (form.userId !== userId && req.user?.role !== 'admin') {
+        throw new ApiError(
+          'You do not have permission to export these submissions',
+          403,
+          'FORBIDDEN'
+        );
+      }
+
+      // Get all submissions (no pagination for export)
+      const { submissions } = await formSubmissionsRepository.findByFormId(
+        id,
+        1,
+        10000 // Maximum submissions to export
+      );
+
+      if (submissions.length === 0) {
+        throw new ApiError(
+          'No submissions found for this form',
+          404,
+          'NO_SUBMISSIONS'
+        );
+      }
+
+      // Prepare CSV data
+      const csvData = submissions.map((submission: FormSubmission) => {
+        // Mask IP address
+        const ipParts = submission.submitterIp.split('.');
+        const maskedIp =
+          ipParts.length >= 2
+            ? `${ipParts[0]}.${ipParts[1]}._._`
+            : submission.submitterIp;
+
+        return {
+          'Submitted At': new Date(submission.submittedAt).toISOString(),
+          'Submitter IP': maskedIp,
+          ...submission.values,
+        };
+      });
+
+      // Generate CSV
+      const parser = new Parser();
+      const csv = parser.parse(csvData);
+
+      // Set response headers for file download
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="form-submissions-${id}.csv"`
+      );
+
+      res.status(200).send(csv);
     }
   );
 }

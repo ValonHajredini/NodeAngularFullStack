@@ -553,4 +553,129 @@ router.post(
   formsController.unpublishForm
 );
 
+/**
+ * @swagger
+ * /api/forms/{id}/submissions:
+ *   get:
+ *     summary: Get form submissions
+ *     description: Get paginated submissions for a form (owner or admin only, with masked IPs and truncated values)
+ *     tags: [Forms]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Form ID (UUID)
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Number of items per page
+ *     responses:
+ *       200:
+ *         description: Submissions retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Submissions retrieved successfully"
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/FormSubmission'
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     page:
+ *                       type: integer
+ *                       example: 1
+ *                     limit:
+ *                       type: integer
+ *                       example: 10
+ *                     total:
+ *                       type: integer
+ *                       example: 25
+ *                     totalPages:
+ *                       type: integer
+ *                       example: 3
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *       401:
+ *         description: Authentication required
+ *       403:
+ *         description: Insufficient permissions to view submissions
+ *       404:
+ *         description: Form not found
+ */
+router.get(
+  '/:id/submissions',
+  AuthMiddleware.authenticate,
+  formIdValidator,
+  formsController.getSubmissions
+);
+
+/**
+ * @swagger
+ * /api/forms/{id}/submissions/export:
+ *   get:
+ *     summary: Export form submissions as CSV
+ *     description: Export all form submissions to CSV file (owner or admin only)
+ *     tags: [Forms]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Form ID (UUID)
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *     responses:
+ *       200:
+ *         description: CSV file download
+ *         content:
+ *           text/csv:
+ *             schema:
+ *               type: string
+ *               example: |
+ *                 Submitted At,Submitter IP,Name,Email,Message
+ *                 2025-01-04T14:30:00Z,192.168._._,John Doe,john@example.com,Hello world
+ *       401:
+ *         description: Authentication required
+ *       403:
+ *         description: Insufficient permissions to export submissions
+ *       404:
+ *         description: Form not found or no submissions found
+ */
+router.get(
+  '/:id/submissions/export',
+  AuthMiddleware.authenticate,
+  formIdValidator,
+  formsController.exportSubmissions
+);
+
 export { router as formsRoutes };
