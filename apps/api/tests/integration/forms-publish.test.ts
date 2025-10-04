@@ -1,6 +1,5 @@
 import request from 'supertest';
 import express from 'express';
-import crypto from 'crypto';
 import { formsRoutes } from '../../src/routes/forms.routes';
 import { formsService } from '../../src/services/forms.service';
 import { formSchemasRepository } from '../../src/repositories/form-schemas.repository';
@@ -17,23 +16,36 @@ describe('Forms Publishing Integration Tests', () => {
   let testUserId: string;
   let testFormId: string;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     // Setup Express app
     app = express();
     app.use(express.json());
+
+    // Import and setup auth routes for user registration
+    const authRoutes = (await import('../../src/routes/auth.routes')).default;
+    app.use('/api/v1/auth', authRoutes);
     app.use('/api/forms', formsRoutes);
 
-    // Setup test user and auth token with valid UUID
-    testUserId = crypto.randomUUID();
-    authToken = 'Bearer test-token';
+    // Create a real test user via registration API
+    const registrationResponse = await request(app)
+      .post('/api/v1/auth/register')
+      .send({
+        email: `formspublishtest-${Date.now()}@example.com`,
+        password: 'TestPass123!',
+        firstName: 'FormPublish',
+        lastName: 'Test',
+      });
 
-    // Mock authentication middleware
+    testUserId = registrationResponse.body.data.user.id;
+    authToken = `Bearer ${registrationResponse.body.data.accessToken}`;
+
+    // Mock authentication middleware to use real user
     jest
       .spyOn(AuthMiddleware, 'authenticate')
       .mockImplementation(async (req: any, _res, next) => {
         req.user = {
           id: testUserId,
-          email: 'test@example.com',
+          email: registrationResponse.body.data.user.email,
           role: 'user',
         };
         next();
@@ -93,6 +105,11 @@ describe('Forms Publishing Integration Tests', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  afterAll(() => {
+    // Cleanup is handled by database reset between test runs
+    // Test user will be cleaned up automatically
   });
 
   describe('POST /api/forms/:id/publish', () => {
