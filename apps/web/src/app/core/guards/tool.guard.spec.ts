@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { Router, UrlTree } from '@angular/router';
+import { of, throwError, isObservable } from 'rxjs';
 import {
   toolGuard,
   anyToolGuard,
@@ -93,8 +93,12 @@ describe('Tool Guards', () => {
       if (typeof result === 'boolean') {
         expect(result).toBe(false);
         done();
-      } else if (result && 'subscribe' in result) {
-        result.subscribe((allowed: boolean) => {
+      } else if (result instanceof UrlTree) {
+        // Handle UrlTree case
+        expect(routerSpy.navigate).toHaveBeenCalled();
+        done();
+      } else if (isObservable(result)) {
+        result.subscribe((allowed) => {
           expect(allowed).toBe(false);
           expect(routerSpy.navigate).toHaveBeenCalledWith(['/app/dashboard'], {
             queryParams: {
@@ -106,8 +110,6 @@ describe('Tool Guards', () => {
           done();
         });
       } else {
-        // Handle UrlTree case
-        expect(routerSpy.navigate).toHaveBeenCalled();
         done();
       }
     });
@@ -123,15 +125,16 @@ describe('Tool Guards', () => {
       if (typeof result === 'boolean') {
         expect(result).toBe(true);
         done();
-      } else if (result && 'subscribe' in result) {
-        result.subscribe((allowed: boolean) => {
+      } else if (result instanceof UrlTree) {
+        expect(routerSpy.navigate).toHaveBeenCalled();
+        done();
+      } else if (isObservable(result)) {
+        result.subscribe((allowed) => {
           expect(allowed).toBe(true);
           expect(toolsServiceSpy.getToolStatus).toHaveBeenCalledWith('short-link');
           done();
         });
       } else {
-        // Handle UrlTree case
-        expect(routerSpy.navigate).toHaveBeenCalled();
         done();
       }
     });
@@ -147,8 +150,11 @@ describe('Tool Guards', () => {
       if (typeof result === 'boolean') {
         expect(result).toBe(false);
         done();
-      } else if (result && 'subscribe' in result) {
-        result.subscribe((allowed: boolean) => {
+      } else if (result instanceof UrlTree) {
+        expect(routerSpy.navigate).toHaveBeenCalled();
+        done();
+      } else if (isObservable(result)) {
+        result.subscribe((allowed) => {
           expect(allowed).toBe(false);
           expect(routerSpy.navigate).toHaveBeenCalledWith(['/app/dashboard'], {
             queryParams: {
@@ -177,8 +183,11 @@ describe('Tool Guards', () => {
       if (typeof result === 'boolean') {
         expect(result).toBe(true);
         done();
-      } else if (result && 'subscribe' in result) {
-        result.subscribe((allowed: boolean) => {
+      } else if (result instanceof UrlTree) {
+        expect(routerSpy.navigate).toHaveBeenCalled();
+        done();
+      } else if (isObservable(result)) {
+        result.subscribe((allowed) => {
           expect(allowed).toBe(true); // Should use cached enabled status
           done();
         });
@@ -196,8 +205,11 @@ describe('Tool Guards', () => {
       if (typeof result === 'boolean') {
         expect(result).toBe(true);
         done();
-      } else if (result && 'subscribe' in result) {
-        result.subscribe((allowed: boolean) => {
+      } else if (result instanceof UrlTree) {
+        expect(routerSpy.navigate).toHaveBeenCalled();
+        done();
+      } else if (isObservable(result)) {
+        result.subscribe((allowed) => {
           expect(allowed).toBe(false);
           expect(routerSpy.navigate).toHaveBeenCalledWith(['/app/dashboard'], {
             queryParams: {
@@ -222,8 +234,11 @@ describe('Tool Guards', () => {
       if (typeof result === 'boolean') {
         expect(result).toBe(true);
         done();
-      } else if (result && 'subscribe' in result) {
-        result.subscribe((allowed: boolean) => {
+      } else if (result instanceof UrlTree) {
+        expect(routerSpy.navigate).toHaveBeenCalled();
+        done();
+      } else if (isObservable(result)) {
+        result.subscribe((allowed) => {
           expect(allowed).toBe(false);
           expect(routerSpy.navigate).toHaveBeenCalledWith(['/custom/route'], {
             queryParams: {},
@@ -254,7 +269,7 @@ describe('Tool Guards', () => {
         expect(result).toBe(true);
         done();
       } else {
-        result.subscribe((allowed: boolean) => {
+        result.subscribe((allowed) => {
           expect(allowed).toBe(true);
           done();
         });
@@ -272,8 +287,11 @@ describe('Tool Guards', () => {
       if (typeof result === 'boolean') {
         expect(result).toBe(true);
         done();
-      } else if (result && 'subscribe' in result) {
-        result.subscribe((allowed: boolean) => {
+      } else if (result instanceof UrlTree) {
+        expect(routerSpy.navigate).toHaveBeenCalled();
+        done();
+      } else if (isObservable(result)) {
+        result.subscribe((allowed) => {
           expect(allowed).toBe(false);
           expect(routerSpy.navigate).toHaveBeenCalledWith(['/app/dashboard'], {
             queryParams: {
@@ -306,8 +324,11 @@ describe('Tool Guards', () => {
       if (typeof result === 'boolean') {
         expect(result).toBe(true);
         done();
-      } else if (result && 'subscribe' in result) {
-        result.subscribe((allowed: boolean) => {
+      } else if (result instanceof UrlTree) {
+        expect(routerSpy.navigate).toHaveBeenCalled();
+        done();
+      } else if (isObservable(result)) {
+        result.subscribe((allowed) => {
           expect(allowed).toBe(true); // Should use cached enabled status
           done();
         });
@@ -327,7 +348,7 @@ describe('Tool Guards', () => {
         expect(result).toBe(true);
         done();
       } else {
-        result.subscribe((allowed: boolean) => {
+        result.subscribe((allowed) => {
           expect(allowed).toBe(true);
           done();
         });
@@ -345,8 +366,11 @@ describe('Tool Guards', () => {
       if (typeof result === 'boolean') {
         expect(result).toBe(true);
         done();
-      } else if (result && 'subscribe' in result) {
-        result.subscribe((allowed: boolean) => {
+      } else if (result instanceof UrlTree) {
+        expect(routerSpy.navigate).toHaveBeenCalled();
+        done();
+      } else if (isObservable(result)) {
+        result.subscribe((allowed) => {
           expect(allowed).toBe(false);
           expect(routerSpy.navigate).toHaveBeenCalledWith(['/app/dashboard'], {
             queryParams: {
@@ -378,8 +402,11 @@ describe('Tool Guards', () => {
       if (typeof result === 'boolean') {
         expect(result).toBe(true);
         done();
-      } else if (result && 'subscribe' in result) {
-        result.subscribe((allowed: boolean) => {
+      } else if (result instanceof UrlTree) {
+        expect(routerSpy.navigate).toHaveBeenCalled();
+        done();
+      } else if (isObservable(result)) {
+        result.subscribe((allowed) => {
           expect(allowed).toBe(false);
           expect(routerSpy.navigate).toHaveBeenCalledWith(['/app/dashboard'], {
             queryParams: {

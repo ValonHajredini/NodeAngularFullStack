@@ -14,6 +14,7 @@ describe('ToolsService', () => {
     {
       id: '1',
       key: 'short-link',
+      slug: 'short-link-generator',
       name: 'Short Link Generator',
       description: 'Create shortened URLs',
       active: true,
@@ -23,6 +24,7 @@ describe('ToolsService', () => {
     {
       id: '2',
       key: 'qr-generator',
+      slug: 'qr-code-generator',
       name: 'QR Code Generator',
       description: 'Generate QR codes',
       active: false,
@@ -32,6 +34,7 @@ describe('ToolsService', () => {
     {
       id: '3',
       key: 'analytics',
+      slug: 'analytics-tool',
       name: 'Analytics Tool',
       description: 'View analytics',
       active: true,
@@ -43,6 +46,7 @@ describe('ToolsService', () => {
   const mockApiResponse: ToolsApiResponse<GetToolsResponse> = {
     success: true,
     data: {
+      success: true,
       data: {
         tools: mockTools,
       },
