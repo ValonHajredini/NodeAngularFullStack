@@ -171,8 +171,8 @@ export function getSVGSymbolTransform(
   position: Point,
   width: number,
   height: number,
-  rotation: number = 0,
-  scale: number = 1,
+  rotation = 0,
+  scale = 1,
 ): string {
   const transforms: string[] = [];
 

@@ -217,7 +217,7 @@ export class ComponentGenerationService {
   ): Promise<void> {
     const { toolKey, toolName, slug } = request;
 
-    if (!toolKey || !toolKey.match(/^[a-z0-9-]+$/)) {
+    if (!toolKey?.match(/^[a-z0-9-]+$/)) {
       throw new Error('Tool key must be kebab-case alphanumeric string');
     }
 
@@ -225,7 +225,7 @@ export class ComponentGenerationService {
       throw new Error('Tool name is required');
     }
 
-    if (!slug || !slug.match(/^[a-z0-9-]+$/)) {
+    if (!slug?.match(/^[a-z0-9-]+$/)) {
       throw new Error('Slug must be kebab-case alphanumeric string');
     }
   }

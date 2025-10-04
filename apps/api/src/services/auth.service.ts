@@ -235,7 +235,7 @@ export class AuthService {
 
     // Find user by email
     const user = await usersRepository.findByEmail(email.toLowerCase().trim());
-    if (!user || !user.isActive) {
+    if (!user?.isActive) {
       throw new Error('Invalid email or password');
     }
 
@@ -348,7 +348,7 @@ export class AuthService {
 
     // Find user
     const user = await usersRepository.findById(tokenPayload.userId);
-    if (!user || !user.isActive) {
+    if (!user?.isActive) {
       await sessionsRepository.delete(session.id);
       throw new Error('User not found or inactive');
     }
@@ -458,7 +458,7 @@ export class AuthService {
     }
 
     const user = await usersRepository.findById(userId);
-    if (!user || !user.isActive) {
+    if (!user?.isActive) {
       throw new Error('User not found');
     }
 
@@ -558,7 +558,7 @@ export class AuthService {
 
     // Get user profile
     const user = await usersRepository.findById(tokenPayload.userId);
-    if (!user || !user.isActive) {
+    if (!user?.isActive) {
       throw new Error('User not found or inactive');
     }
 
@@ -627,7 +627,7 @@ export class AuthService {
     const normalizedEmail = email.toLowerCase().trim();
     const user = await usersRepository.findByEmail(normalizedEmail);
 
-    if (!user || !user.isActive) {
+    if (!user?.isActive) {
       // Don't reveal if email exists for security - always return success
       console.log(
         `Password reset requested for non-existent or inactive user: ${normalizedEmail}`
@@ -712,7 +712,7 @@ export class AuthService {
 
     // Find user
     const user = await usersRepository.findById(resetRecord.userId);
-    if (!user || !user.isActive) {
+    if (!user?.isActive) {
       await passwordResetRepository.delete(resetRecord.id);
       throw new Error('User not found or inactive');
     }

@@ -1,0 +1,94 @@
+<p-dialog
+  header="Publish Form"
+  [(visible)]="visible"
+  (onHide)="onHide()"
+  [modal]="true"
+  [closable]="!loading"
+  [closeOnEscape]="!loading"
+  [draggable]="false"
+  [resizable]="false"
+  styleClass="w-[500px]"
+>
+  <div class="space-y-4">
+    <!-- Validation Errors -->
+    <div *ngIf="validationErrors.length > 0" class="space-y-2">
+      <p-message *ngFor="let error of validationErrors" severity="error" [text]="error"></p-message>
+    </div>
+
+    <!-- Publish Form -->
+    <form
+      *ngIf="validationErrors.length === 0 && !renderUrl"
+      [formGroup]="publishForm"
+      class="space-y-4"
+    >
+      <!-- Expiration Date/Time Picker -->
+      <div class="flex flex-col gap-2">
+        <label for="expirationDate" class="font-semibold">Expiration Date</label>
+        <p-datepicker
+          id="expirationDate"
+          formControlName="expirationDate"
+          [showTime]="true"
+          [showIcon]="true"
+          [minDate]="minDate"
+          [maxDate]="maxDate"
+          dateFormat="yy-mm-dd"
+          placeholder="Select expiration date and time"
+          [disabled]="loading"
+          class="w-full"
+        />
+        <small class="text-gray-600">
+          Form will be accessible via public URL until this date
+        </small>
+      </div>
+
+      <!-- Form Validation Error Message -->
+      <p-message
+        *ngIf="hasFormErrors"
+        severity="warn"
+        text="Please select a valid expiration date"
+      ></p-message>
+    </form>
+
+    <!-- Render URL Display (after publish) -->
+    <div *ngIf="renderUrl" class="space-y-4">
+      <p-message severity="success" text="Form published successfully!"></p-message>
+
+      <div class="flex flex-col gap-2">
+        <label class="font-semibold">Public Form URL</label>
+        <div class="flex gap-2">
+          <input type="text" pInputText [value]="renderUrl" readonly class="flex-1" />
+          <p-button
+            icon="pi pi-copy"
+            label="Copy"
+            (onClick)="onCopyUrl()"
+            [disabled]="loading"
+          ></p-button>
+        </div>
+        <small class="text-gray-600">
+          Share this URL with respondents to collect form submissions
+        </small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dialog Footer -->
+  <ng-template pTemplate="footer">
+    <div class="flex justify-end gap-2">
+      <p-button
+        label="Cancel"
+        severity="secondary"
+        (onClick)="onHide()"
+        [disabled]="loading"
+      ></p-button>
+      <p-button
+        *ngIf="!renderUrl"
+        label="Publish"
+        icon="pi pi-check"
+        (onClick)="onPublish()"
+        [disabled]="loading || publishForm.invalid || validationErrors.length > 0"
+        [loading]="loading"
+      ></p-button>
+      <p-button *ngIf="renderUrl" label="Close" (onClick)="onHide()"></p-button>
+    </div>
+  </ng-template>
+</p-dialog>

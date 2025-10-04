@@ -98,7 +98,7 @@ export class PublicToolsController {
       const tool = await toolsService.getToolBySlug(slug);
 
       // Return 404 for disabled or non-existent tools
-      if (!tool || !tool.active) {
+      if (!tool?.active) {
         res.status(404).json({
           success: false,
           error: 'Tool not found or disabled',
@@ -160,7 +160,7 @@ export class PublicToolsController {
       const tool = await toolsService.getToolByKey(key);
 
       // Return 404 for disabled or non-existent tools
-      if (!tool || !tool.active) {
+      if (!tool?.active) {
         res.status(404).json({
           success: false,
           error: 'Tool not found or disabled',

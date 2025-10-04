@@ -236,7 +236,7 @@ export class ApiTokenService {
 
       // Get user data
       const user = await usersRepository.findById(validToken.userId);
-      if (!user || !user.isActive) {
+      if (!user?.isActive) {
         return { isValid: false };
       }
 

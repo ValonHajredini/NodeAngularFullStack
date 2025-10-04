@@ -1,5 +1,11 @@
 import { Injectable, signal, computed } from '@angular/core';
-import { FormMetadata, FormField, FormSchema, FormFieldType } from '@nodeangularfullstack/shared';
+import {
+  FormMetadata,
+  FormField,
+  FormSchema,
+  FormFieldType,
+  FormStatus,
+} from '@nodeangularfullstack/shared';
 
 /**
  * Form Builder service for managing form state.
@@ -27,6 +33,10 @@ export class FormBuilderService {
     const selected = this._selectedField();
     if (!selected) return -1;
     return this._formFields().findIndex((f) => f.id === selected.id);
+  });
+  readonly isPublished = computed(() => {
+    const form = this._currentForm();
+    return form?.status === FormStatus.PUBLISHED;
   });
 
   /**
@@ -189,5 +199,73 @@ export class FormBuilderService {
       .replace(/([a-z])([A-Z])/g, '$1-$2')
       .replace(/[\s_]+/g, '-')
       .toLowerCase();
+  }
+
+  /**
+   * Loads a form from metadata and populates all signals.
+   * Marks the form as clean after loading.
+   * @param form - The form metadata to load
+   */
+  loadForm(form: FormMetadata): void {
+    this._currentForm.set(form);
+
+    // Extract fields from schema if available
+    if (form.schema?.fields) {
+      this._formFields.set(form.schema.fields);
+    } else {
+      this._formFields.set([]);
+    }
+
+    // Clear selection
+    this._selectedField.set(null);
+
+    // Mark as clean since we just loaded
+    this._isDirty.set(false);
+  }
+
+  /**
+   * Exports the current form data for saving.
+   * @param formSettings - Form settings from the settings dialog
+   * @returns Complete form data ready for API submission
+   */
+  exportFormData(formSettings: {
+    title: string;
+    description: string;
+    columnLayout: 1 | 2 | 3;
+    fieldSpacing: 'compact' | 'normal' | 'relaxed';
+    successMessage: string;
+    redirectUrl: string;
+    allowMultipleSubmissions: boolean;
+  }): Partial<FormMetadata> {
+    const currentForm = this._currentForm();
+    const fields = this._formFields();
+
+    const schema: Partial<FormSchema> = {
+      fields,
+      settings: {
+        layout: {
+          columns: formSettings.columnLayout,
+          spacing:
+            formSettings.fieldSpacing === 'compact'
+              ? 'small'
+              : formSettings.fieldSpacing === 'normal'
+                ? 'medium'
+                : 'large',
+        },
+        submission: {
+          showSuccessMessage: true,
+          successMessage: formSettings.successMessage,
+          redirectUrl: formSettings.redirectUrl || undefined,
+          allowMultipleSubmissions: formSettings.allowMultipleSubmissions,
+        },
+      },
+    };
+
+    return {
+      id: currentForm?.id,
+      title: formSettings.title,
+      description: formSettings.description || undefined,
+      schema: schema as FormSchema,
+    };
   }
 }

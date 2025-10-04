@@ -322,7 +322,7 @@ export class JwtUtils {
   static isTokenExpired(token: string): boolean {
     try {
       const decoded = this.decodeToken(token) as any;
-      if (!decoded || !decoded.exp) {
+      if (!decoded?.exp) {
         return true;
       }
 
@@ -346,7 +346,7 @@ export class JwtUtils {
   static getTokenExpiration(token: string): Date | null {
     try {
       const decoded = this.decodeToken(token) as any;
-      if (!decoded || !decoded.exp) {
+      if (!decoded?.exp) {
         return null;
       }
 

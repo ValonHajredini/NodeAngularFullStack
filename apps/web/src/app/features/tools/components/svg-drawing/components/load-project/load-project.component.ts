@@ -251,7 +251,7 @@ export class LoadProjectComponent implements OnInit {
     const filtered = this.projects().filter(
       (project) =>
         project.name.toLowerCase().includes(query) ||
-        (project.description && project.description.toLowerCase().includes(query)),
+        project.description?.toLowerCase().includes(query),
     );
 
     this.filteredProjects.set(filtered);

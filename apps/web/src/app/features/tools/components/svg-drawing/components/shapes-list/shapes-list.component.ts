@@ -959,7 +959,7 @@ export class ShapesListComponent {
    */
   getGroupDialogTitle(): string {
     const item = this.selectedGroupItem();
-    if (!item || !item.shapes) return 'Group Details';
+    if (!item?.shapes) return 'Group Details';
     return `Group Details - ${item.shapes.length} Shapes`;
   }
 
@@ -1014,7 +1014,7 @@ export class ShapesListComponent {
    */
   onUngroupFromModal(): void {
     const item = this.selectedGroupItem();
-    if (item && item.shapes && item.shapes.length > 0) {
+    if (item?.shapes && item.shapes.length > 0) {
       this.shapeSelect.emit({ shapeId: item.shapes[0].id, multiSelect: false });
       this.ungroupShapes.emit();
       this.closeGroupDetails();

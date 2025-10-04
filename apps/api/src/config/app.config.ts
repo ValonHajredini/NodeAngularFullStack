@@ -37,7 +37,10 @@ let performanceMetrics: ConfigPerformanceMetrics = {
 /**
  * Configuration validation cache for performance optimization.
  */
-const validationCache = new Map<string, { result: any; timestamp: number }>();
+const validationCache = new Map<
+  string,
+  { result: AppConfig; timestamp: number }
+>();
 const CACHE_TTL_MS = 5000; // 5 second cache TTL for validation results
 
 /**
@@ -256,7 +259,7 @@ export const validateAppConfig = (): AppConfig => {
     redis: {
       host: value.REDIS_HOST,
       port: value.REDIS_PORT,
-      password: value.REDIS_PASSWORD || undefined,
+      password: value.REDIS_PASSWORD ?? undefined,
       db: value.REDIS_DB,
     },
     storage: {
@@ -272,8 +275,8 @@ export const validateAppConfig = (): AppConfig => {
       fromName: value.EMAIL_FROM_NAME,
     },
     monitoring: {
-      sentryDsn: value.SENTRY_DSN || undefined,
-      logtailToken: value.LOGTAIL_TOKEN || undefined,
+      sentryDsn: value.SENTRY_DSN ?? undefined,
+      logtailToken: value.LOGTAIL_TOKEN ?? undefined,
     },
     rateLimit: {
       windowMs: value.RATE_LIMIT_WINDOW_MS,
@@ -334,7 +337,7 @@ function generateConfigCacheKey(env: NodeJS.ProcessEnv): string {
   ];
 
   const keyValues = criticalKeys
-    .map((key) => `${key}=${env[key] || ''}`)
+    .map((key) => `${key}=${env[key] ?? ''}`)
     .join('|');
 
   return require('crypto').createHash('md5').update(keyValues).digest('hex');
@@ -370,7 +373,7 @@ function setCachedValidationResult(cacheKey: string, config: AppConfig): void {
   // Limit cache size to prevent memory leaks
   if (validationCache.size > 10) {
     const oldestKey = validationCache.keys().next().value;
-    if (oldestKey) {
+    if (oldestKey !== null && oldestKey !== undefined) {
       validationCache.delete(oldestKey);
     }
   }

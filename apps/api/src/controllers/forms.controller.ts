@@ -290,6 +290,92 @@ export class FormsController {
       res.status(204).send();
     }
   );
+
+  /**
+   * Publishes a form and generates render token.
+   * @route POST /api/forms/:id/publish
+   * @param req - Express request object with form ID and expiration days
+   * @param res - Express response object
+   * @param next - Express next function
+   * @returns HTTP response with published form data and render URL
+   * @throws {ApiError} 400 - Invalid input data or schema validation failed
+   * @throws {ApiError} 401 - Authentication required
+   * @throws {ApiError} 403 - Insufficient permissions
+   * @throws {ApiError} 404 - Form not found
+   * @example
+   * POST /api/forms/form-uuid/publish
+   * Authorization: Bearer <token>
+   * {
+   *   "expiresInDays": 30
+   * }
+   */
+  publishForm = AsyncHandler(
+    async (req: AuthRequest, res: Response): Promise<void> => {
+      const { id } = req.params;
+      const userId = req.user?.id;
+
+      if (!userId) {
+        throw new ApiError('Authentication required', 401, 'UNAUTHORIZED');
+      }
+
+      // Parse expiration days (default to 30)
+      const expiresInDays = parseInt(req.body.expiresInDays) || 30;
+
+      // Validate expiration days range
+      if (expiresInDays < 1 || expiresInDays > 365) {
+        throw new ApiError(
+          'Expiration days must be between 1 and 365',
+          400,
+          'VALIDATION_ERROR'
+        );
+      }
+
+      // Publish form using service
+      const result = await formsService.publishForm(id, userId, expiresInDays);
+
+      res.status(200).json({
+        success: true,
+        message: 'Form published successfully',
+        data: result,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  );
+
+  /**
+   * Unpublishes a form and invalidates the render token.
+   * @route POST /api/forms/:id/unpublish
+   * @param req - Express request object with form ID
+   * @param res - Express response object
+   * @param next - Express next function
+   * @returns HTTP response with unpublish confirmation
+   * @throws {ApiError} 401 - Authentication required
+   * @throws {ApiError} 403 - Insufficient permissions
+   * @throws {ApiError} 404 - Form not found
+   * @example
+   * POST /api/forms/form-uuid/unpublish
+   * Authorization: Bearer <token>
+   */
+  unpublishForm = AsyncHandler(
+    async (req: AuthRequest, res: Response): Promise<void> => {
+      const { id } = req.params;
+      const userId = req.user?.id;
+
+      if (!userId) {
+        throw new ApiError('Authentication required', 401, 'UNAUTHORIZED');
+      }
+
+      // Unpublish form using service
+      const updatedForm = await formsService.unpublishForm(id, userId);
+
+      res.status(200).json({
+        success: true,
+        message: 'Form unpublished successfully',
+        data: updatedForm,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  );
 }
 
 // Export singleton instance

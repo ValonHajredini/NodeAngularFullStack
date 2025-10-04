@@ -138,7 +138,7 @@ export class AuthMiddleware {
         if (tenantId && tenantConfig.tokenIsolation) {
           // Verify tenant still exists and is active
           const tenantRecord = await tenantRepository.findById(tenantId);
-          if (!tenantRecord || !tenantRecord.isActive) {
+          if (!tenantRecord?.isActive) {
             res.status(401).json({
               error: 'Unauthorized',
               message: 'Tenant account is inactive or not found',

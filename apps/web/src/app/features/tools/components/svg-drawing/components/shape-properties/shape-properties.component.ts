@@ -1,4 +1,11 @@
-import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  input,
+  output,
+  ChangeDetectionStrategy,
+  OnInit,
+  OnChanges,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PanelModule } from 'primeng/panel';
@@ -28,7 +35,7 @@ import { Shape, ShapeStyle } from '@nodeangularfullstack/shared';
   styleUrls: ['./shape-properties.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ShapePropertiesComponent {
+export class ShapePropertiesComponent implements OnInit, OnChanges {
   /**
    * Currently selected shape input.
    */
@@ -40,10 +47,10 @@ export class ShapePropertiesComponent {
   readonly propertiesChanged = output<{ shapeId: string; updates: Partial<ShapeStyle> }>();
 
   // Local state for form controls
-  strokeColor: string = '#000000';
-  strokeWidth: number = 2;
-  fillColor: string = 'transparent';
-  hasFill: boolean = false;
+  strokeColor = '#000000';
+  strokeWidth = 2;
+  fillColor = 'transparent';
+  hasFill = false;
 
   /**
    * Initializes form values when selected shape changes.

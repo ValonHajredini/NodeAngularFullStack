@@ -182,7 +182,7 @@ export enum FormStatus {
 }
 
 /**
- * Form metadata
+ * Form metadata with schema
  */
 export interface FormMetadata {
   /** Unique form identifier */
@@ -197,6 +197,8 @@ export interface FormMetadata {
   description?: string;
   /** Form status */
   status: FormStatus;
+  /** Form schema containing fields and settings */
+  schema?: FormSchema;
   /** Form creation timestamp */
   createdAt: Date;
   /** Form last update timestamp */

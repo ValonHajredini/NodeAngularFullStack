@@ -41,7 +41,8 @@ export function getMultiTenancyConfig(): MultiTenancyConfig {
     isolationLevel: (process.env.TENANT_ISOLATION_LEVEL as any) || 'row',
     rlsEnabled: process.env.TENANT_RLS_ENABLED === 'true',
     tokenIsolation: process.env.TENANT_TOKEN_ISOLATION === 'true',
-    defaultTenantId: process.env.DEFAULT_TENANT_ID || '00000000-0000-0000-0000-000000000000'
+    defaultTenantId:
+      process.env.DEFAULT_TENANT_ID || '00000000-0000-0000-0000-000000000000',
   };
 }
 
@@ -137,7 +138,7 @@ export function supportsTenancy(tableName: string): boolean {
     'users',
     'audit_logs',
     'sessions',
-    'password_resets'
+    'password_resets',
   ];
 
   return tenantAwareTables.includes(tableName);
@@ -165,7 +166,8 @@ export function validateTenantContext(tenantContext: TenantContext): void {
   }
 
   // UUID validation for tenant ID
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   if (!uuidRegex.test(tenantContext.id)) {
     throw new Error('Tenant ID must be a valid UUID');
   }
@@ -173,7 +175,9 @@ export function validateTenantContext(tenantContext: TenantContext): void {
   // Slug validation (URL-safe)
   const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
   if (!slugRegex.test(tenantContext.slug)) {
-    throw new Error('Tenant slug must be URL-safe (lowercase letters, numbers, and hyphens only)');
+    throw new Error(
+      'Tenant slug must be URL-safe (lowercase letters, numbers, and hyphens only)'
+    );
   }
 }
 
@@ -194,7 +198,7 @@ export function createTenantContext(
   const context: TenantContext = {
     id: tenantId,
     slug: tenantSlug,
-    ...additionalData
+    ...additionalData,
   };
 
   validateTenantContext(context);
@@ -225,9 +229,15 @@ export function optimizeQuery(
   }
 
   // Multi-tenant mode: add tenant filtering if context is provided
-  if (tenantContext && query.includes('FROM users') && !query.includes('tenant_id')) {
+  if (
+    tenantContext &&
+    query.includes('FROM users') &&
+    !query.includes('tenant_id')
+  ) {
     // Add tenant filtering to user queries
-    const whereClause = query.includes('WHERE') ? ' AND tenant_id = $' : ' WHERE tenant_id = $';
+    const whereClause = query.includes('WHERE')
+      ? ' AND tenant_id = $'
+      : ' WHERE tenant_id = $';
     const optimizedQuery = query.replace(
       /(\bFROM\s+users\b(?:\s+\w+)?)/i,
       `$1${whereClause}${params.length + 1}`
@@ -235,7 +245,7 @@ export function optimizeQuery(
 
     return {
       query: optimizedQuery,
-      params: [...params, tenantContext.id]
+      params: [...params, tenantContext.id],
     };
   }
 
@@ -286,7 +296,7 @@ export function isTenantFeatureEnabled(
     return true; // All features enabled in single-tenant mode
   }
 
-  if (!tenantContext || !tenantContext.features) {
+  if (!tenantContext?.features) {
     return false;
   }
 
@@ -303,7 +313,9 @@ export function isTenantFeatureEnabled(
  *   query.where(filter);
  * }
  */
-export function createTenantFilter(tenantContext?: TenantContext): { tenant_id: string } | null {
+export function createTenantFilter(
+  tenantContext?: TenantContext
+): { tenant_id: string } | null {
   if (!isMultiTenancyEnabled()) {
     return null; // No filtering needed in single-tenant mode
   }
@@ -354,7 +366,7 @@ export function logTenantOperation(
     operation,
     tenantId: tenantContext?.id || 'unknown',
     tenantSlug: tenantContext?.slug || 'unknown',
-    ...additionalData
+    ...additionalData,
   };
 
   // TODO: Integrate with actual logging service
@@ -369,7 +381,10 @@ export function logTenantOperation(
  * @example
  * const cacheKey = createTenantCacheKey('user_profile', tenantContext);
  */
-export function createTenantCacheKey(baseKey: string, tenantContext?: TenantContext): string {
+export function createTenantCacheKey(
+  baseKey: string,
+  tenantContext?: TenantContext
+): string {
   if (!isMultiTenancyEnabled()) {
     return baseKey; // No tenant prefix needed in single-tenant mode
   }

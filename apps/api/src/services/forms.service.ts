@@ -323,6 +323,61 @@ export class FormsService {
       );
     }
   }
+
+  /**
+   * Unpublishes a form and invalidates the render token.
+   * @param formId - Form ID to unpublish
+   * @param userId - User ID requesting unpublish (must be owner)
+   * @returns Promise containing updated form
+   * @throws {ApiError} 404 - When form or schema not found
+   * @throws {ApiError} 403 - When user is not the owner
+   * @throws {ApiError} 500 - When unpublish fails
+   * @example
+   * const form = await formsService.unpublishForm('form-uuid', 'user-uuid');
+   */
+  async unpublishForm(formId: string, userId: string): Promise<FormMetadata> {
+    try {
+      // Find the form
+      const form = await this.formsRepo.findFormById(formId);
+      if (!form) {
+        throw new ApiError('Form not found', 404, 'FORM_NOT_FOUND');
+      }
+
+      // Verify ownership
+      if (form.userId !== userId) {
+        throw new ApiError(
+          'You do not have permission to unpublish this form',
+          403,
+          'FORBIDDEN'
+        );
+      }
+
+      // Get published schema for this form
+      const schemas = await this.formSchemasRepo.findByFormId(formId);
+      const publishedSchema = schemas.find((s) => s.isPublished);
+
+      if (publishedSchema) {
+        // Unpublish the schema
+        await this.formSchemasRepo.unpublishSchema(publishedSchema.id);
+      }
+
+      // Update form status to draft
+      const updatedForm = await this.formsRepo.update(formId, {
+        status: FormStatus.DRAFT,
+      });
+
+      return updatedForm;
+    } catch (error: any) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError(
+        `Failed to unpublish form: ${error.message}`,
+        500,
+        'UNPUBLISH_FORM_ERROR'
+      );
+    }
+  }
 }
 
 // Export singleton instance

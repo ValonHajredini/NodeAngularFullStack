@@ -95,7 +95,7 @@ export const validateFormSchema = (
 ): void => {
   const schema = req.body.schema;
 
-  if (!schema || !schema.fields) {
+  if (!schema?.fields) {
     next();
     return;
   }

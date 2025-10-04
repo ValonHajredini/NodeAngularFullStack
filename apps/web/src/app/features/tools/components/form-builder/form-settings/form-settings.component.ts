@@ -15,12 +15,16 @@ import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { Select } from 'primeng/select';
 import { ButtonDirective } from 'primeng/button';
+import { Checkbox } from 'primeng/checkbox';
 
 interface FormSettings {
   title: string;
   description: string;
   columnLayout: 1 | 2 | 3;
   fieldSpacing: 'compact' | 'normal' | 'relaxed';
+  successMessage: string;
+  redirectUrl: string;
+  allowMultipleSubmissions: boolean;
 }
 
 /**
@@ -39,6 +43,7 @@ interface FormSettings {
     TextareaModule,
     Select,
     ButtonDirective,
+    Checkbox,
   ],
   template: `
     <p-dialog
@@ -117,6 +122,56 @@ interface FormSettings {
           ></p-select>
           <small class="text-gray-500 text-xs">Vertical spacing between form fields</small>
         </div>
+
+        <div class="border-t border-gray-200 my-4 pt-4">
+          <h4 class="text-sm font-semibold text-gray-800 mb-3">Submission Settings</h4>
+
+          <div class="field">
+            <label for="successMessage" class="block text-sm font-medium text-gray-700 mb-1">
+              Success Message
+            </label>
+            <input
+              pInputText
+              id="successMessage"
+              formControlName="successMessage"
+              class="w-full"
+              placeholder="Thank you for your submission!"
+              maxlength="500"
+            />
+            <small class="text-gray-500 text-xs">Message shown after successful submission</small>
+          </div>
+
+          <div class="field">
+            <label for="redirectUrl" class="block text-sm font-medium text-gray-700 mb-1">
+              Redirect URL (Optional)
+            </label>
+            <input
+              pInputText
+              id="redirectUrl"
+              formControlName="redirectUrl"
+              class="w-full"
+              placeholder="https://example.com/thank-you"
+            />
+            @if (
+              settingsForm.get('redirectUrl')?.hasError('pattern') &&
+              settingsForm.get('redirectUrl')?.touched
+            ) {
+              <small class="text-red-500">Please enter a valid URL (http:// or https://)</small>
+            }
+            <small class="text-gray-500 text-xs">Redirect user after submission (optional)</small>
+          </div>
+
+          <div class="field flex items-center gap-2">
+            <p-checkbox
+              inputId="allowMultipleSubmissions"
+              formControlName="allowMultipleSubmissions"
+              [binary]="true"
+            ></p-checkbox>
+            <label for="allowMultipleSubmissions" class="text-sm font-medium text-gray-700">
+              Allow Multiple Submissions
+            </label>
+          </div>
+        </div>
       </form>
 
       <ng-template pTemplate="footer">
@@ -165,6 +220,9 @@ export class FormSettingsComponent implements OnInit {
       description: ['', Validators.maxLength(2000)],
       columnLayout: [1, Validators.required],
       fieldSpacing: ['normal', Validators.required],
+      successMessage: ['Thank you for your submission!', Validators.maxLength(500)],
+      redirectUrl: ['', Validators.pattern(/^https?:\/\/.+/)],
+      allowMultipleSubmissions: [true],
     });
   }
 

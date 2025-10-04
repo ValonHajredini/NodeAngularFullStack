@@ -284,7 +284,7 @@ import { TooltipModule } from 'primeng/tooltip';
 })
 export class ZoomControlsComponent {
   /** Current zoom level as percentage (e.g., 150 for 150%) */
-  @Input() zoomLevel: number = 100;
+  @Input() zoomLevel = 100;
 
   /** Emits when zoom in is clicked */
   @Output() zoomIn = new EventEmitter<void>();

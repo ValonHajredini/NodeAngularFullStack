@@ -1,16 +1,23 @@
 import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
-import { authService, RegisterRequest, LoginRequest } from '../services/auth.service';
+import {
+  authService,
+  RegisterRequest,
+  LoginRequest,
+} from '../services/auth.service';
 import { AccountLockoutMiddleware } from '../middleware/account-lockout.middleware';
 import { SeedUtils } from '../utils/seed.utils';
 
 /**
  * Helper function to extract client information from request.
  */
-function getClientInfo(req: Request) {
+function getClientInfo(req: Request): {
+  ipAddress: string | undefined;
+  userAgent: string | undefined;
+} {
   return {
-    ipAddress: req.ip || req.connection.remoteAddress || undefined,
-    userAgent: req.get('User-Agent') || undefined,
+    ipAddress: req.ip ?? req.connection.remoteAddress ?? undefined,
+    userAgent: req.get('User-Agent') ?? undefined,
   };
 }
 
@@ -35,7 +42,11 @@ export class AuthController {
    *   "lastName": "Doe"
    * }
    */
-  register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  register = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       // Check validation results
       const errors = validationResult(req);
@@ -65,21 +76,23 @@ export class AuthController {
         data: authResponse,
         timestamp: new Date().toISOString(),
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Handle specific errors
-      if (error.message.includes('Email already')) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('Email already')) {
         res.status(409).json({
           error: 'Conflict',
-          message: error.message,
+          message: errorMessage,
           timestamp: new Date().toISOString(),
         });
         return;
       }
 
-      if (error.message.includes('Invalid')) {
+      if (errorMessage.includes('Invalid')) {
         res.status(400).json({
           error: 'Bad Request',
-          message: error.message,
+          message: errorMessage,
           timestamp: new Date().toISOString(),
         });
         return;
@@ -103,7 +116,11 @@ export class AuthController {
    *   "password": "SecurePass123!"
    * }
    */
-  login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  login = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       // Check validation results
       const errors = validationResult(req);
@@ -166,7 +183,11 @@ export class AuthController {
    *   "refreshToken": "jwt-refresh-token"
    * }
    */
-  refresh = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  refresh = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       // Check validation results
       const errors = validationResult(req);
@@ -189,7 +210,10 @@ export class AuthController {
         timestamp: new Date().toISOString(),
       });
     } catch (error: any) {
-      if (error.message.includes('Invalid') || error.message.includes('expired')) {
+      if (
+        error.message.includes('Invalid') ||
+        error.message.includes('expired')
+      ) {
         res.status(401).json({
           error: 'Unauthorized',
           message: error.message,
@@ -215,7 +239,11 @@ export class AuthController {
    *   "refreshToken": "jwt-refresh-token"
    * }
    */
-  logout = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  logout = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const { refreshToken } = req.body;
       await authService.logout(refreshToken);
@@ -240,7 +268,11 @@ export class AuthController {
    * POST /api/v1/auth/logout-all
    * Authorization: Bearer <access-token>
    */
-  logoutAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  logoutAll = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       if (!req.user) {
         res.status(401).json({
@@ -274,7 +306,11 @@ export class AuthController {
    * GET /api/v1/auth/profile
    * Authorization: Bearer <access-token>
    */
-  getProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getProfile = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       if (!req.user) {
         res.status(401).json({
@@ -321,7 +357,11 @@ export class AuthController {
    *   "lastName": "Smith"
    * }
    */
-  updateProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  updateProfile = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       // Check validation results
       const errors = validationResult(req);
@@ -350,7 +390,10 @@ export class AuthController {
         email: req.body.email,
       };
 
-      const updatedProfile = await authService.updateProfile((req.user as any).id, updateData);
+      const updatedProfile = await authService.updateProfile(
+        (req.user as any).id,
+        updateData
+      );
 
       res.status(200).json({
         message: 'Profile updated successfully',
@@ -367,7 +410,10 @@ export class AuthController {
         return;
       }
 
-      if (error.message.includes('Invalid') || error.message.includes('No valid fields')) {
+      if (
+        error.message.includes('Invalid') ||
+        error.message.includes('No valid fields')
+      ) {
         res.status(400).json({
           error: 'Bad Request',
           message: error.message,
@@ -391,7 +437,11 @@ export class AuthController {
    * GET /api/v1/auth/me
    * Authorization: Bearer <access-token>
    */
-  me = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  me = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       if (!req.user) {
         res.status(401).json({
@@ -426,7 +476,11 @@ export class AuthController {
    *   "email": "user@example.com"
    * }
    */
-  requestPasswordReset = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  requestPasswordReset = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       // Check validation results
       const errors = validationResult(req);
@@ -445,7 +499,8 @@ export class AuthController {
 
       // Always return success for security (don't reveal if email exists)
       res.status(200).json({
-        message: 'If the email address is associated with an account, a password reset link has been sent.',
+        message:
+          'If the email address is associated with an account, a password reset link has been sent.',
         timestamp: new Date().toISOString(),
       });
     } catch (error: any) {
@@ -467,7 +522,11 @@ export class AuthController {
    *   "newPassword": "NewPassword123!"
    * }
    */
-  confirmPasswordReset = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  confirmPasswordReset = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       // Check validation results
       const errors = validationResult(req);
@@ -485,11 +544,16 @@ export class AuthController {
       await authService.confirmPasswordReset(token, newPassword);
 
       res.status(200).json({
-        message: 'Password has been reset successfully. Please log in with your new password.',
+        message:
+          'Password has been reset successfully. Please log in with your new password.',
         timestamp: new Date().toISOString(),
       });
     } catch (error: any) {
-      if (error.message.includes('Invalid') || error.message.includes('expired') || error.message.includes('used')) {
+      if (
+        error.message.includes('Invalid') ||
+        error.message.includes('expired') ||
+        error.message.includes('used')
+      ) {
         res.status(400).json({
           error: 'Bad Request',
           message: error.message,
@@ -512,7 +576,11 @@ export class AuthController {
    * @example
    * GET /api/v1/auth/password-reset/validate/reset-token-123
    */
-  validatePasswordResetToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  validatePasswordResetToken = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const { token } = req.params;
 
@@ -559,7 +627,11 @@ export class AuthController {
    * @example
    * GET /api/v1/auth/test-credentials
    */
-  getTestCredentials = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getTestCredentials = async (
+    _req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       // Only available in development environment
       if (process.env.NODE_ENV !== 'development') {
