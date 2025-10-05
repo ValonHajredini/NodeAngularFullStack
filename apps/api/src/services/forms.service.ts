@@ -86,7 +86,15 @@ export class FormsService {
       const tenantContext = tenantId ? { id: tenantId, slug: '' } : undefined;
       const form = await this.formsRepo.create(formToCreate, tenantContext);
 
-      return form;
+      let savedSchema: FormSchema | undefined;
+      if (formData.schema) {
+        savedSchema = await this.createSchemaVersion(form.id, formData.schema);
+      }
+
+      return {
+        ...form,
+        schema: savedSchema,
+      };
     } catch (error: any) {
       if (error instanceof ApiError) {
         throw error;
@@ -377,6 +385,134 @@ export class FormsService {
         'UNPUBLISH_FORM_ERROR'
       );
     }
+  }
+
+  /**
+   * Updates an existing form and optionally persists a new schema version.
+   */
+  async updateForm(
+    formId: string,
+    updateData: Partial<FormMetadata>,
+    schemaData?: Partial<FormSchema>
+  ): Promise<FormMetadata> {
+    try {
+      const hasMetadataChanges =
+        updateData.title !== undefined ||
+        updateData.description !== undefined ||
+        updateData.status !== undefined;
+
+      let updatedForm: FormMetadata | null = null;
+
+      if (hasMetadataChanges) {
+        updatedForm = await this.formsRepo.update(formId, updateData);
+      } else {
+        updatedForm = await this.formsRepo.findFormById(formId);
+      }
+
+      if (!updatedForm) {
+        throw new ApiError('Form not found', 404, 'FORM_NOT_FOUND');
+      }
+
+      const existingSchemas = await this.formSchemasRepo.findByFormId(formId);
+      let latestSchema = existingSchemas[0];
+
+      if (schemaData) {
+        latestSchema = await this.createSchemaVersion(
+          formId,
+          schemaData,
+          latestSchema
+        );
+      }
+
+      return {
+        ...updatedForm,
+        schema: latestSchema,
+      };
+    } catch (error: any) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError(
+        `Failed to update form: ${error.message}`,
+        500,
+        'UPDATE_FORM_ERROR'
+      );
+    }
+  }
+
+  /**
+   * Retrieves a form with the latest schema attached.
+   */
+  async getFormWithSchema(id: string): Promise<FormMetadata | null> {
+    const form = await this.formsRepo.findFormById(id);
+    if (!form) {
+      return null;
+    }
+
+    const schemas = await this.formSchemasRepo.findByFormId(id);
+    const latestSchema = schemas[0];
+
+    return {
+      ...form,
+      schema: latestSchema,
+    };
+  }
+
+  private async createSchemaVersion(
+    formId: string,
+    schemaData: Partial<FormSchema>,
+    currentSchema?: FormSchema
+  ): Promise<FormSchema> {
+    const nextVersion = schemaData.version
+      ? schemaData.version
+      : currentSchema
+        ? currentSchema.version + 1
+        : 1;
+
+    const normalizedSettings = this.normalizeSchemaSettings(
+      schemaData.settings ?? currentSchema?.settings
+    );
+
+    const fields = schemaData.fields ?? currentSchema?.fields ?? [];
+
+    return this.formSchemasRepo.createSchema(formId, {
+      formId,
+      version: nextVersion,
+      fields,
+      settings: normalizedSettings,
+      isPublished: false,
+      renderToken: undefined,
+      expiresAt: undefined,
+    });
+  }
+
+  private normalizeSchemaSettings(
+    settings?: FormSchema['settings']
+  ): FormSchema['settings'] {
+    const defaultSubmission = {
+      showSuccessMessage: true,
+      successMessage: 'Thank you for your submission!',
+      redirectUrl: undefined,
+      allowMultipleSubmissions: true,
+      sendEmailNotification: false,
+      notificationEmails: undefined,
+    } as FormSchema['settings']['submission'];
+
+    const defaultLayout = {
+      columns: 1,
+      spacing: 'medium',
+    } as FormSchema['settings']['layout'];
+
+    return {
+      layout: {
+        ...defaultLayout,
+        ...(settings?.layout ?? {}),
+      },
+      submission: {
+        ...defaultSubmission,
+        ...(settings?.submission ?? {}),
+      },
+    };
   }
 }
 

@@ -41,6 +41,8 @@ export enum FormRenderErrorType {
   NETWORK_ERROR = 'NETWORK_ERROR',
   VALIDATION_ERROR = 'VALIDATION_ERROR',
   SUBMISSION_ERROR = 'SUBMISSION_ERROR',
+  FORM_NOT_FOUND = 'FORM_NOT_FOUND',
+  PARSE_ERROR = 'PARSE_ERROR',
 }
 
 /**
@@ -65,8 +67,8 @@ export class FormRenderError extends Error {
   providedIn: 'root',
 })
 export class FormRendererService {
-  private readonly renderApiUrl = '/api/public/forms/render';
-  private readonly submitApiUrl = '/api/public/forms/submit';
+  private readonly renderApiUrl = '/api/v1/public/forms/render';
+  private readonly submitApiUrl = '/api/v1/public/forms/submit';
 
   constructor(private http: HttpClient) {}
 

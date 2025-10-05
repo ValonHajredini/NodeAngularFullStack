@@ -192,7 +192,7 @@ export interface FormSettings {
             (onClick)="onCancel()"
           ></p-button>
           <p-button
-            label="Update Form Settings"
+            [label]="saveButtonLabel"
             icon="pi pi-check"
             (onClick)="onSave()"
             [disabled]="settingsForm.invalid"
@@ -218,6 +218,7 @@ export class FormSettingsComponent implements OnInit {
   private lastSettings: FormSettings = { ...this.defaultSettings };
 
   @Input() visible = false;
+  @Input() mode: 'create' | 'edit' = 'edit';
   @Input()
   set settings(value: FormSettings | null | undefined) {
     const mergedSettings: FormSettings = {
@@ -232,6 +233,10 @@ export class FormSettingsComponent implements OnInit {
   }
   @Output() visibleChange = new EventEmitter<boolean>();
   @Output() settingsSaved = new EventEmitter<FormSettings>();
+
+  get saveButtonLabel(): string {
+    return this.mode === 'create' ? 'Save & Continue to Builder' : 'Update Form Settings';
+  }
 
   settingsForm: FormGroup;
 

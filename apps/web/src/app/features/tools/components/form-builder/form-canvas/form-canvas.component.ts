@@ -1,8 +1,16 @@
-import { Component, ChangeDetectionStrategy, Output, EventEmitter, inject } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  Output,
+  EventEmitter,
+  Input,
+  inject,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { FormField, FormFieldType } from '@nodeangularfullstack/shared';
 import { FormBuilderService } from '../form-builder.service';
+import { FormSettings } from '../form-settings/form-settings.component';
 
 interface FieldTypeDefinition {
   type: FormFieldType;
@@ -21,32 +29,47 @@ interface FieldTypeDefinition {
   imports: [CommonModule, DragDropModule],
   template: `
     <div class="form-canvas h-full bg-gray-50 p-6">
-      <div
-        cdkDropList
-        #dropList="cdkDropList"
-        [cdkDropListData]="formBuilderService.formFields()"
-        [cdkDropListConnectedTo]="[]"
-        (cdkDropListDropped)="onFieldDropped($event)"
-        class="drop-zone min-h-full"
-        [class.empty]="!formBuilderService.hasFields()"
-      >
-        @if (!formBuilderService.hasFields()) {
-          <div
-            class="empty-state flex flex-col items-center justify-center h-full text-center py-20"
-          >
-            <i class="pi pi-file-edit text-6xl text-gray-300 mb-4"></i>
-            <h3 class="text-xl font-semibold text-gray-700 mb-2">Start Building Your Form</h3>
-            <p class="text-gray-500 max-w-md">
-              Drag fields from the palette to start building your form
+      @if (!formBuilderService.hasFields()) {
+        <div
+          class="drop-zone empty min-h-full flex flex-col items-center justify-center text-center py-20"
+          cdkDropList
+          #dropList="cdkDropList"
+          [cdkDropListData]="formBuilderService.formFields()"
+          [cdkDropListConnectedTo]="[]"
+          (cdkDropListDropped)="onFieldDropped($event)"
+        >
+          <i class="pi pi-file-edit text-6xl text-gray-300 mb-4"></i>
+          <h3 class="text-xl font-semibold text-gray-700 mb-2">Start Building Your Form</h3>
+          <p class="text-gray-500 max-w-md">
+            Drag fields from the palette to start building your form
+          </p>
+        </div>
+      } @else {
+        <div class="form-fields-wrapper">
+          <div class="mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">
+              {{ settings.title || 'Untitled Form' }}
+            </h3>
+            <p class="text-sm text-gray-600">
+              This is a live preview of your form. Click on a field to edit its properties
+              @if (settings.columnLayout > 1) {
+                <span class="ml-2 text-blue-600">{{ settings.columnLayout }} columns</span>
+              }
             </p>
+            @if (settings.description) {
+              <p class="text-sm text-gray-500 mt-1">{{ settings.description }}</p>
+            }
           </div>
-        } @else {
-          <div class="form-fields-container space-y-3">
-            <div class="mb-4">
-              <h3 class="text-lg font-semibold text-gray-900">Form Preview</h3>
-              <p class="text-sm text-gray-600">Click on a field to edit its properties</p>
-            </div>
 
+          <div
+            cdkDropList
+            #dropList="cdkDropList"
+            [cdkDropListData]="formBuilderService.formFields()"
+            [cdkDropListConnectedTo]="[]"
+            (cdkDropListDropped)="onFieldDropped($event)"
+            class="form-fields-grid"
+            [ngClass]="[getGridClass(), getSpacingClass()]"
+          >
             @for (field of formBuilderService.formFields(); track field.id; let i = $index) {
               <div
                 cdkDrag
@@ -80,11 +103,11 @@ interface FieldTypeDefinition {
                 </div>
               </div>
             }
-          </div>
-        }
 
-        <div *cdkDragPlaceholder class="field-placeholder"></div>
-      </div>
+            <div *cdkDragPlaceholder class="field-placeholder"></div>
+          </div>
+        </div>
+      }
     </div>
   `,
   styles: [
@@ -108,8 +131,34 @@ interface FieldTypeDefinition {
         background-color: #eff6ff;
       }
 
-      .empty-state {
-        min-height: 400px;
+      .form-fields-grid {
+        display: grid;
+        gap: 1rem;
+        min-height: 200px;
+      }
+
+      .form-fields-grid.spacing-compact {
+        gap: 0.5rem;
+      }
+
+      .form-fields-grid.spacing-normal {
+        gap: 1rem;
+      }
+
+      .form-fields-grid.spacing-relaxed {
+        gap: 1.5rem;
+      }
+
+      .form-fields-grid.grid-cols-1 {
+        grid-template-columns: 1fr;
+      }
+
+      .form-fields-grid.grid-cols-2 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .form-fields-grid.grid-cols-3 {
+        grid-template-columns: repeat(3, 1fr);
       }
 
       .field-card {
@@ -130,7 +179,6 @@ interface FieldTypeDefinition {
         border: 2px dashed #3b82f6;
         border-radius: 8px;
         min-height: 60px;
-        margin: 8px 0;
       }
 
       .cdk-drag-preview {
@@ -145,12 +193,28 @@ interface FieldTypeDefinition {
       .cdk-drop-list-dragging .field-card:not(.cdk-drag-placeholder) {
         transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
       }
+
+      /* Responsive breakpoints */
+      @media (max-width: 768px) {
+        .form-fields-grid {
+          grid-template-columns: 1fr !important;
+        }
+      }
     `,
   ],
 })
 export class FormCanvasComponent {
   readonly formBuilderService = inject(FormBuilderService);
 
+  @Input() settings: FormSettings = {
+    title: 'Untitled Form',
+    description: '',
+    columnLayout: 1,
+    fieldSpacing: 'normal',
+    successMessage: 'Thank you for your submission!',
+    redirectUrl: '',
+    allowMultipleSubmissions: true,
+  };
   @Output() fieldClicked = new EventEmitter<FormField>();
 
   /**
@@ -249,5 +313,27 @@ export class FormCanvasComponent {
       divider: 'pi-minus',
     };
     return iconMap[type] || 'pi-question';
+  }
+
+  /**
+   * Gets the CSS grid class based on column layout.
+   * @returns The grid class name for the current column layout
+   */
+  getGridClass(): string {
+    return `grid-cols-${this.settings.columnLayout}`;
+  }
+
+  /**
+   * Maps the spacing setting to a CSS class for grid gap control.
+   */
+  getSpacingClass(): string {
+    switch (this.settings.fieldSpacing) {
+      case 'compact':
+        return 'spacing-compact';
+      case 'relaxed':
+        return 'spacing-relaxed';
+      default:
+        return 'spacing-normal';
+    }
   }
 }

@@ -30,11 +30,8 @@ export const toolsRoutes: Routes = [
   },
   {
     path: 'form-builder',
-    loadComponent: () =>
-      import('./components/form-builder/form-builder.component').then(
-        (m) => m.FormBuilderComponent,
-      ),
-    canDeactivate: [unsavedChangesGuard],
+    redirectTo: 'form-builder/list',
+    pathMatch: 'full',
   },
   {
     path: ':slug',

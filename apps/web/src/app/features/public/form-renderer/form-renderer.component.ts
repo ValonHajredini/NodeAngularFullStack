@@ -50,6 +50,7 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   formGroup: FormGroup | null = null;
   schema: FormSchema | null = null;
   settings: FormSettings | null = null;
+  isPreview = false;
 
   state: ComponentState = {
     loading: true,
@@ -74,21 +75,94 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    // Detect if this is a preview route or published form route
+    this.route.url.pipe(takeUntil(this.destroy$)).subscribe((urlSegments) => {
+      const isPreviewRoute =
+        urlSegments.length >= 2 &&
+        urlSegments[0]?.path === 'forms' &&
+        urlSegments[1]?.path === 'preview';
+
+      if (isPreviewRoute) {
+        this.loadPreviewData();
+      } else {
+        this.loadPublishedForm();
+      }
+    });
+  }
+
+  /**
+   * Loads preview data from localStorage
+   */
+  private loadPreviewData(): void {
+    const previewId = this.route.snapshot.paramMap.get('previewId');
+    if (!previewId) {
+      this.handleError('Invalid preview URL', FormRenderErrorType.FORM_NOT_FOUND);
+      return;
+    }
+
+    const previewDataStr = localStorage.getItem(`form-preview-${previewId}`);
+    if (!previewDataStr) {
+      this.handleError(
+        'Preview data not found. Please generate a new preview.',
+        FormRenderErrorType.FORM_NOT_FOUND,
+      );
+      return;
+    }
+
+    try {
+      const previewData = JSON.parse(previewDataStr);
+
+      // Check if preview data is expired (older than 5 minutes)
+      if (previewData.timestamp && Date.now() - previewData.timestamp > 5 * 60 * 1000) {
+        localStorage.removeItem(`form-preview-${previewId}`);
+        this.handleError(
+          'Preview has expired. Please generate a new preview.',
+          FormRenderErrorType.FORM_NOT_FOUND,
+        );
+        return;
+      }
+
+      this.schema = previewData.schema;
+      this.settings = previewData.settings;
+      this.isPreview = previewData.isPreview || false;
+
+      if (this.schema) {
+        this.formGroup = this.buildFormGroup(this.schema);
+        this.setupConditionalVisibility();
+      }
+
+      this.state = { ...this.state, loading: false };
+    } catch (error) {
+      this.handleError('Failed to load preview data', FormRenderErrorType.PARSE_ERROR);
+    }
+  }
+
+  /**
+   * Loads published form from API
+   */
+  private loadPublishedForm(): void {
     // Get token from route params
     this.token = this.route.snapshot.paramMap.get('token') || '';
 
     if (!this.token) {
-      this.state = {
-        ...this.state,
-        loading: false,
-        error: 'No form token provided',
-        errorType: FormRenderErrorType.INVALID_TOKEN,
-      };
+      this.handleError('No form token provided', FormRenderErrorType.INVALID_TOKEN);
       return;
     }
 
     // Load form schema
     this.loadFormSchema();
+  }
+
+  /**
+   * Handles errors by updating state
+   */
+  private handleError(message: string, type: FormRenderErrorType): void {
+    this.state = {
+      ...this.state,
+      loading: false,
+      error: message,
+      errorType: type,
+    };
   }
 
   ngOnDestroy(): void {
@@ -347,9 +421,21 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Determines if form can be submitted
+   */
+  get canSubmit(): boolean {
+    return !this.isPreview && !!this.formGroup?.valid && !this.state.submitting;
+  }
+
+  /**
    * Handles form submission
    */
   onSubmit(): void {
+    // Prevent submission in preview mode
+    if (this.isPreview) {
+      return;
+    }
+
     // Validate form before submission
     if (!this.formGroup || this.formGroup.invalid) {
       // Mark all fields as touched to show validation errors

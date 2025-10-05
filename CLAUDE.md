@@ -26,13 +26,19 @@ setup, and comprehensive testing.
 - `npm run test:web` - Frontend tests only
 - `npm run test:e2e` - Run Playwright E2E tests
 - `npm run test:e2e:ui` - Playwright E2E with UI mode
-- Backend specific: `npm run test:unit`, `npm run test:integration`, `npm run test:security`
+
+**Backend-Specific Test Commands:**
+
+- `npm --workspace=apps/api run test:unit` - Unit tests only
+- `npm --workspace=apps/api run test:integration` - Integration tests only
+- `npm --workspace=apps/api run test:security` - Security tests
+- `npm --workspace=apps/api run test:coverage` - Generate coverage reports
 
 **Running Single Tests:**
 
 - Backend: `npm --workspace=apps/api run test -- --testPathPattern="filename.test.ts"`
 - Frontend: `npm --workspace=apps/web run test -- --include="**/component-name.spec.ts"`
-- Add `--watch=false` or `--passWithNoTests` flags as needed
+- Add `--watch=false`, `--passWithNoTests`, or `--silent` flags as needed
 
 ### Build and Quality Commands
 
@@ -60,6 +66,13 @@ setup, and comprehensive testing.
 
 - `cp .env.development .env.local` - Create local environment file
 - `ENV_FILE=.env.local ./start-dev.sh` - Use custom environment file
+
+### Quality and Security Commands
+
+- `npm run quality:check` - Run lint + typecheck + format check
+- `npm run security:audit` - Run security audit script
+- `npm run format` - Format all code with Prettier
+- `npm run format:check` - Check formatting without making changes
 
 ## Architecture Overview
 
@@ -239,15 +252,29 @@ packages/
 
 ## Utility Scripts
 
-The `scripts/` directory contains utility scripts for:
+The `scripts/` directory contains utility scripts accessible via npm commands:
 
-- Security auditing (`security-audit.js`)
-- Metrics collection (`metrics-collector.js`)
-- Feedback collection (`feedback-collector.js`)
-- Environment validation (`validate-environment.js`)
-- Database management (`pgweb-*.sh`)
+**Security:**
 
-Run these scripts with appropriate npm commands as defined in the root package.json.
+- `npm run security:audit` - Run comprehensive security audit
+
+**Metrics:**
+
+- `npm run metrics:init` - Initialize metrics collection
+- `npm run metrics:dashboard` - View metrics dashboard
+- `npm run metrics:export` - Export metrics data
+
+**Feedback:**
+
+- `npm run feedback:init` - Initialize feedback collection
+- `npm run feedback:collect` - Collect structured feedback
+- `npm run feedback:quick` - Quick feedback submission
+- `npm run feedback:dashboard` - View feedback dashboard
+
+**Onboarding:**
+
+- `npm run onboarding:setup` - Initialize metrics, feedback, and validation
+- `npm run onboarding:help` - Display onboarding instructions
 
 # important-instruction-reminders
 

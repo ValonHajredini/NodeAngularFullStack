@@ -1,14 +1,26 @@
-import { Component, ChangeDetectionStrategy, inject, signal, OnInit } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  inject,
+  signal,
+  OnInit,
+  computed,
+} from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { ButtonDirective } from 'primeng/button';
 import { Paginator } from 'primeng/paginator';
 import { Tag } from 'primeng/tag';
+import { IconField } from 'primeng/iconfield';
+import { InputIcon } from 'primeng/inputicon';
+import { InputText } from 'primeng/inputtext';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { Toast } from 'primeng/toast';
 import { FormMetadata, FormStatus } from '@nodeangularfullstack/shared';
 import { FormsApiService } from '../forms-api.service';
+import { FormSettingsComponent, FormSettings } from '../form-settings/form-settings.component';
 
 /**
  * Forms list component displaying all user's forms.
@@ -18,24 +30,63 @@ import { FormsApiService } from '../forms-api.service';
   selector: 'app-forms-list',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, ButtonDirective, Paginator, Tag, ConfirmDialog, Toast, DatePipe],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ButtonDirective,
+    Paginator,
+    Tag,
+    IconField,
+    InputIcon,
+    InputText,
+    ConfirmDialog,
+    Toast,
+    DatePipe,
+    FormSettingsComponent,
+  ],
   providers: [MessageService, ConfirmationService],
   template: `
     <div class="forms-list-container p-6 bg-gray-50 min-h-screen">
       <div class="max-w-7xl mx-auto">
         <!-- Header -->
-        <div class="flex items-center justify-between mb-6">
-          <div>
-            <h1 class="text-3xl font-bold text-gray-900">My Forms</h1>
-            <p class="text-gray-600 mt-1">Manage your form drafts and published forms</p>
+        <div class="mb-6">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h1 class="text-3xl font-bold text-gray-900">My Forms</h1>
+              <p class="text-gray-600 mt-1">Manage your form drafts and published forms</p>
+            </div>
           </div>
-          <button
-            pButton
-            label="New Form"
-            icon="pi pi-plus"
-            (click)="createNewForm()"
-            class="p-button-primary"
-          ></button>
+
+          <!-- Search Bar and Create Button -->
+          <div class="flex items-center gap-3">
+            <p-iconfield iconPosition="left" class="flex-1">
+              <p-inputicon styleClass="pi pi-search"></p-inputicon>
+              <input
+                pInputText
+                [(ngModel)]="searchTerm"
+                placeholder="Search forms by title or description..."
+                class="w-full"
+                (input)="onSearchInput($event)"
+              />
+            </p-iconfield>
+            @if (searchTerm()) {
+              <button
+                pButton
+                icon="pi pi-times"
+                severity="secondary"
+                [outlined]="true"
+                (click)="clearSearch()"
+                title="Clear search"
+              ></button>
+            }
+            <button
+              pButton
+              label="Create New Form"
+              icon="pi pi-plus"
+              (click)="openCreateFormModal()"
+              class="p-button-primary"
+            ></button>
+          </div>
         </div>
 
         <!-- Loading State -->
@@ -46,7 +97,7 @@ import { FormsApiService } from '../forms-api.service';
         }
 
         <!-- Empty State -->
-        @if (!isLoading() && forms().length === 0) {
+        @if (!isLoading() && filteredForms().length === 0 && !searchTerm()) {
           <div class="bg-white rounded-lg shadow-sm p-12 text-center">
             <i class="pi pi-file-edit text-6xl text-gray-400 mb-4"></i>
             <h3 class="text-xl font-semibold text-gray-900 mb-2">No forms yet</h3>
@@ -55,15 +106,32 @@ import { FormsApiService } from '../forms-api.service';
               pButton
               label="Create Form"
               icon="pi pi-plus"
-              (click)="createNewForm()"
+              (click)="openCreateFormModal()"
+            ></button>
+          </div>
+        }
+
+        <!-- No Search Results -->
+        @if (!isLoading() && filteredForms().length === 0 && searchTerm()) {
+          <div class="bg-white rounded-lg shadow-sm p-12 text-center">
+            <i class="pi pi-search text-6xl text-gray-400 mb-4"></i>
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">No forms found</h3>
+            <p class="text-gray-600 mb-6">
+              No forms match your search "{{ searchTerm() }}". Try a different search term.
+            </p>
+            <button
+              pButton
+              label="Clear Search"
+              icon="pi pi-times"
+              (click)="clearSearch()"
             ></button>
           </div>
         }
 
         <!-- Forms Grid -->
-        @if (!isLoading() && forms().length > 0) {
+        @if (!isLoading() && filteredForms().length > 0) {
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            @for (form of forms(); track form.id) {
+            @for (form of filteredForms(); track form.id) {
               <div class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-6">
                 <!-- Status Badge -->
                 <div class="flex items-center justify-between mb-3">
@@ -97,6 +165,33 @@ import { FormsApiService } from '../forms-api.service';
                     {{ form.createdAt | date: 'short' }}
                   </span>
                 </div>
+
+                <!-- Publish URL (for published forms) -->
+                @if (form.status === FormStatus.PUBLISHED && form.schema?.renderToken) {
+                  <div class="mb-3">
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">
+                      Public Form URL
+                    </label>
+                    <div class="flex gap-2">
+                      <input
+                        type="text"
+                        pInputText
+                        [value]="getPublishUrl(form.schema?.renderToken ?? '')"
+                        readonly
+                        class="w-full text-xs"
+                      />
+                      <button
+                        pButton
+                        icon="pi pi-copy"
+                        size="small"
+                        severity="secondary"
+                        [outlined]="true"
+                        (click)="copyPublishUrl(form.schema?.renderToken ?? '')"
+                        title="Copy URL"
+                      ></button>
+                    </div>
+                  </div>
+                }
 
                 <!-- Actions -->
                 <div class="flex gap-2">
@@ -148,6 +243,14 @@ import { FormsApiService } from '../forms-api.service';
 
       <!-- Toast -->
       <p-toast position="top-right"></p-toast>
+
+      <!-- Form Settings Modal for Creation -->
+      <app-form-settings
+        [(visible)]="showCreateModal"
+        [mode]="'create'"
+        [settings]="newFormSettings()"
+        (settingsSaved)="onFormSettingsSaved($event)"
+      ></app-form-settings>
     </div>
   `,
   styles: [
@@ -175,6 +278,27 @@ export class FormsListComponent implements OnInit {
   readonly pageSize = signal<number>(9);
   readonly totalItems = signal<number>(0);
   readonly totalPages = signal<number>(0);
+
+  // Search functionality
+  readonly searchTerm = signal<string>('');
+  private searchDebounceTimer: any;
+
+  // Filtered forms computed from search
+  readonly filteredForms = computed(() => {
+    const term = this.searchTerm().toLowerCase().trim();
+    if (!term) {
+      return this.forms();
+    }
+    return this.forms().filter(
+      (form) =>
+        form.title.toLowerCase().includes(term) ||
+        (form.description?.toLowerCase() || '').includes(term),
+    );
+  });
+
+  // Modal for creating new form
+  showCreateModal = signal<boolean>(false);
+  readonly newFormSettings = signal<FormSettings | null>(null);
 
   ngOnInit(): void {
     this.loadForms();
@@ -213,17 +337,83 @@ export class FormsListComponent implements OnInit {
   }
 
   /**
-   * Navigates to create a new form.
+   * Opens the create form modal with default settings.
    */
-  createNewForm(): void {
-    this.router.navigate(['/tools/form-builder']);
+  openCreateFormModal(): void {
+    this.newFormSettings.set({
+      title: '',
+      description: '',
+      columnLayout: 1,
+      fieldSpacing: 'normal',
+      successMessage: 'Thank you for your submission!',
+      redirectUrl: '',
+      allowMultipleSubmissions: true,
+    });
+    this.showCreateModal.set(true);
+  }
+
+  /**
+   * Handles form settings saved from the modal.
+   * Creates a new form and navigates to the builder.
+   */
+  onFormSettingsSaved(settings: FormSettings): void {
+    this.formsApiService
+      .createForm({
+        title: settings.title,
+        description: settings.description,
+        status: FormStatus.DRAFT,
+      })
+      .subscribe({
+        next: (form) => {
+          this.showCreateModal.set(false);
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Form Created',
+            detail: 'Form created successfully. Redirecting to builder...',
+            life: 2000,
+          });
+          setTimeout(() => {
+            this.router.navigate(['/app/tools/form-builder', form.id]);
+          }, 500);
+        },
+        error: (error) => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Creation Failed',
+            detail: error.error?.message || 'Failed to create form',
+            life: 3000,
+          });
+        },
+      });
+  }
+
+  /**
+   * Handles search input with debounce.
+   */
+  onSearchInput(event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    // Clear existing timer
+    if (this.searchDebounceTimer) {
+      clearTimeout(this.searchDebounceTimer);
+    }
+    // Set new timer with 300ms debounce
+    this.searchDebounceTimer = setTimeout(() => {
+      this.searchTerm.set(value);
+    }, 300);
+  }
+
+  /**
+   * Clears the search term.
+   */
+  clearSearch(): void {
+    this.searchTerm.set('');
   }
 
   /**
    * Navigates to edit an existing form.
    */
   editForm(formId: string): void {
-    this.router.navigate(['/tools/form-builder', formId]);
+    this.router.navigate(['/app/tools/form-builder', formId]);
   }
 
   /**
@@ -276,5 +466,38 @@ export class FormsListComponent implements OnInit {
         });
       },
     });
+  }
+
+  /**
+   * Gets the full publish URL for a given render token.
+   */
+  getPublishUrl(renderToken: string): string {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/forms/render/${renderToken}`;
+  }
+
+  /**
+   * Copies the publish URL to clipboard.
+   */
+  copyPublishUrl(renderToken: string): void {
+    const url = this.getPublishUrl(renderToken);
+    navigator.clipboard.writeText(url).then(
+      () => {
+        this.messageService.add({
+          severity: 'success',
+          summary: 'URL Copied',
+          detail: 'Form URL has been copied to clipboard',
+          life: 2000,
+        });
+      },
+      () => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Copy Failed',
+          detail: 'Failed to copy URL to clipboard',
+          life: 3000,
+        });
+      },
+    );
   }
 }

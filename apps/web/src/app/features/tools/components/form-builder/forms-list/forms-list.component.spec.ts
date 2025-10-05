@@ -36,7 +36,11 @@ describe('FormsListComponent', () => {
   ];
 
   beforeEach(async () => {
-    const apiSpy = jasmine.createSpyObj('FormsApiService', ['getForms', 'deleteForm']);
+    const apiSpy = jasmine.createSpyObj('FormsApiService', [
+      'getForms',
+      'deleteForm',
+      'createForm',
+    ]);
     const msgSpy = jasmine.createSpyObj('MessageService', ['add']);
     const confirmSpy = jasmine.createSpyObj('ConfirmationService', ['confirm']);
     const routerSpyObj = jasmine.createSpyObj('Router', ['navigate']);
@@ -128,11 +132,152 @@ describe('FormsListComponent', () => {
     });
   });
 
-  describe('createNewForm', () => {
-    it('should navigate to form builder', () => {
-      component.createNewForm();
+  describe('search functionality', () => {
+    beforeEach(() => {
+      const mockResponse: PaginatedResponse<FormMetadata> = {
+        success: true,
+        data: mockForms,
+        timestamp: new Date().toISOString(),
+        pagination: {
+          page: 1,
+          pageSize: 9,
+          totalItems: 2,
+          totalPages: 1,
+          hasNext: false,
+          hasPrevious: false,
+        },
+      };
+      formsApiServiceSpy.getForms.and.returnValue(of(mockResponse));
+      fixture.detectChanges();
+    });
 
-      expect(routerSpy.navigate).toHaveBeenCalledWith(['/tools/form-builder']);
+    it('should filter forms by title', () => {
+      component.searchTerm.set('Contact');
+      expect(component.filteredForms().length).toBe(1);
+      expect(component.filteredForms()[0].title).toBe('Contact Form');
+    });
+
+    it('should filter forms by description', () => {
+      component.searchTerm.set('feedback');
+      expect(component.filteredForms().length).toBe(1);
+      expect(component.filteredForms()[0].description).toContain('feedback');
+    });
+
+    it('should return all forms when search term is empty', () => {
+      component.searchTerm.set('');
+      expect(component.filteredForms().length).toBe(2);
+    });
+
+    it('should return empty array when no matches found', () => {
+      component.searchTerm.set('nonexistent');
+      expect(component.filteredForms().length).toBe(0);
+    });
+
+    it('should clear search term', () => {
+      component.searchTerm.set('test');
+      component.clearSearch();
+      expect(component.searchTerm()).toBe('');
+    });
+
+    it('should debounce search input', (done) => {
+      const event = { target: { value: 'Contact' } } as any;
+      component.onSearchInput(event);
+
+      // Immediately check - should not be updated yet
+      expect(component.searchTerm()).toBe('');
+
+      // After debounce timeout
+      setTimeout(() => {
+        expect(component.searchTerm()).toBe('Contact');
+        done();
+      }, 350);
+    });
+  });
+
+  describe('create form modal', () => {
+    it('should open create modal with default settings', () => {
+      component.openCreateFormModal();
+
+      expect(component.showCreateModal()).toBe(true);
+      expect(component.newFormSettings()).toEqual({
+        title: '',
+        description: '',
+        columnLayout: 1,
+        fieldSpacing: 'normal',
+        successMessage: 'Thank you for your submission!',
+        redirectUrl: '',
+        allowMultipleSubmissions: true,
+      });
+    });
+
+    it('should create form and navigate to builder on settings saved', (done) => {
+      const mockCreatedForm: FormMetadata = {
+        id: 'new-form-id',
+        userId: 'user-1',
+        title: 'New Form',
+        description: 'New form description',
+        status: FormStatus.DRAFT,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      formsApiServiceSpy.createForm.and.returnValue(of(mockCreatedForm));
+
+      const settings = {
+        title: 'New Form',
+        description: 'New form description',
+        columnLayout: 2 as 1 | 2 | 3,
+        fieldSpacing: 'normal' as 'compact' | 'normal' | 'relaxed',
+        successMessage: 'Thanks!',
+        redirectUrl: 'https://example.com',
+        allowMultipleSubmissions: false,
+      };
+
+      component.onFormSettingsSaved(settings);
+
+      expect(formsApiServiceSpy.createForm).toHaveBeenCalledWith({
+        title: 'New Form',
+        description: 'New form description',
+        status: FormStatus.DRAFT,
+      });
+
+      expect(component.showCreateModal()).toBe(false);
+      expect(messageServiceSpy.add).toHaveBeenCalledWith({
+        severity: 'success',
+        summary: 'Form Created',
+        detail: 'Form created successfully. Redirecting to builder...',
+        life: 2000,
+      });
+
+      // Wait for navigation timeout
+      setTimeout(() => {
+        expect(routerSpy.navigate).toHaveBeenCalledWith(['/tools/form-builder', 'new-form-id']);
+        done();
+      }, 600);
+    });
+
+    it('should show error message on create failure', () => {
+      const error = { error: { message: 'Creation failed' } };
+      formsApiServiceSpy.createForm.and.returnValue(throwError(() => error));
+
+      const settings = {
+        title: 'New Form',
+        description: '',
+        columnLayout: 1 as 1 | 2 | 3,
+        fieldSpacing: 'normal' as 'compact' | 'normal' | 'relaxed',
+        successMessage: 'Thanks!',
+        redirectUrl: '',
+        allowMultipleSubmissions: true,
+      };
+
+      component.onFormSettingsSaved(settings);
+
+      expect(messageServiceSpy.add).toHaveBeenCalledWith({
+        severity: 'error',
+        summary: 'Creation Failed',
+        detail: 'Creation failed',
+        life: 3000,
+      });
     });
   });
 

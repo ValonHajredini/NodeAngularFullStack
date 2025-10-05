@@ -89,7 +89,7 @@ describe('FormRendererService', () => {
         error: () => fail('Should not error'),
       });
 
-      const req = httpMock.expectOne(`/api/public/forms/render/${token}`);
+      const req = httpMock.expectOne(`/api/v1/public/forms/render/${token}`);
       expect(req.request.method).toBe('GET');
       req.flush(mockResponse);
     });
@@ -107,7 +107,7 @@ describe('FormRendererService', () => {
         },
       });
 
-      const req = httpMock.expectOne(`/api/public/forms/render/${token}`);
+      const req = httpMock.expectOne(`/api/v1/public/forms/render/${token}`);
       req.flush(
         {
           success: false,
@@ -131,7 +131,7 @@ describe('FormRendererService', () => {
         },
       });
 
-      const req = httpMock.expectOne(`/api/public/forms/render/${token}`);
+      const req = httpMock.expectOne(`/api/v1/public/forms/render/${token}`);
       req.flush(
         {
           success: false,
@@ -155,7 +155,7 @@ describe('FormRendererService', () => {
         },
       });
 
-      const req = httpMock.expectOne(`/api/public/forms/render/${token}`);
+      const req = httpMock.expectOne(`/api/v1/public/forms/render/${token}`);
       req.flush(
         {
           success: false,
@@ -178,7 +178,7 @@ describe('FormRendererService', () => {
         },
       });
 
-      const req = httpMock.expectOne(`/api/public/forms/render/${token}`);
+      const req = httpMock.expectOne(`/api/v1/public/forms/render/${token}`);
       req.flush(
         {
           success: false,
@@ -201,7 +201,7 @@ describe('FormRendererService', () => {
         },
       });
 
-      const req = httpMock.expectOne(`/api/public/forms/render/${token}`);
+      const req = httpMock.expectOne(`/api/v1/public/forms/render/${token}`);
       req.error(new ProgressEvent('Network error'));
     });
 
@@ -218,7 +218,7 @@ describe('FormRendererService', () => {
         },
       });
 
-      const req = httpMock.expectOne(`/api/public/forms/render/${token}`);
+      const req = httpMock.expectOne(`/api/v1/public/forms/render/${token}`);
       req.flush(
         {
           success: false,

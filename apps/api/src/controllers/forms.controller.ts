@@ -52,6 +52,7 @@ export class FormsController {
         title: req.body.title,
         description: req.body.description,
         status: req.body.status || FormStatus.DRAFT,
+        schema: req.body.schema,
       };
 
       // Create form using service
@@ -148,7 +149,7 @@ export class FormsController {
       }
 
       // Get form from repository
-      const form = await formsRepository.findFormById(id);
+      const form = await formsService.getFormWithSchema(id);
 
       if (!form) {
         throw new ApiError('Form not found', 404, 'NOT_FOUND');
@@ -234,8 +235,12 @@ export class FormsController {
         updateData.description = req.body.description;
       if (req.body.status !== undefined) updateData.status = req.body.status;
 
-      // Update form using repository
-      const updatedForm = await formsRepository.update(id, updateData);
+      // Update form using service
+      const updatedForm = await formsService.updateForm(
+        id,
+        updateData,
+        req.body.schema
+      );
 
       res.status(200).json({
         success: true,

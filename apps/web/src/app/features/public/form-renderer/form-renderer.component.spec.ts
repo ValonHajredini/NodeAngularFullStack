@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { of, throwError } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 import { FormRendererComponent } from './form-renderer.component';
 import { FormRendererService, FormRenderError, FormRenderErrorType } from './form-renderer.service';
 import { FormFieldType, FormSchema, FormSettings } from '@nodeangularfullstack/shared';
@@ -657,6 +657,214 @@ describe('FormRendererComponent', () => {
 
       expect(newComponent.formGroup?.get('divider-1')).toBeFalsy();
       expect(newComponent.formGroup?.get('name')).toBeTruthy();
+    });
+  });
+
+  describe('Preview Mode', () => {
+    it('should load preview data from sessionStorage when on preview route', () => {
+      const previewId = 'test-preview-123';
+      const previewData = {
+        schema: {
+          fields: [
+            {
+              id: 'field-1',
+              type: FormFieldType.TEXT,
+              label: 'Preview Field',
+              fieldName: 'preview-field',
+              required: true,
+              order: 1,
+            },
+          ],
+          version: '1.0.0',
+        },
+        settings: {
+          layout: {
+            columns: 1 as 1 | 2 | 3 | 4,
+            spacing: 'medium' as 'small' | 'medium' | 'large',
+          },
+          submission: {
+            showSuccessMessage: true,
+            successMessage: 'Thank you!',
+            allowMultipleSubmissions: false,
+          },
+        },
+        isPreview: true,
+      };
+
+      // Set up preview route
+      const urlSubject = new Subject<any>();
+      const previewRouteStub = {
+        snapshot: {
+          paramMap: {
+            get: jasmine.createSpy('get').and.returnValue(previewId),
+          },
+        },
+        url: urlSubject.asObservable(),
+      };
+
+      spyOn(localStorage, 'getItem').and.returnValue(JSON.stringify(previewData));
+
+      TestBed.overrideProvider(ActivatedRoute, { useValue: previewRouteStub });
+
+      const newFixture = TestBed.createComponent(FormRendererComponent);
+      const newComponent = newFixture.componentInstance;
+
+      // Emit preview route URL segments
+      urlSubject.next([{ path: 'forms' }, { path: 'preview' }, { path: previewId }]);
+      newFixture.detectChanges();
+
+      expect(localStorage.getItem).toHaveBeenCalledWith(`form-preview-${previewId}`);
+      expect(newComponent.isPreview).toBe(true);
+      expect(newComponent.schema?.fields.length).toBe(1);
+      expect(newComponent.settings?.layout.columns).toBe(1);
+      expect(newComponent.state.loading).toBe(false);
+    });
+
+    it('should show error when preview data not found in localStorage', () => {
+      const previewId = 'missing-preview';
+      const urlSubject = new Subject<any>();
+      const previewRouteStub = {
+        snapshot: {
+          paramMap: {
+            get: jasmine.createSpy('get').and.returnValue(previewId),
+          },
+        },
+        url: urlSubject.asObservable(),
+      };
+
+      spyOn(localStorage, 'getItem').and.returnValue(null);
+
+      TestBed.overrideProvider(ActivatedRoute, { useValue: previewRouteStub });
+
+      const newFixture = TestBed.createComponent(FormRendererComponent);
+      const newComponent = newFixture.componentInstance;
+
+      urlSubject.next([{ path: 'forms' }, { path: 'preview' }, { path: previewId }]);
+      newFixture.detectChanges();
+
+      expect(newComponent.state.error).toBe(
+        'Preview data not found. Please generate a new preview.',
+      );
+      expect(newComponent.state.errorType).toBe(FormRenderErrorType.FORM_NOT_FOUND);
+    });
+
+    it('should show error when preview data is invalid JSON', () => {
+      const previewId = 'invalid-preview';
+      const urlSubject = new Subject<any>();
+      const previewRouteStub = {
+        snapshot: {
+          paramMap: {
+            get: jasmine.createSpy('get').and.returnValue(previewId),
+          },
+        },
+        url: urlSubject.asObservable(),
+      };
+
+      spyOn(localStorage, 'getItem').and.returnValue('invalid-json{');
+
+      TestBed.overrideProvider(ActivatedRoute, { useValue: previewRouteStub });
+
+      const newFixture = TestBed.createComponent(FormRendererComponent);
+      const newComponent = newFixture.componentInstance;
+
+      urlSubject.next([{ path: 'forms' }, { path: 'preview' }, { path: previewId }]);
+      newFixture.detectChanges();
+
+      expect(newComponent.state.error).toBe('Failed to load preview data');
+      expect(newComponent.state.errorType).toBe(FormRenderErrorType.PARSE_ERROR);
+    });
+
+    it('should disable submit button in preview mode', () => {
+      const previewData = {
+        schema: mockSchema,
+        settings: mockSettings,
+        isPreview: true,
+      };
+
+      const previewId = 'test-preview-submit';
+      const urlSubject = new Subject<any>();
+      const previewRouteStub = {
+        snapshot: {
+          paramMap: {
+            get: jasmine.createSpy('get').and.returnValue(previewId),
+          },
+        },
+        url: urlSubject.asObservable(),
+      };
+
+      spyOn(localStorage, 'getItem').and.returnValue(JSON.stringify(previewData));
+
+      TestBed.overrideProvider(ActivatedRoute, { useValue: previewRouteStub });
+
+      const newFixture = TestBed.createComponent(FormRendererComponent);
+      const newComponent = newFixture.componentInstance;
+
+      urlSubject.next([{ path: 'forms' }, { path: 'preview' }, { path: previewId }]);
+      newFixture.detectChanges();
+
+      expect(newComponent.isPreview).toBe(true);
+      expect(newComponent.canSubmit).toBe(false);
+
+      // Even with valid form, canSubmit should be false in preview
+      newComponent.formGroup?.patchValue({
+        name: 'John Doe',
+        email: 'john@example.com',
+        country: 'us',
+        'accept-terms': true,
+      });
+      newFixture.detectChanges();
+
+      expect(newComponent.formGroup?.valid).toBe(true);
+      expect(newComponent.canSubmit).toBe(false);
+    });
+
+    it('should not call submit service in preview mode', () => {
+      const previewData = {
+        schema: mockSchema,
+        settings: mockSettings,
+        isPreview: true,
+      };
+
+      const previewId = 'test-preview-no-submit';
+      const urlSubject = new Subject<any>();
+      const previewRouteStub = {
+        snapshot: {
+          paramMap: {
+            get: jasmine.createSpy('get').and.returnValue(previewId),
+          },
+        },
+        url: urlSubject.asObservable(),
+      };
+
+      spyOn(localStorage, 'getItem').and.returnValue(JSON.stringify(previewData));
+
+      TestBed.overrideProvider(ActivatedRoute, { useValue: previewRouteStub });
+
+      const newFixture = TestBed.createComponent(FormRendererComponent);
+      const newComponent = newFixture.componentInstance;
+
+      urlSubject.next([{ path: 'forms' }, { path: 'preview' }, { path: previewId }]);
+      newFixture.detectChanges();
+
+      // Fill form with valid data
+      newComponent.formGroup?.patchValue({
+        name: 'John Doe',
+        email: 'john@example.com',
+        country: 'us',
+        'accept-terms': true,
+      });
+
+      // Spy on submitForm service
+      spyOn(formRendererService, 'submitForm').and.returnValue(
+        of({ submissionId: 'test-submission-id', message: 'Success' }),
+      );
+
+      // Attempt to submit
+      newComponent.onSubmit();
+
+      // Service should not be called in preview mode
+      expect(formRendererService.submitForm).not.toHaveBeenCalled();
+      expect(newComponent.state.submitting).toBe(false);
     });
   });
 });

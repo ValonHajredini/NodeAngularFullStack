@@ -170,6 +170,167 @@ router.get('/', AuthMiddleware.authenticate, formsController.getForms);
 
 /**
  * @swagger
+ * /api/forms/{id}/publish:
+ *   post:
+ *     summary: Publish a form
+ *     description: Publish a form with JWT render token (owner or admin only)
+ *     tags: [Forms]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Form ID (UUID)
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [expiresInDays]
+ *             properties:
+ *               expiresInDays:
+ *                 type: number
+ *                 minimum: 1
+ *                 maximum: 365
+ *                 default: 30
+ *                 description: Number of days until token expires
+ *           example:
+ *             expiresInDays: 30
+ *     responses:
+ *       200:
+ *         description: Form published successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Form published successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     form:
+ *                       $ref: '#/components/schemas/FormMetadata'
+ *                     schema:
+ *                       $ref: '#/components/schemas/FormSchema'
+ *                     renderUrl:
+ *                       type: string
+ *                       example: "/forms/render/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *       400:
+ *         description: Validation error or schema validation failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Insufficient permissions to publish this form
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Form not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       429:
+ *         description: Rate limit exceeded (10 publishes per hour)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.post(
+  '/:id/publish',
+  AuthMiddleware.authenticate,
+  RateLimitMiddleware.publishRateLimit(),
+  formIdValidator,
+  formsController.publishForm
+);
+
+/**
+ * @swagger
+ * /api/forms/{id}/unpublish:
+ *   post:
+ *     summary: Unpublish a form
+ *     description: Unpublish a form and invalidate render token (owner or admin only)
+ *     tags: [Forms]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Form ID (UUID)
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *     responses:
+ *       200:
+ *         description: Form unpublished successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Form unpublished successfully"
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Insufficient permissions to unpublish this form
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Form not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.post(
+  '/:id/unpublish',
+  AuthMiddleware.authenticate,
+  formIdValidator,
+  formsController.unpublishForm
+);
+
+/**
+ * @swagger
  * /api/forms/{id}:
  *   get:
  *     summary: Get form by ID
@@ -390,167 +551,6 @@ router.delete(
   AuthMiddleware.authenticate,
   formIdValidator,
   formsController.deleteForm
-);
-
-/**
- * @swagger
- * /api/forms/{id}/publish:
- *   post:
- *     summary: Publish a form
- *     description: Publish a form with JWT render token (owner or admin only)
- *     tags: [Forms]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Form ID (UUID)
- *         example: "123e4567-e89b-12d3-a456-426614174000"
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [expiresInDays]
- *             properties:
- *               expiresInDays:
- *                 type: number
- *                 minimum: 1
- *                 maximum: 365
- *                 default: 30
- *                 description: Number of days until token expires
- *           example:
- *             expiresInDays: 30
- *     responses:
- *       200:
- *         description: Form published successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "Form published successfully"
- *                 data:
- *                   type: object
- *                   properties:
- *                     form:
- *                       $ref: '#/components/schemas/FormMetadata'
- *                     schema:
- *                       $ref: '#/components/schemas/FormSchema'
- *                     renderUrl:
- *                       type: string
- *                       example: "/forms/render/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
- *                 timestamp:
- *                   type: string
- *                   format: date-time
- *       400:
- *         description: Validation error or schema validation failed
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ValidationError'
- *       401:
- *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       403:
- *         description: Insufficient permissions to publish this form
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       404:
- *         description: Form not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       429:
- *         description: Rate limit exceeded (10 publishes per hour)
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-router.post(
-  '/:id/publish',
-  AuthMiddleware.authenticate,
-  RateLimitMiddleware.publishRateLimit(),
-  formIdValidator,
-  formsController.publishForm
-);
-
-/**
- * @swagger
- * /api/forms/{id}/unpublish:
- *   post:
- *     summary: Unpublish a form
- *     description: Unpublish a form and invalidate render token (owner or admin only)
- *     tags: [Forms]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Form ID (UUID)
- *         example: "123e4567-e89b-12d3-a456-426614174000"
- *     responses:
- *       200:
- *         description: Form unpublished successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "Form unpublished successfully"
- *                 timestamp:
- *                   type: string
- *                   format: date-time
- *       401:
- *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       403:
- *         description: Insufficient permissions to unpublish this form
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       404:
- *         description: Form not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-router.post(
-  '/:id/unpublish',
-  AuthMiddleware.authenticate,
-  formIdValidator,
-  formsController.unpublishForm
 );
 
 /**

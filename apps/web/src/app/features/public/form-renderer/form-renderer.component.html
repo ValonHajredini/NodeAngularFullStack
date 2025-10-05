@@ -77,6 +77,19 @@
   <!-- Form Content -->
   @else if (formGroup && schema) {
     <div class="max-w-6xl mx-auto">
+      <!-- Preview Mode Banner -->
+      @if (isPreview) {
+        <div
+          class="preview-banner bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 mb-6 flex items-center gap-3 rounded-md"
+        >
+          <i class="pi pi-info-circle text-2xl"></i>
+          <div>
+            <p class="font-semibold">PREVIEW MODE</p>
+            <p class="text-sm">This is a temporary preview. Changes are not saved.</p>
+          </div>
+        </div>
+      }
+
       <p-card>
         <form [formGroup]="formGroup" (ngSubmit)="onSubmit()" class="space-y-6">
           <!-- Form Fields Grid -->
@@ -266,20 +279,22 @@
 
           <!-- Submit Button -->
           <div class="flex justify-end mt-6">
-            <button
-              type="submit"
-              pButton
-              [disabled]="formGroup.invalid || state.submitting"
-              class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-            >
-              @if (state.submitting) {
-                <i class="pi pi-spin pi-spinner mr-2"></i>
-                Submitting...
-              } @else {
-                <i class="pi pi-check mr-2"></i>
-                Submit
-              }
-            </button>
+            @if (!isPreview) {
+              <button
+                type="submit"
+                pButton
+                [disabled]="formGroup.invalid || state.submitting"
+                class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                @if (state.submitting) {
+                  <i class="pi pi-spin pi-spinner mr-2"></i>
+                  Submitting...
+                } @else {
+                  <i class="pi pi-check mr-2"></i>
+                  Submit
+                }
+              </button>
+            }
           </div>
         </form>
       </p-card>

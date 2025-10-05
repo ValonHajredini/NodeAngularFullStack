@@ -11,15 +11,16 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonDirective } from 'primeng/button';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
-import { FormField, FormFieldType } from '@nodeangularfullstack/shared';
+import { FormField, FormFieldType, FormMetadata } from '@nodeangularfullstack/shared';
 import { FormBuilderService } from './form-builder.service';
 import { FormsApiService } from './forms-api.service';
 import { ComponentWithUnsavedChanges } from '@core/guards/unsaved-changes.guard';
 import { FieldPaletteComponent } from './field-palette/field-palette.component';
 import { FormCanvasComponent } from './form-canvas/form-canvas.component';
 import { FieldPropertiesComponent } from './field-properties/field-properties.component';
-import { FormSettingsComponent } from './form-settings/form-settings.component';
+import { FormSettingsComponent, FormSettings } from './form-settings/form-settings.component';
 import { PublishDialogComponent } from './publish-dialog/publish-dialog.component';
+import { Dialog } from 'primeng/dialog';
 
 /**
  * Form Builder main component.
@@ -38,6 +39,7 @@ import { PublishDialogComponent } from './publish-dialog/publish-dialog.componen
     FieldPropertiesComponent,
     FormSettingsComponent,
     PublishDialogComponent,
+    Dialog,
   ],
   providers: [MessageService],
   template: `
@@ -49,6 +51,15 @@ import { PublishDialogComponent } from './publish-dialog/publish-dialog.componen
         <div class="flex items-center gap-2">
           <i class="pi pi-file-edit text-2xl text-blue-600"></i>
           <h2 class="text-xl font-semibold text-gray-900">Form Builder</h2>
+          <button
+            pButton
+            label="My Forms"
+            icon="pi pi-list"
+            severity="secondary"
+            size="small"
+            (click)="openFormsDialog()"
+            class="ml-4"
+          ></button>
         </div>
 
         <div class="flex items-center gap-2">
@@ -124,7 +135,10 @@ import { PublishDialogComponent } from './publish-dialog/publish-dialog.componen
 
         <!-- Center: Form Canvas -->
         <div class="flex-1 overflow-auto">
-          <app-form-canvas (fieldClicked)="onFieldClicked($event)"></app-form-canvas>
+          <app-form-canvas
+            [settings]="formSettings()"
+            (fieldClicked)="onFieldClicked($event)"
+          ></app-form-canvas>
         </div>
 
         <!-- Right sidebar: Field Properties -->
@@ -138,13 +152,16 @@ import { PublishDialogComponent } from './publish-dialog/publish-dialog.componen
 
       <!-- Form Settings Dialog -->
       <app-form-settings
-        [(visible)]="settingsDialogVisible"
+        [visible]="settingsDialogVisible()"
+        (visibleChange)="onSettingsDialogVisibleChange($event)"
+        [settings]="formSettings()"
         (settingsSaved)="onSettingsSaved($event)"
       ></app-form-settings>
 
       <!-- Publish Dialog -->
       <app-publish-dialog
-        [(visible)]="publishDialogVisible"
+        [visible]="publishDialogVisible()"
+        (visibleChange)="publishDialogVisible.set($event)"
         [loading]="isPublishing()"
         [validationErrors]="publishValidationErrors()"
         [renderUrl]="publishedRenderUrl()"
@@ -154,6 +171,102 @@ import { PublishDialogComponent } from './publish-dialog/publish-dialog.componen
 
       <!-- Toast for notifications -->
       <p-toast position="top-right"></p-toast>
+
+      <!-- My Forms Dialog -->
+      <p-dialog
+        header="My Forms"
+        [visible]="formsListDialogVisible()"
+        (visibleChange)="onFormsDialogVisibleChange($event)"
+        (onHide)="onFormsDialogVisibleChange(false)"
+        [modal]="true"
+        [closable]="true"
+        [dismissableMask]="true"
+        [closeOnEscape]="true"
+        [draggable]="false"
+        [resizable]="false"
+        [blockScroll]="true"
+        [style]="{ width: '640px', maxHeight: '80vh' }"
+      >
+        <div class="space-y-4">
+          @if (formsListLoading()) {
+            <div class="flex items-center justify-center py-10 text-gray-500 text-sm">
+              <i class="pi pi-spin pi-spinner mr-2"></i>
+              Loading your forms...
+            </div>
+          } @else if (formsListError()) {
+            <div class="p-4 rounded border border-red-200 bg-red-50 text-red-700 text-sm">
+              {{ formsListError() }}
+            </div>
+          } @else if (!availableForms().length) {
+            <div class="p-6 text-center text-sm text-gray-500">
+              <i class="pi pi-inbox text-3xl mb-3 text-gray-300"></i>
+              <p>No saved forms found yet. Save a form to see it listed here.</p>
+            </div>
+          } @else {
+            <div class="border border-gray-200 rounded-lg overflow-hidden">
+              <table class="min-w-full bg-white">
+                <thead class="bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase">
+                  <tr>
+                    <th class="px-4 py-3">Title</th>
+                    <th class="px-4 py-3 w-36">Status</th>
+                    <th class="px-4 py-3 w-40">Last Updated</th>
+                    <th class="px-4 py-3 w-28 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (form of availableForms(); track form.id) {
+                    <tr class="border-t border-gray-100 hover:bg-gray-50">
+                      <td class="px-4 py-3">
+                        <div class="font-medium text-gray-900">{{ form.title }}</div>
+                        @if (form.description) {
+                          <div class="text-xs text-gray-500 truncate max-w-xs">
+                            {{ form.description }}
+                          </div>
+                        }
+                      </td>
+                      <td class="px-4 py-3">
+                        <span
+                          class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+                          [ngClass]="{
+                            'bg-green-100 text-green-700': form.status === 'published',
+                            'bg-gray-100 text-gray-600': form.status !== 'published',
+                          }"
+                        >
+                          {{ form.status | titlecase }}
+                        </span>
+                      </td>
+                      <td class="px-4 py-3 text-sm text-gray-600">
+                        {{ form.updatedAt | date: 'medium' }}
+                      </td>
+                      <td class="px-4 py-3">
+                        <div class="flex items-center justify-end gap-2">
+                          <button
+                            pButton
+                            label="Load"
+                            icon="pi pi-arrow-right"
+                            size="small"
+                            (click)="onFormSelected(form)"
+                            [disabled]="isFormDeleting(form.id)"
+                          ></button>
+                          <button
+                            pButton
+                            label="Delete"
+                            icon="pi pi-trash"
+                            size="small"
+                            severity="danger"
+                            (click)="onDeleteForm(form)"
+                            [loading]="isFormDeleting(form.id)"
+                          ></button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      </p-dialog>
     </div>
   `,
   styles: [
@@ -178,7 +291,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
 
   readonly settingsDialogVisible = signal<boolean>(false);
   readonly publishDialogVisible = signal<boolean>(false);
-  readonly formSettings = signal<any>({
+  readonly formSettings = signal<FormSettings>({
     title: 'Untitled Form',
     description: '',
     columnLayout: 1,
@@ -192,6 +305,11 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
   readonly isPublishing = signal<boolean>(false);
   readonly publishValidationErrors = signal<string[]>([]);
   readonly publishedRenderUrl = signal<string | undefined>(undefined);
+  readonly formsListDialogVisible = signal<boolean>(false);
+  readonly formsListLoading = signal<boolean>(false);
+  readonly availableForms = signal<FormMetadata[]>([]);
+  readonly formsListError = signal<string | null>(null);
+  readonly formsDeleting = signal<Set<string>>(new Set());
 
   private fieldCounter = 0;
   private autoSaveInterval?: number;
@@ -229,7 +347,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
   /**
    * Loads an existing form from the API.
    */
-  private loadExistingForm(formId: string): void {
+  private loadExistingForm(formId: string, options: { updateRoute?: boolean } = {}): void {
     this.isLoading.set(true);
     this.formsApiService.getFormById(formId).subscribe({
       next: (form) => {
@@ -240,7 +358,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
           this.formSettings.set({
             title: form.title,
             description: form.description || '',
-            columnLayout: form.schema.settings.layout.columns,
+            columnLayout: this.normalizeColumnLayout(form.schema.settings.layout.columns),
             fieldSpacing:
               form.schema.settings.layout.spacing === 'small'
                 ? 'compact'
@@ -252,6 +370,17 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
             redirectUrl: form.schema.settings.submission.redirectUrl || '',
             allowMultipleSubmissions: form.schema.settings.submission.allowMultipleSubmissions,
           });
+        } else {
+          // Initialize with default settings if no schema settings exist
+          this.formSettings.set({
+            title: form.title || 'Untitled Form',
+            description: form.description || '',
+            columnLayout: 1,
+            fieldSpacing: 'normal',
+            successMessage: 'Thank you for your submission!',
+            redirectUrl: '',
+            allowMultipleSubmissions: true,
+          });
         }
 
         this.isLoading.set(false);
@@ -261,6 +390,10 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
           detail: `Loaded form: ${form.title}`,
           life: 3000,
         });
+
+        if (options.updateRoute) {
+          this.router.navigate(['/app/tools/form-builder', form.id], { replaceUrl: true });
+        }
       },
       error: (error) => {
         this.isLoading.set(false);
@@ -270,7 +403,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
           detail: error.error?.message || 'Failed to load form',
           life: 3000,
         });
-        this.router.navigate(['/tools/form-builder/list']);
+        this.router.navigate(['/app/tools/form-builder/list']);
       },
     });
   }
@@ -345,29 +478,291 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
   }
 
   /**
+   * Handles form settings dialog visibility changes.
+   */
+  onSettingsDialogVisibleChange(visible: boolean): void {
+    this.settingsDialogVisible.set(visible);
+  }
+
+  /**
    * Handles form settings save.
    */
-  onSettingsSaved(settings: any): void {
-    this.formSettings.set(settings);
-    this.formBuilderService.markDirty();
-    this.messageService.add({
-      severity: 'success',
-      summary: 'Settings Saved',
-      detail: 'Form settings have been updated',
-      life: 3000,
+  onSettingsSaved(settings: FormSettings): void {
+    const currentFormId = this.formBuilderService.currentFormId();
+
+    if (!currentFormId) {
+      // If no form is loaded, just update local settings
+      this.formSettings.set({ ...settings });
+      this.formBuilderService.markDirty();
+      this.settingsDialogVisible.set(false);
+
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Settings Saved',
+        detail: 'Form settings have been updated',
+        life: 3000,
+      });
+      return;
+    }
+
+    // Get the current form to preserve existing schema and fields
+    const currentForm = this.formBuilderService.currentForm();
+    const existingFields = this.formBuilderService.formFields();
+
+    // Prepare the schema settings update
+    const schemaUpdate = {
+      fields: existingFields,
+      settings: {
+        layout: {
+          columns: settings.columnLayout,
+          spacing:
+            settings.fieldSpacing === 'compact'
+              ? 'small'
+              : settings.fieldSpacing === 'normal'
+                ? 'medium'
+                : 'large',
+        },
+        submission: {
+          showSuccessMessage: true,
+          successMessage: settings.successMessage,
+          redirectUrl: settings.redirectUrl || undefined,
+          allowMultipleSubmissions: settings.allowMultipleSubmissions,
+        },
+      },
+    };
+
+    // Update the form in the database (backend will handle schema as part of request body)
+    this.formsApiService
+      .updateForm(currentFormId, {
+        title: settings.title,
+        description: settings.description,
+        schema: schemaUpdate as any, // Type assertion needed due to Partial<FormMetadata> limitation
+      } as any)
+      .subscribe({
+        next: (updatedForm) => {
+          // Update the local form settings signal
+          this.formSettings.set({ ...settings });
+
+          // Update the form in availableForms if it exists
+          const forms = this.availableForms();
+          const index = forms.findIndex((f) => f.id === currentFormId);
+          if (index !== -1) {
+            const updatedForms = [...forms];
+            updatedForms[index] = updatedForm;
+            this.availableForms.set(updatedForms);
+          }
+
+          // Mark the form as pristine since it's saved
+          this.formBuilderService.markPristine();
+
+          // Close the settings dialog
+          this.settingsDialogVisible.set(false);
+
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Settings Saved',
+            detail: 'Form settings have been updated successfully',
+            life: 3000,
+          });
+        },
+        error: (error) => {
+          console.error('Error updating form settings:', error);
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Save Failed',
+            detail: error.error?.message || 'Failed to update form settings',
+            life: 5000,
+          });
+        },
+      });
+  }
+
+  /**
+   * Opens the My Forms dialog and loads available forms.
+   */
+  openFormsDialog(): void {
+    this.formsListDialogVisible.set(true);
+    this.fetchAvailableForms();
+  }
+
+  /**
+   * Handles selecting a form from the dialog.
+   */
+  onFormSelected(form: FormMetadata): void {
+    if (this.formBuilderService.isDirty()) {
+      const confirmSwitch = window.confirm(
+        'You have unsaved changes. Loading another form will discard them. Continue?',
+      );
+      if (!confirmSwitch) {
+        return;
+      }
+    }
+
+    this.formsListDialogVisible.set(false);
+    this.loadExistingForm(form.id, { updateRoute: true });
+  }
+
+  /**
+   * Synchronizes dialog visibility changes with the internal signal.
+   */
+  onFormsDialogVisibleChange(visible: boolean): void {
+    this.formsListDialogVisible.set(visible);
+  }
+
+  /**
+   * Deletes a form from the list.
+   */
+  onDeleteForm(form: FormMetadata): void {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${form.title}"? This action cannot be undone.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    this.setFormDeleting(form.id, true);
+
+    this.formsApiService.deleteForm(form.id).subscribe({
+      next: () => {
+        this.availableForms.update((forms) => forms.filter((f) => f.id !== form.id));
+        this.setFormDeleting(form.id, false);
+
+        if (this.formBuilderService.currentForm()?.id === form.id) {
+          this.formBuilderService.resetForm();
+          this.formSettings.set({
+            title: 'Untitled Form',
+            description: '',
+            columnLayout: 1,
+            fieldSpacing: 'normal',
+            successMessage: 'Thank you for your submission!',
+            redirectUrl: '',
+            allowMultipleSubmissions: true,
+          });
+          this.router.navigate(['/app/tools/form-builder']);
+        }
+
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Form Deleted',
+          detail: `${form.title} has been removed`,
+          life: 3000,
+        });
+      },
+      error: (error) => {
+        this.setFormDeleting(form.id, false);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Delete Failed',
+          detail: error.error?.message || 'Failed to delete form',
+          life: 3000,
+        });
+      },
+    });
+  }
+
+  /**
+   * Fetches the authenticated user's forms for selection.
+   */
+  private fetchAvailableForms(): void {
+    this.formsListLoading.set(true);
+    this.formsListError.set(null);
+
+    this.formsApiService.getForms(1, 50).subscribe({
+      next: (response) => {
+        this.availableForms.set(response.data ?? []);
+        this.formsListLoading.set(false);
+      },
+      error: (error) => {
+        this.formsListLoading.set(false);
+        this.formsListError.set(error.error?.message || 'Failed to load your forms');
+      },
+    });
+  }
+
+  isFormDeleting(formId: string): boolean {
+    return this.formsDeleting().has(formId);
+  }
+
+  private setFormDeleting(formId: string, deleting: boolean): void {
+    this.formsDeleting.update((current) => {
+      const next = new Set(current);
+      if (deleting) {
+        next.add(formId);
+      } else {
+        next.delete(formId);
+      }
+      return next;
     });
   }
 
   /**
    * Handles form preview.
+   * Opens the form preview in a new browser tab.
    */
   onPreview(): void {
-    this.messageService.add({
-      severity: 'info',
-      summary: 'Preview',
-      detail: 'Preview feature coming soon',
-      life: 2000,
-    });
+    // Generate temporary preview ID
+    const previewId = crypto.randomUUID();
+
+    const settings = this.formSettings();
+
+    // Prepare preview data from current form state
+    const previewData = {
+      schema: {
+        fields: this.formBuilderService.formFields(),
+        version: '1.0.0',
+      },
+      settings: {
+        title: settings.title,
+        description: settings.description || '',
+        layout: {
+          columns: settings.columnLayout,
+          spacing:
+            settings.fieldSpacing === 'compact'
+              ? 'small'
+              : settings.fieldSpacing === 'normal'
+                ? 'medium'
+                : 'large',
+        },
+        submission: {
+          showSuccessMessage: true,
+          successMessage: settings.successMessage || 'Thank you for your submission!',
+          redirectUrl: settings.redirectUrl || undefined,
+          allowMultipleSubmissions: settings.allowMultipleSubmissions,
+        },
+      },
+      isPreview: true,
+    };
+
+    // Store in localStorage (shared across tabs) with timestamp for cleanup
+    // sessionStorage won't work as it's tab-specific and doesn't share between tabs
+    localStorage.setItem(
+      `form-preview-${previewId}`,
+      JSON.stringify({
+        ...previewData,
+        timestamp: Date.now(),
+      }),
+    );
+
+    // Set cleanup timer to remove preview data after 5 minutes
+    setTimeout(
+      () => {
+        localStorage.removeItem(`form-preview-${previewId}`);
+      },
+      5 * 60 * 1000,
+    );
+
+    // Open preview in new tab
+    const previewUrl = `/forms/preview/${previewId}`;
+    window.open(previewUrl, '_blank', 'noopener,noreferrer');
+  }
+
+  /**
+   * Navigates to the Forms List view.
+   * The unsaved changes guard will automatically prompt the user if there are unsaved changes.
+   */
+  navigateToFormsList(): void {
+    this.router.navigate(['/app/tools/form-builder/list']);
   }
 
   /**
@@ -418,7 +813,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
 
         // If this was a new form, navigate to the form edit URL
         if (!currentForm?.id && savedForm.id) {
-          this.router.navigate(['/tools/form-builder', savedForm.id], { replaceUrl: true });
+          this.router.navigate(['/app/tools/form-builder', savedForm.id], { replaceUrl: true });
         }
       },
       error: (error) => {
@@ -685,5 +1080,21 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
       [FormFieldType.DIVIDER]: 'Section Divider',
     };
     return labelMap[type] || 'Field';
+  }
+
+  /**
+   * Normalizes column layout values coming from stored schemas.
+   * Values greater than the supported maximum fall back to 3 columns, otherwise default to 1.
+   */
+  private normalizeColumnLayout(columns: number | null | undefined): 1 | 2 | 3 {
+    if (columns === 2) {
+      return 2;
+    }
+
+    if (columns === 3 || (columns ?? 1) > 3) {
+      return 3;
+    }
+
+    return 1;
   }
 }

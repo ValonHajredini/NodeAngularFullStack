@@ -38,6 +38,7 @@ export class FormBuilderService {
     const form = this._currentForm();
     return form?.status === FormStatus.PUBLISHED;
   });
+  readonly currentFormId = computed(() => this._currentForm()?.id || null);
 
   /**
    * Adds a new field to the form canvas.
@@ -115,6 +116,14 @@ export class FormBuilderService {
    * Marks the form as saved (no unsaved changes).
    */
   markClean(): void {
+    this._isDirty.set(false);
+  }
+
+  /**
+   * Marks the form as pristine (same as markClean).
+   * Alias for consistency with Angular forms terminology.
+   */
+  markPristine(): void {
     this._isDirty.set(false);
   }
 
