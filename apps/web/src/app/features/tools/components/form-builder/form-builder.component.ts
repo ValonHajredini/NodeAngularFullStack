@@ -170,7 +170,7 @@ import { Dialog } from 'primeng/dialog';
       ></app-publish-dialog>
 
       <!-- Toast for notifications -->
-      <p-toast position="top-right"></p-toast>
+      <p-toast position="bottom-right"></p-toast>
 
       <!-- My Forms Dialog -->
       <p-dialog
