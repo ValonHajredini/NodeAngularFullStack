@@ -174,7 +174,12 @@ export class FormBuilderService {
       const updated = [...fields];
       const [movedField] = updated.splice(previousIndex, 1);
       updated.splice(currentIndex, 0, movedField);
-      return updated;
+
+      // Update order property for all fields to match array index
+      return updated.map((field, index) => ({
+        ...field,
+        order: index,
+      }));
     });
     this.markDirty();
   }

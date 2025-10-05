@@ -10,7 +10,8 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonDirective } from 'primeng/button';
 import { Toast } from 'primeng/toast';
-import { MessageService } from 'primeng/api';
+import { InputText } from 'primeng/inputtext';
+import { MessageService, ConfirmationService } from 'primeng/api';
 import { FormField, FormFieldType, FormMetadata } from '@nodeangularfullstack/shared';
 import { FormBuilderService } from './form-builder.service';
 import { FormsApiService } from './forms-api.service';
@@ -34,6 +35,7 @@ import { Dialog } from 'primeng/dialog';
     CommonModule,
     ButtonDirective,
     Toast,
+    InputText,
     FieldPaletteComponent,
     FormCanvasComponent,
     FieldPropertiesComponent,
@@ -41,7 +43,7 @@ import { Dialog } from 'primeng/dialog';
     PublishDialogComponent,
     Dialog,
   ],
-  providers: [MessageService],
+  providers: [MessageService, ConfirmationService],
   template: `
     <div class="form-builder-container flex flex-col h-full bg-gray-50">
       <!-- Toolbar -->
@@ -70,6 +72,27 @@ import { Dialog } from 'primeng/dialog';
               <i class="pi pi-check-circle"></i>
               Published
             </span>
+
+            <!-- Public URL Display and Copy -->
+            <div class="flex items-center gap-2 ml-2 px-3 py-1 bg-blue-50 rounded-md">
+              <label class="text-xs font-medium text-blue-700">Public URL:</label>
+              <input
+                pInputText
+                [value]="getPublicFormUrl()"
+                readonly
+                class="text-xs w-96 bg-white"
+                size="small"
+              />
+              <button
+                pButton
+                icon="pi pi-copy"
+                size="small"
+                severity="secondary"
+                [outlined]="true"
+                (click)="copyPublicUrl()"
+                title="Copy public form URL"
+              ></button>
+            </div>
           }
           <button
             pButton
@@ -826,6 +849,54 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
         });
       },
     });
+  }
+
+  /**
+   * Gets the public form URL for the currently loaded published form.
+   * @returns The full public URL with render token, or empty string if not published
+   */
+  getPublicFormUrl(): string {
+    const renderToken = this.formBuilderService.currentForm()?.schema?.renderToken;
+    if (!renderToken) {
+      return '';
+    }
+    return `${window.location.origin}/forms/render/${renderToken}`;
+  }
+
+  /**
+   * Copies the public form URL to clipboard.
+   * Shows success or error toast notification.
+   */
+  copyPublicUrl(): void {
+    const url = this.getPublicFormUrl();
+    if (!url) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'No URL Available',
+        detail: 'Form is not published or URL is not available',
+        life: 3000,
+      });
+      return;
+    }
+
+    navigator.clipboard.writeText(url).then(
+      () => {
+        this.messageService.add({
+          severity: 'success',
+          summary: 'URL Copied',
+          detail: 'Public form URL copied to clipboard',
+          life: 2000,
+        });
+      },
+      () => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Copy Failed',
+          detail: 'Failed to copy URL to clipboard',
+          life: 3000,
+        });
+      },
+    );
   }
 
   /**

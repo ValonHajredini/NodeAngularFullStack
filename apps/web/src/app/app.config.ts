@@ -8,6 +8,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { providePrimeNG } from 'primeng/config';
 import Lara from '@primeng/themes/lara';
+import { ConfirmationService } from 'primeng/api';
 import { authInterceptor } from './core/auth/auth.interceptor';
 
 import { routes } from './app.routes';
@@ -27,5 +28,6 @@ export const appConfig: ApplicationConfig = {
         },
       },
     }),
+    ConfirmationService,
   ],
 };

@@ -1,14 +1,16 @@
 import { Component, signal, inject, OnInit } from '@angular/core';
 import { RouterOutlet, Router } from '@angular/router';
+import { ConfirmDialog } from 'primeng/confirmdialog';
 import { ToolsService } from './core/services/tools.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, ConfirmDialog],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
+// eslint-disable-next-line @angular-eslint/component-class-suffix
 export class App implements OnInit {
   readonly title = signal('web');
   currentUrl = '';
