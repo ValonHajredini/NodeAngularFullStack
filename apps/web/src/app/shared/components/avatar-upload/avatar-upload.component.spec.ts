@@ -132,7 +132,11 @@ describe('AvatarUploadComponent', () => {
     });
 
     it('should display user initials when no avatar available', () => {
-      authService.user = signal(mockUserWithoutAvatar);
+      Object.defineProperty(authService, 'user', {
+        value: signal(mockUserWithoutAvatar),
+        writable: true,
+        configurable: true,
+      });
       fixture.detectChanges();
 
       const initialsSpan = fixture.nativeElement.querySelector('.text-xl.font-bold.text-white');
@@ -141,7 +145,11 @@ describe('AvatarUploadComponent', () => {
     });
 
     it('should display user icon when no user data available', () => {
-      authService.user = signal(null);
+      Object.defineProperty(authService, 'user', {
+        value: signal(null),
+        writable: true,
+        configurable: true,
+      });
       fixture.detectChanges();
 
       const userIcon = fixture.nativeElement.querySelector('.pi-user');
@@ -312,8 +320,11 @@ describe('AvatarUploadComponent', () => {
     });
 
     it('should remove avatar when confirmed', () => {
-      confirmationService.confirm.and.callFake((options: any) => {
-        options.accept();
+      confirmationService.confirm.and.callFake((options: unknown) => {
+        if (options && typeof options === 'object' && 'accept' in options) {
+          (options as { accept: () => void }).accept();
+        }
+        return confirmationService;
       });
 
       component.confirmRemoveAvatar();

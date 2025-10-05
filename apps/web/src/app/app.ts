@@ -14,8 +14,9 @@ export class App implements OnInit {
   currentUrl = '';
 
   private readonly toolsService = inject(ToolsService);
+  private readonly router = inject(Router);
 
-  constructor(private router: Router) {
+  constructor() {
     this.currentUrl = this.router.url;
   }
 

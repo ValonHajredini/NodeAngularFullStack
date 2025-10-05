@@ -15,6 +15,7 @@ import { SvgDrawingComponent } from '../svg-drawing/svg-drawing.component';
 import { TodoAppComponent } from '../todo-app/todo-app.component';
 import { MapComponent } from '../map/map.component';
 import { MarkComponent } from '../mark/mark.component';
+import { FormBuilderComponent } from '../form-builder/form-builder.component';
 
 /**
  * Tool container component that dynamically loads tools based on slug.
@@ -35,6 +36,7 @@ import { MarkComponent } from '../mark/mark.component';
     TodoAppComponent,
     MapComponent,
     MarkComponent,
+    FormBuilderComponent,
   ],
   template: `
     <div [class]="containerClass()">
@@ -94,6 +96,9 @@ import { MarkComponent } from '../mark/mark.component';
             }
             @case ('mark') {
               <app-mark />
+            }
+            @case ('form-builder') {
+              <app-form-builder />
             }
             @default {
               <p-card>

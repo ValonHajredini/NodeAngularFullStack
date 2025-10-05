@@ -1,10 +1,8 @@
 /**
  * Main application configuration module.
  * Centralizes all environment variable validation and configuration management.
+ * NOTE: For tests, dotenv is pre-loaded in test-setup.ts
  */
-import dotenv from 'dotenv';
-dotenv.config();
-
 import Joi from 'joi';
 import { tenantConfig, TenantConfig } from './tenant.config';
 
@@ -39,7 +37,10 @@ let performanceMetrics: ConfigPerformanceMetrics = {
 /**
  * Configuration validation cache for performance optimization.
  */
-const validationCache = new Map<string, { result: any; timestamp: number }>();
+const validationCache = new Map<
+  string,
+  { result: AppConfig; timestamp: number }
+>();
 const CACHE_TTL_MS = 5000; // 5 second cache TTL for validation results
 
 /**
@@ -150,6 +151,7 @@ const appConfigSchema = Joi.object({
   JWT_REFRESH_EXPIRES_IN: Joi.alternatives()
     .try(Joi.string().pattern(/^\d+[smhdw]$/), Joi.number().positive())
     .default('7d'),
+  FORM_RENDER_TOKEN_SECRET: Joi.string().min(32).required(),
 
   // Redis
   REDIS_HOST: Joi.string().default('localhost'),
@@ -258,7 +260,7 @@ export const validateAppConfig = (): AppConfig => {
     redis: {
       host: value.REDIS_HOST,
       port: value.REDIS_PORT,
-      password: value.REDIS_PASSWORD || undefined,
+      password: value.REDIS_PASSWORD ?? undefined,
       db: value.REDIS_DB,
     },
     storage: {
@@ -274,8 +276,8 @@ export const validateAppConfig = (): AppConfig => {
       fromName: value.EMAIL_FROM_NAME,
     },
     monitoring: {
-      sentryDsn: value.SENTRY_DSN || undefined,
-      logtailToken: value.LOGTAIL_TOKEN || undefined,
+      sentryDsn: value.SENTRY_DSN ?? undefined,
+      logtailToken: value.LOGTAIL_TOKEN ?? undefined,
     },
     rateLimit: {
       windowMs: value.RATE_LIMIT_WINDOW_MS,
@@ -336,7 +338,7 @@ function generateConfigCacheKey(env: NodeJS.ProcessEnv): string {
   ];
 
   const keyValues = criticalKeys
-    .map((key) => `${key}=${env[key] || ''}`)
+    .map((key) => `${key}=${env[key] ?? ''}`)
     .join('|');
 
   return require('crypto').createHash('md5').update(keyValues).digest('hex');
@@ -372,7 +374,7 @@ function setCachedValidationResult(cacheKey: string, config: AppConfig): void {
   // Limit cache size to prevent memory leaks
   if (validationCache.size > 10) {
     const oldestKey = validationCache.keys().next().value;
-    if (oldestKey) {
+    if (oldestKey !== null && oldestKey !== undefined) {
       validationCache.delete(oldestKey);
     }
   }
@@ -449,3 +451,22 @@ export const clearConfigValidationCache = (): void => {
  * Validates configuration on module load and provides cached access.
  */
 export const appConfig = validateAppConfig();
+
+/**
+ * Static configuration accessors for common use cases.
+ * Provides type-safe access to specific configuration values.
+ */
+export class AppConfig {
+  /**
+   * Gets the form render token secret from environment.
+   * @returns {string} The form render token secret
+   * @throws {Error} If secret is not configured
+   */
+  static getFormRenderTokenSecret(): string {
+    const secret = process.env.FORM_RENDER_TOKEN_SECRET;
+    if (!secret) {
+      throw new Error('FORM_RENDER_TOKEN_SECRET is not configured');
+    }
+    return secret;
+  }
+}

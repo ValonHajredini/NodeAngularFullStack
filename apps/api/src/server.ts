@@ -1,5 +1,8 @@
 import dotenv from 'dotenv';
-dotenv.config();
+
+// Load environment-specific .env file
+const envFile = process.env.NODE_ENV === 'test' ? '.env.test' : '.env';
+dotenv.config({ path: envFile });
 
 import express, { Application, Response } from 'express';
 import cors from 'cors';
@@ -21,6 +24,8 @@ import toolsRoutes from './routes/tools.routes';
 import publicToolsRoutes from './routes/public-tools.routes';
 import shortLinksRoutes from './routes/short-links.routes';
 import drawingProjectsRoutes from './routes/drawing-projects.routes';
+import { formsRoutes } from './routes/forms.routes';
+import { publicFormsRoutes } from './routes/public-forms.routes';
 import { shortLinksController } from './controllers/short-links.controller';
 import { resolveShortLinkValidator } from './validators/url.validators';
 
@@ -151,6 +156,8 @@ class Server {
     this.app.use('/api/v1/auth', authRoutes);
     this.app.use('/api/v1/users', usersRoutes);
     this.app.use('/api/v1/tokens', tokensRoutes);
+    this.app.use('/api/v1/forms', formsRoutes);
+    this.app.use('/api/v1/public', publicFormsRoutes);
     this.app.use('/api/v1/tools/short-links', shortLinksRoutes);
     console.log(
       '📐 Registering drawing project routes at /api/v1/drawing-projects'
@@ -197,6 +204,7 @@ class Server {
     // 404 handler
     this.app.use((_req, res: Response) => {
       res.status(404).json({
+        success: false,
         error: 'Not Found',
         message: 'The requested resource was not found',
         timestamp: new Date().toISOString(),
@@ -207,13 +215,16 @@ class Server {
     this.app.use((err: Error, _req: any, res: Response, _next: any) => {
       console.error('❌ Unhandled error:', err);
 
-      const isDevelopment = config.NODE_ENV === 'development';
+      const isDevelopment =
+        config.NODE_ENV === 'development' || config.NODE_ENV === 'test';
       const statusCode = (err as any).statusCode || 500;
 
       res.status(statusCode).json({
+        success: false,
         error: statusCode >= 500 ? 'Internal Server Error' : 'Bad Request',
         message: isDevelopment ? err.message : 'An error occurred',
         timestamp: new Date().toISOString(),
+        ...((err as any).errors && { errors: (err as any).errors }),
         ...(isDevelopment && { stack: err.stack }),
       });
     });

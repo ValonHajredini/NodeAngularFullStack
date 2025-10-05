@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthService } from './core/auth/auth.service';
@@ -24,9 +25,7 @@ import { Router } from '@angular/router';
         <strong>Loading:</strong> {{ authService.loading() ? 'YES' : 'NO' }}
       </div>
 
-      <div style="margin: 10px 0;">
-        <strong>Error:</strong> {{ authService.error() || 'None' }}
-      </div>
+      <div style="margin: 10px 0;"><strong>Error:</strong> {{ authService.error() || 'None' }}</div>
 
       <div style="margin: 10px 0;">
         <strong>LocalStorage Data:</strong>
@@ -34,13 +33,17 @@ import { Router } from '@angular/router';
       </div>
 
       <div style="margin: 20px 0;">
-        <button (click)="testAuth()" style="padding: 10px; margin: 5px;">Test Authentication</button>
+        <button (click)="testAuth()" style="padding: 10px; margin: 5px;">
+          Test Authentication
+        </button>
         <button (click)="clearStorage()" style="padding: 10px; margin: 5px;">Clear Storage</button>
-        <button (click)="navigateToDashboard()" style="padding: 10px; margin: 5px;">Go to Dashboard</button>
+        <button (click)="navigateToDashboard()" style="padding: 10px; margin: 5px;">
+          Go to Dashboard
+        </button>
         <button (click)="refresh()" style="padding: 10px; margin: 5px;">Refresh Debug</button>
       </div>
     </div>
-  `
+  `,
 })
 export class AuthDebugComponent {
   authService = inject(AuthService);
@@ -55,7 +58,7 @@ export class AuthDebugComponent {
     const data = {
       user: localStorage.getItem('user'),
       access_token: localStorage.getItem('access_token'),
-      refresh_token: localStorage.getItem('refresh_token')
+      refresh_token: localStorage.getItem('refresh_token'),
     };
     return JSON.stringify(data, null, 2);
   }

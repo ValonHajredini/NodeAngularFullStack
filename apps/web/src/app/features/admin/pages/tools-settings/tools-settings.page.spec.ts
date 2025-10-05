@@ -233,6 +233,7 @@ describe('ToolsSettingsPage', () => {
       let confirmConfig: any;
       mockConfirmationService.confirm.and.callFake((config) => {
         confirmConfig = config;
+        return mockConfirmationService;
       });
 
       component.bulkUpdateStatus(true);
@@ -247,6 +248,7 @@ describe('ToolsSettingsPage', () => {
       let confirmConfig: any;
       mockConfirmationService.confirm.and.callFake((config) => {
         confirmConfig = config;
+        return mockConfirmationService;
       });
 
       component.bulkUpdateStatus(true);
@@ -326,6 +328,7 @@ describe('ToolsSettingsPage', () => {
       let confirmConfig: any;
       mockConfirmationService.confirm.and.callFake((config) => {
         confirmConfig = config;
+        return mockConfirmationService;
       });
 
       component.onToggleStatus(mockTools[1], true);

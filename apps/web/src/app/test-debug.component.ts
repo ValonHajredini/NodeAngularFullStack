@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+/* eslint-disable no-console */
+import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 
 @Component({
@@ -11,21 +12,22 @@ import { Router } from '@angular/router';
       <button (click)="goToWelcome()" style="padding: 10px; margin: 5px;">Go to Welcome</button>
       <button (click)="goToLogin()" style="padding: 10px; margin: 5px;">Go to Login</button>
     </div>
-  `
+  `,
 })
 export class TestDebugComponent {
+  private readonly router = inject(Router);
   currentUrl: string;
 
-  constructor(private router: Router) {
+  constructor() {
     this.currentUrl = this.router.url;
     console.log('TestDebugComponent loaded, current URL:', this.currentUrl);
   }
 
-  goToWelcome() {
-    this.router.navigate(['/welcome']);
+  goToWelcome(): void {
+    void this.router.navigate(['/welcome']);
   }
 
-  goToLogin() {
-    this.router.navigate(['/auth/login']);
+  goToLogin(): void {
+    void this.router.navigate(['/auth/login']);
   }
 }

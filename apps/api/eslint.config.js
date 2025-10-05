@@ -80,8 +80,13 @@ export default tseslint.config(
       '@typescript-eslint/no-floating-promises': 'off',
       '@typescript-eslint/await-thenable': 'off',
       '@typescript-eslint/no-misused-promises': 'off',
+      '@typescript-eslint/explicit-function-return-type': 'off',
       'no-console': 'off',
       'no-undef': 'off',
+      'no-magic-numbers': 'off',
+      'max-lines-per-function': 'off',
+      complexity: 'off',
+      'max-depth': 'off',
     },
   },
   {

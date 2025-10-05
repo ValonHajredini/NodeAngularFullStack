@@ -62,25 +62,25 @@ import { CommonModule } from '@angular/common';
 })
 export class GuideOverlayComponent {
   /** Whether overlay is visible */
-  @Input() visible: boolean = true;
+  @Input() visible = true;
 
   /** Whether to show grid */
-  @Input() showGrid: boolean = false;
+  @Input() showGrid = false;
 
   /** Whether to show rulers */
-  @Input() showRulers: boolean = false;
+  @Input() showRulers = false;
 
   /** Canvas width */
-  @Input() width: number = 800;
+  @Input() width = 800;
 
   /** Canvas height */
-  @Input() height: number = 600;
+  @Input() height = 600;
 
   /** Grid spacing in pixels */
-  @Input() gridSpacing: number = 50;
+  @Input() gridSpacing = 50;
 
   /** Major grid line spacing (every N minor lines) */
-  @Input() majorGridInterval: number = 4;
+  @Input() majorGridInterval = 4;
 
   /** Computed grid X positions */
   get gridX(): number[] {

@@ -72,13 +72,13 @@ export class ToolLoadingComponent {
    * Custom loading message to display.
    * @default "Loading..."
    */
-  @Input() message: string = 'Loading...';
+  @Input() message = 'Loading...';
 
   /**
    * Whether to show compact loading indicator (spinner only).
    * @default false
    */
-  @Input() compact: boolean = false;
+  @Input() compact = false;
 
   /**
    * Size variant for the loading component.

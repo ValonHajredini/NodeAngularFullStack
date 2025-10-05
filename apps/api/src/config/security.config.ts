@@ -76,7 +76,9 @@ const securityConfigSchema = Joi.object({
 
   // File Upload Security
   MAX_FILE_SIZE: Joi.number().positive().default(10485760), // 10MB
-  ALLOWED_MIME_TYPES: Joi.string().default('image/jpeg,image/png,image/gif,application/pdf,text/plain'),
+  ALLOWED_MIME_TYPES: Joi.string().default(
+    'image/jpeg,image/png,image/gif,application/pdf,text/plain'
+  ),
   SCAN_FOR_MALWARE: Joi.boolean().default(false),
   QUARANTINE_SUSPICIOUS: Joi.boolean().default(true),
 });
@@ -92,7 +94,9 @@ export const validateSecurityConfig = (): SecurityConfig => {
   });
 
   if (error) {
-    throw new Error(`Security configuration validation failed: ${error.message}`);
+    throw new Error(
+      `Security configuration validation failed: ${error.message}`
+    );
   }
 
   return {
@@ -102,7 +106,8 @@ export const validateSecurityConfig = (): SecurityConfig => {
       audience: value.JWT_AUDIENCE,
       maxAge: appConfig.jwt.expiresIn,
       refreshMaxAge: appConfig.jwt.refreshExpiresIn,
-      requireHttps: value.JWT_REQUIRE_HTTPS || appConfig.app.nodeEnv === 'production',
+      requireHttps:
+        value.JWT_REQUIRE_HTTPS ?? appConfig.app.nodeEnv === 'production',
     },
     database: {
       requireSsl: appConfig.database.ssl,
@@ -127,7 +132,9 @@ export const validateSecurityConfig = (): SecurityConfig => {
     },
     upload: {
       maxFileSize: value.MAX_FILE_SIZE,
-      allowedMimeTypes: value.ALLOWED_MIME_TYPES.split(',').map((type: string) => type.trim()),
+      allowedMimeTypes: value.ALLOWED_MIME_TYPES.split(',').map(
+        (type: string) => type.trim()
+      ),
       scanForMalware: value.SCAN_FOR_MALWARE,
       quarantineSuspicious: value.QUARANTINE_SUSPICIOUS,
     },
@@ -158,12 +165,19 @@ export const validateProductionSecurity = (): void => {
     errors.push('JWT_SECRET must be at least 64 characters long in production');
   }
 
-  if (appConfig.jwt.secret.includes('change') || appConfig.jwt.secret.includes('default')) {
-    errors.push('JWT_SECRET appears to be a default value - must be changed for production');
+  if (
+    appConfig.jwt.secret.includes('change') ||
+    appConfig.jwt.secret.includes('default')
+  ) {
+    errors.push(
+      'JWT_SECRET appears to be a default value - must be changed for production'
+    );
   }
 
   if (!appConfig.database.ssl) {
-    warnings.push('Database SSL is disabled in production - consider enabling for security');
+    warnings.push(
+      'Database SSL is disabled in production - consider enabling for security'
+    );
   }
 
   if (!appConfig.app.frontendUrl.startsWith('https://')) {
@@ -173,51 +187,77 @@ export const validateProductionSecurity = (): void => {
   // Multi-tenant specific security checks
   if (tenantConfig.multiTenancyEnabled) {
     if (!tenantConfig.rlsEnabled && tenantConfig.isolationLevel === 'row') {
-      errors.push('Multi-tenant production deployment with row-level isolation requires RLS to be enabled');
+      errors.push(
+        'Multi-tenant production deployment with row-level isolation requires RLS to be enabled'
+      );
     }
 
     if (!tenantConfig.crossAccessPrevention) {
-      warnings.push('Cross-access prevention is disabled in multi-tenant production - consider enabling');
+      warnings.push(
+        'Cross-access prevention is disabled in multi-tenant production - consider enabling'
+      );
     }
 
     if (!tenantConfig.dataEncryption) {
-      warnings.push('Tenant data encryption is disabled in production - consider enabling for sensitive data');
+      warnings.push(
+        'Tenant data encryption is disabled in production - consider enabling for sensitive data'
+      );
     }
 
     if (!tenantConfig.auditLogging) {
-      warnings.push('Tenant audit logging is disabled in production - consider enabling for compliance');
+      warnings.push(
+        'Tenant audit logging is disabled in production - consider enabling for compliance'
+      );
     }
   }
 
   // pgWeb security check
-  if (appConfig.pgweb.authPass.includes('change') || appConfig.pgweb.authPass.includes('password')) {
-    errors.push('PGWEB_AUTH_PASS appears to be a default value - must be changed for production');
+  if (
+    appConfig.pgweb.authPass.includes('change') ||
+    appConfig.pgweb.authPass.includes('password')
+  ) {
+    errors.push(
+      'PGWEB_AUTH_PASS appears to be a default value - must be changed for production'
+    );
   }
 
   if (!appConfig.pgweb.readOnly) {
-    warnings.push('pgWeb is not in read-only mode in production - consider enabling for safety');
+    warnings.push(
+      'pgWeb is not in read-only mode in production - consider enabling for safety'
+    );
   }
 
   // Rate limiting checks
   if (!securityConfig.api.enableRateLimit) {
-    warnings.push('Rate limiting is disabled in production - consider enabling for DoS protection');
+    warnings.push(
+      'Rate limiting is disabled in production - consider enabling for DoS protection'
+    );
   }
 
   // Monitoring checks
-  if (!appConfig.monitoring.sentryDsn && !appConfig.monitoring.logtailToken) {
-    warnings.push('No error monitoring configured for production - consider setting up Sentry or Logtail');
+  if (
+    (appConfig.monitoring.sentryDsn === null ||
+      appConfig.monitoring.sentryDsn === undefined) &&
+    (appConfig.monitoring.logtailToken === null ||
+      appConfig.monitoring.logtailToken === undefined)
+  ) {
+    warnings.push(
+      'No error monitoring configured for production - consider setting up Sentry or Logtail'
+    );
   }
 
   // Log results
   if (errors.length > 0) {
     console.error('❌ Critical production security errors:');
-    errors.forEach(error => console.error(`   • ${error}`));
-    throw new Error(`Production security validation failed: ${errors.join(', ')}`);
+    errors.forEach((error) => console.error(`   • ${error}`));
+    throw new Error(
+      `Production security validation failed: ${errors.join(', ')}`
+    );
   }
 
   if (warnings.length > 0) {
     console.warn('⚠️  Production security warnings:');
-    warnings.forEach(warning => console.warn(`   • ${warning}`));
+    warnings.forEach((warning) => console.warn(`   • ${warning}`));
   }
 
   console.log('✅ Production security validation passed');
@@ -227,7 +267,19 @@ export const validateProductionSecurity = (): void => {
  * Gets tenant isolation security level description.
  * @returns {object} Security level information
  */
-export const getTenantSecurityInfo = () => {
+export const getTenantSecurityInfo = (): {
+  mode: string;
+  isolation: string;
+  security: string;
+  description: string;
+  features?: {
+    rowLevelSecurity: boolean;
+    crossAccessPrevention: boolean;
+    dataEncryption: boolean;
+    auditLogging: boolean;
+    tokenIsolation: boolean;
+  };
+} => {
   if (!tenantConfig.multiTenancyEnabled) {
     return {
       mode: 'single-tenant',
@@ -258,7 +310,7 @@ export const getTenantSecurityInfo = () => {
 /**
  * Security configuration summary for debugging and monitoring.
  */
-export const getSecuritySummary = () => {
+export const getSecuritySummary = (): Record<string, unknown> => {
   return {
     environment: appConfig.app.nodeEnv,
     timestamp: new Date().toISOString(),

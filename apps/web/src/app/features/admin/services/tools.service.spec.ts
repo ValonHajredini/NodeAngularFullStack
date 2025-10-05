@@ -11,6 +11,7 @@ describe('ToolsService', () => {
   const mockTool: Tool = {
     id: '1',
     key: 'short-link',
+    slug: 'short-link-generator',
     name: 'Short Link Generator',
     description: 'Generate shortened URLs',
     active: true,
@@ -207,6 +208,7 @@ describe('ToolsService', () => {
     it('should create tool successfully', () => {
       const request: CreateToolRequest = {
         key: 'new-tool',
+        slug: 'new-tool-slug',
         name: 'New Tool',
         description: 'A new tool',
         active: true,
@@ -215,6 +217,8 @@ describe('ToolsService', () => {
       const newTool: Tool = {
         id: '2',
         ...request,
+        slug: request.slug!, // Assert non-null as it's required in Tool type
+        active: request.active!, // Assert non-null as it's required in Tool type
         createdAt: new Date('2025-01-01'),
         updatedAt: new Date('2025-01-01'),
       };
@@ -305,12 +309,12 @@ describe('ToolsService', () => {
     });
 
     it('should compute active tools correctly', () => {
-      expect(service.activeTools()).toHaveLength(1);
+      expect(service.activeTools().length).toBe(1);
       expect(service.activeTools()[0].active).toBe(true);
     });
 
     it('should compute inactive tools correctly', () => {
-      expect(service.inactiveTools()).toHaveLength(1);
+      expect(service.inactiveTools().length).toBe(1);
       expect(service.inactiveTools()[0].active).toBe(false);
     });
 

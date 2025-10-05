@@ -7,7 +7,7 @@ import { databaseService } from '../../src/services/database.service';
 import { Pool, PoolClient } from 'pg';
 
 describe('Database Integration Tests', () => {
-  let dbService = databaseService;
+  const dbService = databaseService;
 
   beforeAll(async () => {
     // Use existing singleton instance
@@ -97,7 +97,6 @@ describe('Database Integration Tests', () => {
 
         expect(selectResult.rows).toHaveLength(1);
         expect(selectResult.rows[0].data).toBe('test data');
-
       } finally {
         client.release();
       }
@@ -109,10 +108,9 @@ describe('Database Integration Tests', () => {
       try {
         await client.query('BEGIN');
 
-        await client.query(
-          'INSERT INTO test_transactions (data) VALUES ($1)',
-          ['data to rollback']
-        );
+        await client.query('INSERT INTO test_transactions (data) VALUES ($1)', [
+          'data to rollback',
+        ]);
 
         // Simulate error condition
         try {
@@ -128,7 +126,6 @@ describe('Database Integration Tests', () => {
         );
 
         expect(selectResult.rows).toHaveLength(0);
-
       } finally {
         client.release();
       }
@@ -182,7 +179,7 @@ describe('Database Integration Tests', () => {
           timeoutPromise,
           new Promise((_, reject) =>
             setTimeout(() => reject(new Error('Query timeout')), 5000)
-          )
+          ),
         ])
       ).rejects.toThrow();
     });
@@ -195,12 +192,14 @@ describe('Database Integration Tests', () => {
       const originalQuery = dbService.query.bind(dbService);
 
       // Mock connection loss
-      dbService.query = jest.fn().mockRejectedValue(
-        new Error('connection terminated')
-      );
+      dbService.query = jest
+        .fn()
+        .mockRejectedValue(new Error('connection terminated'));
 
       try {
-        await expect(dbService.query('SELECT 1')).rejects.toThrow('connection terminated');
+        await expect(dbService.query('SELECT 1')).rejects.toThrow(
+          'connection terminated'
+        );
       } finally {
         // Restore original method
         dbService.query = originalQuery;
@@ -329,19 +328,21 @@ describe('Database Integration Tests', () => {
       `);
 
       // Verify table exists
-      const tableCheck = await dbService.query(`
+      const tableCheck = await dbService.query(
+        `
         SELECT table_name
         FROM information_schema.tables
         WHERE table_name = $1 AND table_schema = 'public'
-      `, [tableName]);
+      `,
+        [tableName]
+      );
 
       expect(tableCheck.rows).toHaveLength(1);
 
       // Insert test data
-      await dbService.query(
-        `INSERT INTO ${tableName} (name) VALUES ($1)`,
-        ['test name']
-      );
+      await dbService.query(`INSERT INTO ${tableName} (name) VALUES ($1)`, [
+        'test name',
+      ]);
 
       // Verify data
       const dataCheck = await dbService.query(`SELECT * FROM ${tableName}`);
@@ -352,11 +353,14 @@ describe('Database Integration Tests', () => {
       await dbService.query(`DROP TABLE ${tableName}`);
 
       // Verify table is gone
-      const tableCheckAfter = await dbService.query(`
+      const tableCheckAfter = await dbService.query(
+        `
         SELECT table_name
         FROM information_schema.tables
         WHERE table_name = $1 AND table_schema = 'public'
-      `, [tableName]);
+      `,
+        [tableName]
+      );
 
       expect(tableCheckAfter.rows).toHaveLength(0);
     });
@@ -395,7 +399,6 @@ describe('Database Integration Tests', () => {
 
         expect(result.rows).toHaveLength(1);
         expect(result.rows[0].email).toBe('user5@test.com');
-
       } finally {
         // Clean up
         await dbService.query(`DROP TABLE IF EXISTS ${tableName}`);

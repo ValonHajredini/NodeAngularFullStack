@@ -246,7 +246,7 @@ export class AuditMiddleware {
           const isSuccess = statusCode >= 200 && statusCode < 300;
 
           let userId: string | undefined;
-          let changes: any = { success: isSuccess };
+          const changes: any = { success: isSuccess };
 
           // Extract user ID from different sources based on action
           if (

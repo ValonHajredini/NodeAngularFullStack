@@ -92,4 +92,23 @@ module.exports = tseslint.config(
     extends: [...angular.configs.templateRecommended, ...angular.configs.templateAccessibility],
     rules: {},
   },
+  {
+    files: ['**/*.spec.ts', '**/*.test.ts', 'src/test.ts'],
+    rules: {
+      // Relax rules for test files
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/strict-boolean-expressions': 'off',
+      '@typescript-eslint/prefer-nullish-coalescing': 'off',
+      '@typescript-eslint/no-floating-promises': 'off',
+      '@typescript-eslint/await-thenable': 'off',
+      '@typescript-eslint/no-misused-promises': 'off',
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@angular-eslint/component-class-suffix': 'off',
+      'no-console': 'off',
+      'no-magic-numbers': 'off',
+      'max-lines-per-function': 'off',
+      complexity: 'off',
+      'max-depth': 'off',
+    },
+  },
 );

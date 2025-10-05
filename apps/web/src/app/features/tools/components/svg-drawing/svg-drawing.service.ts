@@ -348,7 +348,7 @@ export class SvgDrawingService {
    * @param shapeId - ID of the shape to toggle
    * @param multiSelect - If true, adds to selection; if false, replaces selection
    */
-  toggleShapeSelection(shapeId: string, multiSelect: boolean = false): void {
+  toggleShapeSelection(shapeId: string, multiSelect = false): void {
     const shape = this._shapes().find((s) => s.id === shapeId);
     if (!shape) return;
 
@@ -630,7 +630,7 @@ export class SvgDrawingService {
    * @param tolerance - Distance tolerance in pixels (default 10)
    * @returns True if point is near first vertex
    */
-  isNearFirstVertex(point: Point, tolerance: number = 10): boolean {
+  isNearFirstVertex(point: Point, tolerance = 10): boolean {
     const vertices = this._activeVertices();
     if (vertices.length === 0) return false;
 
@@ -1452,7 +1452,7 @@ export class SvgDrawingService {
    * @param addDottedLine - Whether to add a dotted line at the cut point (default: true)
    * @returns Array of new line IDs created from the cut
    */
-  cutLineAtPoint(lineId: string, cutPoint: Point, addDottedLine: boolean = true): string[] {
+  cutLineAtPoint(lineId: string, cutPoint: Point, addDottedLine = true): string[] {
     const line = this._shapes().find((s) => s.id === lineId && s.type === 'line') as
       | LineShape
       | undefined;
@@ -1505,7 +1505,7 @@ export class SvgDrawingService {
    * @param padding - Optional padding around bounds in pixels
    * @returns Bounding box containing all shapes
    */
-  calculateBounds(shapes: Shape[], padding: number = 20): BoundingBox {
+  calculateBounds(shapes: Shape[], padding = 20): BoundingBox {
     if (shapes.length === 0) {
       // Default dimensions for empty canvas
       return { x: 0, y: 0, width: 800, height: 600 };
@@ -1557,7 +1557,7 @@ export class SvgDrawingService {
    * @param offsetY - Y offset to normalize coordinates
    * @returns SVG element string
    */
-  private shapeToSVGElement(shape: Shape, offsetX: number = 0, offsetY: number = 0): string {
+  private shapeToSVGElement(shape: Shape, offsetX = 0, offsetY = 0): string {
     const stroke = shape.color;
     const strokeWidth = shape.strokeWidth;
     const fill = shape.fillColor || 'transparent';
@@ -2213,7 +2213,7 @@ export class SvgDrawingService {
    *   console.log('My active projects:', projects);
    * });
    */
-  getMyProjects(activeOnly: boolean = false): Observable<DrawingProject[]> {
+  getMyProjects(activeOnly = false): Observable<DrawingProject[]> {
     return this.drawingProjectsApi.getProjects(activeOnly);
   }
 
@@ -2350,7 +2350,7 @@ export class SvgDrawingService {
    */
   selectGroup(shapeId: string): void {
     const shape = this._shapes().find((s) => s.id === shapeId);
-    if (!shape || !shape.groupId) {
+    if (!shape?.groupId) {
       return;
     }
 
@@ -2560,7 +2560,7 @@ export class SvgDrawingService {
    * @param closeShape - If true, creates a polygon (closed); otherwise creates polyline (open)
    * @returns The merged shape, or null if merge failed
    */
-  mergeSelectedShapes(closeShape: boolean = false): Shape | null {
+  mergeSelectedShapes(closeShape = false): Shape | null {
     const selectedIds = this._selectedShapeIds();
 
     if (selectedIds.length < 2) {
@@ -3066,7 +3066,7 @@ export class SvgDrawingService {
    * @param direction - Direction to pan ('up', 'down', 'left', 'right')
    * @param amount - Number of pixels to pan (default: 50)
    */
-  panDirection(direction: 'up' | 'down' | 'left' | 'right', amount: number = 50): void {
+  panDirection(direction: 'up' | 'down' | 'left' | 'right', amount = 50): void {
     const offset = this._canvasOffset();
     switch (direction) {
       case 'up':

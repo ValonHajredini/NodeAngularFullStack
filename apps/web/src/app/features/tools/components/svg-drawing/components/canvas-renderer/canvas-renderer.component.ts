@@ -1295,8 +1295,8 @@ export class CanvasRendererComponent implements OnInit, OnDestroy {
   /**
    * Gets resize handles for a shape.
    */
-  getResizeHandles(shape: Shape): Array<{ id: string; x: number; y: number; cursor: string }> {
-    const handles: Array<{ id: string; x: number; y: number; cursor: string }> = [];
+  getResizeHandles(shape: Shape): { id: string; x: number; y: number; cursor: string }[] {
+    const handles: { id: string; x: number; y: number; cursor: string }[] = [];
 
     if (shape.type === 'rectangle' || shape.type === 'rounded-rectangle') {
       const rect = shape as any;
@@ -2460,7 +2460,7 @@ export class CanvasRendererComponent implements OnInit, OnDestroy {
   getCutMarks(
     line: LineShape,
     position: 'start' | 'end',
-  ): Array<{ x1: number; y1: number; x2: number; y2: number }> {
+  ): { x1: number; y1: number; x2: number; y2: number }[] {
     const point = position === 'end' ? line.end : line.start;
     const otherPoint = position === 'end' ? line.start : line.end;
 

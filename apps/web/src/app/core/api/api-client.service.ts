@@ -37,7 +37,7 @@ export class ApiClientService {
    * apiClient.post<AuthResponse>('/auth/login', credentials)
    *   .subscribe(response => console.log('Login successful:', response));
    */
-  post<T>(endpoint: string, body: any, options?: ApiRequestOptions): Observable<T> {
+  post<T>(endpoint: string, body: unknown, options?: ApiRequestOptions): Observable<T> {
     return this.request<T>('POST', endpoint, body, options);
   }
 
@@ -51,7 +51,7 @@ export class ApiClientService {
    * apiClient.patch<User>('/users/123', updates)
    *   .subscribe(user => console.log('User updated:', user));
    */
-  patch<T>(endpoint: string, body: any, options?: ApiRequestOptions): Observable<T> {
+  patch<T>(endpoint: string, body: unknown, options?: ApiRequestOptions): Observable<T> {
     return this.request<T>('PATCH', endpoint, body, options);
   }
 
@@ -62,7 +62,7 @@ export class ApiClientService {
    * @param options - Optional request configuration
    * @returns Observable containing the response data
    */
-  put<T>(endpoint: string, body: any, options?: ApiRequestOptions): Observable<T> {
+  put<T>(endpoint: string, body: unknown, options?: ApiRequestOptions): Observable<T> {
     return this.request<T>('PUT', endpoint, body, options);
   }
 

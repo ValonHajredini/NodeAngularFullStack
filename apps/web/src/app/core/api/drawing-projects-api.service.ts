@@ -30,7 +30,7 @@ export class DrawingProjectsApiService {
    *   console.log('Active projects:', projects);
    * });
    */
-  getProjects(activeOnly: boolean = false): Observable<DrawingProject[]> {
+  getProjects(activeOnly = false): Observable<DrawingProject[]> {
     const url = activeOnly ? `${this.baseUrl}?activeOnly=true` : this.baseUrl;
 
     return this.apiClient

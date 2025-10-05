@@ -19,6 +19,15 @@ export const routes: Routes = [
       import('./features/landing/landing.component').then((m) => m.LandingComponent),
   },
 
+  // Public form renderer (no authentication required)
+  {
+    path: 'forms/render/:token',
+    loadComponent: () =>
+      import('./features/public/form-renderer/form-renderer.component').then(
+        (m) => m.FormRendererComponent,
+      ),
+  },
+
   // Authentication routes (no layout)
   {
     path: 'auth/login',

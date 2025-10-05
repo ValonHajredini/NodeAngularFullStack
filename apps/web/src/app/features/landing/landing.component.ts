@@ -27,8 +27,7 @@ import {
 export class LandingComponent {
   readonly themeService = inject(ThemeService);
   readonly authService = inject(AuthService);
-
-  constructor(private router: Router) {}
+  private readonly router = inject(Router);
 
   /**
    * Welcome page configuration - computed to adapt to authentication state
