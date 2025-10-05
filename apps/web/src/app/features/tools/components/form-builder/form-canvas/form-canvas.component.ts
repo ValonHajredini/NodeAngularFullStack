@@ -224,9 +224,9 @@ export class FormCanvasComponent {
    */
   onFieldDropped(event: CdkDragDrop<FormField[]>): void {
     if (event.previousContainer !== event.container) {
-      // Dropped from palette - add new field
+      // Dropped from palette - add new field at the drop position
       const fieldTypeDef = event.item.data as FieldTypeDefinition;
-      this.formBuilderService.addFieldFromType(fieldTypeDef.type);
+      this.formBuilderService.addFieldFromType(fieldTypeDef.type, event.currentIndex);
     } else {
       // Reordering within canvas
       this.formBuilderService.reorderFields(event.previousIndex, event.currentIndex);

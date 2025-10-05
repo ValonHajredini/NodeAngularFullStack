@@ -147,8 +147,9 @@ export class FormBuilderService {
    * Adds a new field from a field type.
    * Creates a FormField with default values and a unique ID.
    * @param type - The field type to add
+   * @param atIndex - Optional index to insert the field at (defaults to end)
    */
-  addFieldFromType(type: FormFieldType): void {
+  addFieldFromType(type: FormFieldType, atIndex?: number): void {
     const fields = this._formFields();
     const newField: FormField = {
       id: crypto.randomUUID(),
@@ -158,10 +159,26 @@ export class FormBuilderService {
       placeholder: '',
       helpText: '',
       required: false,
-      order: fields.length,
+      order: atIndex ?? fields.length,
       validation: {},
     };
-    this.addField(newField);
+
+    if (atIndex !== undefined && atIndex >= 0 && atIndex < fields.length) {
+      // Insert at specific position
+      this._formFields.update((currentFields) => {
+        const updated = [...currentFields];
+        updated.splice(atIndex, 0, newField);
+        // Update order property for all fields to match array index
+        return updated.map((field, index) => ({
+          ...field,
+          order: index,
+        }));
+      });
+    } else {
+      // Add to end
+      this.addField(newField);
+    }
+    this.markDirty();
   }
 
   /**

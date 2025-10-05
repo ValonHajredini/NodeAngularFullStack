@@ -93,8 +93,10 @@ export class FormsController {
       const page = parseInt(req.query.page as string) || 1;
       const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
 
-      // Admins can see all forms, users see only their own
-      const filterUserId = userRole === 'admin' ? undefined : userId;
+      // In non-tenant mode, users always see only their own forms
+      // In tenant mode, admins can see all forms within their tenant
+      const filterUserId =
+        tenantId && userRole === 'admin' ? undefined : userId;
 
       // Get forms from repository with tenant context
       const tenantContext = tenantId ? { id: tenantId, slug: '' } : undefined;
@@ -143,6 +145,7 @@ export class FormsController {
       const { id } = req.params;
       const userId = req.user?.id;
       const userRole = req.user?.role;
+      const tenantId = req.user?.tenantId;
 
       if (!userId) {
         throw new ApiError('Authentication required', 401, 'UNAUTHORIZED');
@@ -155,8 +158,13 @@ export class FormsController {
         throw new ApiError('Form not found', 404, 'NOT_FOUND');
       }
 
-      // Check ownership (users can only access their own forms, admins can access all)
-      if (form.userId !== userId && userRole !== 'admin') {
+      // In non-tenant mode, users can only access their own forms
+      // In tenant mode, admins can access all forms within their tenant
+      const canAccess =
+        form.userId === userId ||
+        (tenantId && userRole === 'admin' && form.tenantId === tenantId);
+
+      if (!canAccess) {
         throw new ApiError(
           'Insufficient permissions to access this form',
           403,
@@ -215,8 +223,16 @@ export class FormsController {
         throw new ApiError('Form not found', 404, 'NOT_FOUND');
       }
 
-      // Check ownership (users can only update their own forms, admins can update all)
-      if (existingForm.userId !== userId && userRole !== 'admin') {
+      // In non-tenant mode, users can only update their own forms
+      // In tenant mode, admins can update all forms within their tenant
+      const tenantId = req.user?.tenantId;
+      const canUpdate =
+        existingForm.userId === userId ||
+        (tenantId &&
+          userRole === 'admin' &&
+          existingForm.tenantId === tenantId);
+
+      if (!canUpdate) {
         throw new ApiError(
           'Insufficient permissions to update this form',
           403,
@@ -282,8 +298,16 @@ export class FormsController {
         throw new ApiError('Form not found', 404, 'NOT_FOUND');
       }
 
-      // Check ownership (users can only delete their own forms, admins can delete all)
-      if (existingForm.userId !== userId && userRole !== 'admin') {
+      // In non-tenant mode, users can only delete their own forms
+      // In tenant mode, admins can delete all forms within their tenant
+      const tenantId = req.user?.tenantId;
+      const canDelete =
+        existingForm.userId === userId ||
+        (tenantId &&
+          userRole === 'admin' &&
+          existingForm.tenantId === tenantId);
+
+      if (!canDelete) {
         throw new ApiError(
           'Insufficient permissions to delete this form',
           403,
@@ -413,7 +437,14 @@ export class FormsController {
         throw new ApiError('Form not found', 404, 'FORM_NOT_FOUND');
       }
 
-      if (form.userId !== userId && req.user?.role !== 'admin') {
+      // In non-tenant mode, users can only view their own form submissions
+      // In tenant mode, admins can view all submissions within their tenant
+      const tenantId = req.user?.tenantId;
+      const canViewSubmissions =
+        form.userId === userId ||
+        (tenantId && req.user?.role === 'admin' && form.tenantId === tenantId);
+
+      if (!canViewSubmissions) {
         throw new ApiError(
           'You do not have permission to view these submissions',
           403,
@@ -500,7 +531,14 @@ export class FormsController {
         throw new ApiError('Form not found', 404, 'FORM_NOT_FOUND');
       }
 
-      if (form.userId !== userId && req.user?.role !== 'admin') {
+      // In non-tenant mode, users can only export their own form submissions
+      // In tenant mode, admins can export all submissions within their tenant
+      const tenantId = req.user?.tenantId;
+      const canExportSubmissions =
+        form.userId === userId ||
+        (tenantId && req.user?.role === 'admin' && form.tenantId === tenantId);
+
+      if (!canExportSubmissions) {
         throw new ApiError(
           'You do not have permission to export these submissions',
           403,

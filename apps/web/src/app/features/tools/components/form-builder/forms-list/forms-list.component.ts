@@ -7,7 +7,7 @@ import {
   computed,
 } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ButtonDirective } from 'primeng/button';
 import { Paginator } from 'primeng/paginator';
@@ -18,9 +18,10 @@ import { InputText } from 'primeng/inputtext';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { Toast } from 'primeng/toast';
-import { FormMetadata, FormStatus } from '@nodeangularfullstack/shared';
+import { FormMetadata, FormStatus, ToolConfig } from '@nodeangularfullstack/shared';
 import { FormsApiService } from '../forms-api.service';
 import { FormSettingsComponent, FormSettings } from '../form-settings/form-settings.component';
+import { ToolConfigService } from '@core/services/tool-config.service';
 
 /**
  * Forms list component displaying all user's forms.
@@ -32,6 +33,7 @@ import { FormSettingsComponent, FormSettings } from '../form-settings/form-setti
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
+    RouterLink,
     FormsModule,
     ButtonDirective,
     Paginator,
@@ -46,8 +48,32 @@ import { FormSettingsComponent, FormSettings } from '../form-settings/form-setti
   ],
   providers: [MessageService, ConfirmationService],
   template: `
-    <div class="forms-list-container p-6 bg-gray-50 min-h-screen">
-      <div class="max-w-7xl mx-auto">
+    <!-- Breadcrumb Navigation -->
+    <div class="bg-gray-100 border-b border-gray-200 px-6 py-2">
+      <nav
+        class="flex items-center text-sm text-gray-600"
+        [class.max-w-7xl]="!isFullWidth()"
+        [class.mx-auto]="!isFullWidth()"
+      >
+        <a
+          routerLink="/app/dashboard"
+          class="hover:text-blue-600 transition-colors flex items-center"
+        >
+          <i class="pi pi-home mr-1"></i>
+          Dashboard
+        </a>
+        <i class="pi pi-angle-right mx-2 text-gray-400"></i>
+        <a routerLink="/app/tools" class="hover:text-blue-600 transition-colors"> Tools </a>
+        <i class="pi pi-angle-right mx-2 text-gray-400"></i>
+        <span class="text-gray-900 font-medium">Form Builder</span>
+      </nav>
+    </div>
+
+    <div
+      class="forms-list-container px-6 py-6 bg-gray-50 min-h-screen"
+      [class.w-full]="isFullWidth()"
+    >
+      <div [class.max-w-7xl]="!isFullWidth()" [class.mx-auto]="!isFullWidth()">
         <!-- Header -->
         <div class="mb-6">
           <div class="flex items-center justify-between mb-4">
@@ -130,7 +156,7 @@ import { FormSettingsComponent, FormSettings } from '../form-settings/form-setti
 
         <!-- Forms Grid -->
         @if (!isLoading() && filteredForms().length > 0) {
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             @for (form of filteredForms(); track form.id) {
               <div class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-6">
                 <!-- Status Badge -->
@@ -266,11 +292,19 @@ import { FormSettingsComponent, FormSettings } from '../form-settings/form-setti
 })
 export class FormsListComponent implements OnInit {
   private readonly formsApiService = inject(FormsApiService);
+  private readonly toolConfigService = inject(ToolConfigService);
   private readonly messageService = inject(MessageService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly router = inject(Router);
 
   readonly FormStatus = FormStatus;
+  readonly toolConfig = signal<ToolConfig | null>(null);
+
+  // Computed property to check if tool is in full width mode
+  readonly isFullWidth = computed(() => {
+    const config = this.toolConfig();
+    return config?.displayMode === 'full-width';
+  });
 
   readonly forms = signal<FormMetadata[]>([]);
   readonly isLoading = signal<boolean>(false);
@@ -301,7 +335,24 @@ export class FormsListComponent implements OnInit {
   readonly newFormSettings = signal<FormSettings | null>(null);
 
   ngOnInit(): void {
+    this.loadToolConfig();
     this.loadForms();
+  }
+
+  /**
+   * Loads the tool configuration to determine display mode.
+   */
+  private loadToolConfig(): void {
+    this.toolConfigService.getActiveConfig('form-builder').subscribe({
+      next: (config) => {
+        this.toolConfig.set(config || null);
+      },
+      error: (error) => {
+        console.error('Failed to load tool configuration:', error);
+        // Don't show error to user, just use default layout
+        this.toolConfig.set(null);
+      },
+    });
   }
 
   /**

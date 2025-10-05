@@ -7,7 +7,7 @@ import {
   OnDestroy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonDirective } from 'primeng/button';
 import { Toast } from 'primeng/toast';
 import { InputText } from 'primeng/inputtext';
@@ -34,6 +34,7 @@ import { Dialog } from 'primeng/dialog';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
+    RouterLink,
     ButtonDirective,
     Toast,
     InputText,
@@ -48,11 +49,47 @@ import { Dialog } from 'primeng/dialog';
   providers: [MessageService, ConfirmationService],
   template: `
     <div class="form-builder-container flex flex-col h-full bg-gray-50">
+      <!-- Breadcrumb Navigation -->
+      <div class="bg-gray-100 border-b border-gray-200 px-4 py-2">
+        <nav class="flex items-center text-sm text-gray-600">
+          <a
+            [routerLink]="['/app/dashboard']"
+            class="hover:text-blue-600 transition-colors flex items-center"
+          >
+            <i class="pi pi-home mr-1"></i>
+            Dashboard
+          </a>
+          <i class="pi pi-angle-right mx-2 text-gray-400"></i>
+          <a [routerLink]="['/app/tools']" class="hover:text-blue-600 transition-colors"> Tools </a>
+          <i class="pi pi-angle-right mx-2 text-gray-400"></i>
+          <a
+            (click)="navigateToFormsList()"
+            class="hover:text-blue-600 transition-colors cursor-pointer"
+          >
+            Form Builder
+          </a>
+          <i class="pi pi-angle-right mx-2 text-gray-400"></i>
+          <span class="text-gray-900 font-medium">{{
+            formBuilderService.currentForm()?.title || 'New Form'
+          }}</span>
+        </nav>
+      </div>
+
       <!-- Toolbar -->
       <div
         class="toolbar bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between"
       >
         <div class="flex items-center gap-2">
+          <button
+            pButton
+            icon="pi pi-arrow-left"
+            severity="secondary"
+            size="small"
+            [outlined]="true"
+            (click)="navigateToFormsList()"
+            title="Back to My Forms"
+            class="mr-2"
+          ></button>
           <i class="pi pi-file-edit text-2xl text-blue-600"></i>
           <h2 class="text-xl font-semibold text-gray-900">Form Builder</h2>
           <button
@@ -784,10 +821,43 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
 
   /**
    * Navigates to the Forms List view.
-   * The unsaved changes guard will automatically prompt the user if there are unsaved changes.
+   * Checks for unsaved changes and prompts the user before navigating.
    */
   navigateToFormsList(): void {
-    this.router.navigate(['/app/tools/form-builder/list']);
+    // Check if there are unsaved changes
+    if (this.formBuilderService.isDirty()) {
+      const confirmLeave = window.confirm(
+        'You have unsaved changes. Do you want to save before leaving?',
+      );
+
+      if (confirmLeave) {
+        // User wants to save - trigger save and then navigate
+        this.saveDraft(false);
+        // Wait a bit for save to complete, then navigate
+        setTimeout(() => {
+          if (!this.formBuilderService.isDirty()) {
+            this.router.navigate(['/app/tools/form-builder/list']);
+          }
+        }, 500);
+      } else {
+        // User doesn't want to save - ask if they want to discard
+        const confirmDiscard = window.confirm('Are you sure you want to discard your changes?');
+        if (confirmDiscard) {
+          this.router.navigate(['/app/tools/form-builder/list']);
+        }
+      }
+    } else {
+      // No unsaved changes, navigate directly
+      this.router.navigate(['/app/tools/form-builder/list']);
+    }
+  }
+
+  /**
+   * Navigates back to the Tools List.
+   * The unsaved changes guard will automatically prompt the user if there are unsaved changes.
+   */
+  navigateToToolsList(): void {
+    this.router.navigate(['/app/tools']);
   }
 
   /**

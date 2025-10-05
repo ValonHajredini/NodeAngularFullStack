@@ -260,7 +260,7 @@ describe('Forms API Endpoints', () => {
       ).toBe(true);
     });
 
-    it('should return all forms for admin', async () => {
+    it('should return only admin own forms in non-tenant mode', async () => {
       const response = await request(app)
         .get('/api/v1/forms')
         .set('Authorization', `Bearer ${adminToken}`)
@@ -268,7 +268,11 @@ describe('Forms API Endpoints', () => {
 
       expect(response.body.success).toBe(true);
       expect(response.body.data).toBeInstanceOf(Array);
-      expect(response.body.data.length).toBeGreaterThanOrEqual(3);
+      // In non-tenant mode, admin sees only their own form (1 form created in beforeEach)
+      expect(response.body.data.length).toBe(1);
+      expect(
+        response.body.data.every((form: any) => form.userId === adminId)
+      ).toBe(true);
     });
 
     it('should support pagination', async () => {
@@ -315,14 +319,13 @@ describe('Forms API Endpoints', () => {
       expect(response.body.data.title).toBe('Test Form');
     });
 
-    it('should return form for admin (non-owner)', async () => {
+    it('should return 403 for admin trying to access another user form in non-tenant mode', async () => {
       const response = await request(app)
         .get(`/api/v1/forms/${testFormId}`)
         .set('Authorization', `Bearer ${adminToken}`)
-        .expect(200);
+        .expect(403);
 
-      expect(response.body.success).toBe(true);
-      expect(response.body.data.id).toBe(testFormId);
+      expect(response.body.success).toBe(false);
     });
 
     it('should return 403 for non-owner non-admin', async () => {
@@ -398,15 +401,14 @@ describe('Forms API Endpoints', () => {
       expect(response.body.data.status).toBe(FormStatus.PUBLISHED);
     });
 
-    it('should allow admin to update any form', async () => {
+    it('should return 403 for admin trying to update another user form in non-tenant mode', async () => {
       const response = await request(app)
         .put(`/api/v1/forms/${testFormId}`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ title: 'Admin Updated Title' })
-        .expect(200);
+        .expect(403);
 
-      expect(response.body.success).toBe(true);
-      expect(response.body.data.title).toBe('Admin Updated Title');
+      expect(response.body.success).toBe(false);
     });
 
     it('should return 403 for non-owner', async () => {
@@ -485,13 +487,13 @@ describe('Forms API Endpoints', () => {
       expect(getResponse.body.error.code).toBe('NOT_FOUND');
     });
 
-    it('should allow admin to delete any form', async () => {
+    it('should return 403 for admin trying to delete another user form in non-tenant mode', async () => {
       const response = await request(app)
         .delete(`/api/v1/forms/${testFormId}`)
         .set('Authorization', `Bearer ${adminToken}`)
-        .expect(204);
+        .expect(403);
 
-      expect(response.body).toEqual({});
+      expect(response.body.success).toBe(false);
     });
 
     it('should return 403 for non-owner', async () => {
