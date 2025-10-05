@@ -12,6 +12,7 @@ import { ButtonDirective } from 'primeng/button';
 import { Toast } from 'primeng/toast';
 import { InputText } from 'primeng/inputtext';
 import { MessageService, ConfirmationService } from 'primeng/api';
+import { DragDropModule } from '@angular/cdk/drag-drop';
 import { FormField, FormFieldType, FormMetadata } from '@nodeangularfullstack/shared';
 import { FormBuilderService } from './form-builder.service';
 import { FormsApiService } from './forms-api.service';
@@ -36,6 +37,7 @@ import { Dialog } from 'primeng/dialog';
     ButtonDirective,
     Toast,
     InputText,
+    DragDropModule,
     FieldPaletteComponent,
     FormCanvasComponent,
     FieldPropertiesComponent,
@@ -150,7 +152,7 @@ import { Dialog } from 'primeng/dialog';
       </div>
 
       <!-- Three-panel layout -->
-      <div class="flex-1 flex overflow-hidden">
+      <div class="flex-1 flex overflow-hidden" cdkDropListGroup>
         <!-- Left sidebar: Field Palette -->
         <div class="w-64 flex-shrink-0">
           <app-field-palette (fieldSelected)="onFieldTypeSelected($event)"></app-field-palette>

@@ -33,9 +33,9 @@ interface FieldTypeDefinition {
         <div
           class="drop-zone empty min-h-full flex flex-col items-center justify-center text-center py-20"
           cdkDropList
-          #dropList="cdkDropList"
+          #canvasDropList="cdkDropList"
+          id="canvas-drop-list"
           [cdkDropListData]="formBuilderService.formFields()"
-          [cdkDropListConnectedTo]="[]"
           (cdkDropListDropped)="onFieldDropped($event)"
         >
           <i class="pi pi-file-edit text-6xl text-gray-300 mb-4"></i>
@@ -63,9 +63,9 @@ interface FieldTypeDefinition {
 
           <div
             cdkDropList
-            #dropList="cdkDropList"
+            #canvasDropList="cdkDropList"
+            id="canvas-drop-list"
             [cdkDropListData]="formBuilderService.formFields()"
-            [cdkDropListConnectedTo]="[]"
             (cdkDropListDropped)="onFieldDropped($event)"
             class="form-fields-grid"
             [ngClass]="[getGridClass(), getSpacingClass()]"

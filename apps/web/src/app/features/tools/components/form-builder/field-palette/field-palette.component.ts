@@ -23,11 +23,17 @@ interface FieldTypeDefinition {
     <div class="field-palette h-full bg-white border-r border-gray-200">
       <div class="p-4 border-b border-gray-200">
         <h3 class="text-lg font-semibold text-gray-900">Field Types</h3>
-        <p class="text-sm text-gray-600 mt-1">Click to add to form</p>
+        <p class="text-sm text-gray-600 mt-1">Drag or click to add to form</p>
       </div>
 
       <p-scrollpanel [style]="{ width: '100%', height: 'calc(100vh - 200px)' }">
-        <div class="p-3 space-y-2">
+        <div
+          cdkDropList
+          #paletteDropList="cdkDropList"
+          [cdkDropListData]="fieldTypes"
+          [cdkDropListSortingDisabled]="true"
+          class="p-3 space-y-2"
+        >
           @for (fieldType of fieldTypes; track fieldType.type) {
             <div
               cdkDrag
@@ -49,6 +55,8 @@ interface FieldTypeDefinition {
                   <span class="text-sm font-medium text-gray-800">{{ fieldType.label }}</span>
                 </div>
               </div>
+
+              <div *cdkDragPlaceholder class="field-type-placeholder"></div>
             </div>
           }
         </div>
@@ -67,6 +75,13 @@ interface FieldTypeDefinition {
 
       .drag-preview {
         min-width: 200px;
+      }
+
+      .field-type-placeholder {
+        background: #dbeafe;
+        border: 2px dashed #3b82f6;
+        border-radius: 8px;
+        min-height: 48px;
       }
 
       .cdk-drag-animating {
