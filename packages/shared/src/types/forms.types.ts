@@ -224,3 +224,71 @@ export interface FormSubmission {
   /** Additional metadata */
   metadata?: Record<string, unknown>;
 }
+
+/**
+ * Numeric field statistics
+ */
+export interface NumericStatistics {
+  /** Average/mean value */
+  mean: number;
+  /** Median value */
+  median: number;
+  /** Minimum value */
+  min: number;
+  /** Maximum value */
+  max: number;
+  /** Standard deviation */
+  stdDev: number;
+  /** Number of valid data points */
+  count: number;
+}
+
+/**
+ * Choice field distribution data
+ */
+export interface ChoiceDistribution {
+  /** Option label */
+  label: string;
+  /** Option value */
+  value: string | number;
+  /** Number of times this option was selected */
+  count: number;
+  /** Percentage of total selections */
+  percentage: number;
+}
+
+/**
+ * Time series data point
+ */
+export interface TimeSeriesData {
+  /** Time period label (formatted date) */
+  label: string;
+  /** Count/value for this time period */
+  count: number;
+}
+
+/**
+ * Field-specific statistics data
+ */
+export interface FieldStatistics {
+  /** The form field */
+  field: FormField;
+  /** Type of visualization */
+  type: 'numeric' | 'choice' | 'timeseries' | 'text' | 'toggle' | 'none';
+  /** Statistics data (type depends on visualization type) */
+  data: NumericStatistics | ChoiceDistribution[] | TimeSeriesData[] | null;
+}
+
+/**
+ * Filter options for form submission queries and exports
+ */
+export interface SubmissionFilterOptions {
+  /** Array of field names to include in export (if undefined, includes all fields) */
+  fields?: string[];
+  /** Start date for filtering submissions (inclusive) */
+  dateFrom?: Date;
+  /** End date for filtering submissions (inclusive) */
+  dateTo?: Date;
+  /** Array of field value filters (AND logic - all must match) */
+  fieldFilters?: { field: string; value: any }[];
+}

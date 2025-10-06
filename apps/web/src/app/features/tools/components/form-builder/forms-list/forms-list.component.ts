@@ -6,12 +6,11 @@ import {
   OnInit,
   computed,
 } from '@angular/core';
-import { CommonModule, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ButtonDirective } from 'primeng/button';
 import { Paginator } from 'primeng/paginator';
-import { Tag } from 'primeng/tag';
 import { IconField } from 'primeng/iconfield';
 import { InputIcon } from 'primeng/inputicon';
 import { InputText } from 'primeng/inputtext';
@@ -22,6 +21,7 @@ import { FormMetadata, FormStatus, ToolConfig } from '@nodeangularfullstack/shar
 import { FormsApiService } from '../forms-api.service';
 import { FormSettingsComponent, FormSettings } from '../form-settings/form-settings.component';
 import { ToolConfigService } from '@core/services/tool-config.service';
+import { FormCardComponent, FormCardAction } from '../form-card/form-card.component';
 
 /**
  * Forms list component displaying all user's forms.
@@ -37,14 +37,13 @@ import { ToolConfigService } from '@core/services/tool-config.service';
     FormsModule,
     ButtonDirective,
     Paginator,
-    Tag,
     IconField,
     InputIcon,
     InputText,
     ConfirmDialog,
     Toast,
-    DatePipe,
     FormSettingsComponent,
+    FormCardComponent,
   ],
   providers: [MessageService, ConfirmationService],
   template: `
@@ -158,95 +157,7 @@ import { ToolConfigService } from '@core/services/tool-config.service';
         @if (!isLoading() && filteredForms().length > 0) {
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             @for (form of filteredForms(); track form.id) {
-              <div class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-6">
-                <!-- Status Badge -->
-                <div class="flex items-center justify-between mb-3">
-                  <p-tag
-                    [value]="form.status === FormStatus.PUBLISHED ? 'Published' : 'Draft'"
-                    [severity]="form.status === FormStatus.PUBLISHED ? 'success' : 'warning'"
-                  ></p-tag>
-                  <span class="text-xs text-gray-500">
-                    {{ form.updatedAt | date: 'MMM d, yyyy' }}
-                  </span>
-                </div>
-
-                <!-- Form Title -->
-                <h3 class="text-lg font-semibold text-gray-900 mb-2 truncate" [title]="form.title">
-                  {{ form.title }}
-                </h3>
-
-                <!-- Form Description -->
-                <p class="text-sm text-gray-600 mb-4 line-clamp-2" [title]="form.description">
-                  {{ form.description || 'No description' }}
-                </p>
-
-                <!-- Form Stats -->
-                <div class="flex items-center gap-4 text-xs text-gray-500 mb-4">
-                  <span>
-                    <i class="pi pi-list mr-1"></i>
-                    {{ form.schema?.fields?.length || 0 }} fields
-                  </span>
-                  <span>
-                    <i class="pi pi-clock mr-1"></i>
-                    {{ form.createdAt | date: 'short' }}
-                  </span>
-                </div>
-
-                <!-- Publish URL (for published forms) -->
-                @if (form.status === FormStatus.PUBLISHED && form.schema?.renderToken) {
-                  <div class="mb-3">
-                    <label class="block text-xs font-semibold text-gray-700 mb-1">
-                      Public Form URL
-                    </label>
-                    <div class="flex gap-2">
-                      <input
-                        type="text"
-                        pInputText
-                        [value]="getPublishUrl(form.schema?.renderToken ?? '')"
-                        readonly
-                        class="w-full text-xs"
-                      />
-                      <button
-                        pButton
-                        icon="pi pi-copy"
-                        size="small"
-                        severity="secondary"
-                        [outlined]="true"
-                        (click)="copyPublishUrl(form.schema?.renderToken ?? '')"
-                        title="Copy URL"
-                      ></button>
-                    </div>
-                  </div>
-                }
-
-                <!-- Actions -->
-                <div class="flex gap-2">
-                  <button
-                    pButton
-                    label="Edit"
-                    icon="pi pi-pencil"
-                    size="small"
-                    severity="secondary"
-                    class="flex-1"
-                    (click)="editForm(form.id)"
-                  ></button>
-                  <button
-                    pButton
-                    icon="pi pi-trash"
-                    size="small"
-                    severity="danger"
-                    [outlined]="true"
-                    (click)="confirmDelete(form)"
-                    [disabled]="form.status === FormStatus.PUBLISHED"
-                  ></button>
-                </div>
-
-                @if (form.status === FormStatus.PUBLISHED) {
-                  <small class="text-xs text-gray-500 mt-2 block">
-                    Published forms cannot be deleted
-                  </small>
-                }
-              </div>
+              <app-form-card [form]="form" (action)="handleFormAction($event)" />
             }
           </div>
 
@@ -279,16 +190,6 @@ import { ToolConfigService } from '@core/services/tool-config.service';
       ></app-form-settings>
     </div>
   `,
-  styles: [
-    `
-      .line-clamp-2 {
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-      }
-    `,
-  ],
 })
 export class FormsListComponent implements OnInit {
   private readonly formsApiService = inject(FormsApiService);
@@ -461,16 +362,37 @@ export class FormsListComponent implements OnInit {
   }
 
   /**
-   * Navigates to edit an existing form.
+   * Handles form card actions (edit, analytics, delete, copy-url)
    */
-  editForm(formId: string): void {
-    this.router.navigate(['/app/tools/form-builder', formId]);
+  handleFormAction(action: FormCardAction): void {
+    switch (action.type) {
+      case 'edit':
+        this.router.navigate(['/app/tools/form-builder', action.formId]);
+        break;
+
+      case 'analytics':
+        this.router.navigate(['/app/tools/form-builder', action.formId, 'analytics']);
+        break;
+
+      case 'delete':
+        this.confirmDelete(action.formId);
+        break;
+
+      case 'copy-url':
+        if (action.renderToken) {
+          this.copyPublishUrl(action.renderToken);
+        }
+        break;
+    }
   }
 
   /**
    * Shows confirmation dialog before deleting a form.
    */
-  confirmDelete(form: FormMetadata): void {
+  private confirmDelete(formId: string): void {
+    const form = this.forms().find((f) => f.id === formId);
+    if (!form) return;
+
     if (form.status === FormStatus.PUBLISHED) {
       this.messageService.add({
         severity: 'warn',
@@ -487,7 +409,7 @@ export class FormsListComponent implements OnInit {
       icon: 'pi pi-exclamation-triangle',
       acceptButtonStyleClass: 'p-button-danger',
       accept: () => {
-        this.deleteForm(form.id);
+        this.deleteForm(formId);
       },
     });
   }
@@ -520,18 +442,11 @@ export class FormsListComponent implements OnInit {
   }
 
   /**
-   * Gets the full publish URL for a given render token.
-   */
-  getPublishUrl(renderToken: string): string {
-    const baseUrl = window.location.origin;
-    return `${baseUrl}/forms/render/${renderToken}`;
-  }
-
-  /**
    * Copies the publish URL to clipboard.
    */
-  copyPublishUrl(renderToken: string): void {
-    const url = this.getPublishUrl(renderToken);
+  private copyPublishUrl(renderToken: string): void {
+    const baseUrl = window.location.origin;
+    const url = `${baseUrl}/forms/render/${renderToken}`;
     navigator.clipboard.writeText(url).then(
       () => {
         this.messageService.add({

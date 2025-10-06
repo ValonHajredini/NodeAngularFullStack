@@ -76,7 +76,7 @@ export interface UserMenuItem {
       <!-- User Dropdown Menu -->
       @if (userMenuOpen()) {
         <div
-          class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 dropdown-menu ring-1 ring-black ring-opacity-5 focus:outline-none z-50 animate-fade-in"
+          class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 dropdown-menu ring-1 ring-black ring-opacity-5 focus:outline-none z-[9999] animate-fade-in"
         >
           <!-- User Info -->
           @if (user()) {
@@ -188,8 +188,8 @@ export interface UserMenuItem {
       }
 
       /* Ensure dropdown appears above other content */
-      .z-50 {
-        z-index: 50;
+      .z-\\[9999\\] {
+        z-index: 9999;
       }
 
       /* Dark theme adjustments */

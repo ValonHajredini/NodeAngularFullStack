@@ -14,6 +14,42 @@ throughout, shared types, and a monorepo structure.
 - **Authentication**: JWT with Passport.js
 - **Testing**: Jest + Playwright
 
+## Key Features
+
+### Form Builder with Analytics & Data Visualization
+
+Create custom forms and gain powerful insights from submission data:
+
+- **Visual Form Builder**: Drag-and-drop interface for creating forms
+- **Real-Time Analytics**: Interactive charts and statistics updated in real-time
+- **Data Visualization**: Automatic chart selection based on field types
+  - **Bar Charts**: For choice fields (SELECT, RADIO, CHECKBOX)
+  - **Line Charts**: For date/time trends and numeric trends
+  - **Pie Charts**: For binary choices (TOGGLE fields)
+  - **Statistics Cards**: For numeric and text field analysis
+- **Customizable Dashboard**: Show/hide fields, toggle between chart and table views
+- **WCAG AA Accessible**: Full keyboard navigation, screen reader support, data table alternatives
+- **Interactive Filtering**: Filter submissions and watch charts update automatically
+- **Client-Side Performance**: Sub-second calculations for 1000+ submissions
+
+📖 **Learn More**: [Form Analytics Charts User Guide](docs/user-guide/form-analytics-charts.md)
+
+### Authentication & Security
+
+- JWT-based authentication with refresh tokens
+- Role-based access control (Admin, User, ReadOnly)
+- Password hashing with bcrypt
+- Rate limiting and security headers
+- CSRF protection
+
+### Testing & Quality
+
+- Comprehensive unit tests (Jest)
+- E2E tests (Playwright)
+- Automated accessibility testing (axe-core)
+- Code coverage reporting
+- TypeScript strict mode
+
 ## Project Structure
 
 ```

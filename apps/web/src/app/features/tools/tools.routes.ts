@@ -21,6 +21,18 @@ export const toolsRoutes: Routes = [
       ),
   },
   {
+    path: 'form-builder/:id/analytics',
+    loadComponent: () =>
+      import('./components/form-builder/form-analytics/form-analytics.component').then(
+        (m) => m.FormAnalyticsComponent,
+      ),
+    canActivate: [slugToolGuard],
+    data: {
+      checkToolBySlug: false,
+      toolId: 'form-builder',
+    },
+  },
+  {
     path: 'form-builder/:id',
     loadComponent: () =>
       import('./components/form-builder/form-builder.component').then(

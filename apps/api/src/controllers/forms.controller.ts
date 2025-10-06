@@ -4,7 +4,12 @@ import { Parser } from 'json2csv';
 import { formsService, ApiError } from '../services/forms.service';
 import { formsRepository } from '../repositories/forms.repository';
 import { formSubmissionsRepository } from '../repositories/form-submissions.repository';
-import { FormStatus, FormSubmission } from '@nodeangularfullstack/shared';
+import { formSchemasRepository } from '../repositories/form-schemas.repository';
+import {
+  FormStatus,
+  FormSubmission,
+  SubmissionFilterOptions,
+} from '@nodeangularfullstack/shared';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { AsyncHandler } from '../utils/async-handler.utils';
 
@@ -503,16 +508,23 @@ export class FormsController {
   );
 
   /**
-   * Exports form submissions as CSV.
+   * Exports form submissions as CSV with optional filtering.
    * @route GET /api/forms/:id/submissions/export
-   * @param req - Express request object with form ID
+   * @query fields - Comma-separated field names to include
+   * @query dateFrom - Start date filter (ISO format)
+   * @query dateTo - End date filter (ISO format)
+   * @query filterField - Field name to filter by
+   * @query filterValue - Value to match for filter field
+   * @param req - Express request object with form ID and query parameters
    * @param res - Express response object
    * @returns CSV file download
+   * @throws {ApiError} 400 - Invalid field names or date format
    * @throws {ApiError} 401 - Authentication required
    * @throws {ApiError} 403 - User doesn't own this form
-   * @throws {ApiError} 404 - Form not found
+   * @throws {ApiError} 404 - Form not found or no submissions
    * @example
    * GET /api/forms/form-uuid/submissions/export
+   * GET /api/forms/form-uuid/submissions/export?fields=name,email&dateFrom=2024-01-01
    * Authorization: Bearer <token>
    */
   exportSubmissions = AsyncHandler(
@@ -546,51 +558,190 @@ export class FormsController {
         );
       }
 
-      // Get all submissions (no pagination for export)
+      // Parse filter options from query parameters
+      const filterOptions: SubmissionFilterOptions = {
+        fields: req.query.fields
+          ? (req.query.fields as string).split(',').map((f) => f.trim())
+          : undefined,
+        dateFrom: req.query.dateFrom
+          ? new Date(req.query.dateFrom as string)
+          : undefined,
+        dateTo: req.query.dateTo
+          ? new Date(req.query.dateTo as string)
+          : undefined,
+        fieldFilters: [],
+      };
+
+      // Add field value filters
+      if (req.query.filterField && req.query.filterValue) {
+        filterOptions.fieldFilters?.push({
+          field: req.query.filterField as string,
+          value: req.query.filterValue as string,
+        });
+      }
+
+      // Validate field names against form schema
+      if (filterOptions.fields && filterOptions.fields.length > 0) {
+        const schemas = await formSchemasRepository.findByFormId(id);
+        if (schemas.length > 0) {
+          const latestSchema = schemas[0]; // Schemas are sorted by version DESC
+          const validFields = latestSchema.fields.map(
+            (f: { fieldName: string }) => f.fieldName
+          );
+          const invalidFields = filterOptions.fields.filter(
+            (f) => !validFields.includes(f)
+          );
+          if (invalidFields.length > 0) {
+            throw new ApiError(
+              `Invalid field names: ${invalidFields.join(', ')}`,
+              400,
+              'INVALID_FIELDS'
+            );
+          }
+        }
+      }
+
+      // Validate dates
+      if (filterOptions.dateFrom && isNaN(filterOptions.dateFrom.getTime())) {
+        throw new ApiError('Invalid dateFrom format', 400, 'INVALID_DATE');
+      }
+      if (filterOptions.dateTo && isNaN(filterOptions.dateTo.getTime())) {
+        throw new ApiError('Invalid dateTo format', 400, 'INVALID_DATE');
+      }
+
+      // Set response headers for CSV download
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="form-submissions-${form.title.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.csv"`
+      );
+      res.setHeader('Transfer-Encoding', 'chunked');
+
+      // Write UTF-8 BOM for Excel compatibility
+      res.write('\ufeff');
+
+      // Stream submissions in batches
+      await this.streamSubmissionsToCSV(id, filterOptions, res);
+    }
+  );
+
+  /**
+   * Streams submissions to CSV in batches to avoid memory overflow.
+   * @param formId - Form ID to export
+   * @param filterOptions - Filter options for submissions
+   * @param res - Express response object
+   * @throws {ApiError} 404 - No submissions found
+   */
+  private async streamSubmissionsToCSV(
+    formId: string,
+    filterOptions: SubmissionFilterOptions,
+    res: Response
+  ): Promise<void> {
+    const batchSize = 1000;
+    let page = 1;
+    let hasMore = true;
+    let isFirstBatch = true;
+    let selectedFields: string[] = []; // Store field list from first batch
+
+    while (hasMore) {
       const { submissions } = await formSubmissionsRepository.findByFormId(
-        id,
-        1,
-        10000 // Maximum submissions to export
+        formId,
+        page,
+        batchSize,
+        filterOptions
       );
 
       if (submissions.length === 0) {
-        throw new ApiError(
-          'No submissions found for this form',
-          404,
-          'NO_SUBMISSIONS'
-        );
+        if (isFirstBatch) {
+          throw new ApiError(
+            'No submissions found for this form',
+            404,
+            'NO_SUBMISSIONS'
+          );
+        }
+        hasMore = false;
+        break;
       }
 
-      // Prepare CSV data
-      const csvData = submissions.map((submission: FormSubmission) => {
-        // Mask IP address
-        const ipParts = submission.submitterIp.split('.');
-        const maskedIp =
-          ipParts.length >= 2
-            ? `${ipParts[0]}.${ipParts[1]}._._`
-            : submission.submitterIp;
+      // Determine CSV columns from first batch and store for consistency
+      if (isFirstBatch) {
+        selectedFields =
+          filterOptions.fields || Object.keys(submissions[0].values);
+        const headers = ['Submitted At', 'Submitter IP', ...selectedFields];
 
-        return {
-          'Submitted At': new Date(submission.submittedAt).toISOString(),
-          'Submitter IP': maskedIp,
-          ...submission.values,
-        };
-      });
+        // Create CSV parser
+        const parser = new Parser({ fields: headers });
 
-      // Generate CSV
-      const parser = new Parser();
-      const csv = parser.parse(csvData);
+        // Prepare CSV data for this batch
+        const csvData = submissions.map((submission: FormSubmission) => {
+          const ipParts = submission.submitterIp.split('.');
+          const maskedIp =
+            ipParts.length >= 2
+              ? `${ipParts[0]}.${ipParts[1]}._._`
+              : submission.submitterIp;
 
-      // Set response headers for file download
-      res.setHeader('Content-Type', 'text/csv');
-      res.setHeader(
-        'Content-Disposition',
-        `attachment; filename="form-submissions-${id}.csv"`
-      );
+          const row: any = {
+            'Submitted At': new Date(submission.submittedAt).toLocaleString(
+              'en-US',
+              { timeZone: 'UTC' }
+            ),
+            'Submitter IP': maskedIp,
+          };
 
-      res.status(200).send(csv);
+          // Add selected field values
+          selectedFields.forEach((field) => {
+            row[field] = submission.values[field] ?? '';
+          });
+
+          return row;
+        });
+
+        // Write headers and first batch
+        const csv = parser.parse(csvData);
+        res.write(csv + '\n');
+        isFirstBatch = false;
+      } else {
+        // For subsequent batches, use stored selectedFields for consistency
+        const csvData = submissions.map((submission: FormSubmission) => {
+          const ipParts = submission.submitterIp.split('.');
+          const maskedIp =
+            ipParts.length >= 2
+              ? `${ipParts[0]}.${ipParts[1]}._._`
+              : submission.submitterIp;
+
+          const row: any = {
+            'Submitted At': new Date(submission.submittedAt).toLocaleString(
+              'en-US',
+              { timeZone: 'UTC' }
+            ),
+            'Submitter IP': maskedIp,
+          };
+
+          // Use stored selectedFields to ensure consistent CSV structure
+          selectedFields.forEach((field) => {
+            row[field] = submission.values[field] ?? '';
+          });
+
+          return row;
+        });
+
+        const parser = new Parser({
+          fields: ['Submitted At', 'Submitter IP', ...selectedFields],
+        });
+        const csv = parser.parse(csvData);
+        // Remove header row from subsequent batches
+        const rows = csv.split('\n').slice(1).join('\n');
+        res.write(rows + '\n');
+      }
+
+      page++;
+      if (submissions.length < batchSize) {
+        hasMore = false;
+      }
     }
-  );
+
+    res.end();
+  }
 }
 
 // Export singleton instance

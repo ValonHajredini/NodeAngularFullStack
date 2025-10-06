@@ -163,6 +163,9 @@ export interface NavigationItem {
         background-color: var(--color-surface);
         box-shadow: var(--shadow-lg);
         border-bottom: var(--border-width-1) solid var(--color-border);
+        position: sticky;
+        top: 0;
+        z-index: 100;
       }
 
       /* Navigation text colors */
