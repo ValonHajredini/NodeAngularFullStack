@@ -29,7 +29,7 @@ import { ShapesListComponent } from './components/shapes-list/shapes-list.compon
 import { ShapePropertiesComponent } from './components/shape-properties/shape-properties.component';
 import { ImportSvgSymbolComponent } from './components/import-svg-symbol/import-svg-symbol.component';
 import { SvgSymbolLibraryComponent } from './components/svg-symbol-library/svg-symbol-library.component';
-import { ShapeStyle, ExportOptions, DrawingProject } from '@nodeangularfullstack/shared';
+import { Shape, ShapeStyle, ExportOptions, DrawingProject } from '@nodeangularfullstack/shared';
 
 type SidebarSection = 'shapeProperties' | 'shapes';
 
@@ -540,6 +540,14 @@ export class SvgDrawingComponent implements OnInit, OnDestroy {
    */
   onStrokeColorChanged(color: string): void {
     this.svgDrawingService.setStrokeColor(color);
+
+    // If a shape is selected, update its stroke color
+    const selectedIds = this.svgDrawingService.selectedShapeIds();
+    if (selectedIds.length > 0) {
+      selectedIds.forEach((id) => {
+        this.svgDrawingService.updateShapeProperties(id, { color });
+      });
+    }
   }
 
   /**
@@ -547,6 +555,14 @@ export class SvgDrawingComponent implements OnInit, OnDestroy {
    */
   onStrokeWidthChanged(width: number): void {
     this.svgDrawingService.setStrokeWidth(width);
+
+    // If a shape is selected, update its stroke width
+    const selectedIds = this.svgDrawingService.selectedShapeIds();
+    if (selectedIds.length > 0) {
+      selectedIds.forEach((id) => {
+        this.svgDrawingService.updateShapeProperties(id, { strokeWidth: width });
+      });
+    }
   }
 
   /**
@@ -554,6 +570,14 @@ export class SvgDrawingComponent implements OnInit, OnDestroy {
    */
   onFillColorChanged(color: string): void {
     this.svgDrawingService.setFillColor(color);
+
+    // If a shape is selected, update its fill color
+    const selectedIds = this.svgDrawingService.selectedShapeIds();
+    if (selectedIds.length > 0) {
+      selectedIds.forEach((id) => {
+        this.svgDrawingService.updateShapeProperties(id, { fillColor: color });
+      });
+    }
   }
 
   /**
@@ -561,6 +585,16 @@ export class SvgDrawingComponent implements OnInit, OnDestroy {
    */
   onFillEnabledChanged(enabled: boolean): void {
     this.svgDrawingService.setFillEnabled(enabled);
+
+    // If a shape is selected, update its fill color based on enabled state
+    const selectedIds = this.svgDrawingService.selectedShapeIds();
+    if (selectedIds.length > 0) {
+      selectedIds.forEach((id) => {
+        this.svgDrawingService.updateShapeProperties(id, {
+          fillColor: enabled ? this.svgDrawingService.fillColor() : undefined,
+        });
+      });
+    }
   }
 
   /**
@@ -568,6 +602,14 @@ export class SvgDrawingComponent implements OnInit, OnDestroy {
    */
   onRotationChanged(rotation: number): void {
     this.svgDrawingService.setRotation(rotation);
+
+    // If a shape is selected, update its rotation
+    const selectedIds = this.svgDrawingService.selectedShapeIds();
+    if (selectedIds.length > 0) {
+      selectedIds.forEach((id) => {
+        this.svgDrawingService.updateShapeProperties(id, { rotation });
+      });
+    }
   }
 
   /**
@@ -577,6 +619,26 @@ export class SvgDrawingComponent implements OnInit, OnDestroy {
     this.svgDrawingService.toggleShapeSelection(event.shapeId, event.multiSelect);
     if (!event.multiSelect || this.svgDrawingService.selectedShapeIds().length === 1) {
       this.openSection('shapeProperties');
+
+      // Sync the style controls with the selected shape
+      const selectedShape = this.getSelectedShape();
+      if (selectedShape) {
+        if (selectedShape.color) {
+          this.svgDrawingService.setStrokeColor(selectedShape.color);
+        }
+        if (selectedShape.strokeWidth !== undefined) {
+          this.svgDrawingService.setStrokeWidth(selectedShape.strokeWidth);
+        }
+        if (selectedShape.fillColor) {
+          this.svgDrawingService.setFillColor(selectedShape.fillColor);
+          this.svgDrawingService.setFillEnabled(true);
+        } else {
+          this.svgDrawingService.setFillEnabled(false);
+        }
+        if (selectedShape.rotation !== undefined) {
+          this.svgDrawingService.setRotation(selectedShape.rotation);
+        }
+      }
     }
   }
 
@@ -768,7 +830,7 @@ export class SvgDrawingComponent implements OnInit, OnDestroy {
   /**
    * Handles shape properties changes from the edit panel.
    */
-  onShapePropertiesChanged(event: { shapeId: string; updates: Partial<ShapeStyle> }): void {
+  onShapePropertiesChanged(event: { shapeId: string; updates: Partial<Shape> }): void {
     this.svgDrawingService.updateShapeProperties(event.shapeId, event.updates);
   }
 

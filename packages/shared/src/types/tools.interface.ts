@@ -166,6 +166,8 @@ export interface CreateShortLinkRequest {
   originalUrl: string;
   /** Optional expiration date/time */
   expiresAt?: Date | null;
+  /** Optional custom name for the short link (3-30 chars, alphanumeric and hyphens only) */
+  customName?: string;
 }
 
 /**
@@ -194,6 +196,8 @@ export interface CreateShortLinkResponse {
     shortLink: ShortLink;
     /** Full shortened URL with domain */
     shortUrl: string;
+    /** QR code data URL (base64 PNG image) */
+    qrCodeDataUrl: string;
   };
 }
 

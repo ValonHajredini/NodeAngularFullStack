@@ -187,6 +187,35 @@ export class ShortLinkService {
   }
 
   /**
+   * Checks if a custom name is available for use.
+   * @param customName - Custom name to check
+   * @returns Observable containing availability status
+   * @throws {HttpErrorResponse} When check fails
+   * @example
+   * shortLinkService.checkCustomNameAvailability('my-custom-link').subscribe({
+   *   next: (result) => console.log('Available:', result.available),
+   *   error: (error) => console.error('Check failed:', error)
+   * });
+   */
+  checkCustomNameAvailability(customName: string): Observable<{
+    available: boolean;
+    valid: boolean;
+    error?: string;
+  }> {
+    return this.apiClient
+      .get<
+        ShortLinkApiResponse<{ available: boolean; valid: boolean; error?: string }>
+      >(`/tools/short-links/check-availability/${encodeURIComponent(customName)}`)
+      .pipe(
+        map((response) => response.data),
+        catchError((error) => {
+          const errorMessage = this.extractErrorMessage(error);
+          return throwError(() => new Error(errorMessage));
+        }),
+      );
+  }
+
+  /**
    * Previews URL information without creating a short link.
    * @param url - URL to preview
    * @returns Observable containing URL preview information

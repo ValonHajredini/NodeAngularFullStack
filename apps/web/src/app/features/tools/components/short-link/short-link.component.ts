@@ -28,7 +28,8 @@ import { TagModule } from 'primeng/tag';
 import { ShortLinkService } from '../../services/short-link.service';
 import { ToolGateDirective } from '../../../../shared/directives/tool-gate.directive';
 import type { CreateShortLinkRequest, ShortLink } from '@nodeangularfullstack/shared';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap, of } from 'rxjs';
+import QRCode from 'qrcode';
 
 /**
  * Short Link component for URL shortening functionality.
@@ -96,6 +97,64 @@ import { Subject, takeUntil } from 'rxjs';
             </small>
           </div>
 
+          <!-- Custom Name (Optional) -->
+          <div class="field">
+            <label for="customName" class="block text-sm font-medium text-gray-700 mb-2">
+              Custom Link Name (Optional)
+            </label>
+            <div class="p-inputgroup">
+              <input
+                id="customName"
+                type="text"
+                pInputText
+                formControlName="customName"
+                placeholder="my-custom-link"
+                class="flex-1"
+                [class.ng-invalid]="customNameControl.invalid && customNameControl.touched"
+              />
+              @if (checkingAvailability()) {
+                <span class="p-inputgroup-addon">
+                  <i class="pi pi-spin pi-spinner text-gray-500"></i>
+                </span>
+              } @else if (customNameControl.value && customNameAvailable()) {
+                <span class="p-inputgroup-addon">
+                  <i class="pi pi-check text-green-500"></i>
+                </span>
+              } @else if (
+                customNameControl.value &&
+                !customNameAvailable() &&
+                !customNameControl.errors?.['pattern']
+              ) {
+                <span class="p-inputgroup-addon">
+                  <i class="pi pi-times text-red-500"></i>
+                </span>
+              }
+            </div>
+            <small class="text-gray-500 block mt-1">
+              3-30 characters, alphanumeric and hyphens only. Leave empty for auto-generated code.
+            </small>
+            @if (customNamePreview()) {
+              <small class="text-blue-600 block mt-1"> Preview: {{ customNamePreview() }} </small>
+            }
+            <small
+              class="p-error block mt-1"
+              *ngIf="customNameControl.invalid && customNameControl.touched"
+            >
+              @if (customNameControl.errors?.['minlength']) {
+                Custom name must be at least 3 characters
+              }
+              @if (customNameControl.errors?.['maxlength']) {
+                Custom name must be at most 30 characters
+              }
+              @if (customNameControl.errors?.['pattern']) {
+                Only letters, numbers, and hyphens (no spaces or special characters)
+              }
+            </small>
+            @if (customNameError()) {
+              <small class="p-error block mt-1">{{ customNameError() }}</small>
+            }
+          </div>
+
           <!-- Expiration Date (Optional) -->
           <div class="field">
             <label for="expiration" class="block text-sm font-medium text-gray-700 mb-2">
@@ -147,30 +206,58 @@ import { Subject, takeUntil } from 'rxjs';
               Short Link Created
             </h3>
 
-            <div class="bg-gray-50 p-4 rounded-lg">
-              <div class="flex justify-between align-items-center mb-2">
-                <label class="text-sm font-medium text-gray-600">Short URL:</label>
-                <p-button
-                  icon="pi pi-copy"
-                  size="small"
-                  severity="secondary"
-                  (onClick)="copyShortUrl()"
-                  pTooltip="Copy to clipboard"
-                  outlined="true"
-                />
-              </div>
-              <div class="flex align-items-center gap-2">
-                <code class="flex-1 text-sm bg-white p-2 rounded border text-blue-600 font-mono">
-                  {{ generatedShortUrl() }}
-                </code>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Short URL Section -->
+              <div class="bg-gray-50 p-4 rounded-lg">
+                <div class="flex justify-between align-items-center mb-2">
+                  <label class="text-sm font-medium text-gray-600">Short URL:</label>
+                  <p-button
+                    icon="pi pi-copy"
+                    size="small"
+                    severity="secondary"
+                    (onClick)="copyShortUrl()"
+                    pTooltip="Copy to clipboard"
+                    outlined="true"
+                  />
+                </div>
+                <div class="flex align-items-center gap-2">
+                  <code class="flex-1 text-sm bg-white p-2 rounded border text-blue-600 font-mono">
+                    {{ generatedShortUrl() }}
+                  </code>
+                </div>
+
+                <div class="mt-3 text-xs text-gray-500">
+                  <div>Original: {{ createdShortLink()?.originalUrl }}</div>
+                  @if (createdShortLink()?.expiresAt) {
+                    <div>Expires: {{ createdShortLink()?.expiresAt | date: 'medium' }}</div>
+                  }
+                </div>
               </div>
 
-              <div class="mt-3 text-xs text-gray-500">
-                <div>Original: {{ createdShortLink()?.originalUrl }}</div>
-                @if (createdShortLink()?.expiresAt) {
-                  <div>Expires: {{ createdShortLink()?.expiresAt | date: 'medium' }}</div>
-                }
-              </div>
+              <!-- QR Code Section -->
+              @if (qrCodeDataUrl()) {
+                <div class="bg-gray-50 p-4 rounded-lg">
+                  <div class="flex justify-between align-items-center mb-3">
+                    <label class="text-sm font-medium text-gray-600">QR Code:</label>
+                    <p-button
+                      icon="pi pi-download"
+                      size="small"
+                      severity="secondary"
+                      (onClick)="downloadQRCode()"
+                      pTooltip="Download QR Code"
+                      outlined="true"
+                    />
+                  </div>
+                  <div class="flex justify-center">
+                    <img
+                      [src]="qrCodeDataUrl()"
+                      alt="QR Code for short link"
+                      class="w-48 h-48 border border-gray-200 rounded"
+                    />
+                  </div>
+                  <div class="mt-2 text-xs text-gray-500 text-center">Scan to open link</div>
+                </div>
+              }
             </div>
           </div>
         }
@@ -394,11 +481,23 @@ export class ShortLinkComponent implements OnInit, OnDestroy {
   // Component state
   readonly createdShortLink = signal<ShortLink | null>(null);
   readonly minDate = signal<Date>(new Date());
+  readonly qrCodeDataUrl = signal<string | null>(null);
+  readonly customNameAvailable = signal<boolean | null>(null);
+  readonly customNameError = signal<string | null>(null);
+  readonly checkingAvailability = signal<boolean>(false);
 
   // Computed values
   readonly generatedShortUrl = computed(() => {
     const link = this.createdShortLink();
     return link ? this.shortLinkService.generateShortUrl(link.code) : '';
+  });
+
+  readonly customNamePreview = computed(() => {
+    const customName = this.shortLinkForm?.get('customName')?.value;
+    if (!customName || customName.trim() === '') {
+      return null;
+    }
+    return this.shortLinkService.generateShortUrl(customName.trim().toLowerCase());
   });
 
   // Form controls for easier access
@@ -410,11 +509,19 @@ export class ShortLinkComponent implements OnInit, OnDestroy {
     return this.shortLinkForm.get('expiresAt')!;
   }
 
+  get customNameControl() {
+    return this.shortLinkForm.get('customName')!;
+  }
+
   constructor() {
     this.shortLinkForm = this.fb.group({
       originalUrl: [
         '',
         [Validators.required, Validators.pattern(/^https?:\/\/.+/), Validators.maxLength(2048)],
+      ],
+      customName: [
+        '',
+        [Validators.minLength(3), Validators.maxLength(30), Validators.pattern(/^[a-zA-Z0-9-]+$/)],
       ],
       expiresAt: [null],
     });
@@ -431,7 +538,41 @@ export class ShortLinkComponent implements OnInit, OnDestroy {
     this.shortLinkForm.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(() => {
       this.shortLinkService.clearError();
       this.createdShortLink.set(null);
+      this.qrCodeDataUrl.set(null);
     });
+
+    // Real-time custom name validation with debounce
+    this.customNameControl.valueChanges
+      .pipe(
+        debounceTime(500),
+        distinctUntilChanged(),
+        switchMap((customName) => {
+          if (!customName || customName.trim() === '' || this.customNameControl.invalid) {
+            this.customNameAvailable.set(null);
+            this.customNameError.set(null);
+            this.checkingAvailability.set(false);
+            return of(null);
+          }
+
+          this.checkingAvailability.set(true);
+          return this.shortLinkService.checkCustomNameAvailability(customName.trim());
+        }),
+        takeUntil(this.destroy$),
+      )
+      .subscribe({
+        next: (result) => {
+          this.checkingAvailability.set(false);
+          if (result) {
+            this.customNameAvailable.set(result.available);
+            this.customNameError.set(result.error || null);
+          }
+        },
+        error: () => {
+          this.checkingAvailability.set(false);
+          this.customNameAvailable.set(null);
+          this.customNameError.set('Failed to check availability');
+        },
+      });
   }
 
   ngOnDestroy(): void {
@@ -451,9 +592,11 @@ export class ShortLinkComponent implements OnInit, OnDestroy {
     const request: CreateShortLinkRequest = {
       originalUrl: formValue.originalUrl.trim(),
       expiresAt: formValue.expiresAt || null,
+      customName: formValue.customName?.trim() || undefined,
     };
 
     this.createdShortLink.set(null);
+    this.qrCodeDataUrl.set(null);
 
     this.shortLinkService
       .createShortLink(request)
@@ -462,6 +605,7 @@ export class ShortLinkComponent implements OnInit, OnDestroy {
         next: (response) => {
           if (response.success) {
             this.createdShortLink.set(response.data.shortLink);
+            this.qrCodeDataUrl.set(response.data.qrCodeDataUrl);
             this.messageService.add({
               severity: 'success',
               summary: 'Success',
@@ -488,7 +632,34 @@ export class ShortLinkComponent implements OnInit, OnDestroy {
   clearForm(): void {
     this.shortLinkForm.reset();
     this.createdShortLink.set(null);
+    this.qrCodeDataUrl.set(null);
+    this.customNameAvailable.set(null);
+    this.customNameError.set(null);
     this.shortLinkService.clearError();
+  }
+
+  /**
+   * Downloads the QR code as a PNG file.
+   */
+  downloadQRCode(): void {
+    const qrCode = this.qrCodeDataUrl();
+    if (!qrCode) {
+      return;
+    }
+
+    const link = document.createElement('a');
+    const shortLink = this.createdShortLink();
+    const filename = shortLink?.code ? `qr-${shortLink.code}.png` : 'qr-code.png';
+
+    link.href = qrCode;
+    link.download = filename;
+    link.click();
+
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Downloaded',
+      detail: 'QR code downloaded successfully',
+    });
   }
 
   /**

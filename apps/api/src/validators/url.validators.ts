@@ -156,19 +156,25 @@ export const urlValidator = [
 /**
  * Express validator for short code parameter.
  * Validates code format and length.
+ * Supports both auto-generated codes (6-8 chars) and custom names (3-30 chars with hyphens).
  */
 export const shortCodeValidator = [
   param('code')
     .trim()
-    .isLength({ min: 6, max: 8 })
-    .withMessage('Short code must be between 6 and 8 characters')
-    .matches(/^[a-zA-Z0-9]+$/)
-    .withMessage('Short code must contain only alphanumeric characters')
+    .isLength({ min: 3, max: 30 })
+    .withMessage('Short code must be between 3 and 30 characters')
+    .matches(/^[a-zA-Z0-9-]+$/)
+    .withMessage(
+      'Short code must contain only alphanumeric characters and hyphens'
+    )
     .custom((code: string) => {
-      // Additional validation to ensure no confusing characters
-      const confusingChars = /[0oO1lI]/;
-      if (confusingChars.test(code)) {
-        throw new Error('Short code contains potentially confusing characters');
+      // Check for consecutive hyphens
+      if (/--/.test(code)) {
+        throw new Error('Short code cannot contain consecutive hyphens');
+      }
+      // Check for leading/trailing hyphens
+      if (code.startsWith('-') || code.endsWith('-')) {
+        throw new Error('Short code cannot start or end with a hyphen');
       }
       return true;
     }),

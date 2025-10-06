@@ -289,14 +289,26 @@ import { CheckboxModule } from 'primeng/checkbox';
             <span>Rotation</span>
             <span class="value-badge">{{ localRotation }}°</span>
           </label>
-          <p-slider
-            [(ngModel)]="localRotation"
-            (onChange)="onRotationChange($event)"
-            [min]="0"
-            [max]="360"
-            [step]="1"
-            class="compact-slider"
-          />
+          <div class="rotation-controls">
+            <input
+              type="number"
+              [(ngModel)]="localRotation"
+              (ngModelChange)="onRotationInputChange($event)"
+              [min]="0"
+              [max]="360"
+              [step]="1"
+              class="rotation-input"
+              placeholder="Angle"
+            />
+            <p-slider
+              [(ngModel)]="localRotation"
+              (onChange)="onRotationChange($event)"
+              [min]="0"
+              [max]="360"
+              [step]="1"
+              class="compact-slider"
+            />
+          </div>
         </div>
       </div>
 
@@ -614,6 +626,36 @@ import { CheckboxModule } from 'primeng/checkbox';
         width: 100%;
       }
 
+      .rotation-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .rotation-input {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1.5px solid #cbd5e1;
+        border-radius: 0.375rem;
+        background: #ffffff;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #475569;
+        text-align: center;
+        transition: all 0.2s;
+      }
+
+      .rotation-input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        background: #f0f9ff;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+
+      .rotation-input:hover {
+        border-color: #3b82f6;
+      }
+
       /* Action Buttons */
       .action-buttons-compact {
         display: flex;
@@ -883,9 +925,22 @@ export class ToolsSidebarComponent {
   }
 
   /**
-   * Handles rotation change.
+   * Handles rotation change from slider.
    */
   onRotationChange(event: any): void {
     this.rotationChanged.emit(event.value);
+  }
+
+  /**
+   * Handles rotation change from input field.
+   */
+  onRotationInputChange(value: number): void {
+    // Ensure value is within range
+    let normalizedValue = value % 360;
+    if (normalizedValue < 0) {
+      normalizedValue += 360;
+    }
+    this.localRotation = normalizedValue;
+    this.rotationChanged.emit(normalizedValue);
   }
 }

@@ -102,6 +102,47 @@ router.post(
 );
 
 /**
+ * @route GET /api/tools/short-links
+ * @description Retrieve short links created by the authenticated user
+ * @access Authenticated users only
+ * @query limit - Maximum number of results (default: 20, max: 100)
+ * @query offset - Number of results to skip (default: 0)
+ * @response 200 - User's short links list
+ * @response 401 - Authentication required
+ * @response 500 - Internal server error
+ * @example
+ * GET /api/tools/short-links?limit=10&offset=0
+ * Authorization: Bearer <user-token>
+ */
+router.get(
+  '/',
+  AuthMiddleware.authenticate,
+  shortLinksController.getUserShortLinks
+);
+
+/**
+ * @route GET /api/tools/short-links/check-availability/:customName
+ * @description Check if a custom name is available for use
+ * @access Authenticated users only
+ * @param customName - Custom name to check (3-30 alphanumeric characters and hyphens)
+ * @rateLimit 100 requests per minute per IP
+ * @response 200 - Availability status
+ * @response 400 - Invalid custom name format
+ * @response 401 - Authentication required
+ * @response 429 - Rate limit exceeded
+ * @response 500 - Internal server error
+ * @example
+ * GET /api/tools/short-links/check-availability/my-custom-link
+ * Authorization: Bearer <user-token>
+ */
+router.get(
+  '/check-availability/:customName',
+  resolveShortLinkRateLimit,
+  AuthMiddleware.authenticate,
+  shortLinksController.checkCustomNameAvailability
+);
+
+/**
  * @route GET /api/tools/short-links/:code
  * @description Resolve a short code to get original URL information
  * @access Public (no authentication required)
@@ -121,25 +162,6 @@ router.get(
   resolveShortLinkRateLimit,
   resolveShortLinkValidator,
   shortLinksController.resolveShortLink
-);
-
-/**
- * @route GET /api/tools/short-links
- * @description Retrieve short links created by the authenticated user
- * @access Authenticated users only
- * @query limit - Maximum number of results (default: 20, max: 100)
- * @query offset - Number of results to skip (default: 0)
- * @response 200 - User's short links list
- * @response 401 - Authentication required
- * @response 500 - Internal server error
- * @example
- * GET /api/tools/short-links?limit=10&offset=0
- * Authorization: Bearer <user-token>
- */
-router.get(
-  '/',
-  AuthMiddleware.authenticate,
-  shortLinksController.getUserShortLinks
 );
 
 /**

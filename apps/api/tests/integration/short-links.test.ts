@@ -10,34 +10,27 @@ import {
 import request from 'supertest';
 import { Express } from 'express';
 import { Pool } from 'pg';
-import { createApp } from '../../src/server.js';
-import { DatabaseUtils } from '../../src/utils/database.utils.js';
+import { app } from '../../src/server';
+import { databaseService } from '../../src/services/database.service';
 
 /**
  * Integration tests for Short Links API endpoints
  * Tests complete API functionality with database integration
  */
 describe('Short Links API Integration', () => {
-  let app: Express;
+  let testApp: Express;
   let pool: Pool;
   let authToken: string;
   let userId: string;
 
   beforeAll(async () => {
-    // Initialize test database and app
-    pool = DatabaseUtils.createPool({
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '5432'),
-      database: process.env.DB_NAME_TEST || 'nodeangularfullstack_test',
-      user: process.env.DB_USER || 'postgres',
-      password: process.env.DB_PASSWORD || 'postgres',
-    });
-
-    app = createApp(pool);
+    // Use the imported app from server.ts
+    testApp = app;
+    pool = databaseService.getPool();
 
     // Create test user and get auth token
-    const registerResponse = await request(app)
-      .post('/api/auth/register')
+    const registerResponse = await request(testApp)
+      .post('/api/v1/auth/register')
       .send({
         email: 'testuser@example.com',
         password: 'TestPass123!',
@@ -47,10 +40,12 @@ describe('Short Links API Integration', () => {
 
     userId = registerResponse.body.user.id;
 
-    const loginResponse = await request(app).post('/api/auth/login').send({
-      email: 'testuser@example.com',
-      password: 'TestPass123!',
-    });
+    const loginResponse = await request(testApp)
+      .post('/api/v1/auth/login')
+      .send({
+        email: 'testuser@example.com',
+        password: 'TestPass123!',
+      });
 
     authToken = loginResponse.body.accessToken;
 
@@ -81,10 +76,10 @@ describe('Short Links API Integration', () => {
     await pool.query('DELETE FROM short_links WHERE created_by = $1', [userId]);
   });
 
-  describe('POST /api/tools/short-links', () => {
+  describe('POST /api/v1/tools/short-links', () => {
     it('should create a short link successfully', async () => {
-      const response = await request(app)
-        .post('/api/tools/short-links')
+      const response = await request(testApp)
+        .post('/api/v1/tools/short-links')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           originalUrl: 'https://example.com',
@@ -116,8 +111,8 @@ describe('Short Links API Integration', () => {
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 30);
 
-      const response = await request(app)
-        .post('/api/tools/short-links')
+      const response = await request(testApp)
+        .post('/api/v1/tools/short-links')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           originalUrl: 'https://example.org',
@@ -145,8 +140,8 @@ describe('Short Links API Integration', () => {
       ];
 
       for (const url of invalidUrls) {
-        await request(app)
-          .post('/api/tools/short-links')
+        await request(testApp)
+          .post('/api/v1/tools/short-links')
           .set('Authorization', `Bearer ${authToken}`)
           .send({ originalUrl: url })
           .expect(400);
@@ -157,8 +152,8 @@ describe('Short Links API Integration', () => {
       const pastDate = new Date();
       pastDate.setDate(pastDate.getDate() - 1);
 
-      await request(app)
-        .post('/api/tools/short-links')
+      await request(testApp)
+        .post('/api/v1/tools/short-links')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           originalUrl: 'https://example.com',
@@ -168,8 +163,8 @@ describe('Short Links API Integration', () => {
     });
 
     it('should require authentication', async () => {
-      await request(app)
-        .post('/api/tools/short-links')
+      await request(testApp)
+        .post('/api/v1/tools/short-links')
         .send({
           originalUrl: 'https://example.com',
         })
@@ -179,8 +174,8 @@ describe('Short Links API Integration', () => {
     it('should respect rate limiting', async () => {
       // Create multiple requests quickly to test rate limiting
       const promises = Array.from({ length: 60 }, () =>
-        request(app)
-          .post('/api/tools/short-links')
+        request(testApp)
+          .post('/api/v1/tools/short-links')
           .set('Authorization', `Bearer ${authToken}`)
           .send({ originalUrl: 'https://example.com' })
       );
@@ -201,8 +196,8 @@ describe('Short Links API Integration', () => {
         ['short-link']
       );
 
-      await request(app)
-        .post('/api/tools/short-links')
+      await request(testApp)
+        .post('/api/v1/tools/short-links')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           originalUrl: 'https://example.com',
@@ -217,13 +212,13 @@ describe('Short Links API Integration', () => {
     });
   });
 
-  describe('GET /api/tools/short-links/:code', () => {
+  describe('GET /api/v1/tools/short-links/:code', () => {
     let testCode: string;
 
     beforeEach(async () => {
       // Create a test short link
-      const response = await request(app)
-        .post('/api/tools/short-links')
+      const response = await request(testApp)
+        .post('/api/v1/tools/short-links')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           originalUrl: 'https://example.com',
@@ -233,8 +228,8 @@ describe('Short Links API Integration', () => {
     });
 
     it('should resolve short link successfully', async () => {
-      const response = await request(app)
-        .get(`/api/tools/short-links/${testCode}`)
+      const response = await request(testApp)
+        .get(`/api/v1/tools/short-links/${testCode}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
@@ -247,8 +242,8 @@ describe('Short Links API Integration', () => {
     });
 
     it('should return 404 for non-existent code', async () => {
-      await request(app)
-        .get('/api/tools/short-links/notfound')
+      await request(testApp)
+        .get('/api/v1/tools/short-links/notfound')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(404);
     });
@@ -265,14 +260,16 @@ describe('Short Links API Integration', () => {
         ['expired', 'https://example.com', pastDate, userId]
       );
 
-      await request(app)
-        .get(`/api/tools/short-links/${result.rows[0].code}`)
+      await request(testApp)
+        .get(`/api/v1/tools/short-links/${result.rows[0].code}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(410);
     });
 
     it('should require authentication', async () => {
-      await request(app).get(`/api/tools/short-links/${testCode}`).expect(401);
+      await request(testApp)
+        .get(`/api/v1/tools/short-links/${testCode}`)
+        .expect(401);
     });
   });
 
@@ -281,8 +278,8 @@ describe('Short Links API Integration', () => {
 
     beforeEach(async () => {
       // Create a test short link
-      const response = await request(app)
-        .post('/api/tools/short-links')
+      const response = await request(testApp)
+        .post('/api/v1/tools/short-links')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           originalUrl: 'https://example.com',
@@ -292,7 +289,7 @@ describe('Short Links API Integration', () => {
     });
 
     it('should redirect to original URL', async () => {
-      const response = await request(app).get(`/s/${testCode}`).expect(302);
+      const response = await request(testApp).get(`/s/${testCode}`).expect(302);
 
       expect(response.headers.location).toBe('https://example.com');
 
@@ -305,7 +302,7 @@ describe('Short Links API Integration', () => {
     });
 
     it('should return 404 for non-existent code', async () => {
-      await request(app).get('/s/notfound').expect(404);
+      await request(testApp).get('/s/notfound').expect(404);
     });
 
     it('should return 410 for expired links', async () => {
@@ -319,19 +316,19 @@ describe('Short Links API Integration', () => {
         ['expired', 'https://example.com', pastDate, userId]
       );
 
-      await request(app).get(`/s/${result.rows[0].code}`).expect(410);
+      await request(testApp).get(`/s/${result.rows[0].code}`).expect(410);
     });
 
     it('should work without authentication', async () => {
       // Public redirect should not require authentication
-      await request(app).get(`/s/${testCode}`).expect(302);
+      await request(testApp).get(`/s/${testCode}`).expect(302);
     });
 
     it('should increment click count on each access', async () => {
       // Access the link multiple times
-      await request(app).get(`/s/${testCode}`).expect(302);
-      await request(app).get(`/s/${testCode}`).expect(302);
-      await request(app).get(`/s/${testCode}`).expect(302);
+      await request(testApp).get(`/s/${testCode}`).expect(302);
+      await request(testApp).get(`/s/${testCode}`).expect(302);
+      await request(testApp).get(`/s/${testCode}`).expect(302);
 
       // Verify click count
       const dbResult = await pool.query(
@@ -344,7 +341,7 @@ describe('Short Links API Integration', () => {
     it('should update last accessed timestamp', async () => {
       const beforeTime = new Date();
 
-      await request(app).get(`/s/${testCode}`).expect(302);
+      await request(testApp).get(`/s/${testCode}`).expect(302);
 
       const dbResult = await pool.query(
         'SELECT last_accessed_at FROM short_links WHERE code = $1',
@@ -358,7 +355,7 @@ describe('Short Links API Integration', () => {
     });
   });
 
-  describe('GET /api/tools/short-links (List user links)', () => {
+  describe('GET /api/v1/tools/short-links (List user links)', () => {
     beforeEach(async () => {
       // Create multiple test links
       const urls = [
@@ -368,16 +365,16 @@ describe('Short Links API Integration', () => {
       ];
 
       for (const url of urls) {
-        await request(app)
-          .post('/api/tools/short-links')
+        await request(testApp)
+          .post('/api/v1/tools/short-links')
           .set('Authorization', `Bearer ${authToken}`)
           .send({ originalUrl: url });
       }
     });
 
     it('should list user links with pagination', async () => {
-      const response = await request(app)
-        .get('/api/tools/short-links?limit=2&offset=0')
+      const response = await request(testApp)
+        .get('/api/v1/tools/short-links?limit=2&offset=0')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
@@ -396,8 +393,8 @@ describe('Short Links API Integration', () => {
         userId,
       ]);
 
-      const response = await request(app)
-        .get('/api/tools/short-links')
+      const response = await request(testApp)
+        .get('/api/v1/tools/short-links')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
@@ -405,32 +402,32 @@ describe('Short Links API Integration', () => {
     });
 
     it('should require authentication', async () => {
-      await request(app).get('/api/tools/short-links').expect(401);
+      await request(testApp).get('/api/v1/tools/short-links').expect(401);
     });
   });
 
-  describe('GET /api/tools/short-links/stats (User statistics)', () => {
+  describe('GET /api/v1/tools/short-links/stats (User statistics)', () => {
     beforeEach(async () => {
       // Create test links with some clicks
-      const response1 = await request(app)
-        .post('/api/tools/short-links')
+      const response1 = await request(testApp)
+        .post('/api/v1/tools/short-links')
         .set('Authorization', `Bearer ${authToken}`)
         .send({ originalUrl: 'https://example1.com' });
 
-      const response2 = await request(app)
-        .post('/api/tools/short-links')
+      const response2 = await request(testApp)
+        .post('/api/v1/tools/short-links')
         .set('Authorization', `Bearer ${authToken}`)
         .send({ originalUrl: 'https://example2.com' });
 
       // Simulate clicks
-      await request(app).get(`/s/${response1.body.code}`);
-      await request(app).get(`/s/${response1.body.code}`);
-      await request(app).get(`/s/${response2.body.code}`);
+      await request(testApp).get(`/s/${response1.body.code}`);
+      await request(testApp).get(`/s/${response1.body.code}`);
+      await request(testApp).get(`/s/${response2.body.code}`);
     });
 
     it('should return user statistics', async () => {
-      const response = await request(app)
-        .get('/api/tools/short-links/stats')
+      const response = await request(testApp)
+        .get('/api/v1/tools/short-links/stats')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
@@ -448,7 +445,7 @@ describe('Short Links API Integration', () => {
     });
 
     it('should require authentication', async () => {
-      await request(app).get('/api/tools/short-links/stats').expect(401);
+      await request(testApp).get('/api/v1/tools/short-links/stats').expect(401);
     });
   });
 });

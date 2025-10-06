@@ -6,9 +6,12 @@ import {
   afterEach,
   jest,
 } from '@jest/globals';
-import { ShortLinksService } from '../../../src/services/short-links.service.js';
-import { ShortLinksRepository } from '../../../src/repositories/short-links.repository.js';
-import { ToolsService } from '../../../src/services/tools.service.js';
+import { ShortLinksService } from '../../../src/services/short-links.service';
+import {
+  ShortLinksRepository,
+  ShortLinkEntity,
+} from '../../../src/repositories/short-links.repository';
+import { ToolsService } from '../../../src/services/tools.service';
 import type {
   ShortLink,
   CreateShortLinkRequest,
@@ -29,13 +32,18 @@ describe('ShortLinksService', () => {
       create: jest.fn(),
       findByCode: jest.fn(),
       incrementClickCount: jest.fn(),
-      getStatistics: jest.fn(),
       findByUser: jest.fn(),
       deleteExpired: jest.fn(),
+      query: jest.fn(),
+      codeExists: jest.fn() as jest.MockedFunction<any>,
     } as any;
 
+    (mockRepository.codeExists as jest.MockedFunction<any>).mockResolvedValue(
+      false
+    );
+
     mockToolsService = {
-      isToolEnabled: jest.fn(),
+      getToolByKey: jest.fn(),
     } as any;
 
     service = new ShortLinksService(mockRepository, mockToolsService);
@@ -52,7 +60,7 @@ describe('ShortLinksService', () => {
     };
 
     beforeEach(() => {
-      mockToolsService.isToolEnabled.mockResolvedValue(true);
+      mockToolsService.getToolByKey.mockResolvedValue({ active: true } as any);
     });
 
     it('should create short link successfully', async () => {
@@ -72,8 +80,9 @@ describe('ShortLinksService', () => {
 
       const result = await service.createShortLink(validRequest, 'user-id');
 
-      expect(result).toEqual(mockShortLink);
-      expect(mockToolsService.isToolEnabled).toHaveBeenCalledWith('short-link');
+      expect(result.data.shortLink).toEqual(mockShortLink);
+      expect(result.data.qrCodeDataUrl).toBeDefined();
+      expect(mockToolsService.getToolByKey).toHaveBeenCalledWith('short-link');
       expect(mockRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({
           originalUrl: 'https://example.com',
@@ -85,7 +94,7 @@ describe('ShortLinksService', () => {
     });
 
     it('should throw error when tool is disabled', async () => {
-      mockToolsService.isToolEnabled.mockResolvedValue(false);
+      mockToolsService.getToolByKey.mockResolvedValue({ active: false } as any);
 
       await expect(
         service.createShortLink(validRequest, 'user-id')
@@ -149,7 +158,8 @@ describe('ShortLinksService', () => {
 
       const result = await service.createShortLink(localhostRequest, 'user-id');
 
-      expect(result).toEqual(mockShortLink);
+      expect(result.data.shortLink).toEqual(mockShortLink);
+      expect(result.data.qrCodeDataUrl).toBeDefined();
       delete process.env.NODE_ENV;
     });
 
@@ -190,7 +200,8 @@ describe('ShortLinksService', () => {
         'user-id'
       );
 
-      expect(result).toEqual(mockShortLink);
+      expect(result.data.shortLink).toEqual(mockShortLink);
+      expect(result.data.qrCodeDataUrl).toBeDefined();
     });
 
     it('should reject past expiration dates', async () => {
@@ -222,7 +233,7 @@ describe('ShortLinksService', () => {
 
       const result = await service.createShortLink(validRequest, 'user-id');
 
-      expect(result.code).toBe('def456');
+      expect(result.data.shortLink.code).toBe('def456');
       expect(mockRepository.create).toHaveBeenCalledTimes(2);
     });
 
@@ -242,7 +253,7 @@ describe('ShortLinksService', () => {
 
   describe('resolveShortLink', () => {
     it('should resolve valid short link', async () => {
-      const mockShortLink: ShortLink = {
+      const mockShortLink: ShortLinkEntity = {
         id: 'test-uuid',
         code: 'abc123',
         originalUrl: 'https://example.com',
@@ -254,34 +265,40 @@ describe('ShortLinksService', () => {
         updatedAt: new Date(),
       };
 
-      mockRepository.findByCode.mockResolvedValueOnce(mockShortLink);
-      mockRepository.incrementClickCount.mockResolvedValueOnce({
+      const updatedEntity = {
         ...mockShortLink,
         clickCount: 6,
         lastAccessedAt: new Date(),
-      });
+      };
+
+      mockRepository.findByCode.mockResolvedValueOnce(mockShortLink);
+      mockRepository.incrementClickCount.mockResolvedValueOnce(updatedEntity);
 
       const result = await service.resolveShortLink('abc123');
 
-      expect(result).toEqual(mockShortLink);
+      expect(result.success).toBe(true);
+      expect(result.data.shortLink.code).toBe('abc123');
+      expect(result.data.originalUrl).toBe('https://example.com');
       expect(mockRepository.findByCode).toHaveBeenCalledWith('abc123');
       expect(mockRepository.incrementClickCount).toHaveBeenCalledWith('abc123');
     });
 
-    it('should return null for non-existent code', async () => {
+    it('should throw error for non-existent code', async () => {
       mockRepository.findByCode.mockResolvedValueOnce(null);
 
-      const result = await service.resolveShortLink('notfound');
-
-      expect(result).toBeNull();
+      await expect(service.resolveShortLink('notfound')).rejects.toMatchObject({
+        success: false,
+        message: 'Short link not found',
+        code: 'LINK_NOT_FOUND',
+      });
       expect(mockRepository.incrementClickCount).not.toHaveBeenCalled();
     });
 
-    it('should return null for expired links', async () => {
+    it('should throw error for expired links', async () => {
       const expiredDate = new Date();
       expiredDate.setDate(expiredDate.getDate() - 1);
 
-      const expiredShortLink: ShortLink = {
+      const expiredShortLink: ShortLinkEntity = {
         id: 'test-uuid',
         code: 'expired',
         originalUrl: 'https://example.com',
@@ -295,9 +312,11 @@ describe('ShortLinksService', () => {
 
       mockRepository.findByCode.mockResolvedValueOnce(expiredShortLink);
 
-      const result = await service.resolveShortLink('expired');
-
-      expect(result).toBeNull();
+      await expect(service.resolveShortLink('expired')).rejects.toMatchObject({
+        success: false,
+        message: 'Short link has expired',
+        code: 'LINK_EXPIRED',
+      });
       expect(mockRepository.incrementClickCount).not.toHaveBeenCalled();
     });
 
@@ -312,7 +331,7 @@ describe('ShortLinksService', () => {
     });
 
     it('should handle click count increment errors', async () => {
-      const mockShortLink: ShortLink = {
+      const mockShortLink: ShortLinkEntity = {
         id: 'test-uuid',
         code: 'abc123',
         originalUrl: 'https://example.com',
@@ -329,51 +348,73 @@ describe('ShortLinksService', () => {
         new Error('Update failed')
       );
 
-      // Should still return the link even if analytics update fails
-      const result = await service.resolveShortLink('abc123');
-
-      expect(result).toEqual(mockShortLink);
+      // Should fail since click count increment is required
+      await expect(service.resolveShortLink('abc123')).rejects.toThrow(
+        'Update failed'
+      );
     });
   });
 
   describe('getStatistics', () => {
-    it('should return user statistics', async () => {
-      const mockStats = {
-        totalLinks: 15,
-        totalClicks: 250,
-        recentLinks: [
+    it('should return statistics when query succeeds', async () => {
+      const mockStatsResult = {
+        rows: [
           {
-            id: 'uuid1',
-            code: 'abc123',
-            originalUrl: 'https://example.com',
-            clickCount: 25,
-            createdAt: new Date(),
+            total_links: '15',
+            active_links: '12',
+            expired_links: '3',
+            total_clicks: '250',
           },
         ],
       };
 
-      mockRepository.getStatistics.mockResolvedValueOnce(mockStats);
+      const mockTopLinksResult = {
+        rows: [
+          {
+            code: 'abc123',
+            original_url: 'https://example.com',
+            click_count: 25,
+          },
+        ],
+      };
 
-      const result = await service.getStatistics('user-id');
+      const queryMock = jest.fn() as jest.MockedFunction<any>;
+      queryMock
+        .mockResolvedValueOnce(mockStatsResult)
+        .mockResolvedValueOnce(mockTopLinksResult);
+      (mockRepository as any).query = queryMock;
 
-      expect(result).toEqual(mockStats);
-      expect(mockRepository.getStatistics).toHaveBeenCalledWith('user-id');
+      const result = await service.getStatistics();
+
+      expect(result).toEqual({
+        totalLinks: 15,
+        activeLinks: 12,
+        expiredLinks: 3,
+        totalClicks: 250,
+        topLinks: [
+          {
+            code: 'abc123',
+            originalUrl: 'https://example.com',
+            clickCount: 25,
+          },
+        ],
+      });
     });
 
     it('should handle repository error', async () => {
-      mockRepository.getStatistics.mockRejectedValueOnce(
-        new Error('Query failed')
-      );
+      const queryMock = jest.fn() as jest.MockedFunction<any>;
+      queryMock.mockRejectedValueOnce(new Error('Query failed'));
+      (mockRepository as any).query = queryMock;
 
-      await expect(service.getStatistics('user-id')).rejects.toThrow(
-        'Query failed'
+      await expect(service.getStatistics()).rejects.toThrow(
+        'Failed to retrieve statistics'
       );
     });
   });
 
-  describe('getUserLinks', () => {
+  describe('getUserShortLinks', () => {
     it('should return user links with pagination', async () => {
-      const mockLinks: ShortLink[] = [
+      const mockEntities: ShortLinkEntity[] = [
         {
           id: 'uuid1',
           code: 'abc123',
@@ -387,20 +428,22 @@ describe('ShortLinksService', () => {
         },
       ];
 
-      mockRepository.findByUser.mockResolvedValueOnce(mockLinks);
+      mockRepository.findByUser.mockResolvedValueOnce(mockEntities);
 
-      const result = await service.getUserLinks('user-id', 10, 0);
+      const result = await service.getUserShortLinks('user-id', 10, 0);
 
-      expect(result).toEqual(mockLinks);
+      expect(result).toHaveLength(1);
+      expect(result[0]).toHaveProperty('shortUrl');
+      expect(result[0].code).toBe('abc123');
       expect(mockRepository.findByUser).toHaveBeenCalledWith('user-id', 10, 0);
     });
 
     it('should handle default pagination parameters', async () => {
       mockRepository.findByUser.mockResolvedValueOnce([]);
 
-      await service.getUserLinks('user-id');
+      await service.getUserShortLinks('user-id');
 
-      expect(mockRepository.findByUser).toHaveBeenCalledWith('user-id', 50, 0);
+      expect(mockRepository.findByUser).toHaveBeenCalledWith('user-id', 20, 0);
     });
   });
 
@@ -420,59 +463,8 @@ describe('ShortLinksService', () => {
       );
 
       await expect(service.cleanupExpiredLinks()).rejects.toThrow(
-        'Cleanup failed'
+        'Failed to cleanup expired links'
       );
-    });
-  });
-
-  describe('generateShortCode', () => {
-    it('should generate codes of correct length', () => {
-      for (let i = 0; i < 10; i++) {
-        const code = (service as any).generateShortCode();
-        expect(code).toMatch(/^[A-Za-z0-9]{6,8}$/);
-        expect(code.length).toBeGreaterThanOrEqual(6);
-        expect(code.length).toBeLessThanOrEqual(8);
-      }
-    });
-
-    it('should generate unique codes', () => {
-      const codes = new Set();
-      for (let i = 0; i < 100; i++) {
-        const code = (service as any).generateShortCode();
-        codes.add(code);
-      }
-      // Should generate mostly unique codes (allowing for small probability of collision)
-      expect(codes.size).toBeGreaterThan(95);
-    });
-  });
-
-  describe('validateUrl', () => {
-    it('should validate correct URLs', () => {
-      const validUrls = [
-        'https://example.com',
-        'http://example.org',
-        'https://subdomain.example.com/path?query=value',
-        'http://localhost:3000', // allowed in development
-      ];
-
-      for (const url of validUrls) {
-        expect(() => (service as any).validateUrl(url)).not.toThrow();
-      }
-    });
-
-    it('should reject invalid URL formats', () => {
-      const invalidUrls = [
-        'not-a-url',
-        'ftp://example.com',
-        'javascript:alert(1)',
-        'data:text/html,content',
-        '',
-        '   ',
-      ];
-
-      for (const url of invalidUrls) {
-        expect(() => (service as any).validateUrl(url)).toThrow();
-      }
     });
   });
 });

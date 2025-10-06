@@ -347,6 +347,33 @@ export class SvgDrawingService {
     } else {
       this._selectedShapeIds.set([shapeId]);
     }
+
+    // Sync style controls with the selected shape
+    this.syncStyleControlsWithShape(shape);
+  }
+
+  /**
+   * Syncs the style controls (color, width, rotation, etc.) with the given shape.
+   * @param shape - Shape to sync controls with
+   */
+  private syncStyleControlsWithShape(shape: Shape): void {
+    if (shape.color) {
+      this._strokeColor.set(shape.color);
+    }
+    if (shape.strokeWidth !== undefined) {
+      this._strokeWidth.set(shape.strokeWidth);
+    }
+    if (shape.fillColor) {
+      this._fillColor.set(shape.fillColor);
+      this._fillEnabled.set(true);
+    } else {
+      this._fillEnabled.set(false);
+    }
+    if (shape.rotation !== undefined) {
+      this._rotation.set(shape.rotation);
+    } else {
+      this._rotation.set(0);
+    }
   }
 
   /**
@@ -911,7 +938,7 @@ export class SvgDrawingService {
    * @param shapeId - ID of the shape to update
    * @param updates - Partial shape properties to update
    */
-  updateShapeProperties(shapeId: string, updates: Partial<ShapeStyle>): void {
+  updateShapeProperties(shapeId: string, updates: Partial<Shape>): void {
     const shape = this._shapes().find((s) => s.id === shapeId);
     if (!shape) return;
 

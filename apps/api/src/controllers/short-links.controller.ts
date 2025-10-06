@@ -133,6 +133,23 @@ export class ShortLinksController {
             });
             return;
           }
+
+          // Handle custom name errors
+          if (
+            error.message.includes('custom name') ||
+            error.message.includes('already taken') ||
+            error.message.includes('reserved')
+          ) {
+            res.status(400).json({
+              success: false,
+              error: {
+                code: 'CUSTOM_NAME_ERROR',
+                message: error.message,
+              },
+              timestamp: new Date().toISOString(),
+            });
+            return;
+          }
         }
 
         // Generic server error
@@ -385,6 +402,76 @@ export class ShortLinksController {
           error: {
             code: 'INTERNAL_ERROR',
             message: 'Failed to preview URL',
+          },
+          timestamp: new Date().toISOString(),
+        });
+      }
+    }
+  );
+
+  /**
+   * Checks if a custom name is available for use.
+   * @route GET /api/tools/short-links/check-availability/:customName
+   * @param req - Express request object with custom name parameter
+   * @param res - Express response object
+   * @param next - Express next function
+   * @returns HTTP response with availability status
+   * @throws {ApiError} 500 - Internal server error
+   * @example
+   * GET /api/tools/short-links/check-availability/my-custom-link
+   *
+   * Response (available):
+   * {
+   *   "success": true,
+   *   "data": {
+   *     "available": true,
+   *     "valid": true
+   *   }
+   * }
+   *
+   * Response (taken):
+   * {
+   *   "success": true,
+   *   "data": {
+   *     "available": false,
+   *     "valid": true,
+   *     "error": "This custom name is already taken"
+   *   }
+   * }
+   */
+  checkCustomNameAvailability = AsyncHandler(
+    async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+      const { customName } = req.params;
+
+      if (!customName || typeof customName !== 'string') {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: 'INVALID_REQUEST',
+            message: 'Custom name is required',
+          },
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      try {
+        const result =
+          await shortLinksService.checkCustomNameAvailability(customName);
+
+        res.status(200).json({
+          success: true,
+          data: result,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (error) {
+        console.error('Error checking custom name availability:', error);
+
+        res.status(500).json({
+          success: false,
+          error: {
+            code: 'INTERNAL_ERROR',
+            message: 'Failed to check custom name availability',
           },
           timestamp: new Date().toISOString(),
         });
