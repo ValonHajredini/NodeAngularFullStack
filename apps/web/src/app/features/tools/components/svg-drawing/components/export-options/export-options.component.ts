@@ -114,6 +114,24 @@ import { SvgDrawingService } from '../../svg-drawing.service';
         ></p-inputNumber>
       </div>
 
+      <!-- Background inclusion (SVG/PNG only when image present) -->
+      <div
+        class="flex items-center gap-2 mb-4"
+        *ngIf="svgDrawingService.backgroundImage() && exportOptions.format !== 'json'"
+      >
+        <p-checkbox
+          inputId="includeBackground"
+          [(ngModel)]="exportOptions.includeBackground"
+          [binary]="true"
+        ></p-checkbox>
+        <label
+          for="includeBackground"
+          class="font-semibold text-sm cursor-pointer text-gray-700 normal-case tracking-normal"
+        >
+          Include background image
+        </label>
+      </div>
+
       <!-- Optimization Level (SVG only) -->
       <div class="flex flex-col gap-2 mb-4" *ngIf="exportOptions.format === 'svg'">
         <label for="optimization" class="font-semibold text-sm text-gray-700">Optimization</label>
@@ -352,8 +370,8 @@ import { SvgDrawingService } from '../../svg-drawing.service';
   ],
 })
 export class ExportOptionsComponent implements OnInit {
-  /** Inject SVG Drawing Service */
-  private readonly svgDrawingService = inject(SvgDrawingService);
+  /** Inject SVG Drawing Service (exposed to template) */
+  protected readonly svgDrawingService = inject(SvgDrawingService);
 
   /** Event emitted when export is confirmed */
   @Output() export = new EventEmitter<ExportOptions>();
@@ -369,6 +387,7 @@ export class ExportOptionsComponent implements OnInit {
     format: 'svg',
     optimizationLevel: 'basic',
     padding: 20,
+    includeBackground: true,
   };
 
   ngOnInit(): void {
@@ -376,6 +395,7 @@ export class ExportOptionsComponent implements OnInit {
     this.exportOptions.width = this.svgDrawingService.exportWidth();
     this.exportOptions.height = this.svgDrawingService.exportHeight();
     this.exportOptions.padding = this.svgDrawingService.exportPadding();
+    this.exportOptions.includeBackground = true;
   }
 
   /** Whether to show preview before download */
@@ -490,6 +510,7 @@ export class ExportOptionsComponent implements OnInit {
       format: 'svg',
       optimizationLevel: 'basic',
       padding: 20,
+      includeBackground: true,
     };
     this.showPreview = false;
   }

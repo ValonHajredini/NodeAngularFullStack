@@ -867,6 +867,8 @@ export interface ExportOptions {
   optimizationLevel?: OptimizationLevel;
   /** Padding around shapes in pixels (not used for JSON format) */
   padding?: number;
+  /** Whether to include the background image when exporting visual formats */
+  includeBackground?: boolean;
 }
 
 /**
@@ -949,6 +951,8 @@ export interface BackgroundImageSettings {
   position: { x: number; y: number };
   /** Whether image is locked from manipulation */
   locked: boolean;
+  /** Intrinsic image size in pixels */
+  size?: { width: number; height: number } | null;
 }
 
 /**
