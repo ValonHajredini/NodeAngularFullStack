@@ -14,6 +14,7 @@ import {
   NotFoundShortLinkError,
 } from '@nodeangularfullstack/shared';
 import { toolsService } from './tools.service';
+import { storageService } from './storage.service';
 import {
   isValidUrl,
   sanitizeUrl,
@@ -88,6 +89,7 @@ export class ShortLinksService {
       id: entity.id,
       code: entity.code,
       originalUrl: entity.originalUrl,
+      qrCodeUrl: entity.qrCodeUrl,
       expiresAt: entity.expiresAt,
       createdBy: entity.createdBy,
       clickCount: entity.clickCount,
@@ -209,9 +211,59 @@ export class ShortLinksService {
   /**
    * Generates a QR code for the given short URL.
    * @param shortUrl - Full short URL to encode
+   * @returns Promise containing QR code as PNG Buffer
+   */
+  private async generateQRCode(shortUrl: string): Promise<Buffer> {
+    try {
+      // Generate QR code as PNG buffer
+      const qrCodeBuffer = await QRCode.toBuffer(shortUrl, {
+        type: 'png',
+        width: 300,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF',
+        },
+      });
+      return qrCodeBuffer;
+    } catch (error) {
+      console.error('Error generating QR code:', error);
+      throw new Error('Failed to generate QR code');
+    }
+  }
+
+  /**
+   * Uploads QR code image to DigitalOcean Spaces storage.
+   * @param code - Short code for naming the QR code file
+   * @param qrBuffer - PNG buffer containing QR code image
+   * @returns Promise containing public URL of uploaded QR code
+   * @throws {Error} When upload fails
+   */
+  private async uploadQRCodeToStorage(
+    code: string,
+    qrBuffer: Buffer
+  ): Promise<string> {
+    try {
+      const fileName = `qr-codes/qr-${code}.png`;
+      const qrCodeUrl = await storageService.uploadFile(
+        qrBuffer,
+        fileName,
+        'image/png',
+        { generateUniqueFileName: false }
+      );
+      return qrCodeUrl;
+    } catch (error) {
+      console.error('Error uploading QR code to storage:', error);
+      throw new Error('Failed to upload QR code to storage');
+    }
+  }
+
+  /**
+   * Generates QR code as base64 data URL for backwards compatibility.
+   * @param shortUrl - Full short URL to encode
    * @returns Promise containing QR code data URL (base64 PNG)
    */
-  private async generateQRCode(shortUrl: string): Promise<string> {
+  private async generateQRCodeDataUrl(shortUrl: string): Promise<string> {
     try {
       // Generate QR code as data URL (base64 PNG image)
       const qrCodeDataUrl = await QRCode.toDataURL(shortUrl, {
@@ -224,8 +276,8 @@ export class ShortLinksService {
       });
       return qrCodeDataUrl;
     } catch (error) {
-      console.error('Error generating QR code:', error);
-      throw new Error('Failed to generate QR code');
+      console.error('Error generating QR code data URL:', error);
+      throw new Error('Failed to generate QR code data URL');
     }
   }
 
@@ -321,15 +373,49 @@ export class ShortLinksService {
       // Generate full short URL
       const shortUrl = `${ShortLinksService.BASE_URL}/s/${code}`;
 
-      // Generate QR code
-      const qrCodeDataUrl = await this.generateQRCode(shortUrl);
+      // Generate QR code and upload to storage
+      let qrCodeUrl: string | undefined;
+      let qrCodeDataUrl: string | undefined;
+
+      try {
+        // Generate QR code as PNG buffer
+        const qrCodeBuffer = await this.generateQRCode(shortUrl);
+
+        // Upload to DigitalOcean Spaces
+        qrCodeUrl = await this.uploadQRCodeToStorage(code, qrCodeBuffer);
+
+        // Update database with QR code URL
+        await this.shortLinksRepository.updateQRCodeUrl(entity.id, qrCodeUrl);
+
+        // Also generate data URL for backwards compatibility
+        qrCodeDataUrl = await this.generateQRCodeDataUrl(shortUrl);
+      } catch (error) {
+        // QR code generation/upload failure should not prevent short link creation
+        console.error(
+          '⚠️ QR code generation or upload failed, but short link created:',
+          error
+        );
+        // Generate fallback data URL only
+        try {
+          qrCodeDataUrl = await this.generateQRCodeDataUrl(shortUrl);
+        } catch (fallbackError) {
+          console.error(
+            '⚠️ Fallback QR code generation also failed:',
+            fallbackError
+          );
+        }
+      }
 
       return {
         success: true,
         data: {
-          shortLink,
+          shortLink: {
+            ...shortLink,
+            qrCodeUrl,
+          },
           shortUrl,
           qrCodeDataUrl,
+          qrCodeUrl,
         },
       };
     } catch (error) {
@@ -456,6 +542,7 @@ export class ShortLinksService {
   /**
    * Performs cleanup of expired short links.
    * This is typically called by a scheduled job or maintenance task.
+   * Deletes QR codes from storage before removing database records.
    * @returns Promise containing number of deleted links
    * @throws {Error} When cleanup fails
    * @example
@@ -464,6 +551,28 @@ export class ShortLinksService {
    */
   async cleanupExpiredLinks(): Promise<number> {
     try {
+      // First, find all expired links with QR codes
+      const expiredLinks =
+        await this.shortLinksRepository.findExpiredWithQRCodes();
+
+      // Delete QR codes from storage
+      for (const link of expiredLinks) {
+        if (link.qrCodeUrl) {
+          try {
+            const fileName = `qr-codes/qr-${link.code}.png`;
+            await storageService.deleteFile(fileName);
+            console.log(`✅ Deleted QR code for expired link: ${link.code}`);
+          } catch (error) {
+            // Log but don't fail cleanup if storage deletion fails
+            console.error(
+              `⚠️ Failed to delete QR code for ${link.code} from storage:`,
+              error
+            );
+          }
+        }
+      }
+
+      // Then delete the database records
       return await this.shortLinksRepository.deleteExpired();
     } catch (error) {
       console.error('Error during expired links cleanup:', error);

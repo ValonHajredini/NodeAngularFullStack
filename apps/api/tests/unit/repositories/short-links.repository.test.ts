@@ -416,4 +416,94 @@ describe('ShortLinksRepository', () => {
       await expect(repository.deleteExpired()).rejects.toThrow('Delete failed');
     });
   });
+
+  describe('QR Code Storage - Story 7.5', () => {
+    describe('updateQRCodeUrl', () => {
+      it('should update QR code URL successfully', async () => {
+        const qrCodeUrl = 'https://storage.example.com/qr-codes/qr-abc123.png';
+        const shortLinkId = 'test-uuid';
+
+        mockClient.query.mockResolvedValueOnce({
+          rowCount: 1,
+        } as any);
+
+        await repository.updateQRCodeUrl(shortLinkId, qrCodeUrl);
+
+        expect(mockPool.connect).toHaveBeenCalled();
+        expect(mockClient.query).toHaveBeenCalledWith(
+          expect.stringContaining('UPDATE short_links'),
+          [qrCodeUrl, shortLinkId]
+        );
+        expect(mockClient.release).toHaveBeenCalled();
+      });
+
+      it('should handle update error gracefully', async () => {
+        const qrCodeUrl = 'https://storage.example.com/qr-codes/qr-abc123.png';
+        const shortLinkId = 'test-uuid';
+
+        mockClient.query.mockRejectedValueOnce(new Error('Database error'));
+
+        await expect(
+          repository.updateQRCodeUrl(shortLinkId, qrCodeUrl)
+        ).rejects.toThrow('Failed to update QR code URL in database');
+
+        expect(mockClient.release).toHaveBeenCalled();
+      });
+    });
+
+    describe('findExpiredWithQRCodes', () => {
+      it('should retrieve expired short links with QR code URLs', async () => {
+        const mockExpiredLinks = [
+          {
+            code: 'abc123',
+            qrCodeUrl: 'https://storage.example.com/qr-codes/qr-abc123.png',
+          },
+          {
+            code: 'def456',
+            qrCodeUrl: 'https://storage.example.com/qr-codes/qr-def456.png',
+          },
+        ];
+
+        mockClient.query.mockResolvedValueOnce({
+          rows: mockExpiredLinks,
+        } as any);
+
+        const result = await repository.findExpiredWithQRCodes();
+
+        expect(result).toEqual(mockExpiredLinks);
+        expect(mockPool.connect).toHaveBeenCalled();
+        expect(mockClient.query).toHaveBeenCalledWith(
+          expect.stringContaining('SELECT code, qr_code_url')
+        );
+        expect(mockClient.query).toHaveBeenCalledWith(
+          expect.stringContaining('WHERE expires_at IS NOT NULL')
+        );
+        expect(mockClient.query).toHaveBeenCalledWith(
+          expect.stringContaining('AND qr_code_url IS NOT NULL')
+        );
+        expect(mockClient.release).toHaveBeenCalled();
+      });
+
+      it('should return empty array when no expired links with QR codes', async () => {
+        mockClient.query.mockResolvedValueOnce({
+          rows: [],
+        } as any);
+
+        const result = await repository.findExpiredWithQRCodes();
+
+        expect(result).toEqual([]);
+        expect(mockClient.release).toHaveBeenCalled();
+      });
+
+      it('should handle database query errors', async () => {
+        mockClient.query.mockRejectedValueOnce(new Error('Query failed'));
+
+        await expect(repository.findExpiredWithQRCodes()).rejects.toThrow(
+          'Failed to find expired short links with QR codes'
+        );
+
+        expect(mockClient.release).toHaveBeenCalled();
+      });
+    });
+  });
 });

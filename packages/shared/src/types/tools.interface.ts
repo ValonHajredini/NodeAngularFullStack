@@ -144,6 +144,8 @@ export interface ShortLink {
   originalUrl: string;
   /** The complete short URL (computed from base domain + code) */
   shortUrl?: string;
+  /** Public URL of the QR code PNG image stored in DigitalOcean Spaces */
+  qrCodeUrl?: string | null;
   /** Optional expiration timestamp */
   expiresAt?: Date | null;
   /** User who created the short link (nullable) */
@@ -196,8 +198,10 @@ export interface CreateShortLinkResponse {
     shortLink: ShortLink;
     /** Full shortened URL with domain */
     shortUrl: string;
-    /** QR code data URL (base64 PNG image) */
-    qrCodeDataUrl: string;
+    /** QR code data URL (base64 PNG image) for backwards compatibility */
+    qrCodeDataUrl?: string;
+    /** Public URL of the QR code PNG image stored in DigitalOcean Spaces */
+    qrCodeUrl?: string;
   };
 }
 

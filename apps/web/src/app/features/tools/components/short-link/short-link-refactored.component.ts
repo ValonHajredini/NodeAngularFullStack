@@ -25,6 +25,7 @@ import { ShortLinkService } from '../../services/short-link.service';
 import { ToolGateDirective } from '../../../../shared/directives/tool-gate.directive';
 import type { CreateShortLinkRequest, ShortLink } from '@nodeangularfullstack/shared';
 import { Subject, takeUntil } from 'rxjs';
+import QRCode from 'qrcode';
 
 // Reusable Components
 import { UrlInputComponent } from './components/url-input/url-input.component';
@@ -132,6 +133,7 @@ import { RecentLinksListComponent } from './components/recent-links-list/recent-
         <app-short-link-result
           [shortLink]="createdShortLink()"
           [generatedShortUrl]="generatedShortUrl()"
+          [qrCodeUrl]="qrCodeUrl()"
           [qrCodeDataUrl]="qrCodeDataUrl()"
           (copyToClipboard)="copyShortUrl()"
           (downloadQR)="downloadQRCode()"
@@ -156,6 +158,7 @@ import { RecentLinksListComponent } from './components/recent-links-list/recent-
         [urlGenerator]="generateShortUrl.bind(this)"
         (refresh)="refreshLinks()"
         (copyLink)="copyShortUrlByCode($event)"
+        (downloadQRCode)="downloadQRCodeForLink($event)"
       />
 
       <!-- Tool Disabled State -->
@@ -229,7 +232,8 @@ export class ShortLinkRefactoredComponent implements OnInit, OnDestroy {
   // Component state
   readonly createdShortLink = signal<ShortLink | null>(null);
   readonly minDate = signal<Date>(new Date());
-  readonly qrCodeDataUrl = signal<string | null>(null);
+  readonly qrCodeDataUrl = signal<string | null>(null); // Base64 data URL (backwards compat)
+  readonly qrCodeUrl = signal<string | null>(null); // Storage URL (preferred)
   readonly baseUrl = window.location.origin;
 
   // Computed values
@@ -310,6 +314,7 @@ export class ShortLinkRefactoredComponent implements OnInit, OnDestroy {
 
     this.createdShortLink.set(null);
     this.qrCodeDataUrl.set(null);
+    this.qrCodeUrl.set(null);
 
     this.shortLinkService
       .createShortLink(request)
@@ -318,7 +323,8 @@ export class ShortLinkRefactoredComponent implements OnInit, OnDestroy {
         next: (response) => {
           if (response.success) {
             this.createdShortLink.set(response.data.shortLink);
-            this.qrCodeDataUrl.set(response.data.qrCodeDataUrl);
+            this.qrCodeDataUrl.set(response.data.qrCodeDataUrl || null);
+            this.qrCodeUrl.set(response.data.qrCodeUrl || null);
             this.messageService.add({
               severity: 'success',
               summary: 'Success',
@@ -345,15 +351,20 @@ export class ShortLinkRefactoredComponent implements OnInit, OnDestroy {
     this.shortLinkForm.reset();
     this.createdShortLink.set(null);
     this.qrCodeDataUrl.set(null);
+    this.qrCodeUrl.set(null);
     this.shortLinkService.clearError();
   }
 
   /**
    * Downloads the QR code as a PNG file.
+   * Prefers storage URL over base64 data URL.
    */
   downloadQRCode(): void {
-    const qrCode = this.qrCodeDataUrl();
-    if (!qrCode) {
+    const storageUrl = this.qrCodeUrl();
+    const dataUrl = this.qrCodeDataUrl();
+    const qrCodeSource = storageUrl || dataUrl;
+
+    if (!qrCodeSource) {
       return;
     }
 
@@ -361,7 +372,47 @@ export class ShortLinkRefactoredComponent implements OnInit, OnDestroy {
     const shortLink = this.createdShortLink();
     const filename = shortLink?.code ? `qr-${shortLink.code}.png` : 'qr-code.png';
 
-    link.href = qrCode;
+    link.href = qrCodeSource;
+    link.download = filename;
+    link.click();
+
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Downloaded',
+      detail: 'QR code downloaded successfully',
+    });
+  }
+
+  /**
+   * Downloads the QR code for a specific link from the list.
+   * @param shortLink - The short link whose QR code to download
+   */
+  async downloadQRCodeForLink(shortLink: ShortLink): Promise<void> {
+    let qrCodeSource = shortLink.qrCodeUrl || null;
+
+    if (!qrCodeSource) {
+      try {
+        const shortUrl = this.generateShortUrl(shortLink.code);
+        qrCodeSource = await QRCode.toDataURL(shortUrl, { width: 256, margin: 1 });
+      } catch (error) {
+        console.error('Failed to generate fallback QR code for download', error);
+        qrCodeSource = null;
+      }
+    }
+
+    if (!qrCodeSource) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'No QR Code',
+        detail: 'This link does not have a QR code available',
+      });
+      return;
+    }
+
+    const link = document.createElement('a');
+    const filename = `qr-${shortLink.code}.png`;
+
+    link.href = qrCodeSource;
     link.download = filename;
     link.click();
 

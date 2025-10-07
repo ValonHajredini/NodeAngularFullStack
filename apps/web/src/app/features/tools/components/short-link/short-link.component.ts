@@ -605,7 +605,7 @@ export class ShortLinkComponent implements OnInit, OnDestroy {
         next: (response) => {
           if (response.success) {
             this.createdShortLink.set(response.data.shortLink);
-            this.qrCodeDataUrl.set(response.data.qrCodeDataUrl);
+            this.qrCodeDataUrl.set(response.data.qrCodeDataUrl || null);
             this.messageService.add({
               severity: 'success',
               summary: 'Success',

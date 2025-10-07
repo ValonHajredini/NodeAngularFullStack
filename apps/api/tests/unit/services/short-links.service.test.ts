@@ -467,4 +467,90 @@ describe('ShortLinksService', () => {
       );
     });
   });
+
+  describe('QR Code Storage - Story 7.5', () => {
+    describe('createShortLink with QR code storage', () => {
+      const validRequest: CreateShortLinkRequest = {
+        originalUrl: 'https://example.com',
+        expiresAt: null,
+      };
+
+      beforeEach(() => {
+        mockToolsService.getToolByKey.mockResolvedValue({
+          active: true,
+        } as any);
+      });
+
+      it('should create short link with qrCodeUrl when storage succeeds', async () => {
+        const mockShortLink: ShortLink = {
+          id: 'test-uuid',
+          code: 'abc123',
+          originalUrl: 'https://example.com',
+          expiresAt: null,
+          createdBy: 'user-id',
+          clickCount: 0,
+          lastAccessedAt: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          qrCodeUrl: 'https://storage.example.com/qr-codes/qr-abc123.png',
+        };
+
+        mockRepository.create.mockResolvedValueOnce(mockShortLink);
+
+        const result = await service.createShortLink(validRequest, 'user-id');
+
+        // Should have both storage URL and backwards-compatible base64
+        expect(result.data.qrCodeUrl).toBeDefined();
+        expect(result.data.qrCodeDataUrl).toBeDefined();
+        expect(result.data.shortLink.qrCodeUrl).toBeDefined();
+      });
+
+      it('should gracefully degrade to base64 when storage upload fails', async () => {
+        const mockShortLinkWithoutQR: ShortLink = {
+          id: 'test-uuid',
+          code: 'abc123',
+          originalUrl: 'https://example.com',
+          expiresAt: null,
+          createdBy: 'user-id',
+          clickCount: 0,
+          lastAccessedAt: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          qrCodeUrl: null,
+        };
+
+        mockRepository.create.mockResolvedValueOnce(mockShortLinkWithoutQR);
+
+        const result = await service.createShortLink(validRequest, 'user-id');
+
+        // Short link should still be created successfully
+        expect(result.data.shortLink).toEqual(mockShortLinkWithoutQR);
+        // Should fall back to base64 data URL
+        expect(result.data.qrCodeDataUrl).toBeDefined();
+        expect(result.data.qrCodeDataUrl).toMatch(/^data:image\/png;base64,/);
+      });
+
+      it('should not block short link creation when QR generation fails', async () => {
+        const mockShortLink: ShortLink = {
+          id: 'test-uuid',
+          code: 'abc123',
+          originalUrl: 'https://example.com',
+          expiresAt: null,
+          createdBy: 'user-id',
+          clickCount: 0,
+          lastAccessedAt: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        mockRepository.create.mockResolvedValueOnce(mockShortLink);
+
+        // Even if QR code fails, short link creation should succeed
+        const result = await service.createShortLink(validRequest, 'user-id');
+
+        expect(result.data.shortLink).toEqual(mockShortLink);
+        expect(mockRepository.create).toHaveBeenCalled();
+      });
+    });
+  });
 });

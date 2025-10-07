@@ -18,11 +18,13 @@ ALTER TABLE short_links DROP CONSTRAINT IF EXISTS chk_short_links_code_format;
 ALTER TABLE short_links ADD CONSTRAINT chk_short_links_code_format
     CHECK (code ~ '^[a-zA-Z0-9-]+$');
 
--- Add constraint to prevent consecutive hyphens
+-- Add constraint to prevent consecutive hyphens (only if it doesn't exist)
+ALTER TABLE short_links DROP CONSTRAINT IF EXISTS chk_short_links_no_consecutive_hyphens;
 ALTER TABLE short_links ADD CONSTRAINT chk_short_links_no_consecutive_hyphens
     CHECK (code !~ '--');
 
--- Add constraint to prevent leading/trailing hyphens
+-- Add constraint to prevent leading/trailing hyphens (only if it doesn't exist)
+ALTER TABLE short_links DROP CONSTRAINT IF EXISTS chk_short_links_no_edge_hyphens;
 ALTER TABLE short_links ADD CONSTRAINT chk_short_links_no_edge_hyphens
     CHECK (code !~ '^-' AND code !~ '-$');
 

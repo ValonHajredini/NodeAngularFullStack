@@ -39,6 +39,7 @@ import { LinkItemCardComponent } from '../link-item-card/link-item-card.componen
               [link]="link"
               [shortUrl]="generateShortUrl(link.code)"
               (copyLink)="onCopyLink(link.code)"
+              (downloadQR)="onDownloadQR(link)"
             />
           }
         </div>
@@ -82,6 +83,7 @@ export class RecentLinksListComponent {
 
   @Output() refresh = new EventEmitter<void>();
   @Output() copyLink = new EventEmitter<string>();
+  @Output() downloadQRCode = new EventEmitter<ShortLink>();
 
   onRefresh(): void {
     this.refresh.emit();
@@ -89,6 +91,10 @@ export class RecentLinksListComponent {
 
   onCopyLink(code: string): void {
     this.copyLink.emit(code);
+  }
+
+  onDownloadQR(link: ShortLink): void {
+    this.downloadQRCode.emit(link);
   }
 
   generateShortUrl(code: string): string {

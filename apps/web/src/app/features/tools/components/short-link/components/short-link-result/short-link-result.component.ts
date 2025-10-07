@@ -51,7 +51,11 @@ import { QrCodeDisplayComponent } from '../qr-code-display/qr-code-display.compo
           </div>
 
           <!-- QR Code Section -->
-          <app-qr-code-display [qrCodeDataUrl]="qrCodeDataUrl" (download)="onDownloadQR()" />
+          <app-qr-code-display
+            [qrCodeUrl]="qrCodeUrl"
+            [qrCodeDataUrl]="qrCodeDataUrl"
+            (download)="onDownloadQR()"
+          />
         </div>
       </div>
     }
@@ -67,7 +71,8 @@ import { QrCodeDisplayComponent } from '../qr-code-display/qr-code-display.compo
 export class ShortLinkResultComponent {
   @Input() shortLink: ShortLink | null = null;
   @Input() generatedShortUrl = '';
-  @Input() qrCodeDataUrl: string | null = null;
+  @Input() qrCodeUrl: string | null = null; // Storage URL (preferred)
+  @Input() qrCodeDataUrl: string | null = null; // Base64 data URL (backwards compat)
   @Input() title = 'Short Link Created';
 
   @Output() copyToClipboard = new EventEmitter<void>();
