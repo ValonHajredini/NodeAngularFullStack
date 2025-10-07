@@ -5,12 +5,15 @@ import {
   EventEmitter,
   Input,
   inject,
+  signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { FormField, FormFieldType } from '@nodeangularfullstack/shared';
 import { FormBuilderService } from '../form-builder.service';
 import { FormSettings } from '../form-settings/form-settings.component';
+import { FieldPreviewRendererComponent } from './field-preview-renderer/field-preview-renderer.component';
+import { FieldSettingsModalComponent } from './field-settings-modal.component';
 
 interface FieldTypeDefinition {
   type: FormFieldType;
@@ -26,7 +29,12 @@ interface FieldTypeDefinition {
   selector: 'app-form-canvas',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, DragDropModule],
+  imports: [
+    CommonModule,
+    DragDropModule,
+    FieldPreviewRendererComponent,
+    FieldSettingsModalComponent,
+  ],
   template: `
     <div class="form-canvas h-full bg-gray-50 p-6">
       @if (!formBuilderService.hasFields()) {
@@ -74,7 +82,7 @@ interface FieldTypeDefinition {
               <div
                 cdkDrag
                 [cdkDragData]="field"
-                class="field-card p-4 bg-white border rounded-lg cursor-pointer transition-all"
+                class="field-preview-container p-4 bg-white border rounded-lg transition-all relative group"
                 [class.border-blue-500]="isFieldSelected(field)"
                 [class.border-gray-300]="!isFieldSelected(field)"
                 [class.shadow-md]="isFieldSelected(field)"
@@ -85,21 +93,41 @@ interface FieldTypeDefinition {
                 [attr.aria-label]="field.label + ' field'"
                 (keydown)="handleKeyboard($event, field, i)"
               >
-                <div class="flex items-center gap-3">
-                  <i class="pi pi-bars text-gray-400 cursor-move" cdkDragHandle></i>
+                <!-- Delete Button (Top Right) -->
+                <button
+                  type="button"
+                  class="delete-button-card absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  (click)="onDeleteFieldFromCard($event, field)"
+                  [attr.aria-label]="'Delete ' + field.label"
+                  title="Delete field"
+                >
+                  <i class="pi pi-times text-red-500 hover:text-red-700"></i>
+                </button>
+
+                <div class="field-preview-header flex items-center gap-2 mb-3 pb-2 border-gray-200">
+                  <i
+                    class="pi pi-bars text-gray-400 cursor-move hover:text-gray-600"
+                    cdkDragHandle
+                    aria-label="Reorder field"
+                  ></i>
                   <i [class]="'pi ' + getFieldIcon(field.type) + ' text-blue-600'"></i>
-                  <div class="flex-1">
-                    <div class="font-medium text-gray-900">
-                      {{ field.label || 'Untitled Field' }}
-                    </div>
-                    <div class="text-sm text-gray-500">{{ field.fieldName }}</div>
-                  </div>
+                  <span class="text-xs font-medium text-gray-600">{{ field.type }}</span>
                   @if (field.required) {
-                    <span class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">Required</span>
+                    <span class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded ml-auto">
+                      Required
+                    </span>
                   }
-                  <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">{{
-                    field.type
-                  }}</span>
+                </div>
+                <div
+                  class="field-preview-content group cursor-pointer"
+                  (click)="onFieldPreviewClicked($event, field)"
+                >
+                  <app-field-preview-renderer
+                    [field]="field"
+                    (labelChanged)="onLabelChanged(field, $event)"
+                    (settingsClick)="openSettingsModal(field)"
+                    (fieldUpdated)="onFieldUpdated(field.id, $event)"
+                  />
                 </div>
               </div>
             }
@@ -108,6 +136,14 @@ interface FieldTypeDefinition {
           </div>
         </div>
       }
+
+      <!-- Field Settings Modal -->
+      <app-field-settings-modal
+        [field]="selectedFieldForSettings()"
+        [(displayModal)]="displaySettingsModal"
+        (settingsSaved)="onSettingsSaved($event)"
+        (fieldDeleted)="onFieldDeleted()"
+      />
     </div>
   `,
   styles: [
@@ -161,17 +197,50 @@ interface FieldTypeDefinition {
         grid-template-columns: repeat(3, 1fr);
       }
 
-      .field-card {
+      .field-preview-container {
         user-select: none;
+        cursor: pointer;
       }
 
-      .field-card:hover {
+      .field-preview-container:hover {
         box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
       }
 
-      .field-card:focus {
+      .field-preview-container:focus {
         outline: 2px solid #60a5fa;
         outline-offset: 2px;
+      }
+
+      .field-preview-header {
+        cursor: pointer;
+      }
+
+      .delete-button-card {
+        background: white;
+        border: 1px solid #fee2e2;
+        border-radius: 0.375rem;
+        padding: 0.375rem 0.5rem;
+        cursor: pointer;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      }
+
+      .delete-button-card:hover {
+        background: #fef2f2;
+        border-color: #ef4444;
+      }
+
+      .field-preview-content {
+        cursor: pointer;
+        position: relative;
+      }
+
+      .field-preview-content:hover::after {
+        content: '';
+        position: absolute;
+        inset: -4px;
+        border: 2px dashed #60a5fa;
+        border-radius: 4px;
+        pointer-events: none;
       }
 
       .field-placeholder {
@@ -190,7 +259,7 @@ interface FieldTypeDefinition {
         transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
       }
 
-      .cdk-drop-list-dragging .field-card:not(.cdk-drag-placeholder) {
+      .cdk-drop-list-dragging .field-preview-container:not(.cdk-drag-placeholder) {
         transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
       }
 
@@ -216,6 +285,9 @@ export class FormCanvasComponent {
     allowMultipleSubmissions: true,
   };
   @Output() fieldClicked = new EventEmitter<FormField>();
+
+  displaySettingsModal = false;
+  selectedFieldForSettings = signal<FormField | null>(null);
 
   /**
    * Handles drop events on the canvas.
@@ -334,6 +406,124 @@ export class FormCanvasComponent {
         return 'spacing-relaxed';
       default:
         return 'spacing-normal';
+    }
+  }
+
+  /**
+   * Handles label changes from the inline label editor.
+   * Updates the field's label property and auto-generates fieldName in the service.
+   * @param field - The field being edited
+   * @param newLabel - The new label value
+   */
+  onLabelChanged(field: FormField, newLabel: string): void {
+    // Auto-generate fieldName from label (kebab-case)
+    const generatedFieldName = this.generateFieldNameFromLabel(newLabel);
+
+    // Update both label and fieldName
+    this.formBuilderService.updateFieldProperties(field.id, {
+      label: newLabel,
+      fieldName: generatedFieldName,
+    });
+  }
+
+  /**
+   * Generates a kebab-case field name from a label.
+   * @param label - The label to convert
+   * @returns Kebab-case field name
+   */
+  private generateFieldNameFromLabel(label: string): string {
+    return label
+      .replace(/([a-z])([A-Z])/g, '$1-$2')
+      .replace(/[\s_]+/g, '-')
+      .replace(/[^\w-]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  /**
+   * Opens the settings modal for a specific field.
+   * @param field - The field to edit settings for
+   */
+  openSettingsModal(field: FormField): void {
+    this.selectedFieldForSettings.set(field);
+    this.formBuilderService.selectField(field);
+    this.displaySettingsModal = true;
+  }
+
+  /**
+   * Handles saving of field settings from the modal.
+   * Updates all field properties in bulk.
+   * @param updates - Partial field object with updated properties
+   */
+  onSettingsSaved(updates: Partial<FormField>): void {
+    const field = this.selectedFieldForSettings();
+    if (field) {
+      this.formBuilderService.updateFieldProperties(field.id, updates);
+    }
+  }
+
+  /**
+   * Handles field deletion from the settings modal.
+   * Removes the field from the form builder.
+   */
+  onFieldDeleted(): void {
+    const field = this.selectedFieldForSettings();
+    if (field) {
+      this.formBuilderService.removeField(field.id);
+      this.selectedFieldForSettings.set(null);
+    }
+  }
+
+  /**
+   * Handles field deletion from the card delete button.
+   * Shows confirmation and removes the field.
+   * @param event - The click event
+   * @param field - The field to delete
+   */
+  onDeleteFieldFromCard(event: MouseEvent, field: FormField): void {
+    event.stopPropagation();
+    if (
+      confirm(`Are you sure you want to delete "${field.label}"? This action cannot be undone.`)
+    ) {
+      this.formBuilderService.removeField(field.id);
+    }
+  }
+
+  /**
+   * Handles field updates from the field preview renderer (e.g., option changes).
+   * @param fieldId - The ID of the field being updated
+   * @param updates - Partial field object with updated properties
+   */
+  onFieldUpdated(fieldId: string, updates: Partial<FormField>): void {
+    this.formBuilderService.updateFieldProperties(fieldId, updates);
+  }
+
+  /**
+   * Handles clicks on the field preview area.
+   * Opens the settings modal for the field.
+   * @param event - The click event
+   * @param field - The field being clicked
+   */
+  onFieldPreviewClicked(event: MouseEvent, field: FormField): void {
+    // Check if the click target is an interactive element (input, button, etc.)
+    const target = event.target as HTMLElement;
+    const isInteractive =
+      target.tagName === 'INPUT' ||
+      target.tagName === 'BUTTON' ||
+      target.tagName === 'TEXTAREA' ||
+      target.tagName === 'SELECT' ||
+      target.closest('button') ||
+      target.closest('p-button') ||
+      target.closest('.pi-bars') ||
+      target.closest('.inline-option-manager');
+
+    // Only open modal if not clicking on interactive elements
+    if (!isInteractive) {
+      event.stopPropagation();
+      this.openSettingsModal(field);
+    } else {
+      // For interactive elements, just stop propagation to prevent field selection
+      event.stopPropagation();
     }
   }
 }

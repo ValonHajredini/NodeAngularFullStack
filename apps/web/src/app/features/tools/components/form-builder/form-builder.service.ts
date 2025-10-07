@@ -233,6 +233,39 @@ export class FormBuilderService {
   }
 
   /**
+   * Updates a single property of a field by its ID.
+   * @param fieldId - The ID of the field to update
+   * @param property - The property name to update
+   * @param value - The new value for the property
+   */
+  updateFieldProperty(fieldId: string, property: keyof FormField, value: any): void {
+    this._formFields.update((fields) => {
+      const index = fields.findIndex((f) => f.id === fieldId);
+      if (index === -1) return fields;
+      const updated = [...fields];
+      updated[index] = { ...updated[index], [property]: value };
+      return updated;
+    });
+    this.markDirty();
+  }
+
+  /**
+   * Updates multiple properties of a field by its ID.
+   * @param fieldId - The ID of the field to update
+   * @param updates - Partial field object with properties to update
+   */
+  updateFieldProperties(fieldId: string, updates: Partial<FormField>): void {
+    this._formFields.update((fields) => {
+      const index = fields.findIndex((f) => f.id === fieldId);
+      if (index === -1) return fields;
+      const updated = [...fields];
+      updated[index] = { ...updated[index], ...updates };
+      return updated;
+    });
+    this.markDirty();
+  }
+
+  /**
    * Loads a form from metadata and populates all signals.
    * Marks the form as clean after loading.
    * @param form - The form metadata to load
