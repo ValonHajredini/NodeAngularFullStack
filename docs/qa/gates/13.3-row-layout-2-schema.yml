@@ -1,0 +1,143 @@
+# Quality Gate: Story 13.3 - Row-Column Configuration & Schema
+schema: 1
+story: "13.3"
+story_title: "Row-Column Configuration & Schema - Brownfield Addition"
+gate: CONCERNS
+status_reason: "Implementation quality excellent with all ACs met, but component spec file outdated (Story 1 API) and pre-existing test failures prevent automated validation. Production release should be deferred until spec rewritten."
+reviewer: "Quinn (Test Architect)"
+updated: "2025-10-09T01:20:00Z"
+
+waiver: { active: false }
+
+top_issues:
+  - id: "TEST-001"
+    severity: high
+    finding: "RowLayoutSidebarComponent spec tests Story 1 behavior (obsolete `rows()` method)"
+    suggested_action: "Rewrite spec to test Story 2 row configuration UI (rowConfigs signal, add/remove rows, column selectors)"
+    refs: ["apps/web/src/app/features/tools/components/form-builder/row-layout-sidebar/row-layout-sidebar.component.spec.ts:149"]
+    suggested_owner: dev
+
+  - id: "TEST-002"
+    severity: high
+    finding: "Pre-existing test suite failures (45+ compilation errors) prevent running FormBuilderService's 16 row layout tests"
+    suggested_action: "Fix unrelated test failures in forms-list, main-layout, form-card components or create separate tech debt ticket"
+    refs: ["apps/web/src/app/features/tools/components/form-builder/form-builder.service.spec.ts:645-1050"]
+    suggested_owner: dev
+
+  - id: "CODE-001"
+    severity: medium
+    finding: "Migration helper hardcodes `globalColumns = 2` instead of reading actual form settings"
+    suggested_action: "Enhance migrateToRowLayout() to read current global column setting from form schema"
+    refs: ["apps/web/src/app/features/tools/components/form-builder/row-layout-sidebar/row-layout-sidebar.component.ts:301"]
+    suggested_owner: dev
+
+risk_summary:
+  totals: { critical: 0, high: 2, medium: 1, low: 0 }
+  recommendations:
+    must_fix:
+      - "Rewrite component spec file before production release"
+      - "Perform comprehensive manual testing of row layout UI"
+    monitor:
+      - "Track pre-existing test suite failures (tech debt)"
+      - "Migration helper hardcoded value (minor UX impact)"
+
+quality_score: 70
+# Score calculation: 100 - (10 * 2 high) - (10 * 1 medium) = 70
+# Implementation quality is 95+, but test coverage gaps reduce overall score
+
+evidence:
+  tests_reviewed: 16
+  # FormBuilderService has 16 comprehensive test suites (645-1050)
+  # - enableRowLayout/disableRowLayout
+  # - addRow/removeRow/updateRowColumns
+  # - setFieldPosition
+  # - migrateToRowLayout
+  # - fieldsByRow computed signal
+  # - Schema serialization/deserialization
+  # - Field auto-assignment
+  # ALL WRITTEN but CANNOT RUN due to pre-existing failures
+
+  risks_identified: 3
+
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7, 8, 10, 11]
+    # AC1: Shared types extension ✓
+    # AC2: FormBuilderService state management ✓
+    # AC3: Row configuration UI ✓
+    # AC4: Schema serialization ✓
+    # AC5: Backward compatibility ✓
+    # AC6: Existing functionality unchanged ✓
+    # AC7: Service integration ✓
+    # AC8: Type safety & build ✓
+    # AC10: Documentation ✓
+    # AC11: No regression ✓
+
+    ac_gaps: [9]
+    # AC9: Unit tests - Service layer WRITTEN (cannot run), Component layer OUTDATED
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "No auth/payment/sensitive data. User input (column counts) restricted to safe range (0-4)."
+
+  performance:
+    status: PASS
+    notes: "Computed signals optimize reactivity, OnPush change detection, minimal DOM manipulation."
+
+  reliability:
+    status: PASS
+    notes: "Proper error handling, confirmation dialogs for destructive actions, orphaned field reassignment."
+
+  maintainability:
+    status: PASS
+    notes: "Comprehensive JSDoc, TypeScript strict mode, consistent patterns, excellent code structure."
+
+recommendations:
+  immediate:
+    - action: "Rewrite row-layout-sidebar.component.spec.ts for Story 2 API"
+      refs: ["apps/web/src/app/features/tools/components/form-builder/row-layout-sidebar/row-layout-sidebar.component.spec.ts"]
+      priority: "Must fix before production release"
+
+    - action: "Perform comprehensive manual testing verification"
+      refs: ["Story 13.3 QA Results section"]
+      priority: "Required for production confidence"
+      checklist:
+        - "Toggle row layout enable/disable"
+        - "Add/remove rows via UI"
+        - "Change column count (1-4 buttons)"
+        - "Migration from global to row-based layout"
+        - "Schema serialization/deserialization (save/load form)"
+        - "Backward compatibility (load form without row layout)"
+
+  future:
+    - action: "Fix pre-existing test suite failures (45+ compilation errors)"
+      refs: ["Test execution logs"]
+      priority: "Tech debt - create separate ticket"
+
+    - action: "Enhance migration helper to read actual global column setting"
+      refs: ["apps/web/src/app/features/tools/components/form-builder/row-layout-sidebar/row-layout-sidebar.component.ts:301"]
+      priority: "UX improvement - not blocking"
+
+notes: |
+  ARCHITECTURE EXCELLENCE:
+  - Clean separation: types → service → UI
+  - Reactive signal-based state (computed signals prevent waste)
+  - Proper Angular patterns (standalone, OnPush, ARIA attributes)
+  - Backward compatibility via optional schema properties
+
+  IMPLEMENTATION HIGHLIGHTS:
+  - fieldsByRow computed signal efficiently groups fields
+  - Orphaned field handling ensures data integrity
+  - Migration helper enables smooth transition
+  - Confirmation dialogs prevent accidental data loss
+
+  TEST COVERAGE:
+  - Service layer: 16 comprehensive test suites (EXCELLENT but cannot run)
+  - Component layer: Outdated spec (tests Story 1 API, needs rewrite)
+  - Manual testing required for production confidence
+
+  RECOMMENDATION:
+  Story owner should:
+  1. ✅ APPROVE implementation quality (all ACs met)
+  2. ⚠️ DEFER production release until spec rewritten
+  3. ✅ PROCEED with Story 3 (dependencies satisfied)

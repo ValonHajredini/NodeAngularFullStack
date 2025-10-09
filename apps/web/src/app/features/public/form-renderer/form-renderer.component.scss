@@ -32,6 +32,46 @@
   font-size: 0.875rem;
 }
 
+// Row-based layout styles (Story 14.2)
+.row-layout-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem; // 24px gap between rows
+}
+
+.row-wrapper {
+  width: 100%;
+}
+
+.row-grid {
+  display: grid;
+  gap: 1rem; // 16px gap between columns
+  width: 100%;
+
+  // Responsive: stack columns on mobile
+  @media (max-width: 767px) {
+    grid-template-columns: 1fr !important; // Override inline style
+    gap: 0.75rem; // 12px gap between stacked columns
+  }
+}
+
+.column-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem; // 12px gap between fields in column (Story 14.1 multi-field support)
+  width: 100%;
+
+  .form-field {
+    width: 100%;
+
+    // Remove bottom margin from last field in column
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+// Global grid layout styles (backward compatibility)
 .form-fields-grid {
   display: grid;
   gap: 1.5rem;

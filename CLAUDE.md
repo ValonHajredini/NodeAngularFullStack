@@ -9,7 +9,9 @@ This is a modern full-stack TypeScript monorepo with Angular 20+ frontend and Ex
 The project uses npm workspaces for monorepo management and includes shared types, local PostgreSQL
 setup, and comprehensive testing.
 
-**Key Feature**: Visual form builder with drag-and-drop interface, real-time analytics, data visualization (bar/line/pie charts), and WCAG AA accessibility. Forms are shareable via short links with QR codes.
+**Key Feature**: Visual form builder with drag-and-drop interface, row-based multi-column layouts,
+real-time analytics, data visualization (bar/line/pie charts), and WCAG AA accessibility. Forms are
+shareable via short links with QR codes.
 
 ## Development Commands
 
@@ -235,10 +237,86 @@ packages/
 - Form schemas stored in `forms`, `form_schemas`, `form_submissions` tables
 - Short links with QR codes stored in `short_links` table
 - Frontend form builder components in `apps/web/src/app/features/tools/components/form-builder/`
-- Backend form APIs in `apps/api/src/controllers/forms.controller.ts` and `apps/api/src/services/forms.service.ts`
+- Backend form APIs in `apps/api/src/controllers/forms.controller.ts` and
+  `apps/api/src/services/forms.service.ts`
 - Public form rendering at `/public/form/:shortCode` route
 - HTML sanitization middleware applied to all form submissions (uses DOMPurify)
 - Custom CSS validation for background styles
+- **Row-based layout system**: Enable/disable row layout mode, configure 1-4 columns per row,
+  flexible multi-column forms
+  - Row layout configuration stored in `FormSettings.rowLayout` (optional property)
+  - Field positions tracked via `FormField.position` (rowId + columnIndex + orderInColumn)
+  - Migration helper converts global column layout to row-based layout
+  - FormBuilderService provides row management methods: `enableRowLayout()`, `addRow()`,
+    `removeRow()`, `updateRowColumns()`, `setFieldPosition()`
+  - RowLayoutSidebarComponent provides UI for row configuration
+  - **Multi-field column support**:
+    - Multiple fields can be stacked vertically within a single column
+    - Field order within column tracked via `FieldPosition.orderInColumn` property (0-based index)
+    - FormBuilderService provides methods: `getFieldsInColumn()`, `reorderFieldInColumn()`,
+      `fieldsByRowColumn()` computed signal
+    - Fields render vertically stacked with 12px spacing between fields
+    - Drag-drop calculates `orderInColumn` based on drop position within column
+    - Moving field to new column recalculates `orderInColumn` for both old and new columns
+    - Backward compatible: forms without `orderInColumn` default to 0 (single field per column
+      behavior)
+  - **Drag-and-drop behavior**:
+    - FormCanvasComponent renders row-based layout with column drop zones when row layout enabled
+    - Each column displays as drop zone with visual boundaries (dashed border for empty, solid for
+      occupied)
+    - Empty columns show "Drop field here" placeholder with inbox icon
+    - Drag field type from palette to create new field in specific row-column position
+    - Drag existing field to move to new row-column position or reorder within same column
+    - Drop validation: allows drops into any column (no more "occupied" restriction)
+    - Visual feedback: green border on valid drop targets during drag
+    - Backward compatibility: global column layout (1-3 columns) works when row layout disabled
+    - Uses Angular CDK Drag-Drop with `cdkDropListGroup` at parent level (FormBuilderComponent) to
+      connect palette with all drop zones
+    - Custom drop predicate (`canDropIntoColumn`) always returns true for multi-field column support
+    - **IMPORTANT**: Do NOT add nested `cdkDropListGroup` within FormCanvasComponent row layout
+      section - this breaks palette-to-canvas drag-drop by overriding parent group
+  - **Public form row layout rendering**:
+    - FormRendererComponent detects `formSchema.settings.rowLayout.enabled` to determine layout mode
+    - **Row layout mode** (when `enabled === true`):
+      - Renders rows → columns → fields matching builder design exactly
+      - Each row uses CSS Grid with `grid-template-columns: repeat(columnCount, 1fr)`
+      - Fields within columns sorted by `position.orderInColumn` (ascending)
+      - Multiple fields per column render vertically stacked with 12px spacing
+    - **Global layout mode** (when `enabled === false` or undefined):
+      - Falls back to global column layout for backward compatibility
+      - Uses `settings.columnLayout` (1-3 columns) for grid configuration
+      - Fields sorted by `field.order` property (no row/column structure)
+    - **Responsive behavior**:
+      - Desktop (≥ 768px): Rows render with horizontal columns as designed (2-4 columns
+        side-by-side)
+      - Mobile (< 768px): Columns stack vertically via CSS Grid media query
+        (`@media (max-width: 767px)`)
+      - Column order preserved on mobile (column 0 → column 1 → column 2 → ...)
+      - Fields within columns maintain vertical order (`orderInColumn`)
+      - No horizontal scrolling on mobile devices
+    - **Backward compatibility**:
+      - Forms created before Epic 14 (no `rowLayout` property) render with global layout mode
+      - No breaking changes to existing published forms
+      - Graceful degradation when `rowLayout` undefined or disabled
+    - **Implementation details**:
+      - Template uses `@if (isRowLayoutEnabled())` to choose rendering path
+      - Field rendering logic shared between row and global layout modes (no duplication)
+      - Reactive form group integration unchanged (all fields added regardless of position)
+  - **Preview Mode (Story 14.3)**:
+    - **Preview button** in FormBuilderComponent toolbar opens modal dialog with form preview
+    - **Preview dialog** (PreviewDialogComponent) embeds FormRendererComponent in preview mode
+    - **In-memory preview**: Uses current builder state (includes unsaved changes), no API fetch
+    - **Preview mode flag**: FormRendererComponent accepts `@Input() previewMode` to disable
+      submission
+    - **Form submission disabled** in preview mode (prevents POST to backend)
+    - **Close preview** returns to builder without saving or navigating away
+    - **Usage**: Click "Preview" button → see exact public form rendering → close to continue
+      editing
+    - **Benefits**: Test layout/styling before publishing, iterate without publishing, verify
+      responsive behavior
+    - **Location**: FormBuilderComponent toolbar (between Settings and Save buttons)
+      - Form submission logic unchanged (POST to `/api/public/forms/:shortCode/submit`)
+      - HTML sanitization middleware still applied server-side (DOMPurify)
 
 ### Prerequisites
 

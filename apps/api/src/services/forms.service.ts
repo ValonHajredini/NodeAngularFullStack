@@ -522,6 +522,11 @@ export class FormsService {
       result.background = normalizedBackground;
     }
 
+    // Preserve row layout configuration if present
+    if (settings?.rowLayout) {
+      result.rowLayout = settings.rowLayout;
+    }
+
     return result;
   }
 
@@ -532,8 +537,7 @@ export class FormsService {
       return undefined;
     }
 
-    const type: FormBackgroundSettings['type'] =
-      background.type ?? 'none';
+    const type: FormBackgroundSettings['type'] = background.type ?? 'none';
 
     if (type === 'none') {
       return {

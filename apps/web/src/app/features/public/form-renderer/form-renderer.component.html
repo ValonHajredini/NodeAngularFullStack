@@ -3,7 +3,10 @@
   [ngClass]="{ 'bg-gray-50': !hasBackgroundImage() }"
 >
   @if (hasBackgroundImage()) {
-    <div class="background-image-layer absolute inset-0 z-0" [ngStyle]="getBackgroundLayerStyles()"></div>
+    <div
+      class="background-image-layer absolute inset-0 z-0"
+      [ngStyle]="getBackgroundLayerStyles()"
+    ></div>
   }
 
   @if (shouldShowBackgroundOverlay()) {
@@ -85,16 +88,16 @@
               </button>
             }
           </div>
-      </p-card>
-    </div>
-  }
+        </p-card>
+      </div>
+    }
 
-  <!-- Form Content -->
-  @else if (formGroup && schema) {
-    <div class="max-w-6xl mx-auto">
-      <!-- Preview Mode Banner -->
-      @if (isPreview) {
-        <div
+    <!-- Form Content -->
+    @else if (formGroup && schema) {
+      <div class="max-w-6xl mx-auto">
+        <!-- Preview Mode Banner -->
+        @if (isPreview) {
+          <div
             class="preview-banner bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 mb-6 flex items-center gap-3 rounded-md"
           >
             <i class="pi pi-info-circle text-2xl"></i>
@@ -107,192 +110,405 @@
 
         <p-card [ngStyle]="{ background: 'white', position: 'relative', 'z-index': '10' }">
           <div class="form-content-wrapper">
-
             <form [formGroup]="formGroup" (ngSubmit)="onSubmit()" class="space-y-6">
-              <!-- Form Fields Grid -->
-              <div class="form-fields-grid" [ngClass]="getGridClass()">
-              @for (field of getSortedFields(); track field.id) {
-                @if (isFieldVisible(field)) {
-                  <div class="form-field" [ngClass]="getFieldSpacingClass()">
-                    <div class="field-wrapper">
-                      @if (
-                        field.type !== fieldTypes.DIVIDER &&
-                        field.type !== fieldTypes.CHECKBOX &&
-                        field.type !== fieldTypes.TOGGLE
-                      ) {
-                        <label [for]="field.fieldName" class="field-label">
-                          {{ field.label }}
-                          @if (field.required) {
-                            <span class="text-red-500">*</span>
+              <!-- Form Fields: Row-Based Layout or Global Grid -->
+              @if (isRowLayoutEnabled()) {
+                <!-- Row-Based Layout Mode -->
+                <div class="row-layout-container space-y-6">
+                  @for (row of getRowConfigs(); track row.rowId) {
+                    <div class="row-wrapper">
+                      <!-- Row columns grid -->
+                      <div
+                        class="row-grid grid gap-4"
+                        [style.grid-template-columns]="getGridColumns(row.columnCount)"
+                      >
+                        @for (columnIndex of getColumnIndices(row.columnCount); track columnIndex) {
+                          <div class="column-container space-y-3">
+                            <!-- Multiple fields in column (Story 14.1) -->
+                            @for (
+                              field of getFieldsInColumn(row.rowId, columnIndex);
+                              track field.id
+                            ) {
+                              @if (isFieldVisible(field)) {
+                                <div class="form-field">
+                                  <div class="field-wrapper">
+                                    @if (
+                                      field.type !== fieldTypes.DIVIDER &&
+                                      field.type !== fieldTypes.CHECKBOX &&
+                                      field.type !== fieldTypes.TOGGLE
+                                    ) {
+                                      <label [for]="field.fieldName" class="field-label">
+                                        {{ field.label }}
+                                        @if (field.required) {
+                                          <span class="text-red-500">*</span>
+                                        }
+                                      </label>
+                                    }
+
+                                    <!-- Text Input -->
+                                    @if (field.type === fieldTypes.TEXT) {
+                                      <input
+                                        type="text"
+                                        [id]="field.fieldName"
+                                        [formControlName]="field.fieldName"
+                                        [placeholder]="field.placeholder || ''"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                      />
+                                    }
+
+                                    <!-- Email Input -->
+                                    @if (field.type === fieldTypes.EMAIL) {
+                                      <input
+                                        type="email"
+                                        [id]="field.fieldName"
+                                        [formControlName]="field.fieldName"
+                                        [placeholder]="field.placeholder || ''"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                      />
+                                    }
+
+                                    <!-- Number Input -->
+                                    @if (field.type === fieldTypes.NUMBER) {
+                                      <input
+                                        type="number"
+                                        [id]="field.fieldName"
+                                        [formControlName]="field.fieldName"
+                                        [placeholder]="field.placeholder || ''"
+                                        [min]="field.validation?.min ?? null"
+                                        [max]="field.validation?.max ?? null"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                      />
+                                    }
+
+                                    <!-- Textarea -->
+                                    @if (field.type === fieldTypes.TEXTAREA) {
+                                      <textarea
+                                        [id]="field.fieldName"
+                                        [formControlName]="field.fieldName"
+                                        [placeholder]="field.placeholder || ''"
+                                        rows="5"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                      ></textarea>
+                                    }
+
+                                    <!-- Select Dropdown -->
+                                    @if (field.type === fieldTypes.SELECT) {
+                                      <select
+                                        [id]="field.fieldName"
+                                        [formControlName]="field.fieldName"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                      >
+                                        <option value="">
+                                          {{ field.placeholder || 'Select an option' }}
+                                        </option>
+                                        @for (option of field.options; track option.value) {
+                                          <option [value]="option.value">{{ option.label }}</option>
+                                        }
+                                      </select>
+                                    }
+
+                                    <!-- Radio Button Group -->
+                                    @if (field.type === fieldTypes.RADIO) {
+                                      <div class="space-y-2">
+                                        @for (option of field.options; track option.value) {
+                                          <div class="flex items-center">
+                                            <input
+                                              type="radio"
+                                              [id]="field.fieldName + '-' + option.value"
+                                              [formControlName]="field.fieldName"
+                                              [value]="option.value"
+                                              class="mr-2"
+                                            />
+                                            <label [for]="field.fieldName + '-' + option.value">
+                                              {{ option.label }}
+                                            </label>
+                                          </div>
+                                        }
+                                      </div>
+                                    }
+
+                                    <!-- Checkbox -->
+                                    @if (field.type === fieldTypes.CHECKBOX) {
+                                      <div class="flex items-center">
+                                        <input
+                                          type="checkbox"
+                                          [id]="field.fieldName"
+                                          [formControlName]="field.fieldName"
+                                          class="mr-2"
+                                        />
+                                        <label [for]="field.fieldName">
+                                          {{ field.label }}
+                                          @if (field.required) {
+                                            <span class="text-red-500">*</span>
+                                          }
+                                        </label>
+                                      </div>
+                                    }
+
+                                    <!-- Toggle Switch -->
+                                    @if (field.type === fieldTypes.TOGGLE) {
+                                      <div class="flex items-center gap-3">
+                                        <input
+                                          type="checkbox"
+                                          [id]="field.fieldName"
+                                          [formControlName]="field.fieldName"
+                                          class="toggle-switch"
+                                        />
+                                        <label [for]="field.fieldName">
+                                          {{ field.label }}
+                                          @if (field.required) {
+                                            <span class="text-red-500">*</span>
+                                          }
+                                        </label>
+                                      </div>
+                                    }
+
+                                    <!-- Date Picker -->
+                                    @if (field.type === fieldTypes.DATE) {
+                                      <input
+                                        type="date"
+                                        [id]="field.fieldName"
+                                        [formControlName]="field.fieldName"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                      />
+                                    }
+
+                                    <!-- DateTime Picker -->
+                                    @if (field.type === fieldTypes.DATETIME) {
+                                      <input
+                                        type="datetime-local"
+                                        [id]="field.fieldName"
+                                        [formControlName]="field.fieldName"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                      />
+                                    }
+
+                                    <!-- File Upload -->
+                                    @if (field.type === fieldTypes.FILE) {
+                                      <input
+                                        type="file"
+                                        [id]="field.fieldName"
+                                        [accept]="
+                                          field.validation?.acceptedFileTypes?.join(',') || '*'
+                                        "
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                      />
+                                    }
+
+                                    <!-- Divider -->
+                                    @if (field.type === fieldTypes.DIVIDER) {
+                                      <hr class="col-span-full my-4 border-gray-300" />
+                                    }
+
+                                    @if (field.helpText) {
+                                      <small class="text-gray-500 text-sm">{{
+                                        field.helpText
+                                      }}</small>
+                                    }
+
+                                    @if (shouldShowError(field.fieldName)) {
+                                      <div class="text-red-600 text-sm mt-1">
+                                        {{ getErrorMessage(field) }}
+                                      </div>
+                                    }
+                                  </div>
+                                </div>
+                              }
+                            }
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              } @else {
+                <!-- Global Grid Layout Mode (Backward Compatible) -->
+                <div class="form-fields-grid" [ngClass]="getGridClass()">
+                  @for (field of getFieldsWithoutPosition(); track field.id) {
+                    @if (isFieldVisible(field)) {
+                      <div class="form-field" [ngClass]="getFieldSpacingClass()">
+                        <div class="field-wrapper">
+                          @if (
+                            field.type !== fieldTypes.DIVIDER &&
+                            field.type !== fieldTypes.CHECKBOX &&
+                            field.type !== fieldTypes.TOGGLE
+                          ) {
+                            <label [for]="field.fieldName" class="field-label">
+                              {{ field.label }}
+                              @if (field.required) {
+                                <span class="text-red-500">*</span>
+                              }
+                            </label>
                           }
-                        </label>
-                      }
 
-                      <!-- Text Input -->
-                      @if (field.type === fieldTypes.TEXT) {
-                        <input
-                          type="text"
-                          [id]="field.fieldName"
-                          [formControlName]="field.fieldName"
-                          [placeholder]="field.placeholder || ''"
-                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      }
-
-                      <!-- Email Input -->
-                      @if (field.type === fieldTypes.EMAIL) {
-                        <input
-                          type="email"
-                          [id]="field.fieldName"
-                          [formControlName]="field.fieldName"
-                          [placeholder]="field.placeholder || ''"
-                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      }
-
-                      <!-- Number Input -->
-                      @if (field.type === fieldTypes.NUMBER) {
-                        <input
-                          type="number"
-                          [id]="field.fieldName"
-                          [formControlName]="field.fieldName"
-                          [placeholder]="field.placeholder || ''"
-                          [min]="field.validation?.min ?? null"
-                          [max]="field.validation?.max ?? null"
-                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      }
-
-                      <!-- Textarea -->
-                      @if (field.type === fieldTypes.TEXTAREA) {
-                        <textarea
-                          [id]="field.fieldName"
-                          [formControlName]="field.fieldName"
-                          [placeholder]="field.placeholder || ''"
-                          rows="5"
-                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        ></textarea>
-                      }
-
-                      <!-- Select Dropdown -->
-                      @if (field.type === fieldTypes.SELECT) {
-                        <select
-                          [id]="field.fieldName"
-                          [formControlName]="field.fieldName"
-                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                          <option value="">{{ field.placeholder || 'Select an option' }}</option>
-                          @for (option of field.options; track option.value) {
-                            <option [value]="option.value">{{ option.label }}</option>
+                          <!-- Text Input -->
+                          @if (field.type === fieldTypes.TEXT) {
+                            <input
+                              type="text"
+                              [id]="field.fieldName"
+                              [formControlName]="field.fieldName"
+                              [placeholder]="field.placeholder || ''"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
                           }
-                        </select>
-                      }
 
-                      <!-- Radio Button Group -->
-                      @if (field.type === fieldTypes.RADIO) {
-                        <div class="space-y-2">
-                          @for (option of field.options; track option.value) {
+                          <!-- Email Input -->
+                          @if (field.type === fieldTypes.EMAIL) {
+                            <input
+                              type="email"
+                              [id]="field.fieldName"
+                              [formControlName]="field.fieldName"
+                              [placeholder]="field.placeholder || ''"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                          }
+
+                          <!-- Number Input -->
+                          @if (field.type === fieldTypes.NUMBER) {
+                            <input
+                              type="number"
+                              [id]="field.fieldName"
+                              [formControlName]="field.fieldName"
+                              [placeholder]="field.placeholder || ''"
+                              [min]="field.validation?.min ?? null"
+                              [max]="field.validation?.max ?? null"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                          }
+
+                          <!-- Textarea -->
+                          @if (field.type === fieldTypes.TEXTAREA) {
+                            <textarea
+                              [id]="field.fieldName"
+                              [formControlName]="field.fieldName"
+                              [placeholder]="field.placeholder || ''"
+                              rows="5"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            ></textarea>
+                          }
+
+                          <!-- Select Dropdown -->
+                          @if (field.type === fieldTypes.SELECT) {
+                            <select
+                              [id]="field.fieldName"
+                              [formControlName]="field.fieldName"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                              <option value="">
+                                {{ field.placeholder || 'Select an option' }}
+                              </option>
+                              @for (option of field.options; track option.value) {
+                                <option [value]="option.value">{{ option.label }}</option>
+                              }
+                            </select>
+                          }
+
+                          <!-- Radio Button Group -->
+                          @if (field.type === fieldTypes.RADIO) {
+                            <div class="space-y-2">
+                              @for (option of field.options; track option.value) {
+                                <div class="flex items-center">
+                                  <input
+                                    type="radio"
+                                    [id]="field.fieldName + '-' + option.value"
+                                    [formControlName]="field.fieldName"
+                                    [value]="option.value"
+                                    class="mr-2"
+                                  />
+                                  <label [for]="field.fieldName + '-' + option.value">
+                                    {{ option.label }}
+                                  </label>
+                                </div>
+                              }
+                            </div>
+                          }
+
+                          <!-- Checkbox -->
+                          @if (field.type === fieldTypes.CHECKBOX) {
                             <div class="flex items-center">
                               <input
-                                type="radio"
-                                [id]="field.fieldName + '-' + option.value"
+                                type="checkbox"
+                                [id]="field.fieldName"
                                 [formControlName]="field.fieldName"
-                                [value]="option.value"
                                 class="mr-2"
                               />
-                              <label [for]="field.fieldName + '-' + option.value">
-                                {{ option.label }}
+                              <label [for]="field.fieldName">
+                                {{ field.label }}
+                                @if (field.required) {
+                                  <span class="text-red-500">*</span>
+                                }
                               </label>
                             </div>
                           }
+
+                          <!-- Toggle Switch -->
+                          @if (field.type === fieldTypes.TOGGLE) {
+                            <div class="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                [id]="field.fieldName"
+                                [formControlName]="field.fieldName"
+                                class="toggle-switch"
+                              />
+                              <label [for]="field.fieldName">
+                                {{ field.label }}
+                                @if (field.required) {
+                                  <span class="text-red-500">*</span>
+                                }
+                              </label>
+                            </div>
+                          }
+
+                          <!-- Date Picker -->
+                          @if (field.type === fieldTypes.DATE) {
+                            <input
+                              type="date"
+                              [id]="field.fieldName"
+                              [formControlName]="field.fieldName"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                          }
+
+                          <!-- DateTime Picker -->
+                          @if (field.type === fieldTypes.DATETIME) {
+                            <input
+                              type="datetime-local"
+                              [id]="field.fieldName"
+                              [formControlName]="field.fieldName"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                          }
+
+                          <!-- File Upload -->
+                          @if (field.type === fieldTypes.FILE) {
+                            <input
+                              type="file"
+                              [id]="field.fieldName"
+                              [accept]="field.validation?.acceptedFileTypes?.join(',') || '*'"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                            />
+                          }
+
+                          <!-- Divider -->
+                          @if (field.type === fieldTypes.DIVIDER) {
+                            <hr class="col-span-full my-4 border-gray-300" />
+                          }
+
+                          @if (field.helpText) {
+                            <small class="text-gray-500 text-sm">{{ field.helpText }}</small>
+                          }
+
+                          @if (shouldShowError(field.fieldName)) {
+                            <div class="text-red-600 text-sm mt-1">
+                              {{ getErrorMessage(field) }}
+                            </div>
+                          }
                         </div>
-                      }
-
-                      <!-- Checkbox -->
-                      @if (field.type === fieldTypes.CHECKBOX) {
-                        <div class="flex items-center">
-                          <input
-                            type="checkbox"
-                            [id]="field.fieldName"
-                            [formControlName]="field.fieldName"
-                            class="mr-2"
-                          />
-                          <label [for]="field.fieldName">
-                            {{ field.label }}
-                            @if (field.required) {
-                              <span class="text-red-500">*</span>
-                            }
-                          </label>
-                        </div>
-                      }
-
-                      <!-- Toggle Switch -->
-                      @if (field.type === fieldTypes.TOGGLE) {
-                        <div class="flex items-center gap-3">
-                          <input
-                            type="checkbox"
-                            [id]="field.fieldName"
-                            [formControlName]="field.fieldName"
-                            class="toggle-switch"
-                          />
-                          <label [for]="field.fieldName">
-                            {{ field.label }}
-                            @if (field.required) {
-                              <span class="text-red-500">*</span>
-                            }
-                          </label>
-                        </div>
-                      }
-
-                      <!-- Date Picker -->
-                      @if (field.type === fieldTypes.DATE) {
-                        <input
-                          type="date"
-                          [id]="field.fieldName"
-                          [formControlName]="field.fieldName"
-                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      }
-
-                      <!-- DateTime Picker -->
-                      @if (field.type === fieldTypes.DATETIME) {
-                        <input
-                          type="datetime-local"
-                          [id]="field.fieldName"
-                          [formControlName]="field.fieldName"
-                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      }
-
-                      <!-- File Upload -->
-                      @if (field.type === fieldTypes.FILE) {
-                        <input
-                          type="file"
-                          [id]="field.fieldName"
-                          [accept]="field.validation?.acceptedFileTypes?.join(',') || '*'"
-                          class="w-full px-3 py-2 border border-gray-300 rounded-md"
-                        />
-                      }
-
-                      <!-- Divider -->
-                      @if (field.type === fieldTypes.DIVIDER) {
-                        <hr class="col-span-full my-4 border-gray-300" />
-                      }
-
-                      @if (field.helpText) {
-                        <small class="text-gray-500 text-sm">{{ field.helpText }}</small>
-                      }
-
-                      @if (shouldShowError(field.fieldName)) {
-                        <div class="text-red-600 text-sm mt-1">
-                          {{ getErrorMessage(field) }}
-                        </div>
-                      }
-                    </div>
-                  </div>
-                }
+                      </div>
+                    }
+                  }
+                </div>
               }
-              </div>
 
               <!-- Submit Button -->
               <div class="flex justify-end mt-6">

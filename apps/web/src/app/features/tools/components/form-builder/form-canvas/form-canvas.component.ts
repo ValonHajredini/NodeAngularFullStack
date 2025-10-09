@@ -9,9 +9,9 @@ import {
   computed,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
+import { DragDropModule, CdkDragDrop, CdkDrag, CdkDropList } from '@angular/cdk/drag-drop';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { FormField, FormFieldType } from '@nodeangularfullstack/shared';
+import { FormField, FormFieldType, FieldPosition } from '@nodeangularfullstack/shared';
 import { FormBuilderService } from '../form-builder.service';
 import { FormSettings } from '../form-settings/form-settings.component';
 import { FieldPreviewRendererComponent } from './field-preview-renderer/field-preview-renderer.component';
@@ -43,7 +43,7 @@ interface FieldTypeDefinition {
   ],
   template: `
     <div class="form-canvas h-full bg-gray-50 p-6">
-      @if (!formBuilderService.hasFields()) {
+      @if (!formBuilderService.hasFields() && !formBuilderService.rowLayoutEnabled()) {
         <div
           class="drop-zone empty min-h-full flex flex-col items-center justify-center text-center py-20"
           cdkDropList
@@ -106,132 +106,230 @@ interface FieldTypeDefinition {
             }
           </div>
 
-          <div
-          cdkDropList
-          #canvasDropList="cdkDropList"
-          id="canvas-drop-list"
-          [cdkDropListData]="formBuilderService.formFields()"
-            (cdkDropListDropped)="onFieldDropped($event)"
-            class="form-fields-grid"
-            [ngClass]="[getGridClass(), getSpacingClass()]"
-            style="position: relative; z-index: 2;"
-          >
-            @for (field of formBuilderService.formFields(); track field.id; let i = $index) {
-              <div
-                cdkDrag
-                [cdkDragData]="field"
-                [cdkDragDisabled]="field.type === FormFieldType.GROUP"
-                class="field-preview-container p-4 bg-white border-2 border-dashed rounded-lg transition-all relative group"
-                [class.border-blue-500]="isFieldSelected(field)"
-                [class.border-gray-300]="!isFieldSelected(field)"
-                [class.shadow-md]="isFieldSelected(field)"
-                [class.hover:border-blue-400]="!isFieldSelected(field)"
-                (click)="onFieldClicked(field)"
-                tabindex="0"
-                role="listitem"
-                [attr.aria-label]="field.label + ' field'"
-                (keydown)="handleKeyboard($event, field, i)"
-              >
-                <!-- Drag Handle (Top Left) -->
-                @if (field.type !== FormFieldType.GROUP) {
-                  <div class="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                    <i
-                      class="pi pi-bars text-gray-400 cursor-move hover:text-gray-600 text-lg"
-                      cdkDragHandle
-                      aria-label="Reorder field"
-                    ></i>
+          @if (formBuilderService.rowLayoutEnabled()) {
+            <!-- Row-based layout mode -->
+            <div class="row-layout-container space-y-4" style="position: relative; z-index: 2;">
+              @for (row of formBuilderService.rowConfigs(); track row.rowId) {
+                <div class="row-wrapper">
+                  <!-- Row separator with label -->
+                  <div class="row-separator mb-2 flex items-center gap-2">
+                    <span class="text-sm font-medium text-gray-600">
+                      Row {{ row.order + 1 }} ({{ row.columnCount }} columns)
+                    </span>
+                    <div class="flex-1 h-px bg-gray-300"></div>
                   </div>
-                }
 
-                <!-- Delete Button (Top Right) -->
-                <button
-                  type="button"
-                  class="delete-button-card absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                  (click)="onDeleteFieldFromCard($event, field)"
-                  [attr.aria-label]="'Delete ' + field.label"
-                  title="Delete field"
-                >
-                  <i class="pi pi-times text-red-500 hover:text-red-700"></i>
-                </button>
-                @if (field.type === FormFieldType.GROUP) {
-                  <!-- Group fields - no click handler to allow drop zone interaction -->
-                  <div class="field-preview-content">
-                    @let childFields = getChildFields(field.id);
-                    <app-group-preview
-                      [field]="field"
-                      [childFields]="childFields"
-                      [dropListId]="getGroupDropListId(field.id)"
-                      (drop)="onGroupDrop($event, field)"
-                    >
-                      @for (child of childFields; track child.id; let childIndex = $index) {
-                        <div
-                          cdkDrag
-                          [cdkDragData]="child"
-                          class="field-preview-container p-4 bg-white border-2 border-dashed rounded-lg transition-all relative group mb-3"
-                          [class.border-blue-500]="isFieldSelected(child)"
-                          [class.border-gray-300]="!isFieldSelected(child)"
-                          [class.shadow-md]="isFieldSelected(child)"
-                          [class.hover:border-blue-400]="!isFieldSelected(child)"
-                          (click)="onFieldClicked(child)"
-                          tabindex="0"
-                          role="listitem"
-                          [attr.aria-label]="child.label + ' field'"
-                          (keydown)="handleGroupKeyboard($event, child, field.id, childIndex)"
-                        >
-                          <!-- Drag Handle (Top Left) -->
-                          <div class="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                            <i
-                              class="pi pi-bars text-gray-400 cursor-move hover:text-gray-600 text-lg"
-                              cdkDragHandle
-                              aria-label="Reorder field"
-                            ></i>
-                          </div>
-
-                          <!-- Delete Button (Top Right) -->
-                          <button
-                            type="button"
-                            class="delete-button-card absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                            (click)="onDeleteFieldFromCard($event, child)"
-                            [attr.aria-label]="'Delete ' + child.label"
-                            title="Delete field"
-                          >
-                            <i class="pi pi-times text-red-500 hover:text-red-700"></i>
-                          </button>
-                          <div
-                            class="field-preview-content group cursor-pointer"
-                            (click)="onFieldPreviewClicked($event, child)"
-                          >
-                            <app-field-preview-renderer
-                              [field]="child"
-                              (labelChanged)="onLabelChanged(child, $event)"
-                              (settingsClick)="openSettingsModal(child)"
-                              (fieldUpdated)="onFieldUpdated(child.id, $event)"
-                            />
-                          </div>
-
-                          <div *cdkDragPlaceholder class="field-placeholder"></div>
-                        </div>
-                      }
-                    </app-group-preview>
-                  </div>
-                } @else {
+                  <!-- Row columns grid -->
                   <div
-                    class="field-preview-content group cursor-pointer"
-                    (click)="onFieldPreviewClicked($event, field)"
+                    class="row-grid"
+                    [style.grid-template-columns]="'repeat(' + row.columnCount + ', 1fr)'"
+                    style="display: grid; gap: 16px; min-height: 120px;"
                   >
-                    <app-field-preview-renderer
-                      [field]="field"
-                      (labelChanged)="onLabelChanged(field, $event)"
-                      (settingsClick)="openSettingsModal(field)"
-                      (fieldUpdated)="onFieldUpdated(field.id, $event)"
-                    />
-                  </div>
-                }
-              </div>
-            }
+                    @for (columnIndex of getColumnIndices(row.columnCount); track columnIndex) {
+                      <div
+                        class="column-drop-zone"
+                        [attr.data-row-id]="row.rowId"
+                        [attr.data-column-index]="columnIndex"
+                        [class.occupied]="getFieldsInColumn(row.rowId, columnIndex).length > 0"
+                        cdkDropList
+                        [cdkDropListData]="{ rowId: row.rowId, columnIndex: columnIndex }"
+                        [cdkDropListEnterPredicate]="canDropIntoColumn"
+                        (cdkDropListDropped)="onFieldDroppedInRow($event)"
+                      >
+                        @if (getFieldsInColumn(row.rowId, columnIndex); as columnFields) {
+                          @if (columnFields.length > 0) {
+                            <!-- Occupied column: render fields vertically stacked -->
+                            <div class="column-fields-container">
+                              @for (
+                                field of columnFields;
+                                track field.id;
+                                let fieldIndex = $index
+                              ) {
+                                <!-- Field wrapper with drag support -->
+                                <div class="field-wrapper mb-3" cdkDrag [cdkDragData]="field">
+                                  <div
+                                    class="field-preview-container p-4 bg-white border-2 border-solid border-gray-300 rounded-lg transition-all relative group hover:border-blue-400 hover:shadow-md"
+                                    [class.border-blue-500]="isFieldSelected(field)"
+                                    [class.shadow-md]="isFieldSelected(field)"
+                                    [class.last:mb-0]="fieldIndex === columnFields.length - 1"
+                                    (click)="onFieldClicked(field)"
+                                    tabindex="0"
+                                    role="listitem"
+                                    [attr.aria-label]="field.label + ' field'"
+                                  >
+                                    <!-- Delete Button (Top Right) -->
+                                    <button
+                                      type="button"
+                                      class="delete-button-card absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                      (click)="onDeleteFieldFromCard($event, field)"
+                                      [attr.aria-label]="'Delete ' + field.label"
+                                      title="Delete field"
+                                    >
+                                      <i class="pi pi-times text-red-500 hover:text-red-700"></i>
+                                    </button>
 
-            <div *cdkDragPlaceholder class="field-placeholder"></div>
-          </div>
+                                    <div
+                                      class="field-preview-content cursor-pointer"
+                                      (click)="onFieldPreviewClicked($event, field)"
+                                    >
+                                      <app-field-preview-renderer
+                                        [field]="field"
+                                        (labelChanged)="onLabelChanged(field, $event)"
+                                        (settingsClick)="openSettingsModal(field)"
+                                        (fieldUpdated)="onFieldUpdated(field.id, $event)"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              }
+                            </div>
+                          } @else {
+                            <!-- Empty column: placeholder -->
+                            <div class="empty-column-placeholder">
+                              <i class="pi pi-inbox text-gray-300 text-2xl mb-2"></i>
+                              <span class="text-xs text-gray-400">Drop field here</span>
+                            </div>
+                          }
+                        }
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          } @else {
+            <!-- Global column layout mode (existing functionality) -->
+            <div
+              cdkDropList
+              #canvasDropList="cdkDropList"
+              id="canvas-drop-list"
+              [cdkDropListData]="formBuilderService.formFields()"
+              (cdkDropListDropped)="onFieldDropped($event)"
+              class="form-fields-grid"
+              [ngClass]="[getGridClass(), getSpacingClass()]"
+              style="position: relative; z-index: 2;"
+            >
+              @for (field of formBuilderService.formFields(); track field.id; let i = $index) {
+                <div
+                  cdkDrag
+                  [cdkDragData]="field"
+                  [cdkDragDisabled]="field.type === FormFieldType.GROUP"
+                  class="field-preview-container p-4 bg-white border-2 border-dashed rounded-lg transition-all relative group"
+                  [class.border-blue-500]="isFieldSelected(field)"
+                  [class.border-gray-300]="!isFieldSelected(field)"
+                  [class.shadow-md]="isFieldSelected(field)"
+                  [class.hover:border-blue-400]="!isFieldSelected(field)"
+                  (click)="onFieldClicked(field)"
+                  tabindex="0"
+                  role="listitem"
+                  [attr.aria-label]="field.label + ' field'"
+                  (keydown)="handleKeyboard($event, field, i)"
+                >
+                  <!-- Drag Handle (Top Left) -->
+                  @if (field.type !== FormFieldType.GROUP) {
+                    <div
+                      class="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                    >
+                      <i
+                        class="pi pi-bars text-gray-400 cursor-move hover:text-gray-600 text-lg"
+                        cdkDragHandle
+                        aria-label="Reorder field"
+                      ></i>
+                    </div>
+                  }
+
+                  <!-- Delete Button (Top Right) -->
+                  <button
+                    type="button"
+                    class="delete-button-card absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                    (click)="onDeleteFieldFromCard($event, field)"
+                    [attr.aria-label]="'Delete ' + field.label"
+                    title="Delete field"
+                  >
+                    <i class="pi pi-times text-red-500 hover:text-red-700"></i>
+                  </button>
+                  @if (field.type === FormFieldType.GROUP) {
+                    <!-- Group fields - no click handler to allow drop zone interaction -->
+                    <div class="field-preview-content">
+                      @let childFields = getChildFields(field.id);
+                      <app-group-preview
+                        [field]="field"
+                        [childFields]="childFields"
+                        [dropListId]="getGroupDropListId(field.id)"
+                        (drop)="onGroupDrop($event, field)"
+                      >
+                        @for (child of childFields; track child.id; let childIndex = $index) {
+                          <div
+                            cdkDrag
+                            [cdkDragData]="child"
+                            class="field-preview-container p-4 bg-white border-2 border-dashed rounded-lg transition-all relative group mb-3"
+                            [class.border-blue-500]="isFieldSelected(child)"
+                            [class.border-gray-300]="!isFieldSelected(child)"
+                            [class.shadow-md]="isFieldSelected(child)"
+                            [class.hover:border-blue-400]="!isFieldSelected(child)"
+                            (click)="onFieldClicked(child)"
+                            tabindex="0"
+                            role="listitem"
+                            [attr.aria-label]="child.label + ' field'"
+                            (keydown)="handleGroupKeyboard($event, child, field.id, childIndex)"
+                          >
+                            <!-- Drag Handle (Top Left) -->
+                            <div
+                              class="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                            >
+                              <i
+                                class="pi pi-bars text-gray-400 cursor-move hover:text-gray-600 text-lg"
+                                cdkDragHandle
+                                aria-label="Reorder field"
+                              ></i>
+                            </div>
+
+                            <!-- Delete Button (Top Right) -->
+                            <button
+                              type="button"
+                              class="delete-button-card absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                              (click)="onDeleteFieldFromCard($event, child)"
+                              [attr.aria-label]="'Delete ' + child.label"
+                              title="Delete field"
+                            >
+                              <i class="pi pi-times text-red-500 hover:text-red-700"></i>
+                            </button>
+                            <div
+                              class="field-preview-content group cursor-pointer"
+                              (click)="onFieldPreviewClicked($event, child)"
+                            >
+                              <app-field-preview-renderer
+                                [field]="child"
+                                (labelChanged)="onLabelChanged(child, $event)"
+                                (settingsClick)="openSettingsModal(child)"
+                                (fieldUpdated)="onFieldUpdated(child.id, $event)"
+                              />
+                            </div>
+
+                            <div *cdkDragPlaceholder class="field-placeholder"></div>
+                          </div>
+                        }
+                      </app-group-preview>
+                    </div>
+                  } @else {
+                    <div
+                      class="field-preview-content group cursor-pointer"
+                      (click)="onFieldPreviewClicked($event, field)"
+                    >
+                      <app-field-preview-renderer
+                        [field]="field"
+                        (labelChanged)="onLabelChanged(field, $event)"
+                        (settingsClick)="openSettingsModal(field)"
+                        (fieldUpdated)="onFieldUpdated(field.id, $event)"
+                      />
+                    </div>
+                  }
+                </div>
+              }
+
+              <div *cdkDragPlaceholder class="field-placeholder"></div>
+            </div>
+          }
         </div>
       }
 
@@ -358,6 +456,87 @@ interface FieldTypeDefinition {
           grid-template-columns: 1fr !important;
         }
       }
+
+      /* Row layout styles */
+      .row-layout-container {
+        .row-grid {
+          display: grid;
+          gap: 16px;
+          min-height: 120px;
+        }
+
+        .column-drop-zone {
+          border: 2px dashed #d1d5db;
+          border-radius: 8px;
+          padding: 12px;
+          background: #f9fafb;
+          min-height: 100px;
+          display: flex;
+          align-items: flex-start;
+          justify-content: center;
+          transition: all 0.2s ease;
+
+          &.cdk-drop-list-dragging {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+          }
+
+          &.cdk-drop-list-receiving {
+            border-color: #10b981;
+            border-style: solid;
+            background: rgba(16, 185, 129, 0.15);
+          }
+
+          &.occupied {
+            border: 1px solid #e5e7eb;
+            background: transparent;
+            padding: 0;
+          }
+        }
+
+        .column-fields-container {
+          display: flex;
+          flex-direction: column;
+          gap: 0;
+          width: 100%;
+        }
+
+        .empty-column-placeholder {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          width: 100%;
+          height: 100%;
+          min-height: 100px;
+        }
+
+        .field-wrapper {
+          cursor: move;
+          width: 100%;
+          margin-bottom: 12px;
+
+          &:last-child {
+            margin-bottom: 0;
+          }
+
+          &.cdk-drag-preview {
+            opacity: 0.8;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          }
+        }
+
+        .row-separator {
+          user-select: none;
+        }
+      }
+
+      .global-layout-container {
+        display: grid;
+        gap: 16px;
+        grid-auto-rows: auto;
+      }
     `,
   ],
 })
@@ -408,8 +587,7 @@ export class FormCanvasComponent {
     const s = this._settings();
     return (
       s.backgroundType === 'custom' &&
-      (s.backgroundCustomHtml !== undefined ||
-        s.backgroundCustomCss !== undefined)
+      (s.backgroundCustomHtml !== undefined || s.backgroundCustomCss !== undefined)
     );
   });
 
@@ -464,7 +642,12 @@ export class FormCanvasComponent {
    * Supports Enter/Space (select), ArrowUp/ArrowDown (reorder within group).
    * Note: Delete/Backspace functionality has been disabled to prevent accidental deletion.
    */
-  handleGroupKeyboard(event: KeyboardEvent, field: FormField, groupId: string, index: number): void {
+  handleGroupKeyboard(
+    event: KeyboardEvent,
+    field: FormField,
+    groupId: string,
+    index: number,
+  ): void {
     switch (event.key) {
       case 'Enter':
       case ' ':
@@ -802,10 +985,7 @@ export class FormCanvasComponent {
    */
   getBackgroundImageStyle(): string {
     const s = this._settings();
-    if (
-      s.backgroundType !== 'image' ||
-      !s.backgroundImageUrl
-    ) {
+    if (s.backgroundType !== 'image' || !s.backgroundImageUrl) {
       return 'none';
     }
     return `url(${s.backgroundImageUrl})`;
@@ -817,10 +997,7 @@ export class FormCanvasComponent {
    */
   getBackgroundStyles(): Record<string, string> {
     const s = this._settings();
-    if (
-      s.backgroundType !== 'image' ||
-      !s.backgroundImageUrl
-    ) {
+    if (s.backgroundType !== 'image' || !s.backgroundImageUrl) {
       return {};
     }
 
@@ -828,8 +1005,7 @@ export class FormCanvasComponent {
       'background-image': `url(${s.backgroundImageUrl})`,
       'background-size': s.backgroundImagePosition ?? 'cover',
       'background-position': s.backgroundImageAlignment ?? 'center',
-      'background-repeat':
-        s.backgroundImagePosition === 'repeat' ? 'repeat' : 'no-repeat',
+      'background-repeat': s.backgroundImagePosition === 'repeat' ? 'repeat' : 'no-repeat',
     };
 
     // Apply blur filter if specified
@@ -846,9 +1022,7 @@ export class FormCanvasComponent {
    */
   getBackgroundOpacity(): number {
     const s = this._settings();
-    return s.backgroundImageOpacity !== undefined
-      ? s.backgroundImageOpacity / 100
-      : 1;
+    return s.backgroundImageOpacity !== undefined ? s.backgroundImageOpacity / 100 : 1;
   }
 
   /**
@@ -873,10 +1047,7 @@ export class FormCanvasComponent {
   protected getSandboxedPreviewHTML(): SafeHtml {
     const s = this._settings();
     // Return empty if no custom background in settings
-    if (
-      s.backgroundType !== 'custom' ||
-      (!s.backgroundCustomHtml && !s.backgroundCustomCss)
-    ) {
+    if (s.backgroundType !== 'custom' || (!s.backgroundCustomHtml && !s.backgroundCustomCss)) {
       return this.sanitizer.bypassSecurityTrustHtml('');
     }
 
@@ -939,5 +1110,128 @@ export class FormCanvasComponent {
 
     // Strip any dangerous patterns (defense-in-depth)
     return stripDangerousCSS(css);
+  }
+
+  /**
+   * Get array of column indices for rendering columns in row layout
+   * @param columnCount - Number of columns in the row
+   * @returns Array of column indices [0, 1, 2, ...]
+   */
+  getColumnIndices(columnCount: number): number[] {
+    return Array.from({ length: columnCount }, (_, i) => i);
+  }
+
+  /**
+   * Get field at specific row-column position (legacy method for backward compatibility)
+   * @param rowId - Row ID to search in
+   * @param columnIndex - Column index within the row
+   * @returns FormField if found, null otherwise
+   * @deprecated Use getFieldsInColumn instead for multi-field column support
+   */
+  getFieldAtPosition(rowId: string, columnIndex: number): FormField | null {
+    const fields = this.formBuilderService.getFieldsInColumn(rowId, columnIndex);
+    return fields.length > 0 ? fields[0] : null;
+  }
+
+  /**
+   * Get all fields in a specific column, sorted by orderInColumn.
+   * @param rowId - Row ID to search in
+   * @param columnIndex - Column index within the row
+   * @returns Array of FormField objects in the column, sorted by orderInColumn
+   */
+  getFieldsInColumn(rowId: string, columnIndex: number): FormField[] {
+    return this.formBuilderService.getFieldsInColumn(rowId, columnIndex);
+  }
+
+  /**
+   * Can drop predicate for row-column drop zones.
+   * With multi-field column support, all drops are now allowed (no more "occupied" restriction).
+   * @param drag - The CDK dragged item
+   * @param drop - The CDK drop list target
+   * @returns Always returns true (all drops allowed)
+   */
+  canDropIntoColumn = (drag: CdkDrag, drop: CdkDropList): boolean => {
+    // Multi-field column support: allow drops into any column
+    return true;
+  };
+
+  /**
+   * Handle field dropped into row-column position.
+   * Creates new field from palette or moves existing field to new position.
+   * Calculates orderInColumn based on drop index within column.
+   * @param event - The CdkDragDrop event with row-column position data
+   */
+  onFieldDroppedInRow(event: CdkDragDrop<{ rowId: string; columnIndex: number }>): void {
+    const dropData = event.container.data as { rowId: string; columnIndex: number };
+    const dragData = event.item.data;
+
+    // Get fields currently in target column
+    const columnFields = this.getFieldsInColumn(dropData.rowId, dropData.columnIndex);
+
+    // Calculate orderInColumn based on drop index (defaults to end of column)
+    const orderInColumn = event.currentIndex ?? columnFields.length;
+
+    // Check if dragging field type from palette (create new field)
+    if (this.isFieldTypeDefinition(dragData)) {
+      this.createFieldAtPosition(dragData.type, {
+        rowId: dropData.rowId,
+        columnIndex: dropData.columnIndex,
+        orderInColumn,
+      });
+      return;
+    }
+
+    // Dragging existing field (reorder or move)
+    const field = dragData as FormField;
+    const position: FieldPosition = {
+      rowId: dropData.rowId,
+      columnIndex: dropData.columnIndex,
+      orderInColumn,
+    };
+
+    // Check if trying to drop in same position (no-op)
+    if (
+      field.position?.rowId === position.rowId &&
+      field.position?.columnIndex === position.columnIndex &&
+      field.position?.orderInColumn === orderInColumn
+    ) {
+      return;
+    }
+
+    // Update field position
+    this.formBuilderService.setFieldPosition(field.id, position);
+  }
+
+  /**
+   * Create new field at specific row-column position.
+   * Called when dropping field type from palette into row-column zone.
+   * @param type - The field type to create
+   * @param position - The row-column position with orderInColumn
+   */
+  private createFieldAtPosition(
+    type: FormFieldType,
+    position: { rowId: string; columnIndex: number; orderInColumn?: number },
+  ): void {
+    // Create field using service (auto-generates ID and defaults)
+    const newField = this.formBuilderService.addFieldFromType(type);
+
+    // Set position after creation (includes orderInColumn)
+    this.formBuilderService.setFieldPosition(newField.id, {
+      rowId: position.rowId,
+      columnIndex: position.columnIndex,
+      orderInColumn: position.orderInColumn ?? 0,
+    });
+  }
+
+  /**
+   * Show error toast notification.
+   * TODO: Integrate with MessageService (injected from FormBuilderComponent)
+   * @param message - Error message to display
+   */
+  private showErrorToast(message: string): void {
+    // Temporary console.error until MessageService integration
+    console.error(message);
+    // Future: Use MessageService to show toast
+    // this.messageService.add({ severity: 'error', summary: 'Error', detail: message });
   }
 }

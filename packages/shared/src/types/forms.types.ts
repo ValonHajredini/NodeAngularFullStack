@@ -94,6 +94,34 @@ export interface GroupMetadata {
 }
 
 /**
+ * Row layout configuration for multi-column form rows
+ */
+export interface RowLayoutConfig {
+  /** Unique row identifier */
+  rowId: string;
+  /** Number of columns in this row (0 = full-width, 1-4 = columns) */
+  columnCount: 0 | 1 | 2 | 3 | 4;
+  /** Row order index for rendering */
+  order: number;
+}
+
+/**
+ * Field position within row-column layout
+ */
+export interface FieldPosition {
+  /** Row identifier this field belongs to */
+  rowId: string;
+  /** Column index within row (0-3 for columns 1-4) */
+  columnIndex: number;
+  /**
+   * Order index within column for vertical stacking (0-based)
+   * Optional for backward compatibility - defaults to 0 if undefined
+   * Fields with lower orderInColumn render above fields with higher orderInColumn
+   */
+  orderInColumn?: number;
+}
+
+/**
  * Individual form field definition
  */
 export interface FormField {
@@ -125,6 +153,8 @@ export interface FormField {
   parentGroupId?: string;
   /** Additional metadata for special field types (e.g., GROUP) */
   metadata?: GroupMetadata;
+  /** Position within row-column layout (optional, for row-based layouts) */
+  position?: FieldPosition;
 }
 
 /**
@@ -192,6 +222,13 @@ export interface FormSettings {
   submission: FormSubmissionConfig;
   /** Optional background configuration */
   background?: FormBackgroundSettings;
+  /** Row-based layout configuration (optional) */
+  rowLayout?: {
+    /** Whether row-based layout is enabled */
+    enabled: boolean;
+    /** Row configurations */
+    rows: RowLayoutConfig[];
+  };
 }
 
 /**

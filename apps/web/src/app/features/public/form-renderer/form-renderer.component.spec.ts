@@ -867,4 +867,498 @@ describe('FormRendererComponent', () => {
       expect(newComponent.state.submitting).toBe(false);
     });
   });
+
+  describe('Row Layout Support (Story 14.2)', () => {
+    describe('Layout Mode Detection', () => {
+      it('should detect row layout when enabled is true', () => {
+        const rowLayoutSettings: FormSettings = {
+          ...mockSettings,
+          rowLayout: {
+            enabled: true,
+            rows: [
+              { rowId: 'row-1', columnCount: 2, order: 0 },
+              { rowId: 'row-2', columnCount: 3, order: 1 },
+            ],
+          },
+        };
+
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: mockSchema, settings: rowLayoutSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        expect(newComponent.isRowLayoutEnabled()).toBe(true);
+      });
+
+      it('should return false when row layout is disabled', () => {
+        const rowLayoutSettings: FormSettings = {
+          ...mockSettings,
+          rowLayout: {
+            enabled: false,
+            rows: [],
+          },
+        };
+
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: mockSchema, settings: rowLayoutSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        expect(newComponent.isRowLayoutEnabled()).toBe(false);
+      });
+
+      it('should return false when row layout is undefined (backward compatibility)', () => {
+        const settingsWithoutRowLayout: FormSettings = {
+          ...mockSettings,
+          rowLayout: undefined,
+        };
+
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: mockSchema, settings: settingsWithoutRowLayout }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        expect(newComponent.isRowLayoutEnabled()).toBe(false);
+      });
+    });
+
+    describe('Row Configuration', () => {
+      it('should return sorted rows by order (ascending)', () => {
+        const rowLayoutSettings: FormSettings = {
+          ...mockSettings,
+          rowLayout: {
+            enabled: true,
+            rows: [
+              { rowId: 'row-3', columnCount: 4, order: 2 },
+              { rowId: 'row-1', columnCount: 2, order: 0 },
+              { rowId: 'row-2', columnCount: 3, order: 1 },
+            ],
+          },
+        };
+
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: mockSchema, settings: rowLayoutSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        const rows = newComponent.getRowConfigs();
+        expect(rows.length).toBe(3);
+        expect(rows[0].rowId).toBe('row-1');
+        expect(rows[1].rowId).toBe('row-2');
+        expect(rows[2].rowId).toBe('row-3');
+      });
+
+      it('should return empty array when row layout is disabled', () => {
+        fixture.detectChanges();
+        const rows = component.getRowConfigs();
+        expect(rows).toEqual([]);
+      });
+    });
+
+    describe('Field Filtering and Sorting', () => {
+      it('should return fields in column sorted by orderInColumn', () => {
+        const schemaWithPositions: FormSchema = {
+          ...mockSchema,
+          fields: [
+            {
+              id: 'field-1',
+              type: FormFieldType.TEXT,
+              label: 'Field 1',
+              fieldName: 'field-1',
+              required: true,
+              order: 1,
+              position: { rowId: 'row-1', columnIndex: 0, orderInColumn: 2 },
+            },
+            {
+              id: 'field-2',
+              type: FormFieldType.TEXT,
+              label: 'Field 2',
+              fieldName: 'field-2',
+              required: true,
+              order: 2,
+              position: { rowId: 'row-1', columnIndex: 0, orderInColumn: 0 },
+            },
+            {
+              id: 'field-3',
+              type: FormFieldType.TEXT,
+              label: 'Field 3',
+              fieldName: 'field-3',
+              required: true,
+              order: 3,
+              position: { rowId: 'row-1', columnIndex: 0, orderInColumn: 1 },
+            },
+          ],
+        };
+
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: schemaWithPositions, settings: mockSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        const fields = newComponent.getFieldsInColumn('row-1', 0);
+        expect(fields.length).toBe(3);
+        expect(fields[0].fieldName).toBe('field-2'); // orderInColumn: 0
+        expect(fields[1].fieldName).toBe('field-3'); // orderInColumn: 1
+        expect(fields[2].fieldName).toBe('field-1'); // orderInColumn: 2
+      });
+
+      it('should return empty array for non-existent row-column', () => {
+        fixture.detectChanges();
+        const fields = component.getFieldsInColumn('non-existent-row', 0);
+        expect(fields).toEqual([]);
+      });
+
+      it('should filter fields by both rowId and columnIndex', () => {
+        const schemaWithMultiplePositions: FormSchema = {
+          ...mockSchema,
+          fields: [
+            {
+              id: 'field-1',
+              type: FormFieldType.TEXT,
+              label: 'Field 1',
+              fieldName: 'field-1',
+              required: true,
+              order: 1,
+              position: { rowId: 'row-1', columnIndex: 0, orderInColumn: 0 },
+            },
+            {
+              id: 'field-2',
+              type: FormFieldType.TEXT,
+              label: 'Field 2',
+              fieldName: 'field-2',
+              required: true,
+              order: 2,
+              position: { rowId: 'row-1', columnIndex: 1, orderInColumn: 0 },
+            },
+            {
+              id: 'field-3',
+              type: FormFieldType.TEXT,
+              label: 'Field 3',
+              fieldName: 'field-3',
+              required: true,
+              order: 3,
+              position: { rowId: 'row-2', columnIndex: 0, orderInColumn: 0 },
+            },
+          ],
+        };
+
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: schemaWithMultiplePositions, settings: mockSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        const row1Col0 = newComponent.getFieldsInColumn('row-1', 0);
+        const row1Col1 = newComponent.getFieldsInColumn('row-1', 1);
+        const row2Col0 = newComponent.getFieldsInColumn('row-2', 0);
+
+        expect(row1Col0.length).toBe(1);
+        expect(row1Col0[0].fieldName).toBe('field-1');
+
+        expect(row1Col1.length).toBe(1);
+        expect(row1Col1[0].fieldName).toBe('field-2');
+
+        expect(row2Col0.length).toBe(1);
+        expect(row2Col0[0].fieldName).toBe('field-3');
+      });
+
+      it('should handle fields without orderInColumn (defaults to 0)', () => {
+        const schemaWithMissingOrderInColumn: FormSchema = {
+          ...mockSchema,
+          fields: [
+            {
+              id: 'field-1',
+              type: FormFieldType.TEXT,
+              label: 'Field 1',
+              fieldName: 'field-1',
+              required: true,
+              order: 1,
+              position: { rowId: 'row-1', columnIndex: 0 }, // orderInColumn omitted
+            },
+            {
+              id: 'field-2',
+              type: FormFieldType.TEXT,
+              label: 'Field 2',
+              fieldName: 'field-2',
+              required: true,
+              order: 2,
+              position: { rowId: 'row-1', columnIndex: 0, orderInColumn: 1 },
+            },
+          ],
+        };
+
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: schemaWithMissingOrderInColumn, settings: mockSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        const fields = newComponent.getFieldsInColumn('row-1', 0);
+        expect(fields.length).toBe(2);
+        expect(fields[0].fieldName).toBe('field-1'); // orderInColumn defaults to 0
+        expect(fields[1].fieldName).toBe('field-2'); // orderInColumn: 1
+      });
+    });
+
+    describe('Grid Column Calculations', () => {
+      it('should return correct CSS Grid columns for different column counts', () => {
+        fixture.detectChanges();
+
+        expect(component.getGridColumns(1)).toBe('repeat(1, 1fr)');
+        expect(component.getGridColumns(2)).toBe('repeat(2, 1fr)');
+        expect(component.getGridColumns(3)).toBe('repeat(3, 1fr)');
+        expect(component.getGridColumns(4)).toBe('repeat(4, 1fr)');
+      });
+
+      it('should return global grid columns for backward compatibility', () => {
+        component.settings = {
+          ...mockSettings,
+          layout: { ...mockSettings.layout, columns: 3 },
+        };
+        fixture.detectChanges();
+
+        expect(component.getGlobalGridColumns()).toBe('repeat(3, 1fr)');
+      });
+
+      it('should default to 1 column when layout columns is undefined', () => {
+        component.settings = {
+          ...mockSettings,
+          layout: { ...mockSettings.layout, columns: undefined as any },
+        };
+        fixture.detectChanges();
+
+        expect(component.getGlobalGridColumns()).toBe('repeat(1, 1fr)');
+      });
+    });
+
+    describe('Backward Compatibility', () => {
+      it('should render fields without position using global layout', () => {
+        const schemaWithoutPositions: FormSchema = {
+          ...mockSchema,
+          fields: mockSchema.fields.map((f) => ({ ...f, position: undefined })),
+        };
+
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: schemaWithoutPositions, settings: mockSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        const fieldsWithoutPosition = newComponent.getFieldsWithoutPosition();
+        expect(fieldsWithoutPosition.length).toBe(mockSchema.fields.length);
+        expect(newComponent.isRowLayoutEnabled()).toBe(false);
+      });
+
+      it('should handle mixed fields (with and without position)', () => {
+        const mixedSchema: FormSchema = {
+          ...mockSchema,
+          fields: [
+            {
+              id: 'field-1',
+              type: FormFieldType.TEXT,
+              label: 'With Position',
+              fieldName: 'with-position',
+              required: true,
+              order: 1,
+              position: { rowId: 'row-1', columnIndex: 0, orderInColumn: 0 },
+            },
+            {
+              id: 'field-2',
+              type: FormFieldType.TEXT,
+              label: 'Without Position',
+              fieldName: 'without-position',
+              required: true,
+              order: 2,
+            },
+          ],
+        };
+
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: mixedSchema, settings: mockSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        const withPosition = newComponent.getFieldsInColumn('row-1', 0);
+        const withoutPosition = newComponent.getFieldsWithoutPosition();
+
+        expect(withPosition.length).toBe(1);
+        expect(withPosition[0].fieldName).toBe('with-position');
+
+        expect(withoutPosition.length).toBe(1);
+        expect(withoutPosition[0].fieldName).toBe('without-position');
+      });
+    });
+
+    describe('Column Indices Helper', () => {
+      it('should generate correct column indices array', () => {
+        fixture.detectChanges();
+
+        expect(component.getColumnIndices(1)).toEqual([0]);
+        expect(component.getColumnIndices(2)).toEqual([0, 1]);
+        expect(component.getColumnIndices(3)).toEqual([0, 1, 2]);
+        expect(component.getColumnIndices(4)).toEqual([0, 1, 2, 3]);
+      });
+
+      it('should handle zero columns gracefully', () => {
+        fixture.detectChanges();
+        expect(component.getColumnIndices(0)).toEqual([]);
+      });
+    });
+  });
+
+  describe('Preview Mode (Story 14.3)', () => {
+    it('should use provided formSchema when previewMode is true', () => {
+      const mockSchema: any = {
+        fields: [
+          {
+            id: 'field-1',
+            type: FormFieldType.TEXT,
+            fieldName: 'name',
+            label: 'Name',
+            placeholder: '',
+            helpText: '',
+            required: true,
+            order: 0,
+          },
+        ],
+        settings: {
+          layout: { columns: 1, spacing: 'medium' },
+          submission: {
+            showSuccessMessage: true,
+            successMessage: 'Thank you!',
+            allowMultipleSubmissions: true,
+          },
+        },
+      };
+
+      component.formSchema = mockSchema;
+      component.previewMode = true;
+
+      component.ngOnInit();
+
+      expect(component.schema).toEqual(mockSchema);
+      expect(component.settings).toEqual(mockSchema.settings);
+      expect(component.isPreview).toBe(true);
+      expect(component.state.loading).toBe(false);
+      expect(component.formGroup).toBeTruthy();
+    });
+
+    it('should skip API fetch when previewMode is true', () => {
+      spyOn(formRendererService, 'getFormSchema');
+
+      const mockSchema: any = {
+        fields: [],
+        settings: {
+          layout: { columns: 1, spacing: 'medium' },
+          submission: {
+            showSuccessMessage: true,
+            successMessage: '',
+            allowMultipleSubmissions: true,
+          },
+        },
+      };
+
+      component.formSchema = mockSchema;
+      component.previewMode = true;
+
+      component.ngOnInit();
+
+      expect(formRendererService.getFormSchema).not.toHaveBeenCalled();
+    });
+
+    it('should disable form submission when previewMode is true', () => {
+      const mockSchema: any = {
+        fields: [
+          {
+            id: 'field-1',
+            type: FormFieldType.TEXT,
+            fieldName: 'name',
+            label: 'Name',
+            placeholder: '',
+            helpText: '',
+            required: false,
+            order: 0,
+          },
+        ],
+        settings: {
+          layout: { columns: 1, spacing: 'medium' },
+          submission: {
+            showSuccessMessage: true,
+            successMessage: 'Thank you!',
+            allowMultipleSubmissions: true,
+          },
+        },
+      };
+
+      component.formSchema = mockSchema;
+      component.previewMode = true;
+      component.ngOnInit();
+
+      spyOn(formRendererService, 'submitForm');
+
+      component.onSubmit();
+
+      expect(formRendererService.submitForm).not.toHaveBeenCalled();
+    });
+
+    it('should set canSubmit to false when previewMode is true', () => {
+      const mockSchema: any = {
+        fields: [],
+        settings: {
+          layout: { columns: 1, spacing: 'medium' },
+          submission: {
+            showSuccessMessage: true,
+            successMessage: '',
+            allowMultipleSubmissions: true,
+          },
+        },
+      };
+
+      component.formSchema = mockSchema;
+      component.previewMode = true;
+      component.ngOnInit();
+
+      expect(component.canSubmit).toBe(false);
+    });
+
+    it('should load schema from API when previewMode is false', () => {
+      spyOn(formRendererService, 'getFormSchema').and.returnValue(
+        of({
+          schema: { fields: [], settings: {} as any },
+          settings: {} as any,
+        }),
+      );
+
+      component.previewMode = false;
+      component.formSchema = null;
+
+      component.ngOnInit();
+
+      expect(formRendererService.getFormSchema).toHaveBeenCalled();
+    });
+  });
 });

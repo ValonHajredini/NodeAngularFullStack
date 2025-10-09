@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   ReactiveFormsModule,
@@ -44,6 +44,12 @@ interface ComponentState {
  * Public form renderer component that dynamically generates forms from schema.
  * Supports all field types, conditional visibility, validation, and responsive layouts.
  * This component is publicly accessible without authentication.
+ *
+ * Preview Mode Support (Story 14.3):
+ * - Accepts @Input() formSchema for in-memory preview (bypasses API fetch)
+ * - Accepts @Input() previewMode flag to disable submission
+ * - When previewMode === true, uses provided formSchema and disables form submission
+ * - When previewMode === false, loads schema from API via token (published form mode)
  */
 @Component({
   selector: 'app-form-renderer',
@@ -53,6 +59,18 @@ interface ComponentState {
   styleUrls: ['./form-renderer.component.scss'],
 })
 export class FormRendererComponent implements OnInit, OnDestroy {
+  /**
+   * Input: FormSchema for preview mode (bypasses API fetch).
+   * When provided, component uses this schema instead of fetching from API.
+   */
+  @Input() formSchema: FormSchema | null = null;
+
+  /**
+   * Input: Preview mode flag (disables submission).
+   * When true, form submission is disabled and no API calls are made.
+   */
+  @Input() previewMode = false;
+
   formGroup: FormGroup | null = null;
   schema: FormSchema | null = null;
   settings: FormSettings | null = null;
@@ -81,7 +99,18 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    // Detect if this is a preview route or published form route
+    // If in preview mode with provided schema, use it directly (Story 14.3)
+    if (this.previewMode && this.formSchema) {
+      this.schema = this.formSchema;
+      this.settings = this.formSchema.settings as FormSettings;
+      this.isPreview = true;
+      this.formGroup = this.buildFormGroup(this.formSchema);
+      this.setupConditionalVisibility();
+      this.state = { ...this.state, loading: false };
+      return;
+    }
+
+    // Otherwise, detect if this is a preview route or published form route
     this.route.url.pipe(takeUntil(this.destroy$)).subscribe((urlSegments) => {
       const isPreviewRoute =
         urlSegments.length >= 2 &&
@@ -364,6 +393,93 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Check if row layout is enabled in form settings
+   */
+  isRowLayoutEnabled(): boolean {
+    return this.settings?.rowLayout?.enabled === true;
+  }
+
+  /**
+   * Get row configurations from form settings, sorted by order
+   */
+  getRowConfigs(): Array<{ rowId: string; columnCount: number; order: number }> {
+    if (!this.settings?.rowLayout?.enabled || !this.settings.rowLayout.rows) {
+      return [];
+    }
+    // Sort rows by order (ascending)
+    return [...this.settings.rowLayout.rows].sort((a, b) => a.order - b.order);
+  }
+
+  /**
+   * Get all fields in a specific row-column position, sorted by orderInColumn.
+   * Supports multi-field columns (Story 14.1).
+   * @param rowId - The row ID to filter by
+   * @param columnIndex - The column index to filter by
+   * @returns Array of fields sorted by orderInColumn (ascending)
+   */
+  getFieldsInColumn(rowId: string, columnIndex: number): FormField[] {
+    if (!this.schema?.fields) return [];
+
+    return this.schema.fields
+      .filter(
+        (field) => field.position?.rowId === rowId && field.position?.columnIndex === columnIndex,
+      )
+      .sort((a, b) => {
+        const orderA = a.position?.orderInColumn ?? 0;
+        const orderB = b.position?.orderInColumn ?? 0;
+        return orderA - orderB;
+      });
+  }
+
+  /**
+   * Get fields that belong to a specific row-column position (single field - DEPRECATED).
+   * This method is kept for backward compatibility but getFieldsInColumn should be used instead.
+   * @deprecated Use getFieldsInColumn instead for multi-field column support
+   */
+  getFieldAtPosition(rowId: string, columnIndex: number): FormField | null {
+    const fields = this.getFieldsInColumn(rowId, columnIndex);
+    return fields.length > 0 ? fields[0] : null;
+  }
+
+  /**
+   * Get fields for global layout mode (backward compatibility).
+   * When rowLayout is disabled, render all fields in global grid layout mode.
+   * Fields are sorted by 'order' property regardless of position data.
+   */
+  getFieldsWithoutPosition(): FormField[] {
+    if (!this.schema) return [];
+    // Return ALL fields sorted by order (ignore position when rowLayout disabled)
+    return this.schema.fields.slice().sort((a, b) => a.order - b.order);
+  }
+
+  /**
+   * Get array of column indices for rendering row columns
+   * @param columnCount - Number of columns in the row
+   * @returns Array of column indices [0, 1, 2, ...]
+   */
+  getColumnIndices(columnCount: number): number[] {
+    return Array.from({ length: columnCount }, (_, i) => i);
+  }
+
+  /**
+   * Get CSS Grid template columns for a row
+   * @param columnCount - Number of columns in the row
+   * @returns CSS Grid template columns value (e.g., 'repeat(2, 1fr)')
+   */
+  getGridColumns(columnCount: number): string {
+    return `repeat(${columnCount}, 1fr)`;
+  }
+
+  /**
+   * Get global grid columns for backward compatibility
+   * @returns CSS Grid template columns value based on global column layout
+   */
+  getGlobalGridColumns(): string {
+    const columnCount = this.settings?.layout?.columns || 1;
+    return `repeat(${columnCount}, 1fr)`;
+  }
+
+  /**
    * Determines if error should be shown for a field
    */
   shouldShowError(fieldName: string): boolean {
@@ -429,17 +545,22 @@ export class FormRendererComponent implements OnInit, OnDestroy {
 
   /**
    * Determines if form can be submitted
+   * Disabled in preview mode (Story 14.3)
    */
   get canSubmit(): boolean {
-    return !this.isPreview && !!this.formGroup?.valid && !this.state.submitting;
+    return (
+      !this.previewMode && !this.isPreview && !!this.formGroup?.valid && !this.state.submitting
+    );
   }
 
   /**
    * Handles form submission
+   * Prevents submission in preview mode (Story 14.3)
    */
   onSubmit(): void {
-    // Prevent submission in preview mode
-    if (this.isPreview) {
+    // Prevent submission in preview mode (Story 14.3)
+    if (this.previewMode || this.isPreview) {
+      console.log('Form submission disabled in preview mode');
       return;
     }
 
@@ -532,14 +653,14 @@ export class FormRendererComponent implements OnInit, OnDestroy {
    */
   getBackgroundLayerStyles(): Record<string, string> {
     const bg = this.getBackgroundImage();
-    if (!bg || !bg.imageUrl || bg.type !== 'image') {
+    if (!bg?.imageUrl || bg.type !== 'image') {
       return {};
     }
 
     const isRepeat = bg.imagePosition === 'repeat';
     const styles: Record<string, string> = {
       'background-image': `url(${bg.imageUrl})`,
-      'background-size': isRepeat ? 'auto' : bg.imagePosition ?? 'cover',
+      'background-size': isRepeat ? 'auto' : (bg.imagePosition ?? 'cover'),
       'background-position': bg.imageAlignment ?? 'center',
       'background-repeat': isRepeat ? 'repeat' : 'no-repeat',
       'background-attachment': 'fixed',
@@ -559,7 +680,7 @@ export class FormRendererComponent implements OnInit, OnDestroy {
    */
   getBackgroundOpacity(): number {
     const bg = this.getBackgroundImage();
-    return bg && bg.imageOpacity !== undefined ? bg.imageOpacity / 100 : 1;
+    return bg?.imageOpacity !== undefined ? bg.imageOpacity / 100 : 1;
   }
 
   /**

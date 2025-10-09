@@ -33,7 +33,10 @@ import { FormField, FormFieldType, FormFieldOption } from '@nodeangularfullstack
 import { FormBuilderService } from '../form-builder.service';
 import { Subject, takeUntil, debounceTime } from 'rxjs';
 import { MonacoEditorModule } from 'ngx-monaco-editor-v2';
-import { sanitizeCustomBackground, containsDangerousPatterns } from '../../../../../shared/utils/sanitizer';
+import {
+  sanitizeCustomBackground,
+  containsDangerousPatterns,
+} from '../../../../../shared/utils/sanitizer';
 import { validateCSS, CSSValidationResult } from '../../../../../shared/utils/css-validator';
 
 /**
@@ -562,7 +565,10 @@ import { validateCSS, CSSValidationResult } from '../../../../../shared/utils/cs
                   </div>
 
                   <div class="field">
-                    <label for="imageAlignment" class="block text-sm font-medium text-gray-700 mb-1">
+                    <label
+                      for="imageAlignment"
+                      class="block text-sm font-medium text-gray-700 mb-1"
+                    >
                       Alignment
                     </label>
                     <p-select
@@ -579,24 +585,14 @@ import { validateCSS, CSSValidationResult } from '../../../../../shared/utils/cs
                     <label for="imageOpacity" class="block text-sm font-medium text-gray-700 mb-1">
                       Opacity: {{ propertiesForm.get('imageOpacity')?.value || 100 }}%
                     </label>
-                    <p-slider
-                      formControlName="imageOpacity"
-                      [min]="0"
-                      [max]="100"
-                      class="w-full"
-                    />
+                    <p-slider formControlName="imageOpacity" [min]="0" [max]="100" class="w-full" />
                   </div>
 
                   <div class="field">
                     <label for="imageBlur" class="block text-sm font-medium text-gray-700 mb-1">
                       Blur: {{ propertiesForm.get('imageBlur')?.value || 0 }}px
                     </label>
-                    <p-slider
-                      formControlName="imageBlur"
-                      [min]="0"
-                      [max]="20"
-                      class="w-full"
-                    />
+                    <p-slider formControlName="imageBlur" [min]="0" [max]="20" class="w-full" />
                     <small class="text-gray-500 text-xs">
                       Apply blur effect to background image (0-20 pixels)
                     </small>
@@ -616,7 +612,8 @@ import { validateCSS, CSSValidationResult } from '../../../../../shared/utils/cs
                       <div>
                         <p class="text-sm font-medium text-yellow-800">Security Notice</p>
                         <p class="text-xs text-yellow-700 mt-1">
-                          Only whitelisted HTML tags are allowed. All scripts and event handlers are removed automatically.
+                          Only whitelisted HTML tags are allowed. All scripts and event handlers are
+                          removed automatically.
                         </p>
                       </div>
                     </div>
@@ -640,9 +637,7 @@ import { validateCSS, CSSValidationResult } from '../../../../../shared/utils/cs
 
                   <!-- CSS Editor -->
                   <div class="field">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                      CSS Editor
-                    </label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1"> CSS Editor </label>
                     <ngx-monaco-editor
                       [options]="cssEditorOptions"
                       formControlName="customCss"
@@ -692,7 +687,8 @@ import { validateCSS, CSSValidationResult } from '../../../../../shared/utils/cs
                         Dangerous content detected and will be removed
                       </p>
                       <p class="text-xs text-orange-700 mt-1">
-                        Your HTML contains scripts or event handlers that will be automatically sanitized.
+                        Your HTML contains scripts or event handlers that will be automatically
+                        sanitized.
                       </p>
                     </div>
                   }
@@ -1171,7 +1167,7 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
     const options = this.options.value.length > 0 ? this.options.value : undefined;
 
     // Build metadata object (only for GROUP fields now)
-    let metadata = currentField.metadata;
+    const metadata = currentField.metadata;
 
     const updatedField: FormField = {
       ...currentField,

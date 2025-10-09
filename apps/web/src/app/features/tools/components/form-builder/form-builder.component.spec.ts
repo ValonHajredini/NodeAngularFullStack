@@ -277,41 +277,20 @@ describe('FormBuilderComponent', () => {
         allowMultipleSubmissions: true,
       });
 
-      // Mock window.open and localStorage
-      const windowOpenSpy = spyOn(window, 'open');
-      const localStorageSetSpy = spyOn(localStorage, 'setItem');
-
-      // Mock crypto.randomUUID
-      const mockUuid = '550e8400-e29b-41d4-a716-446655440000';
-      spyOn(crypto, 'randomUUID').and.returnValue(mockUuid);
-
       component.onPreview();
 
-      // Verify localStorage was called with correct data
-      expect(localStorageSetSpy).toHaveBeenCalledOnceWith(
-        `form-preview-${mockUuid}`,
-        jasmine.stringMatching(/schema.*settings.*isPreview.*timestamp/),
-      );
+      // Verify preview dialog visible signal set to true (Story 14.3)
+      expect(component.previewDialogVisible()).toBe(true);
 
-      // Verify the stored data structure
-      const storedData = JSON.parse(localStorageSetSpy.calls.mostRecent().args[1] as string);
-      expect(storedData.schema.fields.length).toBe(1);
-      expect(storedData.settings.title).toBe('Test Form');
-      expect(storedData.settings.description).toBe('Test Description');
-      expect(storedData.settings.layout.columns).toBe(2);
-      expect(storedData.settings.layout.spacing).toBe('medium');
-      expect(storedData.settings.submission.successMessage).toBe('Success!');
-      expect(storedData.settings.submission.redirectUrl).toBe('https://example.com');
-      expect(storedData.settings.submission.allowMultipleSubmissions).toBe(true);
-      expect(storedData.isPreview).toBe(true);
-      expect(storedData.timestamp).toBeDefined();
-
-      // Verify window.open was called
-      expect(windowOpenSpy).toHaveBeenCalledOnceWith(
-        `/forms/preview/${mockUuid}`,
-        '_blank',
-        'noopener,noreferrer',
-      );
+      // Verify preview form schema is set (Story 14.3)
+      const schema = component.previewFormSchema();
+      expect(schema).toBeTruthy();
+      expect(schema?.fields.length).toBe(1);
+      expect(schema?.settings.layout.columns).toBe(2);
+      expect(schema?.settings.layout.spacing).toBe('medium');
+      expect(schema?.settings.submission.successMessage).toBe('Success!');
+      expect(schema?.settings.submission.redirectUrl).toBe('https://example.com');
+      expect(schema?.settings.submission.allowMultipleSubmissions).toBe(true);
     });
 
     it('should handle preview with empty optional fields', () => {
@@ -328,27 +307,77 @@ describe('FormBuilderComponent', () => {
         allowMultipleSubmissions: false,
       });
 
-      const windowOpenSpy = spyOn(window, 'open');
-      const localStorageSetSpy = spyOn(localStorage, 'setItem');
-      const mockUuid = '550e8400-e29b-41d4-a716-446655440001';
-      spyOn(crypto, 'randomUUID').and.returnValue(mockUuid);
+      component.onPreview();
+
+      const schema = component.previewFormSchema();
+      expect(schema).toBeTruthy();
+      expect(schema?.fields.length).toBe(0);
+      expect(schema?.settings.layout.columns).toBe(1);
+      expect(schema?.settings.layout.spacing).toBe('small');
+      expect(schema?.settings.submission.successMessage).toBe('');
+      expect(schema?.settings.submission.redirectUrl).toBeUndefined();
+      expect(schema?.settings.submission.allowMultipleSubmissions).toBe(false);
+    });
+
+    it('should set previewVisible to true when onPreview called (Story 14.3)', () => {
+      expect(component.previewDialogVisible()).toBe(false);
 
       component.onPreview();
 
-      const storedData = JSON.parse(localStorageSetSpy.calls.mostRecent().args[1] as string);
-      expect(storedData.settings.description).toBe('');
-      expect(storedData.settings.layout.columns).toBe(1);
-      expect(storedData.settings.layout.spacing).toBe('small');
-      expect(storedData.settings.submission.successMessage).toBe('Thank you for your submission!');
-      expect(storedData.settings.submission.redirectUrl).toBeUndefined();
-      expect(storedData.settings.submission.allowMultipleSubmissions).toBe(false);
-      expect(storedData.timestamp).toBeDefined();
+      expect(component.previewDialogVisible()).toBe(true);
+    });
 
-      expect(windowOpenSpy).toHaveBeenCalledOnceWith(
-        `/forms/preview/${mockUuid}`,
-        '_blank',
-        'noopener,noreferrer',
-      );
+    it('should export current schema to previewSchema when onPreview called (Story 14.3)', () => {
+      const mockFormFields: any[] = [
+        {
+          id: 'field-1',
+          type: FormFieldType.TEXT,
+          fieldName: 'email',
+          label: 'Email',
+          placeholder: '',
+          helpText: '',
+          required: true,
+          order: 0,
+        },
+      ];
+
+      formBuilderService.setFormFields(mockFormFields as any);
+
+      expect(component.previewFormSchema()).toBeNull();
+
+      component.onPreview();
+
+      const schema = component.previewFormSchema();
+      expect(schema).toBeTruthy();
+      expect(schema?.fields.length).toBe(1);
+      expect(schema?.fields[0].fieldName).toBe('email');
+    });
+
+    it('should set previewVisible to false when closePreview called (Story 14.3)', () => {
+      component.previewDialogVisible.set(true);
+
+      component.closePreview();
+
+      expect(component.previewDialogVisible()).toBe(false);
+    });
+
+    it('should clear previewSchema when closePreview called (Story 14.3)', () => {
+      component.previewDialogVisible.set(true);
+      component.previewFormSchema.set({
+        fields: [],
+        settings: {
+          layout: { columns: 1, spacing: 'medium' },
+          submission: {
+            showSuccessMessage: true,
+            successMessage: '',
+            allowMultipleSubmissions: true,
+          },
+        },
+      } as any);
+
+      component.closePreview();
+
+      expect(component.previewFormSchema()).toBeNull();
     });
   });
 });

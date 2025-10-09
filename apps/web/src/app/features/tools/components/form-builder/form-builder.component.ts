@@ -23,11 +23,14 @@ import { FormCanvasComponent } from './form-canvas/form-canvas.component';
 import { FieldPropertiesModalComponent } from './field-properties-modal/field-properties-modal.component';
 import { FormSettingsComponent, FormSettings } from './form-settings/form-settings.component';
 import { PublishDialogComponent } from './publish-dialog/publish-dialog.component';
+import { RowLayoutSidebarComponent } from './row-layout-sidebar/row-layout-sidebar.component';
+import { PreviewDialogComponent } from './preview-dialog/preview-dialog.component';
 import { Dialog } from 'primeng/dialog';
+import { FormSchema } from '@nodeangularfullstack/shared';
 
 /**
  * Form Builder main component.
- * Provides a two-panel layout for building forms with drag-and-drop functionality.
+ * Provides a three-panel layout for building forms with drag-and-drop functionality.
  * Field properties are edited via modal dialog instead of sidebar.
  */
 @Component({
@@ -47,6 +50,8 @@ import { Dialog } from 'primeng/dialog';
     FieldPropertiesModalComponent,
     FormSettingsComponent,
     PublishDialogComponent,
+    RowLayoutSidebarComponent,
+    PreviewDialogComponent,
     Dialog,
   ],
   providers: [MessageService, ConfirmationService],
@@ -191,13 +196,11 @@ import { Dialog } from 'primeng/dialog';
         </div>
       </div>
 
-      <!-- Two-panel layout -->
+      <!-- Three-panel layout -->
       <div class="flex-1 flex overflow-hidden" cdkDropListGroup>
         <!-- Left sidebar: Field Palette -->
         <div class="w-64 flex-shrink-0">
-          <app-field-palette
-            (fieldSelected)="onFieldTypeSelected($event)"
-          ></app-field-palette>
+          <app-field-palette (fieldSelected)="onFieldTypeSelected($event)"></app-field-palette>
         </div>
 
         <!-- Center: Form Canvas (expanded to fill remaining space) -->
@@ -206,6 +209,11 @@ import { Dialog } from 'primeng/dialog';
             [settings]="formSettings()"
             (fieldClicked)="onFieldClicked($event)"
           ></app-form-canvas>
+        </div>
+
+        <!-- Right sidebar: Row Layout -->
+        <div class="flex-shrink-0">
+          <app-row-layout-sidebar></app-row-layout-sidebar>
         </div>
       </div>
 
@@ -237,6 +245,13 @@ import { Dialog } from 'primeng/dialog';
         (publish)="onPublish($event)"
         (copyUrl)="onCopyRenderUrl()"
       ></app-publish-dialog>
+
+      <!-- Preview Dialog (Story 14.3) -->
+      <app-preview-dialog
+        [visible]="previewDialogVisible()"
+        [formSchema]="previewFormSchema()"
+        (onClose)="closePreview()"
+      ></app-preview-dialog>
 
       <!-- Toast for notifications -->
       <p-toast position="bottom-right"></p-toast>
@@ -389,6 +404,10 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
   readonly availableForms = signal<FormMetadata[]>([]);
   readonly formsListError = signal<string | null>(null);
   readonly formsDeleting = signal<Set<string>>(new Set());
+
+  // Preview state (Story 14.3)
+  readonly previewDialogVisible = signal<boolean>(false);
+  readonly previewFormSchema = signal<FormSchema | null>(null);
 
   private fieldCounter = 0;
   private autoSaveInterval?: number;
@@ -672,6 +691,13 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
           customHtml: settings.backgroundCustomHtml || '',
           customCss: settings.backgroundCustomCss || '',
         },
+        // Include row layout configuration from service
+        rowLayout: this.formBuilderService.rowLayoutEnabled()
+          ? {
+              enabled: true,
+              rows: this.formBuilderService.getRowLayout(),
+            }
+          : undefined,
       },
     };
 
@@ -841,13 +867,10 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
   }
 
   /**
-   * Handles form preview.
-   * Opens the form preview in a new browser tab.
+   * Handles form preview (Story 14.3).
+   * Opens preview dialog with current form schema (includes unsaved changes).
    */
   onPreview(): void {
-    // Generate temporary preview ID
-    const previewId = crypto.randomUUID();
-
     const settings = this.formSettings();
     const backgroundSettings = {
       type: settings.backgroundType || 'none',
@@ -866,28 +889,11 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
           ? 'medium'
           : 'large';
 
-    // Prepare preview data from current form state
-    const previewData = {
-      schema: {
-        fields: this.formBuilderService.formFields(),
-        version: '1.0.0',
-        settings: {
-          layout: {
-            columns: settings.columnLayout,
-            spacing: layoutSpacing,
-          },
-          submission: {
-            showSuccessMessage: true,
-            successMessage: settings.successMessage || 'Thank you for your submission!',
-            redirectUrl: settings.redirectUrl || undefined,
-            allowMultipleSubmissions: settings.allowMultipleSubmissions,
-          },
-          background: backgroundSettings,
-        },
-      },
+    // Export current form data (in-memory, includes unsaved changes)
+    // Note: For preview mode, we only need fields and settings, not full FormSchema
+    const schema: any = {
+      fields: this.formBuilderService.formFields(),
       settings: {
-        title: settings.title,
-        description: settings.description || '',
         layout: {
           columns: settings.columnLayout,
           spacing: layoutSpacing,
@@ -899,31 +905,27 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
           allowMultipleSubmissions: settings.allowMultipleSubmissions,
         },
         background: backgroundSettings,
+        // Include row layout configuration if enabled
+        rowLayout: this.formBuilderService.rowLayoutEnabled()
+          ? {
+              enabled: true,
+              rows: this.formBuilderService.getRowLayout(),
+            }
+          : undefined,
       },
-      isPreview: true,
     };
 
-    // Store in localStorage (shared across tabs) with timestamp for cleanup
-    // sessionStorage won't work as it's tab-specific and doesn't share between tabs
-    localStorage.setItem(
-      `form-preview-${previewId}`,
-      JSON.stringify({
-        ...previewData,
-        timestamp: Date.now(),
-      }),
-    );
+    // Set preview schema and show dialog
+    this.previewFormSchema.set(schema);
+    this.previewDialogVisible.set(true);
+  }
 
-    // Set cleanup timer to remove preview data after 5 minutes
-    setTimeout(
-      () => {
-        localStorage.removeItem(`form-preview-${previewId}`);
-      },
-      5 * 60 * 1000,
-    );
-
-    // Open preview in new tab
-    const previewUrl = `/forms/preview/${previewId}`;
-    window.open(previewUrl, '_blank', 'noopener,noreferrer');
+  /**
+   * Closes preview dialog (Story 14.3).
+   */
+  closePreview(): void {
+    this.previewDialogVisible.set(false);
+    this.previewFormSchema.set(null);
   }
 
   /**
