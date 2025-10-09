@@ -31,6 +31,8 @@ export enum FormFieldType {
   TOGGLE = 'toggle',
   /** Visual divider (non-input) */
   DIVIDER = 'divider',
+  /** Group container for organizing related fields */
+  GROUP = 'group',
 }
 
 /**
@@ -78,6 +80,20 @@ export interface FormFieldOption {
 }
 
 /**
+ * Group-specific metadata for GROUP field type
+ */
+export interface GroupMetadata {
+  /** Group title/heading */
+  groupTitle?: string;
+  /** Border style for group container */
+  groupBorderStyle?: 'solid' | 'dashed' | 'none';
+  /** Whether group is collapsible */
+  groupCollapsible?: boolean;
+  /** Background color (hex format) */
+  groupBackgroundColor?: string;
+}
+
+/**
  * Individual form field definition
  */
 export interface FormField {
@@ -105,6 +121,10 @@ export interface FormField {
   conditional?: FormFieldConditional;
   /** Order index for rendering */
   order: number;
+  /** Parent group ID for nested fields */
+  parentGroupId?: string;
+  /** Additional metadata for special field types (e.g., GROUP) */
+  metadata?: GroupMetadata;
 }
 
 /**
@@ -136,6 +156,33 @@ export interface FormSubmissionConfig {
 }
 
 /**
+ * Background settings configuration for forms.
+ */
+export type FormBackgroundType = 'none' | 'image' | 'custom';
+
+/**
+ * Background appearance configuration for rendered forms.
+ */
+export interface FormBackgroundSettings {
+  /** Background display type */
+  type: FormBackgroundType;
+  /** Background image URL or data URI */
+  imageUrl?: string;
+  /** Background image sizing behavior */
+  imagePosition?: 'cover' | 'contain' | 'repeat';
+  /** Background image opacity percentage (0-100) */
+  imageOpacity?: number;
+  /** Background image vertical alignment */
+  imageAlignment?: 'top' | 'center' | 'bottom';
+  /** Background image blur amount in pixels */
+  imageBlur?: number;
+  /** Custom HTML content for background (sanitized server-side) */
+  customHtml?: string;
+  /** Custom CSS for background (validated server-side) */
+  customCss?: string;
+}
+
+/**
  * Form settings
  */
 export interface FormSettings {
@@ -143,6 +190,8 @@ export interface FormSettings {
   layout: FormLayout;
   /** Submission behavior */
   submission: FormSubmissionConfig;
+  /** Optional background configuration */
+  background?: FormBackgroundSettings;
 }
 
 /**

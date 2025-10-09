@@ -1,5 +1,6 @@
 import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Checkbox } from 'primeng/checkbox';
 import { FormField } from '@nodeangularfullstack/shared';
 
@@ -11,7 +12,7 @@ import { FormField } from '@nodeangularfullstack/shared';
   selector: 'app-checkbox-preview',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, Checkbox],
+  imports: [CommonModule, FormsModule, Checkbox],
   template: `
     <div class="field-preview">
       @if (!field.options || field.options.length === 0) {
@@ -19,6 +20,7 @@ import { FormField } from '@nodeangularfullstack/shared';
         <div class="flex items-center">
           <p-checkbox
             [binary]="true"
+            [(ngModel)]="previewBinaryValue"
             [disabled]="true"
             inputId="checkbox-preview"
             [attr.aria-label]="field.label"
@@ -33,17 +35,12 @@ import { FormField } from '@nodeangularfullstack/shared';
         </div>
       } @else {
         <!-- Checkbox group with options -->
-        <label class="block text-sm font-medium text-gray-700 mb-2">
-          {{ field.label }}
-          @if (field.required) {
-            <span class="text-red-500 ml-1">*</span>
-          }
-        </label>
         <div class="flex flex-col gap-2">
           @for (option of field.options; track option.value) {
             <div class="flex items-center">
               <p-checkbox
                 [value]="option.value"
+                [(ngModel)]="previewArrayValue"
                 [disabled]="true"
                 [binary]="false"
                 [inputId]="'checkbox-' + field.id + '-' + option.value"
@@ -59,9 +56,6 @@ import { FormField } from '@nodeangularfullstack/shared';
           }
         </div>
       }
-      @if (field.helpText) {
-        <small class="block mt-1 text-gray-500">{{ field.helpText }}</small>
-      }
     </div>
   `,
   styles: [
@@ -74,4 +68,11 @@ import { FormField } from '@nodeangularfullstack/shared';
 })
 export class CheckboxPreviewComponent {
   @Input({ required: true }) field!: FormField;
+
+  /**
+   * Placeholder values for ngModel binding.
+   * Required by PrimeNG Checkbox even when disabled.
+   */
+  protected previewBinaryValue = false;
+  protected previewArrayValue: string[] = [];
 }

@@ -92,39 +92,36 @@ export interface FormCardAction {
       }
 
       <!-- Actions -->
-      <div class="flex gap-2 mb-2">
+      <div class="flex gap-2 justify-end">
         <button
           pButton
-          label="Edit"
-          icon="pi pi-pencil"
-          size="small"
-          severity="secondary"
-          class="flex-1"
-          (click)="onEdit()"
-        ></button>
-        <button
-          pButton
-          label="Analytics"
           icon="pi pi-chart-bar"
           size="small"
           severity="info"
           [outlined]="true"
-          class="flex-1"
           (click)="onAnalytics()"
           [disabled]="form.status !== FormStatus.PUBLISHED"
           [attr.data-testid]="'analytics-btn'"
+          title="Analytics"
         ></button>
-      </div>
-      <div class="flex gap-2">
+        <button
+          pButton
+          icon="pi pi-pencil"
+          size="small"
+          severity="secondary"
+          [outlined]="true"
+          (click)="onEdit()"
+          title="Edit"
+        ></button>
         <button
           pButton
           icon="pi pi-trash"
           size="small"
           severity="danger"
           [outlined]="true"
-          class="w-full"
           (click)="onDelete()"
           [disabled]="form.status === FormStatus.PUBLISHED"
+          title="Delete"
         ></button>
       </div>
 

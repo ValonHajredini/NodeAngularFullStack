@@ -7,6 +7,7 @@ import {
   OnDestroy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonDirective } from 'primeng/button';
 import { Toast } from 'primeng/toast';
@@ -19,14 +20,15 @@ import { FormsApiService } from './forms-api.service';
 import { ComponentWithUnsavedChanges } from '@core/guards/unsaved-changes.guard';
 import { FieldPaletteComponent } from './field-palette/field-palette.component';
 import { FormCanvasComponent } from './form-canvas/form-canvas.component';
-import { FieldPropertiesComponent } from './field-properties/field-properties.component';
+import { FieldPropertiesModalComponent } from './field-properties-modal/field-properties-modal.component';
 import { FormSettingsComponent, FormSettings } from './form-settings/form-settings.component';
 import { PublishDialogComponent } from './publish-dialog/publish-dialog.component';
 import { Dialog } from 'primeng/dialog';
 
 /**
  * Form Builder main component.
- * Provides a three-panel layout for building forms with drag-and-drop functionality.
+ * Provides a two-panel layout for building forms with drag-and-drop functionality.
+ * Field properties are edited via modal dialog instead of sidebar.
  */
 @Component({
   selector: 'app-form-builder',
@@ -34,6 +36,7 @@ import { Dialog } from 'primeng/dialog';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
+    FormsModule,
     RouterLink,
     ButtonDirective,
     Toast,
@@ -41,7 +44,7 @@ import { Dialog } from 'primeng/dialog';
     DragDropModule,
     FieldPaletteComponent,
     FormCanvasComponent,
-    FieldPropertiesComponent,
+    FieldPropertiesModalComponent,
     FormSettingsComponent,
     PublishDialogComponent,
     Dialog,
@@ -188,29 +191,33 @@ import { Dialog } from 'primeng/dialog';
         </div>
       </div>
 
-      <!-- Three-panel layout -->
+      <!-- Two-panel layout -->
       <div class="flex-1 flex overflow-hidden" cdkDropListGroup>
         <!-- Left sidebar: Field Palette -->
         <div class="w-64 flex-shrink-0">
-          <app-field-palette (fieldSelected)="onFieldTypeSelected($event)"></app-field-palette>
+          <app-field-palette
+            (fieldSelected)="onFieldTypeSelected($event)"
+          ></app-field-palette>
         </div>
 
-        <!-- Center: Form Canvas -->
+        <!-- Center: Form Canvas (expanded to fill remaining space) -->
         <div class="flex-1 overflow-auto">
           <app-form-canvas
             [settings]="formSettings()"
             (fieldClicked)="onFieldClicked($event)"
           ></app-form-canvas>
         </div>
-
-        <!-- Right sidebar: Field Properties -->
-        <div class="w-80 flex-shrink-0">
-          <app-field-properties
-            (propertyChanged)="onPropertyChanged($event)"
-            (fieldDeleted)="onFieldDeleted()"
-          ></app-field-properties>
-        </div>
       </div>
+
+      <!-- Field Properties Modal -->
+      <app-field-properties-modal
+        [visible]="fieldPropertiesModalVisible()"
+        [field]="selectedFieldForModal()"
+        (visibleChange)="onFieldPropertiesModalVisibleChange($event)"
+        (save)="onFieldPropertiesSaved($event)"
+        (cancel)="onFieldPropertiesCancelled()"
+        (fieldDeleted)="onFieldDeleted()"
+      ></app-field-properties-modal>
 
       <!-- Form Settings Dialog -->
       <app-form-settings
@@ -353,6 +360,8 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
 
   readonly settingsDialogVisible = signal<boolean>(false);
   readonly publishDialogVisible = signal<boolean>(false);
+  readonly fieldPropertiesModalVisible = signal<boolean>(false);
+  readonly selectedFieldForModal = signal<FormField | null>(null);
   readonly formSettings = signal<FormSettings>({
     title: 'Untitled Form',
     description: '',
@@ -361,6 +370,14 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
     successMessage: 'Thank you for your submission!',
     redirectUrl: '',
     allowMultipleSubmissions: true,
+    backgroundType: 'none',
+    backgroundImageUrl: '',
+    backgroundImagePosition: 'cover',
+    backgroundImageOpacity: 100,
+    backgroundImageAlignment: 'center',
+    backgroundImageBlur: 0,
+    backgroundCustomHtml: '',
+    backgroundCustomCss: '',
   });
   readonly isSaving = signal<boolean>(false);
   readonly isLoading = signal<boolean>(false);
@@ -417,6 +434,9 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
 
         // Update form settings from loaded form
         if (form.schema?.settings) {
+          const settings = form.schema.settings as any;
+          const background = settings.background || {};
+
           this.formSettings.set({
             title: form.title,
             description: form.description || '',
@@ -431,6 +451,15 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
               form.schema.settings.submission.successMessage || 'Thank you for your submission!',
             redirectUrl: form.schema.settings.submission.redirectUrl || '',
             allowMultipleSubmissions: form.schema.settings.submission.allowMultipleSubmissions,
+            // Extract background settings from schema.settings.background
+            backgroundType: background.type || 'none',
+            backgroundImageUrl: background.imageUrl || '',
+            backgroundImagePosition: background.imagePosition || 'cover',
+            backgroundImageOpacity: background.imageOpacity ?? 100,
+            backgroundImageAlignment: background.imageAlignment || 'center',
+            backgroundImageBlur: background.imageBlur ?? 0,
+            backgroundCustomHtml: background.customHtml || '',
+            backgroundCustomCss: background.customCss || '',
           });
         } else {
           // Initialize with default settings if no schema settings exist
@@ -442,6 +471,14 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
             successMessage: 'Thank you for your submission!',
             redirectUrl: '',
             allowMultipleSubmissions: true,
+            backgroundType: 'none',
+            backgroundImageUrl: '',
+            backgroundImagePosition: 'cover',
+            backgroundImageOpacity: 100,
+            backgroundImageAlignment: 'center',
+            backgroundImageBlur: 0,
+            backgroundCustomHtml: '',
+            backgroundCustomCss: '',
           });
         }
 
@@ -503,21 +540,50 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
 
   /**
    * Handles field click from canvas.
+   * Opens field properties modal with the selected field.
    */
   onFieldClicked(field: FormField): void {
-    // Field selection is already handled in the canvas component
+    this.selectedFieldForModal.set(field);
+    this.fieldPropertiesModalVisible.set(true);
   }
 
   /**
-   * Handles property changes from the properties panel.
+   * Handles field properties modal visibility changes.
    */
-  onPropertyChanged(properties: Partial<FormField>): void {
+  onFieldPropertiesModalVisibleChange(visible: boolean): void {
+    this.fieldPropertiesModalVisible.set(visible);
+    if (!visible) {
+      this.selectedFieldForModal.set(null);
+    }
+  }
+
+  /**
+   * Handles field properties save from modal.
+   */
+  onFieldPropertiesSaved(updatedField: FormField): void {
+    const fieldIndex = this.formBuilderService.selectedFieldIndex();
+    if (fieldIndex >= 0) {
+      this.formBuilderService.updateField(fieldIndex, updatedField);
+      this.formBuilderService.selectField(updatedField);
+    }
+
     this.messageService.add({
-      severity: 'info',
+      severity: 'success',
       summary: 'Properties Updated',
-      detail: 'Field properties have been updated',
+      detail: 'Field properties have been saved',
       life: 2000,
     });
+
+    this.fieldPropertiesModalVisible.set(false);
+    this.selectedFieldForModal.set(null);
+  }
+
+  /**
+   * Handles field properties modal cancel.
+   */
+  onFieldPropertiesCancelled(): void {
+    this.fieldPropertiesModalVisible.set(false);
+    this.selectedFieldForModal.set(null);
   }
 
   /**
@@ -552,9 +618,14 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
   onSettingsSaved(settings: FormSettings): void {
     const currentFormId = this.formBuilderService.currentFormId();
 
+    // Update local settings
+    this.formSettings.set({ ...settings });
+
+    // Sync background settings to fields
+    this.syncBackgroundSettingsToFields(settings);
+
     if (!currentFormId) {
-      // If no form is loaded, just update local settings
-      this.formSettings.set({ ...settings });
+      // If no form is loaded, just mark as dirty
       this.formBuilderService.markDirty();
       this.settingsDialogVisible.set(false);
 
@@ -589,6 +660,17 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
           successMessage: settings.successMessage,
           redirectUrl: settings.redirectUrl || undefined,
           allowMultipleSubmissions: settings.allowMultipleSubmissions,
+        },
+        // Include background settings in schema
+        background: {
+          type: settings.backgroundType || 'none',
+          imageUrl: settings.backgroundImageUrl || '',
+          imagePosition: settings.backgroundImagePosition || 'cover',
+          imageOpacity: settings.backgroundImageOpacity ?? 100,
+          imageAlignment: settings.backgroundImageAlignment || 'center',
+          imageBlur: settings.backgroundImageBlur ?? 0,
+          customHtml: settings.backgroundCustomHtml || '',
+          customCss: settings.backgroundCustomCss || '',
         },
       },
     };
@@ -767,24 +849,48 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
     const previewId = crypto.randomUUID();
 
     const settings = this.formSettings();
+    const backgroundSettings = {
+      type: settings.backgroundType || 'none',
+      imageUrl: settings.backgroundImageUrl || '',
+      imagePosition: settings.backgroundImagePosition || 'cover',
+      imageOpacity: settings.backgroundImageOpacity ?? 100,
+      imageAlignment: settings.backgroundImageAlignment || 'center',
+      imageBlur: settings.backgroundImageBlur ?? 0,
+      customHtml: settings.backgroundCustomHtml || '',
+      customCss: settings.backgroundCustomCss || '',
+    };
+    const layoutSpacing =
+      settings.fieldSpacing === 'compact'
+        ? 'small'
+        : settings.fieldSpacing === 'normal'
+          ? 'medium'
+          : 'large';
 
     // Prepare preview data from current form state
     const previewData = {
       schema: {
         fields: this.formBuilderService.formFields(),
         version: '1.0.0',
+        settings: {
+          layout: {
+            columns: settings.columnLayout,
+            spacing: layoutSpacing,
+          },
+          submission: {
+            showSuccessMessage: true,
+            successMessage: settings.successMessage || 'Thank you for your submission!',
+            redirectUrl: settings.redirectUrl || undefined,
+            allowMultipleSubmissions: settings.allowMultipleSubmissions,
+          },
+          background: backgroundSettings,
+        },
       },
       settings: {
         title: settings.title,
         description: settings.description || '',
         layout: {
           columns: settings.columnLayout,
-          spacing:
-            settings.fieldSpacing === 'compact'
-              ? 'small'
-              : settings.fieldSpacing === 'normal'
-                ? 'medium'
-                : 'large',
+          spacing: layoutSpacing,
         },
         submission: {
           showSuccessMessage: true,
@@ -792,6 +898,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
           redirectUrl: settings.redirectUrl || undefined,
           allowMultipleSubmissions: settings.allowMultipleSubmissions,
         },
+        background: backgroundSettings,
       },
       isPreview: true,
     };
@@ -1221,6 +1328,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
       [FormFieldType.DATETIME]: 'Date & Time',
       [FormFieldType.TOGGLE]: 'Toggle',
       [FormFieldType.DIVIDER]: 'Section Divider',
+      [FormFieldType.GROUP]: 'Group Container',
     };
     return labelMap[type] || 'Field';
   }
@@ -1239,5 +1347,35 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
     }
 
     return 1;
+  }
+
+  /**
+   * Extracts background settings from schema settings (not from fields).
+   * Background settings are now stored in schema.settings.background, not as fields.
+   */
+  private extractBackgroundSettings(fields: FormField[]): Partial<FormSettings> {
+    // Background settings are now managed in schema.settings.background
+    // This method is kept for compatibility but returns default values
+    return {
+      backgroundType: 'none',
+      backgroundImageUrl: '',
+      backgroundImagePosition: 'cover',
+      backgroundImageOpacity: 100,
+      backgroundImageAlignment: 'center',
+      backgroundImageBlur: 0,
+      backgroundCustomHtml: '',
+      backgroundCustomCss: '',
+    };
+  }
+
+  /**
+   * Syncs background settings - NO-OP.
+   * Background settings are now stored directly in schema.settings.background
+   * and are not represented as fields in the form.
+   */
+  private syncBackgroundSettingsToFields(settings: FormSettings): void {
+    // Background settings are now managed in form-settings.component
+    // They are stored in schema.settings.background, not as fields
+    // This method is kept for compatibility but does nothing
   }
 }

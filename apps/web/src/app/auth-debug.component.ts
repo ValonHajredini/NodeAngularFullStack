@@ -81,7 +81,7 @@ export class AuthDebugComponent {
   }
 
   navigateToDashboard(): void {
-    this.router.navigate(['/app/dashboard']);
+    void this.router.navigate(['/app/dashboard']);
   }
 
   refresh(): void {

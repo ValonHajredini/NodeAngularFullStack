@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import { formsController } from '../controllers/forms.controller';
+import { FormsUploadController } from '../controllers/forms-upload.controller';
 import { AuthMiddleware } from '../middleware/auth.middleware';
 import { RateLimitMiddleware } from '../middleware/rate-limit.middleware';
+import { sanitizeFormHTML } from '../middleware/sanitize-html.middleware';
 import {
   createFormValidator,
   updateFormValidator,
@@ -9,6 +11,9 @@ import {
   validateFormSchema,
   xssProtection,
 } from '../validators/forms.validator';
+
+// Initialize upload controller
+const formsUploadController = new FormsUploadController();
 
 /**
  * Forms routes configuration.
@@ -93,6 +98,7 @@ router.post(
   '/',
   AuthMiddleware.authenticate,
   xssProtection,
+  sanitizeFormHTML, // Sanitize custom background HTML before validation
   createFormValidator,
   validateFormSchema,
   formsController.createForm
@@ -331,6 +337,65 @@ router.post(
 
 /**
  * @swagger
+ * /api/forms/upload-background:
+ *   post:
+ *     summary: Upload a background image for forms
+ *     description: Upload an image file to DigitalOcean Spaces for use as form background
+ *     tags: [Forms]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [backgroundImage]
+ *             properties:
+ *               backgroundImage:
+ *                 type: string
+ *                 format: binary
+ *                 description: Image file (JPEG, PNG, GIF, WebP, SVG) - max 5MB
+ *     responses:
+ *       200:
+ *         description: Image uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     url:
+ *                       type: string
+ *                       description: Public CDN URL of uploaded image
+ *                     fileName:
+ *                       type: string
+ *                     size:
+ *                       type: number
+ *                     mimeType:
+ *                       type: string
+ *       400:
+ *         description: No file provided or invalid file type
+ *       401:
+ *         description: Authentication required
+ *       500:
+ *         description: Upload failed
+ */
+router.post(
+  '/upload-background',
+  AuthMiddleware.authenticate,
+  formsUploadController.uploadMiddleware,
+  formsUploadController.uploadBackgroundImage
+);
+
+/**
+ * @swagger
  * /api/forms/{id}:
  *   get:
  *     summary: Get form by ID
@@ -495,6 +560,7 @@ router.put(
   AuthMiddleware.authenticate,
   formIdValidator,
   xssProtection,
+  sanitizeFormHTML, // Sanitize custom background HTML before validation
   updateFormValidator,
   validateFormSchema,
   formsController.updateForm

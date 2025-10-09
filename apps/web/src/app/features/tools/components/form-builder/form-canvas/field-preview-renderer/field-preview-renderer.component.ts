@@ -10,6 +10,7 @@ import { DatePreviewComponent } from './date-preview.component';
 import { FilePreviewComponent } from './file-preview.component';
 import { TogglePreviewComponent } from './toggle-preview.component';
 import { DividerPreviewComponent } from './divider-preview.component';
+import { GroupPreviewComponent } from './group-preview.component';
 import { InlineLabelEditorComponent } from './inline-label-editor.component';
 import { InlineOptionManagerComponent } from './inline-option-manager.component';
 import { ButtonModule } from 'primeng/button';
@@ -36,14 +37,15 @@ import { FormFieldOption } from '@nodeangularfullstack/shared';
     FilePreviewComponent,
     TogglePreviewComponent,
     DividerPreviewComponent,
+    GroupPreviewComponent,
     InlineLabelEditorComponent,
     InlineOptionManagerComponent,
     ButtonModule,
   ],
   template: `
     <div class="field-preview-wrapper relative">
-      <!-- Inline Label Editor (for non-divider fields) -->
-      @if (field.type !== FormFieldType.DIVIDER) {
+      <!-- Inline Label Editor (for non-divider and non-group fields) -->
+      @if (field.type !== FormFieldType.DIVIDER && field.type !== FormFieldType.GROUP) {
         <div
           class="label-section mb-2"
           (click)="$event.stopPropagation()"
@@ -103,6 +105,9 @@ import { FormFieldOption } from '@nodeangularfullstack/shared';
           @case (FormFieldType.DIVIDER) {
             <app-divider-preview [field]="field" />
           }
+          @case (FormFieldType.GROUP) {
+            <app-group-preview [field]="field" />
+          }
           @default {
             <div class="p-4 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
               Unknown field type: {{ field.type }}
@@ -112,7 +117,7 @@ import { FormFieldOption } from '@nodeangularfullstack/shared';
       </div>
 
       <!-- Help Text -->
-      @if (field.helpText && field.type !== FormFieldType.DIVIDER) {
+      @if (field.helpText && field.type !== FormFieldType.DIVIDER && field.type !== FormFieldType.GROUP) {
         <small class="block mt-1 text-gray-500">{{ field.helpText }}</small>
       }
 
@@ -136,7 +141,7 @@ import { FormFieldOption } from '@nodeangularfullstack/shared';
   styles: [
     `
       .field-preview-wrapper {
-        padding: 0.75rem;
+        padding: 0;
       }
 
       .field-control {

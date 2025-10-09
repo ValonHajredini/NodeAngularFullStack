@@ -1,3 +1,25 @@
+.form-renderer-container {
+  position: relative;
+
+  .background-image-layer {
+    pointer-events: none;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    will-change: filter, transform;
+  }
+
+  .background-overlay {
+    pointer-events: none;
+  }
+}
+
+.form-content-wrapper {
+  min-height: 400px;
+  padding: 1.5rem;
+  border-radius: 0.375rem;
+}
+
 .field-wrapper {
   display: flex;
   flex-direction: column;

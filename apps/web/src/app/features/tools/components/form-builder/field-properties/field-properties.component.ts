@@ -27,10 +27,14 @@ import { Select } from 'primeng/select';
 import { InputNumber } from 'primeng/inputnumber';
 import { ToggleSwitch } from 'primeng/toggleswitch';
 import { Panel } from 'primeng/panel';
+import { Slider } from 'primeng/slider';
 import { CdkDrag, CdkDropList, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { FormField, FormFieldType, FormFieldOption } from '@nodeangularfullstack/shared';
 import { FormBuilderService } from '../form-builder.service';
 import { Subject, takeUntil, debounceTime } from 'rxjs';
+import { MonacoEditorModule } from 'ngx-monaco-editor-v2';
+import { sanitizeCustomBackground, containsDangerousPatterns } from '../../../../../shared/utils/sanitizer';
+import { validateCSS, CSSValidationResult } from '../../../../../shared/utils/css-validator';
 
 /**
  * Field properties component for editing selected field properties.
@@ -51,8 +55,10 @@ import { Subject, takeUntil, debounceTime } from 'rxjs';
     InputNumber,
     ToggleSwitch,
     Panel,
+    Slider,
     CdkDrag,
     CdkDropList,
+    MonacoEditorModule,
   ],
   template: `
     <div class="field-properties h-full bg-white border-l border-gray-200 overflow-y-auto">
@@ -485,6 +491,215 @@ import { Subject, takeUntil, debounceTime } from 'rxjs';
               </p-panel>
             }
 
+            <!-- Background Image Settings Section -->
+            @if (isBackgroundImageField()) {
+              <p-panel header="Background Image Settings" [toggleable]="true">
+                <div class="space-y-4">
+                  <div class="field">
+                    <label for="imageUrl" class="block text-sm font-medium text-gray-700 mb-1">
+                      Image URL
+                    </label>
+                    <input
+                      pInputText
+                      id="imageUrl"
+                      formControlName="imageUrl"
+                      class="w-full"
+                      placeholder="https://example.com/image.jpg"
+                    />
+                    <small class="text-gray-500 text-xs">
+                      Enter a URL or upload an image below
+                    </small>
+                  </div>
+
+                  <div class="field">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                      Or Upload Image
+                    </label>
+                    <input
+                      #fileInput
+                      type="file"
+                      accept="image/*"
+                      (change)="onImageFileSelected($event)"
+                      class="hidden"
+                    />
+                    <button
+                      pButton
+                      type="button"
+                      label="Choose Image"
+                      icon="pi pi-upload"
+                      severity="secondary"
+                      size="small"
+                      (click)="fileInput.click()"
+                    ></button>
+                    <small class="text-gray-500 text-xs block mt-1">
+                      Max 5MB (JPG, PNG, GIF, WebP)
+                    </small>
+                  </div>
+
+                  @if (imagePreviewUrl()) {
+                    <div class="field">
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Preview</label>
+                      <img
+                        [src]="imagePreviewUrl()"
+                        alt="Background preview"
+                        class="w-full h-32 object-cover rounded border border-gray-300"
+                      />
+                    </div>
+                  }
+
+                  <div class="field">
+                    <label for="imagePosition" class="block text-sm font-medium text-gray-700 mb-1">
+                      Background Size
+                    </label>
+                    <p-select
+                      formControlName="imagePosition"
+                      [options]="positionOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="Select background size"
+                      class="w-full"
+                    />
+                  </div>
+
+                  <div class="field">
+                    <label for="imageAlignment" class="block text-sm font-medium text-gray-700 mb-1">
+                      Alignment
+                    </label>
+                    <p-select
+                      formControlName="imageAlignment"
+                      [options]="alignmentOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="Select alignment"
+                      class="w-full"
+                    />
+                  </div>
+
+                  <div class="field">
+                    <label for="imageOpacity" class="block text-sm font-medium text-gray-700 mb-1">
+                      Opacity: {{ propertiesForm.get('imageOpacity')?.value || 100 }}%
+                    </label>
+                    <p-slider
+                      formControlName="imageOpacity"
+                      [min]="0"
+                      [max]="100"
+                      class="w-full"
+                    />
+                  </div>
+
+                  <div class="field">
+                    <label for="imageBlur" class="block text-sm font-medium text-gray-700 mb-1">
+                      Blur: {{ propertiesForm.get('imageBlur')?.value || 0 }}px
+                    </label>
+                    <p-slider
+                      formControlName="imageBlur"
+                      [min]="0"
+                      [max]="20"
+                      class="w-full"
+                    />
+                    <small class="text-gray-500 text-xs">
+                      Apply blur effect to background image (0-20 pixels)
+                    </small>
+                  </div>
+                </div>
+              </p-panel>
+            }
+
+            <!-- Custom Background Settings Section -->
+            @if (isCustomBackgroundField()) {
+              <p-panel header="Custom Background Settings" [toggleable]="true">
+                <div class="space-y-4">
+                  <!-- Security Warning -->
+                  <div class="bg-yellow-50 border border-yellow-200 rounded p-3 mb-4">
+                    <div class="flex items-start gap-2">
+                      <i class="pi pi-exclamation-triangle text-yellow-600 mt-1"></i>
+                      <div>
+                        <p class="text-sm font-medium text-yellow-800">Security Notice</p>
+                        <p class="text-xs text-yellow-700 mt-1">
+                          Only whitelisted HTML tags are allowed. All scripts and event handlers are removed automatically.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- HTML Editor -->
+                  <div class="field">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                      HTML Editor
+                    </label>
+                    <ngx-monaco-editor
+                      [options]="htmlEditorOptions"
+                      formControlName="customHtml"
+                      (ngModelChange)="onCustomHTMLChange($event)"
+                      style="height: 200px; border: 1px solid #d1d5db; border-radius: 6px;"
+                    ></ngx-monaco-editor>
+                    <small class="text-xs text-gray-600 mt-1 block">
+                      Allowed tags: div, span, p, h1-h3, style. Max 10000 characters.
+                    </small>
+                  </div>
+
+                  <!-- CSS Editor -->
+                  <div class="field">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                      CSS Editor
+                    </label>
+                    <ngx-monaco-editor
+                      [options]="cssEditorOptions"
+                      formControlName="customCss"
+                      (ngModelChange)="onCustomCSSChange($event)"
+                      style="height: 200px; border: 1px solid #d1d5db; border-radius: 6px;"
+                    ></ngx-monaco-editor>
+                    <small class="text-xs text-gray-600 mt-1 block">
+                      Max 5000 characters. JavaScript URLs are not allowed.
+                    </small>
+                  </div>
+
+                  <!-- Validation Errors -->
+                  @if (cssValidationErrors().length > 0) {
+                    <div class="bg-red-50 border border-red-200 rounded p-3">
+                      <p class="text-sm font-medium text-red-800 mb-2">
+                        <i class="pi pi-times-circle mr-1"></i>
+                        Validation Errors:
+                      </p>
+                      <ul class="text-sm text-red-700 list-disc list-inside space-y-1">
+                        @for (error of cssValidationErrors(); track error) {
+                          <li>{{ error }}</li>
+                        }
+                      </ul>
+                    </div>
+                  }
+
+                  <!-- Validation Warnings -->
+                  @if (cssValidationWarnings().length > 0) {
+                    <div class="bg-yellow-50 border border-yellow-200 rounded p-3">
+                      <p class="text-sm font-medium text-yellow-800 mb-2">
+                        <i class="pi pi-exclamation-triangle mr-1"></i>
+                        Warnings:
+                      </p>
+                      <ul class="text-sm text-yellow-700 list-disc list-inside space-y-1">
+                        @for (warning of cssValidationWarnings(); track warning) {
+                          <li>{{ warning }}</li>
+                        }
+                      </ul>
+                    </div>
+                  }
+
+                  <!-- Dangerous Patterns Warning -->
+                  @if (htmlContainsDangerousPatterns()) {
+                    <div class="bg-orange-50 border border-orange-200 rounded p-3">
+                      <p class="text-sm font-medium text-orange-800">
+                        <i class="pi pi-shield mr-1"></i>
+                        Dangerous content detected and will be removed
+                      </p>
+                      <p class="text-xs text-orange-700 mt-1">
+                        Your HTML contains scripts or event handlers that will be automatically sanitized.
+                      </p>
+                    </div>
+                  }
+                </div>
+              </p-panel>
+            }
+
             <!-- Action Buttons -->
             <div
               class="flex gap-2 pt-4 sticky bottom-0 bg-white border-t border-gray-200 p-4 -mx-4"
@@ -538,6 +753,49 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
     { label: 'Contains', value: 'contains' },
   ];
 
+  // Background image position options
+  readonly positionOptions = [
+    { label: 'Cover (fill container)', value: 'cover' },
+    { label: 'Contain (fit inside)', value: 'contain' },
+    { label: 'Repeat', value: 'repeat' },
+  ];
+
+  // Background image alignment options
+  readonly alignmentOptions = [
+    { label: 'Top', value: 'top' },
+    { label: 'Center', value: 'center' },
+    { label: 'Bottom', value: 'bottom' },
+  ];
+
+  // Image preview URL signal
+  readonly imagePreviewUrl = signal<string | null>(null);
+
+  // Custom background validation signals
+  readonly cssValidationErrors = signal<string[]>([]);
+  readonly cssValidationWarnings = signal<string[]>([]);
+  readonly htmlContainsDangerousPatterns = signal<boolean>(false);
+
+  // Monaco Editor options
+  readonly htmlEditorOptions = {
+    language: 'html',
+    minimap: { enabled: false },
+    lineNumbers: 'on',
+    scrollBeyondLastLine: false,
+    theme: 'vs-light',
+    automaticLayout: true,
+    wordWrap: 'on',
+  };
+
+  readonly cssEditorOptions = {
+    language: 'css',
+    minimap: { enabled: false },
+    lineNumbers: 'on',
+    scrollBeyondLastLine: false,
+    theme: 'vs-light',
+    automaticLayout: true,
+    wordWrap: 'on',
+  };
+
   constructor() {
     this.propertiesForm = this.fb.group({
       // Basic properties
@@ -580,6 +838,17 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
       acceptedTypes: [''],
       maxFileSize: [null],
       maxFiles: [1],
+
+      // Background image specific
+      imageUrl: [''],
+      imagePosition: ['cover'],
+      imageOpacity: [100],
+      imageAlignment: ['center'],
+      imageBlur: [0],
+
+      // Custom background specific
+      customHtml: ['', [Validators.maxLength(10000)]],
+      customCss: ['', [Validators.maxLength(5000)]],
     });
 
     // Watch for selected field changes using effect
@@ -669,6 +938,40 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
   isFileField(): boolean {
     const fieldType = this.formBuilderService.selectedField()?.type;
     return fieldType === FormFieldType.FILE;
+  }
+
+  /**
+   * Check if current field is background image
+   * NOTE: Background images are now form-level settings, not fields
+   */
+  isBackgroundImageField(): boolean {
+    return false;
+  }
+
+  /**
+   * Check if current field is custom background
+   * NOTE: Custom backgrounds are now form-level settings, not fields
+   */
+  isCustomBackgroundField(): boolean {
+    return false;
+  }
+
+  /**
+   * Handler for custom HTML changes
+   * NOTE: Custom backgrounds are now form-level settings, not fields
+   */
+  onCustomHTMLChange(html: string): void {
+    // Custom backgrounds are now managed in form-settings.component
+    // This method is kept for compatibility but does nothing
+  }
+
+  /**
+   * Handler for custom CSS changes
+   * NOTE: Custom backgrounds are now form-level settings, not fields
+   */
+  onCustomCSSChange(css: string): void {
+    // Custom backgrounds are now managed in form-settings.component
+    // This method is kept for compatibility but does nothing
   }
 
   /**
@@ -766,9 +1069,34 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
           ? field.validation.maxFileSize / (1024 * 1024)
           : null,
         maxFiles: 1,
+        // Background image metadata
+        imageUrl: (field.metadata as any)?.imageUrl || '',
+        imagePosition: (field.metadata as any)?.imagePosition || 'cover',
+        imageOpacity: (field.metadata as any)?.imageOpacity ?? 100,
+        imageAlignment: (field.metadata as any)?.imageAlignment || 'center',
+        imageBlur: (field.metadata as any)?.imageBlur ?? 0,
+        // Custom background metadata
+        customHtml: (field.metadata as any)?.html || '',
+        customCss: (field.metadata as any)?.css || '',
       },
       { emitEvent: false },
     );
+
+    // Set image preview if URL exists
+    const imageUrl = (field.metadata as any)?.imageUrl;
+    if (imageUrl) {
+      this.imagePreviewUrl.set(imageUrl);
+    } else {
+      this.imagePreviewUrl.set(null);
+    }
+
+    // Reset custom background validation signals
+    this.cssValidationErrors.set([]);
+    this.cssValidationWarnings.set([]);
+    this.htmlContainsDangerousPatterns.set(false);
+
+    // Background fields are no longer supported as field types
+    // They are now form-level settings managed in form-settings.component
 
     this.propertiesForm.markAsPristine();
     this.hasChanges.set(false);
@@ -842,6 +1170,9 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
     // Build options array
     const options = this.options.value.length > 0 ? this.options.value : undefined;
 
+    // Build metadata object (only for GROUP fields now)
+    let metadata = currentField.metadata;
+
     const updatedField: FormField = {
       ...currentField,
       label: formValues.label,
@@ -853,6 +1184,7 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
       defaultValue: formValues.defaultValue,
       options,
       conditional,
+      metadata,
     };
 
     this.formBuilderService.updateField(fieldIndex, updatedField);
@@ -901,6 +1233,43 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
     moveItemInArray(optionsArray, event.previousIndex, event.currentIndex);
     this.options.patchValue(optionsArray.map((c) => c.value));
     this.propertiesForm.markAsDirty();
+  }
+
+  /**
+   * Handle image file selection for background image
+   * Converts image to base64 data URL for storage
+   */
+  onImageFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    const file = input.files[0];
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file (JPG, PNG, GIF, WebP)');
+      return;
+    }
+
+    // Validate file size (5MB max)
+    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+    if (file.size > maxSize) {
+      alert('Image file size must be less than 5MB');
+      return;
+    }
+
+    // Read file and convert to base64
+    const reader = new FileReader();
+    reader.onload = (e: ProgressEvent<FileReader>) => {
+      const dataUrl = e.target?.result as string;
+      this.propertiesForm.patchValue({ imageUrl: dataUrl });
+      this.imagePreviewUrl.set(dataUrl);
+      this.propertiesForm.markAsDirty();
+    };
+    reader.onerror = () => {
+      alert('Error reading image file. Please try again.');
+    };
+    reader.readAsDataURL(file);
   }
 
   /**

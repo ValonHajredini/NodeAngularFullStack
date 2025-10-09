@@ -102,16 +102,61 @@ export const validateFormSchema = (
 
   const errors: string[] = [];
 
+  // Valid field types
+  const validFieldTypes = [
+    'text',
+    'email',
+    'number',
+    'select',
+    'textarea',
+    'file',
+    'checkbox',
+    'radio',
+    'date',
+    'datetime',
+    'toggle',
+    'divider',
+    'group',
+    'background-image',
+    'background-custom', // Custom HTML/CSS background with XSS protection
+  ];
+
   // Check for duplicate field names
   const fieldNames = new Set<string>();
   const duplicates = new Set<string>();
 
   schema.fields.forEach(
     (field: {
+      type?: string;
       fieldName?: string;
       label?: string;
+      parentGroupId?: string;
       validation?: { pattern?: string };
+      metadata?: {
+        groupTitle?: string;
+        groupBorderStyle?: string;
+        groupCollapsible?: boolean;
+        groupBackgroundColor?: string;
+        imageUrl?: string;
+        imagePosition?: string;
+        imageOpacity?: number;
+        imageAlignment?: string;
+        imageBlur?: number;
+        html?: string; // Custom background HTML (will be sanitized)
+        css?: string; // Custom background CSS (will be validated)
+      };
     }) => {
+      // Validate field type
+      if (!field.type) {
+        errors.push('All fields must have a type property');
+        return;
+      }
+
+      if (!validFieldTypes.includes(field.type)) {
+        errors.push(`Invalid field type: ${field.type}`);
+        return;
+      }
+
       if (!field.fieldName) {
         errors.push('All fields must have a fieldName property');
         return;
@@ -148,6 +193,154 @@ export const validateFormSchema = (
           errors.push(
             `Field label contains potentially malicious content: ${field.fieldName}`
           );
+        }
+      }
+
+      // Validate parentGroupId if present
+      if (field.parentGroupId) {
+        const uuidRegex =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(field.parentGroupId)) {
+          errors.push(
+            `Invalid parentGroupId for field ${field.fieldName}: must be a valid UUID`
+          );
+        }
+      }
+
+      // Validate group-specific metadata for GROUP field type
+      if (field.type === 'group' && field.metadata) {
+        // Validate groupTitle
+        if (
+          field.metadata.groupTitle &&
+          field.metadata.groupTitle.length > 100
+        ) {
+          errors.push(
+            `Group title for field ${field.fieldName} exceeds 100 characters`
+          );
+        }
+
+        // Validate groupBorderStyle
+        if (field.metadata.groupBorderStyle) {
+          const validBorderStyles = ['solid', 'dashed', 'none'];
+          if (!validBorderStyles.includes(field.metadata.groupBorderStyle)) {
+            errors.push(
+              `Invalid groupBorderStyle for field ${field.fieldName}: must be solid, dashed, or none`
+            );
+          }
+        }
+
+        // Validate groupCollapsible
+        if (
+          field.metadata.groupCollapsible !== undefined &&
+          typeof field.metadata.groupCollapsible !== 'boolean'
+        ) {
+          errors.push(
+            `Invalid groupCollapsible for field ${field.fieldName}: must be a boolean`
+          );
+        }
+
+        // Validate groupBackgroundColor (hex format)
+        if (field.metadata.groupBackgroundColor) {
+          const hexColorRegex = /^#([0-9A-F]{3}){1,2}$/i;
+          if (!hexColorRegex.test(field.metadata.groupBackgroundColor)) {
+            errors.push(
+              `Invalid groupBackgroundColor for field ${field.fieldName}: must be a valid hex color`
+            );
+          }
+        }
+      }
+
+      // Validate background-image specific metadata
+      if (field.type === 'background-image' && field.metadata) {
+        // Validate imageUrl (must be HTTP/HTTPS URL or data URL)
+        if (field.metadata.imageUrl) {
+          const urlRegex = /^(https?:\/\/|data:image\/)/;
+          if (!urlRegex.test(field.metadata.imageUrl)) {
+            errors.push(
+              `Invalid imageUrl for field ${field.fieldName}: must be a valid HTTP/HTTPS URL or data URL`
+            );
+          }
+        }
+
+        // Validate imagePosition
+        if (field.metadata.imagePosition) {
+          const validPositions = ['cover', 'contain', 'repeat'];
+          if (!validPositions.includes(field.metadata.imagePosition)) {
+            errors.push(
+              `Invalid imagePosition for field ${field.fieldName}: must be cover, contain, or repeat`
+            );
+          }
+        }
+
+        // Validate imageOpacity (0-100)
+        if (field.metadata.imageOpacity !== undefined) {
+          if (
+            typeof field.metadata.imageOpacity !== 'number' ||
+            field.metadata.imageOpacity < 0 ||
+            field.metadata.imageOpacity > 100
+          ) {
+            errors.push(
+              `Invalid imageOpacity for field ${field.fieldName}: must be a number between 0 and 100`
+            );
+          }
+        }
+
+        // Validate imageAlignment
+        if (field.metadata.imageAlignment) {
+          const validAlignments = ['top', 'center', 'bottom'];
+          if (!validAlignments.includes(field.metadata.imageAlignment)) {
+            errors.push(
+              `Invalid imageAlignment for field ${field.fieldName}: must be top, center, or bottom`
+            );
+          }
+        }
+      }
+
+      // Validate background-custom specific metadata (SECURITY CRITICAL)
+      if (field.type === 'background-custom' && field.metadata) {
+        // Validate HTML length (max 10000 characters)
+        if (field.metadata.html) {
+          if (typeof field.metadata.html !== 'string') {
+            errors.push(
+              `Invalid html for field ${field.fieldName}: must be a string`
+            );
+          } else if (field.metadata.html.length > 10000) {
+            errors.push(
+              `Invalid html for field ${field.fieldName}: must not exceed 10000 characters`
+            );
+          }
+          // Note: HTML sanitization is handled by sanitizeFormHTML middleware
+          // Validation here is just for length and type
+        }
+
+        // Validate CSS (max 5000 characters, check for dangerous patterns)
+        if (field.metadata.css) {
+          if (typeof field.metadata.css !== 'string') {
+            errors.push(
+              `Invalid css for field ${field.fieldName}: must be a string`
+            );
+          } else if (field.metadata.css.length > 5000) {
+            errors.push(
+              `Invalid css for field ${field.fieldName}: must not exceed 5000 characters`
+            );
+          } else {
+            // Check for dangerous patterns in CSS
+            const dangerousPatterns = [
+              /javascript\s*:/i,
+              /expression\s*\(/i,
+              /vbscript\s*:/i,
+              /-moz-binding/i,
+              /behavior\s*:/i,
+            ];
+
+            dangerousPatterns.forEach((pattern) => {
+              if (field.metadata?.css && pattern.test(field.metadata.css)) {
+                errors.push(
+                  `Invalid css for field ${field.fieldName}: contains dangerous patterns (${pattern.source})`
+                );
+              }
+            });
+          }
         }
       }
     }

@@ -4,6 +4,7 @@ import {
   FormSchema,
   FormField,
   FormStatus,
+  FormBackgroundSettings,
 } from '@nodeangularfullstack/shared';
 import { formsRepository } from '../repositories/forms.repository';
 import { formSchemasRepository } from '../repositories/form-schemas.repository';
@@ -503,7 +504,7 @@ export class FormsService {
       spacing: 'medium',
     } as FormSchema['settings']['layout'];
 
-    return {
+    const result: FormSchema['settings'] = {
       layout: {
         ...defaultLayout,
         ...(settings?.layout ?? {}),
@@ -513,6 +514,74 @@ export class FormsService {
         ...(settings?.submission ?? {}),
       },
     };
+
+    const normalizedBackground = this.normalizeBackgroundSettings(
+      settings?.background
+    );
+    if (normalizedBackground) {
+      result.background = normalizedBackground;
+    }
+
+    return result;
+  }
+
+  private normalizeBackgroundSettings(
+    background?: FormBackgroundSettings
+  ): FormBackgroundSettings | undefined {
+    if (!background) {
+      return undefined;
+    }
+
+    const type: FormBackgroundSettings['type'] =
+      background.type ?? 'none';
+
+    if (type === 'none') {
+      return {
+        type: 'none',
+        imageUrl: '',
+        imagePosition: 'cover',
+        imageOpacity: 100,
+        imageAlignment: 'center',
+        imageBlur: 0,
+        customHtml: '',
+        customCss: '',
+      };
+    }
+
+    const clamp = (value: number, min: number, max: number) =>
+      Math.min(max, Math.max(min, value));
+
+    const normalized: FormBackgroundSettings = {
+      type,
+      imageUrl: background.imageUrl?.trim() ?? '',
+      imagePosition: background.imagePosition ?? 'cover',
+      imageOpacity:
+        background.imageOpacity !== undefined
+          ? clamp(background.imageOpacity, 0, 100)
+          : 100,
+      imageAlignment: background.imageAlignment ?? 'center',
+      imageBlur:
+        background.imageBlur !== undefined
+          ? clamp(background.imageBlur, 0, 100)
+          : 0,
+      customHtml: background.customHtml ?? '',
+      customCss: background.customCss ?? '',
+    };
+
+    if (normalized.type !== 'image') {
+      normalized.imageUrl = '';
+      normalized.imageBlur = 0;
+      normalized.imageOpacity = 100;
+      normalized.imagePosition = 'cover';
+      normalized.imageAlignment = 'center';
+    }
+
+    if (normalized.type !== 'custom') {
+      normalized.customHtml = '';
+      normalized.customCss = '';
+    }
+
+    return normalized;
   }
 }
 

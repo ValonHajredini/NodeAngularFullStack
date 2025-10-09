@@ -9,6 +9,8 @@ This is a modern full-stack TypeScript monorepo with Angular 20+ frontend and Ex
 The project uses npm workspaces for monorepo management and includes shared types, local PostgreSQL
 setup, and comprehensive testing.
 
+**Key Feature**: Visual form builder with drag-and-drop interface, real-time analytics, data visualization (bar/line/pie charts), and WCAG AA accessibility. Forms are shareable via short links with QR codes.
+
 ## Development Commands
 
 ### Essential Development Commands
@@ -39,6 +41,7 @@ setup, and comprehensive testing.
 - Backend: `npm --workspace=apps/api run test -- --testPathPattern="filename.test.ts"`
 - Frontend: `npm --workspace=apps/web run test -- --include="**/component-name.spec.ts"`
 - Add `--watch=false`, `--passWithNoTests`, or `--silent` flags as needed
+- Use `--maxWorkers=1` flag for tests that require sequential execution or have resource constraints
 
 ### Build and Quality Commands
 
@@ -227,9 +230,19 @@ packages/
 - State management with NgRx Signals
 - Proxy configuration automatically routes API calls to backend
 
+### Form Builder Development
+
+- Form schemas stored in `forms`, `form_schemas`, `form_submissions` tables
+- Short links with QR codes stored in `short_links` table
+- Frontend form builder components in `apps/web/src/app/features/tools/components/form-builder/`
+- Backend form APIs in `apps/api/src/controllers/forms.controller.ts` and `apps/api/src/services/forms.service.ts`
+- Public form rendering at `/public/form/:shortCode` route
+- HTML sanitization middleware applied to all form submissions (uses DOMPurify)
+- Custom CSS validation for background styles
+
 ### Prerequisites
 
-- Node.js 20+ with npm
+- Node.js 18+ with npm (engines specified in package.json)
 - PostgreSQL 14+ (recommended: `brew install postgresql@14`)
 - pgWeb CLI (optional: `brew install pgweb`)
 - Angular CLI (installed automatically if missing)

@@ -7,6 +7,7 @@ import {
   OnChanges,
   SimpleChanges,
   ChangeDetectionStrategy,
+  signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -17,6 +18,7 @@ import { FormField, FormFieldOption } from '@nodeangularfullstack/shared';
 /**
  * Inline option manager for select, radio, and checkbox fields
  * Allows adding, removing, and reordering field options with validation
+ * Collapsible by default to save space
  */
 @Component({
   selector: 'app-inline-option-manager',
@@ -25,84 +27,106 @@ import { FormField, FormFieldOption } from '@nodeangularfullstack/shared';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="inline-option-manager mt-3 p-3 bg-gray-50 rounded border border-gray-200">
-      <div class="flex items-center justify-between mb-3">
-        <label class="text-sm font-medium text-gray-700">Field Options</label>
+      <div
+        class="flex items-center justify-between cursor-pointer"
+        (click)="toggleExpanded()"
+        role="button"
+        [attr.aria-expanded]="isExpanded()"
+        [attr.aria-label]="'Toggle field options. Currently ' + (isExpanded() ? 'expanded' : 'collapsed')"
+      >
+        <div class="flex items-center gap-2">
+          <i
+            class="pi text-gray-500 transition-transform"
+            [class.pi-chevron-down]="!isExpanded()"
+            [class.pi-chevron-up]="isExpanded()"
+          ></i>
+          <label class="text-sm font-medium text-gray-700 cursor-pointer">
+            Field Options
+            <span class="text-gray-500 font-normal ml-1">({{ options.length }})</span>
+          </label>
+        </div>
         <p-button
           label="Add Option"
           icon="pi pi-plus"
           size="small"
-          (onClick)="addOption()"
+          (onClick)="addOption(); $event.stopPropagation()"
           [text]="true"
         />
       </div>
 
-      @if (options.length === 0) {
-        <p class="text-sm text-gray-500 text-center py-4">
-          No options yet. Click "Add Option" to create your first option.
-        </p>
-      } @else {
-        <div cdkDropList (cdkDropListDropped)="onOptionReordered($event)" class="space-y-2">
-          @for (option of options; track $index; let i = $index) {
-            <div
-              cdkDrag
-              class="option-row flex items-center gap-2 p-2 bg-white border rounded"
-              [class.border-red-500]="isDuplicateValue(option.value, i)"
-            >
-              <i
-                class="pi pi-bars text-gray-400 cursor-move"
-                cdkDragHandle
-                aria-label="Reorder option"
-              ></i>
+      @if (isExpanded()) {
+        <div class="mt-3">
+          @if (options.length === 0) {
+            <p class="text-sm text-gray-500 text-center py-4">
+              No options yet. Click "Add Option" to create your first option.
+            </p>
+          } @else {
+            <div cdkDropList (cdkDropListDropped)="onOptionReordered($event)" class="space-y-2">
+              @for (option of options; track $index; let i = $index) {
+                <div
+                  cdkDrag
+                  class="option-row flex items-center gap-2 p-2 bg-white border rounded"
+                  [class.border-red-500]="isDuplicateValue(option.value, i)"
+                >
+                  <i
+                    class="pi pi-bars text-gray-400 cursor-move"
+                    cdkDragHandle
+                    aria-label="Reorder option"
+                  ></i>
 
-              <div class="flex-1 grid grid-cols-2 gap-2">
-                <div>
-                  <input
-                    type="text"
-                    [(ngModel)]="option.label"
-                    (ngModelChange)="onOptionChanged()"
-                    placeholder="Option label"
-                    class="w-full px-2 py-1 border rounded text-sm"
-                    [class.border-red-500]="!option.label"
-                    [attr.aria-label]="'Option ' + (i + 1) + ' label'"
+                  <div class="flex-1 grid grid-cols-2 gap-2">
+                    <div>
+                      <input
+                        type="text"
+                        [(ngModel)]="option.label"
+                        (ngModelChange)="onOptionChanged()"
+                        (keydown.enter)="onEnterPressed($event, i)"
+                        placeholder="Option label"
+                        class="w-full px-2 py-1 border rounded text-sm"
+                        [class.border-red-500]="!option.label"
+                        [attr.aria-label]="'Option ' + (i + 1) + ' label'"
+                      />
+                      @if (!option.label) {
+                        <small class="text-red-600 text-xs" role="alert">Label required</small>
+                      }
+                    </div>
+
+                    <div>
+                      <input
+                        type="text"
+                        [(ngModel)]="option.value"
+                        (ngModelChange)="onOptionChanged()"
+                        (keydown.enter)="onEnterPressed($event, i)"
+                        placeholder="Option value"
+                        class="w-full px-2 py-1 border rounded text-sm"
+                        [class.border-red-500]="isDuplicateValue(option.value, i)"
+                        [attr.aria-label]="'Option ' + (i + 1) + ' value'"
+                      />
+                      @if (isDuplicateValue(option.value, i)) {
+                        <small class="text-red-600 text-xs" role="alert">Duplicate value</small>
+                      }
+                    </div>
+                  </div>
+
+                  <p-button
+                    icon="pi pi-times"
+                    severity="danger"
+                    size="small"
+                    [text]="true"
+                    (onClick)="removeOption(i)"
+                    [ariaLabel]="'Remove option ' + (i + 1)"
                   />
-                  @if (!option.label) {
-                    <small class="text-red-600 text-xs" role="alert">Label required</small>
-                  }
                 </div>
-
-                <div>
-                  <input
-                    type="text"
-                    [(ngModel)]="option.value"
-                    (ngModelChange)="onOptionChanged()"
-                    placeholder="Option value"
-                    class="w-full px-2 py-1 border rounded text-sm"
-                    [class.border-red-500]="isDuplicateValue(option.value, i)"
-                    [attr.aria-label]="'Option ' + (i + 1) + ' value'"
-                  />
-                  @if (isDuplicateValue(option.value, i)) {
-                    <small class="text-red-600 text-xs" role="alert">Duplicate value</small>
-                  }
-                </div>
-              </div>
-
-              <p-button
-                icon="pi pi-times"
-                severity="danger"
-                size="small"
-                [text]="true"
-                (onClick)="removeOption(i)"
-                [ariaLabel]="'Remove option ' + (i + 1)"
-              />
+              }
             </div>
           }
+
+          <small class="block text-gray-500 mt-2 text-xs">
+            <i class="pi pi-info-circle mr-1"></i>
+            Label is displayed to users, value is stored in form submission
+          </small>
         </div>
       }
-
-      <small class="block text-gray-500 mt-2 text-xs">
-        <i class="pi pi-info-circle mr-1"></i>
-        Label is displayed to users, value is stored in form submission
-      </small>
     </div>
   `,
   styles: [
@@ -129,6 +153,12 @@ export class InlineOptionManagerComponent implements OnInit, OnChanges {
 
   options: FormFieldOption[] = [];
 
+  /**
+   * Signal to track whether the options list is expanded.
+   * Defaults to false (collapsed) to save space.
+   */
+  isExpanded = signal(false);
+
   ngOnInit(): void {
     this.options = [...(this.field.options || [])];
   }
@@ -140,7 +170,15 @@ export class InlineOptionManagerComponent implements OnInit, OnChanges {
   }
 
   /**
+   * Toggle the expanded/collapsed state of the options list
+   */
+  toggleExpanded(): void {
+    this.isExpanded.set(!this.isExpanded());
+  }
+
+  /**
    * Add a new blank option to the list
+   * Automatically expands the options list when adding a new option
    */
   addOption(): void {
     const newOption: FormFieldOption = {
@@ -148,6 +186,7 @@ export class InlineOptionManagerComponent implements OnInit, OnChanges {
       value: '',
     };
     this.options.push(newOption);
+    this.isExpanded.set(true); // Auto-expand when adding new option
     this.onOptionChanged();
   }
 
@@ -157,6 +196,29 @@ export class InlineOptionManagerComponent implements OnInit, OnChanges {
   removeOption(index: number): void {
     this.options.splice(index, 1);
     this.onOptionChanged();
+  }
+
+  /**
+   * Handle Enter key press in option inputs
+   * Creates a new option when Enter is pressed
+   */
+  onEnterPressed(event: Event, currentIndex: number): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    // Only add new option if we're on the last option
+    if (currentIndex === this.options.length - 1) {
+      this.addOption();
+
+      // Focus the new input after a short delay to allow it to render
+      setTimeout(() => {
+        const inputs = document.querySelectorAll('.inline-option-manager input');
+        const nextInput = inputs[inputs.length - 2] as HTMLInputElement;
+        if (nextInput) {
+          nextInput.focus();
+        }
+      }, 50);
+    }
   }
 
   /**

@@ -309,11 +309,42 @@ export class FormsListComponent implements OnInit {
    * Creates a new form and navigates to the builder.
    */
   onFormSettingsSaved(settings: FormSettings): void {
+    // Create initial schema with background settings
+    const initialSchema: any = {
+      version: 1,
+      fields: [],
+      settings: {
+        layout: {
+          columns: settings.columnLayout,
+          spacing: settings.fieldSpacing,
+        },
+        submission: {
+          showSuccessMessage: true,
+          successMessage: settings.successMessage || 'Thank you for your submission!',
+          redirectUrl: settings.redirectUrl || '',
+          allowMultipleSubmissions: settings.allowMultipleSubmissions,
+        },
+        // Include background settings
+        background: {
+          type: settings.backgroundType || 'none',
+          imageUrl: settings.backgroundImageUrl || '',
+          imagePosition: settings.backgroundImagePosition || 'cover',
+          imageOpacity: settings.backgroundImageOpacity ?? 100,
+          imageAlignment: settings.backgroundImageAlignment || 'center',
+          imageBlur: settings.backgroundImageBlur ?? 0,
+          customHtml: settings.backgroundCustomHtml || '',
+          customCss: settings.backgroundCustomCss || '',
+        },
+      },
+      isPublished: false,
+    };
+
     this.formsApiService
       .createForm({
         title: settings.title,
         description: settings.description,
         status: FormStatus.DRAFT,
+        schema: initialSchema as any,
       })
       .subscribe({
         next: (form) => {

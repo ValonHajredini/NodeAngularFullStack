@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, adminGuard, userGuard, roleGuard } from './core/guards/auth.guard';
+import { authGuard, userGuard, roleGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   // Debug route for testing

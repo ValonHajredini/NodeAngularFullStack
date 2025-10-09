@@ -23,7 +23,9 @@ export class FormBuilderService {
 
   // Public readonly signals
   readonly currentForm = this._currentForm.asReadonly();
-  readonly formFields = this._formFields.asReadonly();
+  readonly formFields = computed(() =>
+    this._formFields().filter((field) => !field.parentGroupId)
+  );
   readonly selectedField = this._selectedField.asReadonly();
   readonly isDirty = this._isDirty.asReadonly();
 
@@ -149,36 +151,23 @@ export class FormBuilderService {
    * @param type - The field type to add
    * @param atIndex - Optional index to insert the field at (defaults to end)
    */
-  addFieldFromType(type: FormFieldType, atIndex?: number): void {
-    const fields = this._formFields();
-    const newField: FormField = {
-      id: crypto.randomUUID(),
-      type,
-      label: 'Untitled Field',
-      fieldName: this.generateUniqueFieldName(type),
-      placeholder: '',
-      helpText: '',
-      required: false,
-      order: atIndex ?? fields.length,
-      validation: {},
-    };
+  addFieldFromType(type: FormFieldType, atIndex?: number): FormField {
+    const newField = this.createField(type);
 
-    if (atIndex !== undefined && atIndex >= 0 && atIndex < fields.length) {
-      // Insert at specific position
-      this._formFields.update((currentFields) => {
-        const updated = [...currentFields];
+    this._formFields.update((currentFields) => {
+      const updated = [...currentFields];
+      if (atIndex !== undefined && atIndex >= 0 && atIndex <= updated.length) {
         updated.splice(atIndex, 0, newField);
-        // Update order property for all fields to match array index
-        return updated.map((field, index) => ({
-          ...field,
-          order: index,
-        }));
-      });
-    } else {
-      // Add to end
-      this.addField(newField);
-    }
+      } else {
+        updated.push(newField);
+      }
+      return this.recalculateOrder(updated);
+    });
+
     this.markDirty();
+
+    const createdField = this._formFields().find((field) => field.id === newField.id);
+    return createdField ?? newField;
   }
 
   /**
@@ -230,6 +219,72 @@ export class FormBuilderService {
       .replace(/([a-z])([A-Z])/g, '$1-$2')
       .replace(/[\s_]+/g, '-')
       .toLowerCase();
+  }
+
+  private createField(type: FormFieldType): FormField {
+    const fields = this._formFields();
+    return {
+      id: crypto.randomUUID(),
+      type,
+      label: 'Untitled Field',
+      fieldName: this.generateUniqueFieldName(type),
+      placeholder: '',
+      helpText: '',
+      required: false,
+      order: fields.length,
+      validation: {},
+    };
+  }
+
+  private recalculateOrder(fields: FormField[]): FormField[] {
+    return fields.map((field, index) => ({
+      ...field,
+      order: index,
+    }));
+  }
+
+  private calculateInsertIndex(
+    fields: FormField[],
+    parentGroupId: string | undefined,
+    targetIndex?: number
+  ): number {
+    if (!parentGroupId) {
+      const topLevelFields = fields.filter((field) => !field.parentGroupId);
+      if (targetIndex === undefined || targetIndex >= topLevelFields.length) {
+        return fields.length;
+      }
+      const targetField = topLevelFields[targetIndex];
+      if (!targetField) {
+        return fields.length;
+      }
+      return fields.findIndex((field) => field.id === targetField.id);
+    }
+
+    const parentIndex = fields.findIndex((field) => field.id === parentGroupId);
+    if (parentIndex === -1) {
+      return fields.length;
+    }
+
+    const childFields = fields.filter((field) => field.parentGroupId === parentGroupId);
+
+    if (childFields.length === 0) {
+      return parentIndex + 1;
+    }
+
+    if (targetIndex === undefined || targetIndex >= childFields.length) {
+      const lastChild = childFields[childFields.length - 1];
+      const lastChildIndex = fields.findIndex((field) => field.id === lastChild.id);
+      return lastChildIndex + 1;
+    }
+
+    const targetChild = childFields[targetIndex];
+    if (!targetChild) {
+      const lastChild = childFields[childFields.length - 1];
+      const lastChildIndex = fields.findIndex((field) => field.id === lastChild.id);
+      return lastChildIndex + 1;
+    }
+
+    return fields.findIndex((field) => field.id === targetChild.id);
   }
 
   /**
@@ -285,6 +340,69 @@ export class FormBuilderService {
 
     // Mark as clean since we just loaded
     this._isDirty.set(false);
+  }
+
+  /**
+   * Assigns a field to a parent group container.
+   * Sets the parentGroupId on the field to enable group nesting.
+   * @param fieldId - The ID of the field to assign
+   * @param parentGroupId - The ID of the parent group (null to remove from group)
+   */
+  assignFieldToGroup(fieldId: string, parentGroupId: string | null, targetIndex?: number): void {
+    this._formFields.update((fields) => {
+      const index = fields.findIndex((f) => f.id === fieldId);
+      if (index === -1) {
+        return fields;
+      }
+
+      const updated = [...fields];
+      const [removedField] = updated.splice(index, 1);
+      const reassigned: FormField = {
+        ...removedField,
+        parentGroupId: parentGroupId ?? undefined,
+      };
+
+      const insertIndex = this.calculateInsertIndex(
+        updated,
+        reassigned.parentGroupId,
+        targetIndex
+      );
+
+      updated.splice(insertIndex, 0, reassigned);
+      return this.recalculateOrder(updated);
+    });
+    this.markDirty();
+  }
+
+  /**
+   * Gets all child fields that belong to a specific group.
+   * Returns only direct children (not nested grandchildren).
+   * @param groupId - The ID of the group
+   * @returns Array of fields that have this group as their parent
+   */
+  getChildFields(groupId: string): FormField[] {
+    return this._formFields()
+      .filter((field) => field.parentGroupId === groupId)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  }
+
+  /**
+   * Moves a field between groups or to/from top-level.
+   * Updates the field's parentGroupId to the new parent.
+   * @param fieldId - The ID of the field to move
+   * @param newParentId - The ID of the new parent group (null for top-level)
+   */
+  moveFieldBetweenGroups(fieldId: string, newParentId: string | null): void {
+    this.assignFieldToGroup(fieldId, newParentId);
+  }
+
+  /**
+   * Gets all fields including nested children (for saving to database).
+   * Returns the complete flattened array of all fields.
+   * @returns Array of all fields regardless of parent relationships
+   */
+  getAllFields(): FormField[] {
+    return this._formFields();
   }
 
   /**

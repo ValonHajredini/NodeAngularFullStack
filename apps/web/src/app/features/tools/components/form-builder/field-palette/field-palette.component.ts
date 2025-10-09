@@ -30,6 +30,7 @@ interface FieldTypeDefinition {
         <div
           cdkDropList
           #paletteDropList="cdkDropList"
+          id="palette-drop-list"
           [cdkDropListData]="fieldTypes"
           [cdkDropListSortingDisabled]="true"
           class="p-3 space-y-2"
@@ -106,6 +107,7 @@ export class FieldPaletteComponent {
     { type: FormFieldType.DATETIME, icon: 'pi-clock', label: 'DateTime' },
     { type: FormFieldType.TOGGLE, icon: 'pi-toggle-on', label: 'Toggle' },
     { type: FormFieldType.DIVIDER, icon: 'pi-minus', label: 'Section Divider' },
+    // Note: Background Image and Custom Background moved to Form Settings
   ];
 
   /**

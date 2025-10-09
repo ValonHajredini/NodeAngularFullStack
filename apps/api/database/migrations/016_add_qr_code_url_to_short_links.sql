@@ -4,10 +4,10 @@
 
 -- Add qr_code_url column to short_links table
 ALTER TABLE short_links
-ADD COLUMN qr_code_url VARCHAR(512);
+ADD COLUMN IF NOT EXISTS qr_code_url VARCHAR(512);
 
 -- Add index for potential future queries
-CREATE INDEX idx_short_links_qr_code_url ON short_links(qr_code_url);
+CREATE INDEX IF NOT EXISTS idx_short_links_qr_code_url ON short_links(qr_code_url);
 
 -- Add comment for documentation
 COMMENT ON COLUMN short_links.qr_code_url IS 'DigitalOcean Spaces public URL for the QR code PNG image';

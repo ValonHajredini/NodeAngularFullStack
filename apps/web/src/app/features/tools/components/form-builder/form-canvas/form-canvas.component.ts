@@ -6,14 +6,19 @@ import {
   Input,
   inject,
   signal,
+  computed,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
+import { DragDropModule, CdkDragDrop } from '@angular/cdk/drag-drop';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { FormField, FormFieldType } from '@nodeangularfullstack/shared';
 import { FormBuilderService } from '../form-builder.service';
 import { FormSettings } from '../form-settings/form-settings.component';
 import { FieldPreviewRendererComponent } from './field-preview-renderer/field-preview-renderer.component';
 import { FieldSettingsModalComponent } from './field-settings-modal.component';
+import { GroupPreviewComponent } from './field-preview-renderer/group-preview.component';
+import { sanitizeCustomBackground } from '../../../../../shared/utils/sanitizer';
+import { validateCSS, stripDangerousCSS } from '../../../../../shared/utils/css-validator';
 
 interface FieldTypeDefinition {
   type: FormFieldType;
@@ -34,6 +39,7 @@ interface FieldTypeDefinition {
     DragDropModule,
     FieldPreviewRendererComponent,
     FieldSettingsModalComponent,
+    GroupPreviewComponent,
   ],
   template: `
     <div class="form-canvas h-full bg-gray-50 p-6">
@@ -53,8 +59,39 @@ interface FieldTypeDefinition {
           </p>
         </div>
       } @else {
-        <div class="form-fields-wrapper">
-          <div class="mb-4">
+        <div
+          class="form-fields-wrapper"
+          [style.position]="hasBackgroundImage() || hasCustomBackground() ? 'relative' : ''"
+        >
+          <!-- Background layer with blur -->
+          @if (hasBackgroundImage()) {
+            <div
+              class="background-layer"
+              [ngStyle]="getBackgroundStyles()"
+              style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 0;"
+            ></div>
+          }
+
+          <!-- Custom Background (Sandboxed) -->
+          @if (hasCustomBackground()) {
+            <iframe
+              [srcdoc]="getSandboxedPreviewHTML()"
+              sandbox="allow-same-origin"
+              class="custom-background-preview"
+              style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; border: none; background: transparent;"
+            ></iframe>
+          }
+
+          <!-- Background overlay for opacity control -->
+          @if (shouldShowBackgroundOverlay()) {
+            <div
+              class="background-overlay"
+              [style.opacity]="1 - getBackgroundOpacity()"
+              style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: white; pointer-events: none; z-index: 1;"
+            ></div>
+          }
+
+          <div class="mb-4" style="position: relative; z-index: 2;">
             <h3 class="text-lg font-semibold text-gray-900">
               {{ settings.title || 'Untitled Form' }}
             </h3>
@@ -70,29 +107,42 @@ interface FieldTypeDefinition {
           </div>
 
           <div
-            cdkDropList
-            #canvasDropList="cdkDropList"
-            id="canvas-drop-list"
-            [cdkDropListData]="formBuilderService.formFields()"
+          cdkDropList
+          #canvasDropList="cdkDropList"
+          id="canvas-drop-list"
+          [cdkDropListData]="formBuilderService.formFields()"
             (cdkDropListDropped)="onFieldDropped($event)"
             class="form-fields-grid"
             [ngClass]="[getGridClass(), getSpacingClass()]"
+            style="position: relative; z-index: 2;"
           >
             @for (field of formBuilderService.formFields(); track field.id; let i = $index) {
               <div
                 cdkDrag
                 [cdkDragData]="field"
-                class="field-preview-container p-4 bg-white border rounded-lg transition-all relative group"
+                [cdkDragDisabled]="field.type === FormFieldType.GROUP"
+                class="field-preview-container p-4 bg-white border-2 border-dashed rounded-lg transition-all relative group"
                 [class.border-blue-500]="isFieldSelected(field)"
                 [class.border-gray-300]="!isFieldSelected(field)"
                 [class.shadow-md]="isFieldSelected(field)"
-                [class.hover:border-blue-300]="!isFieldSelected(field)"
+                [class.hover:border-blue-400]="!isFieldSelected(field)"
                 (click)="onFieldClicked(field)"
                 tabindex="0"
                 role="listitem"
                 [attr.aria-label]="field.label + ' field'"
                 (keydown)="handleKeyboard($event, field, i)"
               >
+                <!-- Drag Handle (Top Left) -->
+                @if (field.type !== FormFieldType.GROUP) {
+                  <div class="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    <i
+                      class="pi pi-bars text-gray-400 cursor-move hover:text-gray-600 text-lg"
+                      cdkDragHandle
+                      aria-label="Reorder field"
+                    ></i>
+                  </div>
+                }
+
                 <!-- Delete Button (Top Right) -->
                 <button
                   type="button"
@@ -103,32 +153,80 @@ interface FieldTypeDefinition {
                 >
                   <i class="pi pi-times text-red-500 hover:text-red-700"></i>
                 </button>
+                @if (field.type === FormFieldType.GROUP) {
+                  <!-- Group fields - no click handler to allow drop zone interaction -->
+                  <div class="field-preview-content">
+                    @let childFields = getChildFields(field.id);
+                    <app-group-preview
+                      [field]="field"
+                      [childFields]="childFields"
+                      [dropListId]="getGroupDropListId(field.id)"
+                      (drop)="onGroupDrop($event, field)"
+                    >
+                      @for (child of childFields; track child.id; let childIndex = $index) {
+                        <div
+                          cdkDrag
+                          [cdkDragData]="child"
+                          class="field-preview-container p-4 bg-white border-2 border-dashed rounded-lg transition-all relative group mb-3"
+                          [class.border-blue-500]="isFieldSelected(child)"
+                          [class.border-gray-300]="!isFieldSelected(child)"
+                          [class.shadow-md]="isFieldSelected(child)"
+                          [class.hover:border-blue-400]="!isFieldSelected(child)"
+                          (click)="onFieldClicked(child)"
+                          tabindex="0"
+                          role="listitem"
+                          [attr.aria-label]="child.label + ' field'"
+                          (keydown)="handleGroupKeyboard($event, child, field.id, childIndex)"
+                        >
+                          <!-- Drag Handle (Top Left) -->
+                          <div class="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                            <i
+                              class="pi pi-bars text-gray-400 cursor-move hover:text-gray-600 text-lg"
+                              cdkDragHandle
+                              aria-label="Reorder field"
+                            ></i>
+                          </div>
 
-                <div class="field-preview-header flex items-center gap-2 mb-3 pb-2 border-gray-200">
-                  <i
-                    class="pi pi-bars text-gray-400 cursor-move hover:text-gray-600"
-                    cdkDragHandle
-                    aria-label="Reorder field"
-                  ></i>
-                  <i [class]="'pi ' + getFieldIcon(field.type) + ' text-blue-600'"></i>
-                  <span class="text-xs font-medium text-gray-600">{{ field.type }}</span>
-                  @if (field.required) {
-                    <span class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded ml-auto">
-                      Required
-                    </span>
-                  }
-                </div>
-                <div
-                  class="field-preview-content group cursor-pointer"
-                  (click)="onFieldPreviewClicked($event, field)"
-                >
-                  <app-field-preview-renderer
-                    [field]="field"
-                    (labelChanged)="onLabelChanged(field, $event)"
-                    (settingsClick)="openSettingsModal(field)"
-                    (fieldUpdated)="onFieldUpdated(field.id, $event)"
-                  />
-                </div>
+                          <!-- Delete Button (Top Right) -->
+                          <button
+                            type="button"
+                            class="delete-button-card absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                            (click)="onDeleteFieldFromCard($event, child)"
+                            [attr.aria-label]="'Delete ' + child.label"
+                            title="Delete field"
+                          >
+                            <i class="pi pi-times text-red-500 hover:text-red-700"></i>
+                          </button>
+                          <div
+                            class="field-preview-content group cursor-pointer"
+                            (click)="onFieldPreviewClicked($event, child)"
+                          >
+                            <app-field-preview-renderer
+                              [field]="child"
+                              (labelChanged)="onLabelChanged(child, $event)"
+                              (settingsClick)="openSettingsModal(child)"
+                              (fieldUpdated)="onFieldUpdated(child.id, $event)"
+                            />
+                          </div>
+
+                          <div *cdkDragPlaceholder class="field-placeholder"></div>
+                        </div>
+                      }
+                    </app-group-preview>
+                  </div>
+                } @else {
+                  <div
+                    class="field-preview-content group cursor-pointer"
+                    (click)="onFieldPreviewClicked($event, field)"
+                  >
+                    <app-field-preview-renderer
+                      [field]="field"
+                      (labelChanged)="onLabelChanged(field, $event)"
+                      (settingsClick)="openSettingsModal(field)"
+                      (fieldUpdated)="onFieldUpdated(field.id, $event)"
+                    />
+                  </div>
+                }
               </div>
             }
 
@@ -234,15 +332,6 @@ interface FieldTypeDefinition {
         position: relative;
       }
 
-      .field-preview-content:hover::after {
-        content: '';
-        position: absolute;
-        inset: -4px;
-        border: 2px dashed #60a5fa;
-        border-radius: 4px;
-        pointer-events: none;
-      }
-
       .field-placeholder {
         background: #dbeafe;
         border: 2px dashed #3b82f6;
@@ -274,8 +363,10 @@ interface FieldTypeDefinition {
 })
 export class FormCanvasComponent {
   readonly formBuilderService = inject(FormBuilderService);
+  private readonly sanitizer = inject(DomSanitizer);
+  protected readonly FormFieldType = FormFieldType;
 
-  @Input() settings: FormSettings = {
+  private _settings = signal<FormSettings>({
     title: 'Untitled Form',
     description: '',
     columnLayout: 1,
@@ -283,11 +374,44 @@ export class FormCanvasComponent {
     successMessage: 'Thank you for your submission!',
     redirectUrl: '',
     allowMultipleSubmissions: true,
-  };
+  });
+
+  @Input()
+  set settings(value: FormSettings) {
+    this._settings.set(value);
+  }
+  get settings(): FormSettings {
+    return this._settings();
+  }
+
   @Output() fieldClicked = new EventEmitter<FormField>();
 
   displaySettingsModal = false;
   selectedFieldForSettings = signal<FormField | null>(null);
+
+  /**
+   * Check if background image exists with URL (from settings)
+   */
+  protected readonly hasBackgroundImage = computed(() => {
+    const s = this._settings();
+    return (
+      s.backgroundType === 'image' &&
+      s.backgroundImageUrl !== undefined &&
+      s.backgroundImageUrl !== ''
+    );
+  });
+
+  /**
+   * Check if custom background exists with HTML/CSS (from settings)
+   */
+  protected readonly hasCustomBackground = computed(() => {
+    const s = this._settings();
+    return (
+      s.backgroundType === 'custom' &&
+      (s.backgroundCustomHtml !== undefined ||
+        s.backgroundCustomCss !== undefined)
+    );
+  });
 
   /**
    * Handles drop events on the canvas.
@@ -295,14 +419,127 @@ export class FormCanvasComponent {
    * @param event - The CdkDragDrop event containing drag-drop metadata
    */
   onFieldDropped(event: CdkDragDrop<FormField[]>): void {
-    if (event.previousContainer !== event.container) {
-      // Dropped from palette - add new field at the drop position
-      const fieldTypeDef = event.item.data as FieldTypeDefinition;
-      this.formBuilderService.addFieldFromType(fieldTypeDef.type, event.currentIndex);
+    const data = event.item.data;
+
+    if (this.isFieldTypeDefinition(data)) {
+      this.formBuilderService.addFieldFromType(data.type, event.currentIndex);
+      return;
+    }
+
+    const field = data as FormField;
+
+    if (event.previousContainer === event.container) {
+      this.formBuilderService.reorderFields(event.previousIndex, event.currentIndex);
+      return;
+    }
+
+    const previousContainerId = event.previousContainer.id;
+    if (previousContainerId.startsWith('group-drop-')) {
+      this.formBuilderService.assignFieldToGroup(field.id, null, event.currentIndex);
     } else {
-      // Reordering within canvas
       this.formBuilderService.reorderFields(event.previousIndex, event.currentIndex);
     }
+  }
+
+  /**
+   * Handles drop interactions within a group container.
+   * Supports adding new fields, moving fields between groups, and reordering children.
+   */
+  onGroupDrop(event: CdkDragDrop<FormField[]>, group: FormField): void {
+    const data = event.item.data;
+    const groupId = group.id;
+
+    if (this.isFieldTypeDefinition(data)) {
+      const newField = this.formBuilderService.addFieldFromType(data.type);
+      this.formBuilderService.assignFieldToGroup(newField.id, groupId, event.currentIndex);
+      return;
+    }
+
+    const field = data as FormField;
+    this.formBuilderService.assignFieldToGroup(field.id, groupId, event.currentIndex);
+  }
+
+  /**
+   * Keyboard interactions for fields within a group container.
+   * Supports Enter/Space (select), ArrowUp/ArrowDown (reorder within group).
+   * Note: Delete/Backspace functionality has been disabled to prevent accidental deletion.
+   */
+  handleGroupKeyboard(event: KeyboardEvent, field: FormField, groupId: string, index: number): void {
+    switch (event.key) {
+      case 'Enter':
+      case ' ':
+        // Don't handle space/enter if user is typing in an input field
+        if (this.isUserTyping(event)) {
+          return;
+        }
+        event.preventDefault();
+        this.onFieldClicked(field);
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        if (index > 0) {
+          this.formBuilderService.assignFieldToGroup(field.id, groupId, index - 1);
+        }
+        break;
+      case 'ArrowDown':
+        event.preventDefault();
+        this.formBuilderService.assignFieldToGroup(field.id, groupId, index + 1);
+        break;
+      // Backspace/Delete functionality disabled to prevent accidental field deletion
+      // Users can still delete fields using the delete button or settings modal
+      // case 'Delete':
+      // case 'Backspace':
+      //   if (!this.isUserTyping(event)) {
+      //     event.preventDefault();
+      //     this.formBuilderService.removeField(field.id);
+      //   }
+      //   break;
+    }
+  }
+
+  /**
+   * Retrieves child fields for a group.
+   */
+  getChildFields(groupId: string): FormField[] {
+    return this.formBuilderService.getChildFields(groupId);
+  }
+
+  /**
+   * Provides drop list IDs connected to the canvas drop zone.
+   */
+  getConnectedDropListsForCanvas(): string[] {
+    return ['palette-drop-list', ...this.getAllGroupDropListIds()];
+  }
+
+  /**
+   * Provides drop list IDs connected to a specific group.
+   */
+  getConnectedDropLists(groupId: string): string[] {
+    return ['palette-drop-list', 'canvas-drop-list', ...this.getAllGroupDropListIds(groupId)];
+  }
+
+  /**
+   * Generates the drop list ID for a group container.
+   */
+  getGroupDropListId(groupId: string): string {
+    return `group-drop-${groupId}`;
+  }
+
+  protected getAllGroupDropListIds(excludeGroupId?: string): string[] {
+    return this.formBuilderService
+      .getAllFields()
+      .filter((field) => field.type === FormFieldType.GROUP)
+      .map((field) => this.getGroupDropListId(field.id))
+      .filter((id) => !excludeGroupId || id !== this.getGroupDropListId(excludeGroupId));
+  }
+
+  private isFieldTypeDefinition(data: unknown): data is FieldTypeDefinition {
+    return (
+      !!data &&
+      typeof data === 'object' &&
+      'type' in (data as Record<string, unknown>) &&
+      !('id' in (data as Record<string, unknown>))
+    );
   }
 
   /**
@@ -327,7 +564,8 @@ export class FormCanvasComponent {
 
   /**
    * Handles keyboard navigation and actions on fields.
-   * Supports Enter/Space (select), ArrowUp/ArrowDown (reorder), Delete/Backspace (remove).
+   * Supports Enter/Space (select), ArrowUp/ArrowDown (reorder).
+   * Note: Delete/Backspace functionality has been disabled to prevent accidental deletion.
    * @param event - The keyboard event
    * @param field - The FormField being interacted with
    * @param index - The index of the field in the fields array
@@ -338,6 +576,10 @@ export class FormCanvasComponent {
     switch (event.key) {
       case 'Enter':
       case ' ':
+        // Don't handle space/enter if user is typing in an input field
+        if (this.isUserTyping(event)) {
+          return;
+        }
         event.preventDefault();
         this.onFieldClicked(field);
         break;
@@ -356,11 +598,15 @@ export class FormCanvasComponent {
         }
         break;
 
-      case 'Delete':
-      case 'Backspace':
-        event.preventDefault();
-        this.formBuilderService.removeField(field.id);
-        break;
+      // Backspace/Delete functionality disabled to prevent accidental field deletion
+      // Users can still delete fields using the delete button or settings modal
+      // case 'Delete':
+      // case 'Backspace':
+      //   if (!this.isUserTyping(event)) {
+      //     event.preventDefault();
+      //     this.formBuilderService.removeField(field.id);
+      //   }
+      //   break;
     }
   }
 
@@ -525,5 +771,173 @@ export class FormCanvasComponent {
       // For interactive elements, just stop propagation to prevent field selection
       event.stopPropagation();
     }
+  }
+
+  /**
+   * Checks if the user is currently typing in an input field, textarea, or other editable element.
+   * Used to prevent keyboard shortcuts from interfering with typing.
+   * @param event - The keyboard event to check
+   * @returns True if user is typing in an editable element, false otherwise
+   */
+  private isUserTyping(event: KeyboardEvent): boolean {
+    const target = event.target as HTMLElement;
+
+    // Check if target is an editable element
+    const isEditable =
+      target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.tagName === 'SELECT' ||
+      target.isContentEditable ||
+      target.closest('input') !== null ||
+      target.closest('textarea') !== null ||
+      target.closest('select') !== null ||
+      target.closest('[contenteditable="true"]') !== null;
+
+    return isEditable;
+  }
+
+  /**
+   * Get background image CSS url() value (from settings)
+   * @returns CSS url() string or 'none'
+   */
+  getBackgroundImageStyle(): string {
+    const s = this._settings();
+    if (
+      s.backgroundType !== 'image' ||
+      !s.backgroundImageUrl
+    ) {
+      return 'none';
+    }
+    return `url(${s.backgroundImageUrl})`;
+  }
+
+  /**
+   * Get background styles object for canvas (from settings)
+   * @returns Object with CSS style properties
+   */
+  getBackgroundStyles(): Record<string, string> {
+    const s = this._settings();
+    if (
+      s.backgroundType !== 'image' ||
+      !s.backgroundImageUrl
+    ) {
+      return {};
+    }
+
+    const styles: Record<string, string> = {
+      'background-image': `url(${s.backgroundImageUrl})`,
+      'background-size': s.backgroundImagePosition ?? 'cover',
+      'background-position': s.backgroundImageAlignment ?? 'center',
+      'background-repeat':
+        s.backgroundImagePosition === 'repeat' ? 'repeat' : 'no-repeat',
+    };
+
+    // Apply blur filter if specified
+    if (s.backgroundImageBlur !== undefined && s.backgroundImageBlur > 0) {
+      styles['filter'] = `blur(${s.backgroundImageBlur}px)`;
+    }
+
+    return styles;
+  }
+
+  /**
+   * Get opacity value for background overlay (from settings)
+   * @returns Opacity value as CSS decimal (0-1)
+   */
+  getBackgroundOpacity(): number {
+    const s = this._settings();
+    return s.backgroundImageOpacity !== undefined
+      ? s.backgroundImageOpacity / 100
+      : 1;
+  }
+
+  /**
+   * Check if background overlay should be shown (when opacity < 100%, from settings)
+   * @returns True if overlay should be displayed
+   */
+  shouldShowBackgroundOverlay(): boolean {
+    const s = this._settings();
+    return (
+      s.backgroundType === 'image' &&
+      s.backgroundImageUrl !== undefined &&
+      s.backgroundImageOpacity !== undefined &&
+      s.backgroundImageOpacity < 100
+    );
+  }
+
+  /**
+   * Generates sandboxed iframe HTML for custom background preview (from settings)
+   * Implements defense-in-depth security: sanitizes HTML, validates CSS, and uses restrictive sandbox
+   * @returns SafeHtml for iframe srcdoc attribute
+   */
+  protected getSandboxedPreviewHTML(): SafeHtml {
+    const s = this._settings();
+    // Return empty if no custom background in settings
+    if (
+      s.backgroundType !== 'custom' ||
+      (!s.backgroundCustomHtml && !s.backgroundCustomCss)
+    ) {
+      return this.sanitizer.bypassSecurityTrustHtml('');
+    }
+
+    // Sanitize HTML (already sanitized in settings dialog, but defense-in-depth)
+    const sanitizedHTML = sanitizeCustomBackground(s.backgroundCustomHtml || '');
+
+    // Validate and clean CSS
+    const validatedCSS = this.validateAndCleanCSS(s.backgroundCustomCss || '');
+
+    // Build iframe content with HTML5 DOCTYPE
+    const iframeContent = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    /* Reset default styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: transparent;
+    }
+    /* User custom CSS */
+    ${validatedCSS}
+  </style>
+</head>
+<body>
+  ${sanitizedHTML}
+</body>
+</html>`;
+
+    // Bypass Angular's sanitization for srcdoc (safe because we've already sanitized)
+    return this.sanitizer.bypassSecurityTrustHtml(iframeContent);
+  }
+
+  /**
+   * Validates CSS and strips dangerous patterns
+   * @param css - CSS code to validate
+   * @returns Safe CSS code
+   */
+  private validateAndCleanCSS(css: string): string {
+    if (!css || css.trim() === '') {
+      return '';
+    }
+
+    // Validate CSS for dangerous patterns
+    const validation = validateCSS(css);
+
+    // If CSS has critical errors, return empty string
+    if (!validation.isValid) {
+      console.warn('Custom background CSS validation errors:', validation.errors);
+      return '';
+    }
+
+    // Strip any dangerous patterns (defense-in-depth)
+    return stripDangerousCSS(css);
   }
 }

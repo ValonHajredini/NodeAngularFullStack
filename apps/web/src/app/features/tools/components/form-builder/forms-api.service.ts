@@ -161,6 +161,28 @@ export class FormsApiService {
   }
 
   /**
+   * Uploads a background image for forms.
+   * @param file - Image file to upload
+   * @returns Observable containing the uploaded image URL
+   * @throws {HttpErrorResponse} When upload fails
+   * @example
+   * formsApiService.uploadBackgroundImage(imageFile)
+   *   .subscribe(response => console.log('Image URL:', response.url));
+   */
+  uploadBackgroundImage(file: File): Observable<{ url: string; fileName: string; size: number; mimeType: string }> {
+    const formData = new FormData();
+    formData.append('backgroundImage', file);
+
+    return this.apiClient.post<ApiResponse<{ url: string; fileName: string; size: number; mimeType: string }>>(
+      '/forms/upload-background',
+      formData
+    ).pipe(
+      map((response) => response.data!),
+      catchError((error) => throwError(() => error))
+    );
+  }
+
+  /**
    * Converts date strings to Date objects for proper typing.
    * @param form - Form metadata with string dates
    * @returns Form metadata with Date objects

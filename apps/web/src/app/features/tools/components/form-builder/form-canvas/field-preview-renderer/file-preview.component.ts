@@ -14,12 +14,6 @@ import { FormField } from '@nodeangularfullstack/shared';
   imports: [CommonModule, FileUpload],
   template: `
     <div class="field-preview">
-      <label class="block text-sm font-medium text-gray-700 mb-1">
-        {{ field.label }}
-        @if (field.required) {
-          <span class="text-red-500 ml-1">*</span>
-        }
-      </label>
       <p-fileupload
         mode="basic"
         [disabled]="true"
@@ -28,9 +22,6 @@ import { FormField } from '@nodeangularfullstack/shared';
         [attr.aria-label]="field.label"
         [attr.aria-required]="field.required"
       ></p-fileupload>
-      @if (field.helpText) {
-        <small class="block mt-1 text-gray-500">{{ field.helpText }}</small>
-      }
       @if (field.validation) {
         <div class="mt-1 text-xs text-gray-400">
           @if (

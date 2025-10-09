@@ -14,12 +14,6 @@ import { FormField } from '@nodeangularfullstack/shared';
   imports: [CommonModule, Select],
   template: `
     <div class="field-preview">
-      <label class="block text-sm font-medium text-gray-700 mb-1">
-        {{ field.label }}
-        @if (field.required) {
-          <span class="text-red-500 ml-1">*</span>
-        }
-      </label>
       <p-select
         [options]="field.options || []"
         [placeholder]="field.placeholder || 'Select an option'"
@@ -30,15 +24,32 @@ import { FormField } from '@nodeangularfullstack/shared';
         [attr.aria-label]="field.label"
         [attr.aria-required]="field.required"
       ></p-select>
-      @if (field.helpText) {
-        <small class="block mt-1 text-gray-500">{{ field.helpText }}</small>
-      }
     </div>
   `,
   styles: [
     `
       .field-preview {
         pointer-events: none;
+      }
+
+      /* Match select dropdown size to text input */
+      ::ng-deep .p-select {
+        height: 2.5rem;
+        display: flex;
+        align-items: center;
+      }
+
+      ::ng-deep .p-select .p-select-label {
+        padding: 0.5rem 0.75rem;
+        display: flex;
+        align-items: center;
+        line-height: 1.5rem;
+      }
+
+      ::ng-deep .p-select .p-select-dropdown {
+        height: 2.5rem;
+        display: flex;
+        align-items: center;
       }
     `,
   ],

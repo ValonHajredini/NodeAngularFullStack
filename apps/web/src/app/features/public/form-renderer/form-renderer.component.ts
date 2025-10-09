@@ -17,7 +17,13 @@ import { Card } from 'primeng/card';
 import { ButtonDirective } from 'primeng/button';
 
 // Shared Types
-import { FormSchema, FormSettings, FormField, FormFieldType } from '@nodeangularfullstack/shared';
+import {
+  FormSchema,
+  FormSettings,
+  FormField,
+  FormFieldType,
+  FormBackgroundSettings,
+} from '@nodeangularfullstack/shared';
 
 // Service
 import { FormRendererService, FormRenderError, FormRenderErrorType } from './form-renderer.service';
@@ -203,8 +209,9 @@ export class FormRendererComponent implements OnInit, OnDestroy {
     const group: Record<string, FormControl> = {};
 
     schema.fields.forEach((field) => {
+      // Skip non-input fields (dividers)
       if (field.type === FormFieldType.DIVIDER) {
-        return; // Skip dividers
+        return;
       }
 
       const validators = this.buildValidators(field);
@@ -503,5 +510,63 @@ export class FormRendererComponent implements OnInit, OnDestroy {
       error: null,
       errorType: null,
     };
+  }
+
+  /**
+   * Determine if a background image should be shown
+   */
+  hasBackgroundImage(): boolean {
+    const bg = this.schema?.settings?.background;
+    return !!bg && bg.type === 'image' && !!bg.imageUrl;
+  }
+
+  /**
+   * Get background image metadata from schema settings
+   */
+  getBackgroundImage(): FormBackgroundSettings | null {
+    return this.settings?.background ?? this.schema?.settings?.background ?? null;
+  }
+
+  /**
+   * Get background styles for the absolute background layer
+   */
+  getBackgroundLayerStyles(): Record<string, string> {
+    const bg = this.getBackgroundImage();
+    if (!bg || !bg.imageUrl || bg.type !== 'image') {
+      return {};
+    }
+
+    const isRepeat = bg.imagePosition === 'repeat';
+    const styles: Record<string, string> = {
+      'background-image': `url(${bg.imageUrl})`,
+      'background-size': isRepeat ? 'auto' : bg.imagePosition ?? 'cover',
+      'background-position': bg.imageAlignment ?? 'center',
+      'background-repeat': isRepeat ? 'repeat' : 'no-repeat',
+      'background-attachment': 'fixed',
+    };
+
+    if (bg.imageBlur !== undefined && bg.imageBlur > 0) {
+      styles['filter'] = `blur(${bg.imageBlur}px)`;
+      styles['transform'] = 'scale(1.05)';
+      styles['transform-origin'] = 'center';
+    }
+
+    return styles;
+  }
+
+  /**
+   * Get opacity value for background overlay
+   */
+  getBackgroundOpacity(): number {
+    const bg = this.getBackgroundImage();
+    return bg && bg.imageOpacity !== undefined ? bg.imageOpacity / 100 : 1;
+  }
+
+  /**
+   * Check if background overlay should be shown (when opacity < 100%)
+   */
+  shouldShowBackgroundOverlay(): boolean {
+    const bg = this.getBackgroundImage();
+    return !!bg && !!bg.imageUrl && bg.imageOpacity !== undefined && bg.imageOpacity < 100;
   }
 }
