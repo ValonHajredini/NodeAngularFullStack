@@ -28,6 +28,8 @@ import { InputNumber } from 'primeng/inputnumber';
 import { ToggleSwitch } from 'primeng/toggleswitch';
 import { Panel } from 'primeng/panel';
 import { Slider } from 'primeng/slider';
+import { ColorPicker } from 'primeng/colorpicker';
+import { SelectButton } from 'primeng/selectbutton';
 import { CdkDrag, CdkDropList, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { FormField, FormFieldType, FormFieldOption } from '@nodeangularfullstack/shared';
 import { FormBuilderService } from '../form-builder.service';
@@ -59,6 +61,8 @@ import { validateCSS, CSSValidationResult } from '../../../../../shared/utils/cs
     ToggleSwitch,
     Panel,
     Slider,
+    ColorPicker,
+    SelectButton,
     CdkDrag,
     CdkDropList,
     MonacoEditorModule,
@@ -494,6 +498,87 @@ import { validateCSS, CSSValidationResult } from '../../../../../shared/utils/cs
               </p-panel>
             }
 
+            <!-- Heading Settings Section -->
+            @if (isHeadingField()) {
+              <p-panel header="Heading Settings" [toggleable]="true">
+                <div class="space-y-4">
+                  <div class="field">
+                    <label for="headingText" class="block text-sm font-medium text-gray-700 mb-1">
+                      Heading Text <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      pInputText
+                      id="headingText"
+                      formControlName="label"
+                      class="w-full"
+                      placeholder="Enter heading text"
+                    />
+                    <small class="text-gray-500 text-xs">
+                      This text will be displayed as the heading
+                    </small>
+                  </div>
+
+                  <div class="field">
+                    <label for="headingLevel" class="block text-sm font-medium text-gray-700 mb-1">
+                      Heading Level
+                    </label>
+                    <p-select
+                      formControlName="headingLevel"
+                      inputId="headingLevel"
+                      [options]="headingLevelOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      class="w-full"
+                    />
+                    <small class="text-gray-500 text-xs">
+                      H1 is largest, H6 is smallest (H2 recommended for sections)
+                    </small>
+                  </div>
+
+                  <div class="field">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                      Text Alignment
+                    </label>
+                    <p-selectbutton
+                      formControlName="headingAlignment"
+                      [options]="headingAlignmentOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                    />
+                  </div>
+
+                  <div class="field">
+                    <label for="headingColor" class="block text-sm font-medium text-gray-700 mb-1">
+                      Text Color
+                    </label>
+                    <p-colorpicker
+                      formControlName="headingColor"
+                      inputId="headingColor"
+                      format="hex"
+                    />
+                    <small class="text-gray-500 text-xs"> Leave empty for default color </small>
+                  </div>
+
+                  <div class="field">
+                    <label
+                      for="headingFontWeight"
+                      class="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Font Weight
+                    </label>
+                    <p-select
+                      formControlName="headingFontWeight"
+                      inputId="headingFontWeight"
+                      [options]="fontWeightOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      class="w-full"
+                    />
+                  </div>
+                </div>
+              </p-panel>
+            }
+
             <!-- Background Image Settings Section -->
             @if (isBackgroundImageField()) {
               <p-panel header="Background Image Settings" [toggleable]="true">
@@ -763,6 +848,27 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
     { label: 'Bottom', value: 'bottom' },
   ];
 
+  // Heading-specific options
+  readonly headingLevelOptions = [
+    { label: 'H1', value: 'h1' },
+    { label: 'H2', value: 'h2' },
+    { label: 'H3', value: 'h3' },
+    { label: 'H4', value: 'h4' },
+    { label: 'H5', value: 'h5' },
+    { label: 'H6', value: 'h6' },
+  ];
+
+  readonly headingAlignmentOptions = [
+    { label: 'Left', value: 'left', icon: 'pi pi-align-left' },
+    { label: 'Center', value: 'center', icon: 'pi pi-align-center' },
+    { label: 'Right', value: 'right', icon: 'pi pi-align-right' },
+  ];
+
+  readonly fontWeightOptions = [
+    { label: 'Normal', value: 'normal' },
+    { label: 'Bold', value: 'bold' },
+  ];
+
   // Image preview URL signal
   readonly imagePreviewUrl = signal<string | null>(null);
 
@@ -845,6 +951,12 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
       // Custom background specific
       customHtml: ['', [Validators.maxLength(10000)]],
       customCss: ['', [Validators.maxLength(5000)]],
+
+      // Heading specific
+      headingLevel: ['h2'],
+      headingAlignment: ['left'],
+      headingColor: [''],
+      headingFontWeight: ['bold'],
     });
 
     // Watch for selected field changes using effect
@@ -934,6 +1046,14 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
   isFileField(): boolean {
     const fieldType = this.formBuilderService.selectedField()?.type;
     return fieldType === FormFieldType.FILE;
+  }
+
+  /**
+   * Check if current field is heading
+   */
+  isHeadingField(): boolean {
+    const fieldType = this.formBuilderService.selectedField()?.type;
+    return fieldType === FormFieldType.HEADING;
   }
 
   /**
@@ -1074,6 +1194,11 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
         // Custom background metadata
         customHtml: (field.metadata as any)?.html || '',
         customCss: (field.metadata as any)?.css || '',
+        // Heading metadata
+        headingLevel: (field.metadata as any)?.headingLevel || 'h2',
+        headingAlignment: (field.metadata as any)?.alignment || 'left',
+        headingColor: (field.metadata as any)?.color || '',
+        headingFontWeight: (field.metadata as any)?.fontWeight || 'bold',
       },
       { emitEvent: false },
     );
@@ -1166,8 +1291,16 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
     // Build options array
     const options = this.options.value.length > 0 ? this.options.value : undefined;
 
-    // Build metadata object (only for GROUP fields now)
-    const metadata = currentField.metadata;
+    // Build metadata object (GROUP and HEADING fields)
+    let metadata = currentField.metadata;
+    if (currentField.type === FormFieldType.HEADING) {
+      metadata = {
+        headingLevel: formValues.headingLevel,
+        alignment: formValues.headingAlignment,
+        color: formValues.headingColor || undefined,
+        fontWeight: formValues.headingFontWeight,
+      };
+    }
 
     const updatedField: FormField = {
       ...currentField,

@@ -1,6 +1,10 @@
 import { body, param } from 'express-validator';
 import { Request, Response, NextFunction } from 'express';
-import { FormStatus } from '@nodeangularfullstack/shared';
+import {
+  FormStatus,
+  FormFieldType,
+  isInputField,
+} from '@nodeangularfullstack/shared';
 
 /**
  * Validation rules for creating a new form.
@@ -102,26 +106,10 @@ export const validateFormSchema = (
 
   const errors: string[] = [];
 
-  // Valid field types
-  const validFieldTypes = [
-    'text',
-    'email',
-    'number',
-    'select',
-    'textarea',
-    'file',
-    'checkbox',
-    'radio',
-    'date',
-    'datetime',
-    'toggle',
-    'divider',
-    'group',
-    'background-image',
-    'background-custom', // Custom HTML/CSS background with XSS protection
-  ];
+  // All valid field types from shared enum
+  const allValidFieldTypes = Object.values(FormFieldType);
 
-  // Check for duplicate field names
+  // Check for duplicate field names (only for input fields)
   const fieldNames = new Set<string>();
   const duplicates = new Set<string>();
 
@@ -152,20 +140,28 @@ export const validateFormSchema = (
         return;
       }
 
-      if (!validFieldTypes.includes(field.type)) {
+      if (!allValidFieldTypes.includes(field.type as FormFieldType)) {
         errors.push(`Invalid field type: ${field.type}`);
         return;
       }
 
+      const fieldType = field.type as FormFieldType;
+
+      // Validate fieldName requirement based on field category
       if (!field.fieldName) {
+        // Display elements (heading, divider, group) may not need fieldName for submission
+        // but we still require it for identification purposes
         errors.push('All fields must have a fieldName property');
         return;
       }
 
-      if (fieldNames.has(field.fieldName)) {
-        duplicates.add(field.fieldName);
-      } else {
-        fieldNames.add(field.fieldName);
+      // Check for duplicate field names (only matters for input fields)
+      if (isInputField(fieldType)) {
+        if (fieldNames.has(field.fieldName)) {
+          duplicates.add(field.fieldName);
+        } else {
+          fieldNames.add(field.fieldName);
+        }
       }
 
       // Validate regex patterns if present

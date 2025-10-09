@@ -317,17 +317,31 @@ export class FormBuilderService {
 
   private createField(type: FormFieldType): FormField {
     const fields = this._formFields();
-    return {
+    const baseField = {
       id: crypto.randomUUID(),
       type,
-      label: 'Untitled Field',
+      label: type === FormFieldType.HEADING ? 'Untitled Heading' : 'Untitled Field',
       fieldName: this.generateUniqueFieldName(type),
       placeholder: '',
       helpText: '',
-      required: false,
+      required: type === FormFieldType.HEADING ? false : false, // Headings are never required
       order: fields.length,
       validation: {},
     };
+
+    // Add HEADING-specific metadata
+    if (type === FormFieldType.HEADING) {
+      return {
+        ...baseField,
+        metadata: {
+          headingLevel: 'h2',
+          alignment: 'left',
+          fontWeight: 'bold',
+        },
+      };
+    }
+
+    return baseField;
   }
 
   private recalculateOrder(fields: FormField[]): FormField[] {

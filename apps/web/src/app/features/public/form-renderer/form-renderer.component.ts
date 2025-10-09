@@ -23,6 +23,9 @@ import {
   FormField,
   FormFieldType,
   FormBackgroundSettings,
+  HeadingMetadata,
+  isInputField,
+  isDisplayElement,
 } from '@nodeangularfullstack/shared';
 
 // Service
@@ -206,6 +209,16 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Type guard to safely access HeadingMetadata properties
+   */
+  getHeadingMetadata(field: FormField): HeadingMetadata | null {
+    if (field.type === FormFieldType.HEADING && field.metadata) {
+      return field.metadata as HeadingMetadata;
+    }
+    return null;
+  }
+
+  /**
    * Loads form schema from API using token
    */
   private loadFormSchema(): void {
@@ -233,13 +246,14 @@ export class FormRendererComponent implements OnInit, OnDestroy {
 
   /**
    * Builds dynamic FormGroup from schema fields
+   * Only includes input fields - display elements (heading, divider, group) are skipped
    */
   private buildFormGroup(schema: FormSchema): FormGroup {
     const group: Record<string, FormControl> = {};
 
     schema.fields.forEach((field) => {
-      // Skip non-input fields (dividers)
-      if (field.type === FormFieldType.DIVIDER) {
+      // Skip display elements (heading, divider, group) - only add input fields to form
+      if (isDisplayElement(field.type)) {
         return;
       }
 

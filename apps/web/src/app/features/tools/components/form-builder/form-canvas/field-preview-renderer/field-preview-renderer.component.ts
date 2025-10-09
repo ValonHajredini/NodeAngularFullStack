@@ -11,6 +11,7 @@ import { FilePreviewComponent } from './file-preview.component';
 import { TogglePreviewComponent } from './toggle-preview.component';
 import { DividerPreviewComponent } from './divider-preview.component';
 import { GroupPreviewComponent } from './group-preview.component';
+import { HeadingPreviewComponent } from './heading-preview.component';
 import { InlineLabelEditorComponent } from './inline-label-editor.component';
 import { InlineOptionManagerComponent } from './inline-option-manager.component';
 import { ButtonModule } from 'primeng/button';
@@ -38,14 +39,19 @@ import { FormFieldOption } from '@nodeangularfullstack/shared';
     TogglePreviewComponent,
     DividerPreviewComponent,
     GroupPreviewComponent,
+    HeadingPreviewComponent,
     InlineLabelEditorComponent,
     InlineOptionManagerComponent,
     ButtonModule,
   ],
   template: `
     <div class="field-preview-wrapper relative">
-      <!-- Inline Label Editor (for non-divider and non-group fields) -->
-      @if (field.type !== FormFieldType.DIVIDER && field.type !== FormFieldType.GROUP) {
+      <!-- Inline Label Editor (for non-divider, non-group, and non-heading fields) -->
+      @if (
+        field.type !== FormFieldType.DIVIDER &&
+        field.type !== FormFieldType.GROUP &&
+        field.type !== FormFieldType.HEADING
+      ) {
         <div
           class="label-section mb-2"
           (click)="$event.stopPropagation()"
@@ -108,6 +114,9 @@ import { FormFieldOption } from '@nodeangularfullstack/shared';
           @case (FormFieldType.GROUP) {
             <app-group-preview [field]="field" />
           }
+          @case (FormFieldType.HEADING) {
+            <app-heading-preview [field]="field" />
+          }
           @default {
             <div class="p-4 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
               Unknown field type: {{ field.type }}
@@ -117,7 +126,12 @@ import { FormFieldOption } from '@nodeangularfullstack/shared';
       </div>
 
       <!-- Help Text -->
-      @if (field.helpText && field.type !== FormFieldType.DIVIDER && field.type !== FormFieldType.GROUP) {
+      @if (
+        field.helpText &&
+        field.type !== FormFieldType.DIVIDER &&
+        field.type !== FormFieldType.GROUP &&
+        field.type !== FormFieldType.HEADING
+      ) {
         <small class="block mt-1 text-gray-500">{{ field.helpText }}</small>
       }
 

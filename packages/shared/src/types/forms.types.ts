@@ -33,6 +33,49 @@ export enum FormFieldType {
   DIVIDER = 'divider',
   /** Group container for organizing related fields */
   GROUP = 'group',
+  /** Heading/title for form sections (non-input, display only) */
+  HEADING = 'heading',
+}
+
+/**
+ * Field type categories for distinguishing input vs display elements
+ */
+export const FIELD_TYPE_CATEGORIES = {
+  /** Input fields that collect user data */
+  INPUT_FIELDS: [
+    FormFieldType.TEXT,
+    FormFieldType.EMAIL,
+    FormFieldType.NUMBER,
+    FormFieldType.SELECT,
+    FormFieldType.TEXTAREA,
+    FormFieldType.FILE,
+    FormFieldType.CHECKBOX,
+    FormFieldType.RADIO,
+    FormFieldType.DATE,
+    FormFieldType.DATETIME,
+    FormFieldType.TOGGLE,
+  ] as const,
+
+  /** Display elements that don't collect data (visual/organizational) */
+  DISPLAY_ELEMENTS: [
+    FormFieldType.HEADING,
+    FormFieldType.DIVIDER,
+    FormFieldType.GROUP,
+  ] as const,
+} as const;
+
+/**
+ * Check if a field type is an input field that collects data
+ */
+export function isInputField(fieldType: FormFieldType): boolean {
+  return FIELD_TYPE_CATEGORIES.INPUT_FIELDS.includes(fieldType as any);
+}
+
+/**
+ * Check if a field type is a display element (non-input)
+ */
+export function isDisplayElement(fieldType: FormFieldType): boolean {
+  return FIELD_TYPE_CATEGORIES.DISPLAY_ELEMENTS.includes(fieldType as any);
 }
 
 /**
@@ -94,6 +137,20 @@ export interface GroupMetadata {
 }
 
 /**
+ * Heading-specific metadata for HEADING field type
+ */
+export interface HeadingMetadata {
+  /** HTML heading level (h1-h6) */
+  headingLevel: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
+  /** Text alignment */
+  alignment: 'left' | 'center' | 'right';
+  /** Text color (hex format) */
+  color?: string;
+  /** Font weight */
+  fontWeight?: 'normal' | 'bold';
+}
+
+/**
  * Row layout configuration for multi-column form rows
  */
 export interface RowLayoutConfig {
@@ -151,8 +208,8 @@ export interface FormField {
   order: number;
   /** Parent group ID for nested fields */
   parentGroupId?: string;
-  /** Additional metadata for special field types (e.g., GROUP) */
-  metadata?: GroupMetadata;
+  /** Additional metadata for special field types (e.g., GROUP, HEADING) */
+  metadata?: GroupMetadata | HeadingMetadata;
   /** Position within row-column layout (optional, for row-based layouts) */
   position?: FieldPosition;
 }

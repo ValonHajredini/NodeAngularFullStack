@@ -1331,6 +1331,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
       [FormFieldType.TOGGLE]: 'Toggle',
       [FormFieldType.DIVIDER]: 'Section Divider',
       [FormFieldType.GROUP]: 'Group Container',
+      [FormFieldType.HEADING]: 'Untitled Heading',
     };
     return labelMap[type] || 'Field';
   }

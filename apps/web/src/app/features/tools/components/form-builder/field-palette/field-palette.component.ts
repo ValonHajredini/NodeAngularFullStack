@@ -107,6 +107,7 @@ export class FieldPaletteComponent {
     { type: FormFieldType.DATETIME, icon: 'pi-clock', label: 'DateTime' },
     { type: FormFieldType.TOGGLE, icon: 'pi-toggle-on', label: 'Toggle' },
     { type: FormFieldType.DIVIDER, icon: 'pi-minus', label: 'Section Divider' },
+    { type: FormFieldType.HEADING, icon: 'pi-align-center', label: 'Heading' },
     // Note: Background Image and Custom Background moved to Form Settings
   ];
 

@@ -134,6 +134,7 @@
                                   <div class="field-wrapper">
                                     @if (
                                       field.type !== fieldTypes.DIVIDER &&
+                                      field.type !== fieldTypes.HEADING &&
                                       field.type !== fieldTypes.CHECKBOX &&
                                       field.type !== fieldTypes.TOGGLE
                                     ) {
@@ -300,6 +301,110 @@
                                       <hr class="col-span-full my-4 border-gray-300" />
                                     }
 
+                                    <!-- Heading -->
+                                    @if (field.type === fieldTypes.HEADING) {
+                                      <div class="heading-field col-span-full mb-4">
+                                        @switch ($any(field.metadata)?.headingLevel || 'h2') {
+                                          @case ('h1') {
+                                            <h1
+                                              class="text-4xl font-bold"
+                                              [style.text-align]="
+                                                $any(field.metadata)?.alignment || 'left'
+                                              "
+                                              [style.color]="
+                                                $any(field.metadata)?.color || 'inherit'
+                                              "
+                                              [style.font-weight]="
+                                                $any(field.metadata)?.fontWeight || 'bold'
+                                              "
+                                            >
+                                              {{ field.label }}
+                                            </h1>
+                                          }
+                                          @case ('h2') {
+                                            <h2
+                                              class="text-3xl font-bold"
+                                              [style.text-align]="
+                                                $any(field.metadata)?.alignment || 'left'
+                                              "
+                                              [style.color]="
+                                                $any(field.metadata)?.color || 'inherit'
+                                              "
+                                              [style.font-weight]="
+                                                $any(field.metadata)?.fontWeight || 'bold'
+                                              "
+                                            >
+                                              {{ field.label }}
+                                            </h2>
+                                          }
+                                          @case ('h3') {
+                                            <h3
+                                              class="text-2xl font-bold"
+                                              [style.text-align]="
+                                                $any(field.metadata)?.alignment || 'left'
+                                              "
+                                              [style.color]="
+                                                $any(field.metadata)?.color || 'inherit'
+                                              "
+                                              [style.font-weight]="
+                                                $any(field.metadata)?.fontWeight || 'bold'
+                                              "
+                                            >
+                                              {{ field.label }}
+                                            </h3>
+                                          }
+                                          @case ('h4') {
+                                            <h4
+                                              class="text-xl font-bold"
+                                              [style.text-align]="
+                                                $any(field.metadata)?.alignment || 'left'
+                                              "
+                                              [style.color]="
+                                                $any(field.metadata)?.color || 'inherit'
+                                              "
+                                              [style.font-weight]="
+                                                $any(field.metadata)?.fontWeight || 'bold'
+                                              "
+                                            >
+                                              {{ field.label }}
+                                            </h4>
+                                          }
+                                          @case ('h5') {
+                                            <h5
+                                              class="text-lg font-bold"
+                                              [style.text-align]="
+                                                $any(field.metadata)?.alignment || 'left'
+                                              "
+                                              [style.color]="
+                                                $any(field.metadata)?.color || 'inherit'
+                                              "
+                                              [style.font-weight]="
+                                                $any(field.metadata)?.fontWeight || 'bold'
+                                              "
+                                            >
+                                              {{ field.label }}
+                                            </h5>
+                                          }
+                                          @case ('h6') {
+                                            <h6
+                                              class="text-base font-bold"
+                                              [style.text-align]="
+                                                $any(field.metadata)?.alignment || 'left'
+                                              "
+                                              [style.color]="
+                                                $any(field.metadata)?.color || 'inherit'
+                                              "
+                                              [style.font-weight]="
+                                                $any(field.metadata)?.fontWeight || 'bold'
+                                              "
+                                            >
+                                              {{ field.label }}
+                                            </h6>
+                                          }
+                                        }
+                                      </div>
+                                    }
+
                                     @if (field.helpText) {
                                       <small class="text-gray-500 text-sm">{{
                                         field.helpText
@@ -330,6 +435,7 @@
                         <div class="field-wrapper">
                           @if (
                             field.type !== fieldTypes.DIVIDER &&
+                            field.type !== fieldTypes.HEADING &&
                             field.type !== fieldTypes.CHECKBOX &&
                             field.type !== fieldTypes.TOGGLE
                           ) {
@@ -492,6 +598,74 @@
                           <!-- Divider -->
                           @if (field.type === fieldTypes.DIVIDER) {
                             <hr class="col-span-full my-4 border-gray-300" />
+                          }
+
+                          <!-- Heading -->
+                          @if (field.type === fieldTypes.HEADING) {
+                            <div class="heading-field col-span-full mb-4">
+                              @switch ($any(field.metadata)?.headingLevel || 'h2') {
+                                @case ('h1') {
+                                  <h1
+                                    class="text-4xl font-bold"
+                                    [style.text-align]="$any(field.metadata)?.alignment || 'left'"
+                                    [style.color]="$any(field.metadata)?.color || 'inherit'"
+                                    [style.font-weight]="$any(field.metadata)?.fontWeight || 'bold'"
+                                  >
+                                    {{ field.label }}
+                                  </h1>
+                                }
+                                @case ('h2') {
+                                  <h2
+                                    class="text-3xl font-bold"
+                                    [style.text-align]="$any(field.metadata)?.alignment || 'left'"
+                                    [style.color]="$any(field.metadata)?.color || 'inherit'"
+                                    [style.font-weight]="$any(field.metadata)?.fontWeight || 'bold'"
+                                  >
+                                    {{ field.label }}
+                                  </h2>
+                                }
+                                @case ('h3') {
+                                  <h3
+                                    class="text-2xl font-bold"
+                                    [style.text-align]="$any(field.metadata)?.alignment || 'left'"
+                                    [style.color]="$any(field.metadata)?.color || 'inherit'"
+                                    [style.font-weight]="$any(field.metadata)?.fontWeight || 'bold'"
+                                  >
+                                    {{ field.label }}
+                                  </h3>
+                                }
+                                @case ('h4') {
+                                  <h4
+                                    class="text-xl font-bold"
+                                    [style.text-align]="$any(field.metadata)?.alignment || 'left'"
+                                    [style.color]="$any(field.metadata)?.color || 'inherit'"
+                                    [style.font-weight]="$any(field.metadata)?.fontWeight || 'bold'"
+                                  >
+                                    {{ field.label }}
+                                  </h4>
+                                }
+                                @case ('h5') {
+                                  <h5
+                                    class="text-lg font-bold"
+                                    [style.text-align]="$any(field.metadata)?.alignment || 'left'"
+                                    [style.color]="$any(field.metadata)?.color || 'inherit'"
+                                    [style.font-weight]="$any(field.metadata)?.fontWeight || 'bold'"
+                                  >
+                                    {{ field.label }}
+                                  </h5>
+                                }
+                                @case ('h6') {
+                                  <h6
+                                    class="text-base font-bold"
+                                    [style.text-align]="$any(field.metadata)?.alignment || 'left'"
+                                    [style.color]="$any(field.metadata)?.color || 'inherit'"
+                                    [style.font-weight]="$any(field.metadata)?.fontWeight || 'bold'"
+                                  >
+                                    {{ field.label }}
+                                  </h6>
+                                }
+                              }
+                            </div>
                           }
 
                           @if (field.helpText) {
