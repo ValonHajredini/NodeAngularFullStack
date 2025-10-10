@@ -15,7 +15,6 @@ import { FormField, FormFieldType, FieldPosition } from '@nodeangularfullstack/s
 import { FormBuilderService } from '../form-builder.service';
 import { FormSettings } from '../form-settings/form-settings.component';
 import { FieldPreviewRendererComponent } from './field-preview-renderer/field-preview-renderer.component';
-import { FieldSettingsModalComponent } from './field-settings-modal.component';
 import { GroupPreviewComponent } from './field-preview-renderer/group-preview.component';
 import { sanitizeCustomBackground } from '../../../../../shared/utils/sanitizer';
 import { validateCSS, stripDangerousCSS } from '../../../../../shared/utils/css-validator';
@@ -34,13 +33,7 @@ interface FieldTypeDefinition {
   selector: 'app-form-canvas',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    CommonModule,
-    DragDropModule,
-    FieldPreviewRendererComponent,
-    FieldSettingsModalComponent,
-    GroupPreviewComponent,
-  ],
+  imports: [CommonModule, DragDropModule, FieldPreviewRendererComponent, GroupPreviewComponent],
   template: `
     <div class="form-canvas h-full bg-gray-50 p-6">
       @if (!formBuilderService.hasFields() && !formBuilderService.rowLayoutEnabled()) {
@@ -333,13 +326,7 @@ interface FieldTypeDefinition {
         </div>
       }
 
-      <!-- Field Settings Modal -->
-      <app-field-settings-modal
-        [field]="selectedFieldForSettings()"
-        [(displayModal)]="displaySettingsModal"
-        (settingsSaved)="onSettingsSaved($event)"
-        (fieldDeleted)="onFieldDeleted()"
-      />
+      <!-- Field Settings Modal removed - now handled by parent UnifiedFieldEditorModal (Story 16.8) -->
     </div>
   `,
   styles: [
@@ -564,9 +551,6 @@ export class FormCanvasComponent {
   }
 
   @Output() fieldClicked = new EventEmitter<FormField>();
-
-  displaySettingsModal = false;
-  selectedFieldForSettings = signal<FormField | null>(null);
 
   /**
    * Check if background image exists with URL (from settings)
@@ -870,37 +854,14 @@ export class FormCanvasComponent {
   }
 
   /**
-   * Opens the settings modal for a specific field.
+   * Opens the unified field editor modal for a specific field.
+   * Story 16.8: Simplified to emit fieldClicked event instead of managing separate modal.
+   * Parent FormBuilderComponent handles the unified modal.
    * @param field - The field to edit settings for
    */
   openSettingsModal(field: FormField): void {
-    this.selectedFieldForSettings.set(field);
     this.formBuilderService.selectField(field);
-    this.displaySettingsModal = true;
-  }
-
-  /**
-   * Handles saving of field settings from the modal.
-   * Updates all field properties in bulk.
-   * @param updates - Partial field object with updated properties
-   */
-  onSettingsSaved(updates: Partial<FormField>): void {
-    const field = this.selectedFieldForSettings();
-    if (field) {
-      this.formBuilderService.updateFieldProperties(field.id, updates);
-    }
-  }
-
-  /**
-   * Handles field deletion from the settings modal.
-   * Removes the field from the form builder.
-   */
-  onFieldDeleted(): void {
-    const field = this.selectedFieldForSettings();
-    if (field) {
-      this.formBuilderService.removeField(field.id);
-      this.selectedFieldForSettings.set(null);
-    }
+    this.fieldClicked.emit(field);
   }
 
   /**

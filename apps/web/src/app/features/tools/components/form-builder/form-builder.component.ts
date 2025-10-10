@@ -20,7 +20,7 @@ import { FormsApiService } from './forms-api.service';
 import { ComponentWithUnsavedChanges } from '@core/guards/unsaved-changes.guard';
 import { FieldPaletteComponent } from './field-palette/field-palette.component';
 import { FormCanvasComponent } from './form-canvas/form-canvas.component';
-import { FieldPropertiesModalComponent } from './field-properties-modal/field-properties-modal.component';
+import { UnifiedFieldEditorModalComponent } from './unified-field-editor-modal/unified-field-editor-modal.component';
 import { FormSettingsComponent, FormSettings } from './form-settings/form-settings.component';
 import { PublishDialogComponent } from './publish-dialog/publish-dialog.component';
 import { RowLayoutSidebarComponent } from './row-layout-sidebar/row-layout-sidebar.component';
@@ -47,7 +47,7 @@ import { FormSchema } from '@nodeangularfullstack/shared';
     DragDropModule,
     FieldPaletteComponent,
     FormCanvasComponent,
-    FieldPropertiesModalComponent,
+    UnifiedFieldEditorModalComponent,
     FormSettingsComponent,
     PublishDialogComponent,
     RowLayoutSidebarComponent,
@@ -217,15 +217,15 @@ import { FormSchema } from '@nodeangularfullstack/shared';
         </div>
       </div>
 
-      <!-- Field Properties Modal -->
-      <app-field-properties-modal
+      <!-- Unified Field Editor Modal (Story 16.8) -->
+      <app-unified-field-editor-modal
         [visible]="fieldPropertiesModalVisible()"
         [field]="selectedFieldForModal()"
         (visibleChange)="onFieldPropertiesModalVisibleChange($event)"
         (save)="onFieldPropertiesSaved($event)"
-        (cancel)="onFieldPropertiesCancelled()"
+        (cancelModal)="onFieldPropertiesCancelled()"
         (fieldDeleted)="onFieldDeleted()"
-      ></app-field-properties-modal>
+      ></app-unified-field-editor-modal>
 
       <!-- Form Settings Dialog -->
       <app-form-settings
