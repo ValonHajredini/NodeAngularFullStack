@@ -1,4 +1,6 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, effect } from '@angular/core';
+import { Subject } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
 import {
   FormMetadata,
   FormField,
@@ -27,6 +29,13 @@ export class FormBuilderService {
   private readonly _rowLayoutEnabled = signal<boolean>(false);
   private readonly _rowConfigs = signal<RowLayoutConfig[]>([]);
 
+  // Property change subjects for real-time preview updates (Story 16.5)
+  private readonly propertyChangeSubject = new Subject<{
+    fieldId: string;
+    updates: Partial<FormField>;
+  }>();
+  private readonly debouncedPropertyUpdates$ = this.propertyChangeSubject.pipe(debounceTime(300));
+
   // Public readonly signals
   readonly currentForm = this._currentForm.asReadonly();
   readonly formFields = computed(() => this._formFields().filter((field) => !field.parentGroupId));
@@ -49,6 +58,13 @@ export class FormBuilderService {
     return form?.status === FormStatus.PUBLISHED;
   });
   readonly currentFormId = computed(() => this._currentForm()?.id || null);
+
+  constructor() {
+    // Subscribe to debounced property updates
+    this.debouncedPropertyUpdates$.subscribe(({ fieldId, updates }) => {
+      this.applyFieldUpdateWithoutMarkingDirty(fieldId, updates);
+    });
+  }
 
   /**
    * Computed signal that groups fields by row.
@@ -320,11 +336,23 @@ export class FormBuilderService {
     const baseField = {
       id: crypto.randomUUID(),
       type,
-      label: type === FormFieldType.HEADING ? 'Untitled Heading' : 'Untitled Field',
+      label:
+        type === FormFieldType.HEADING
+          ? 'Untitled Heading'
+          : type === FormFieldType.IMAGE
+            ? 'Image'
+            : type === FormFieldType.TEXT_BLOCK
+              ? 'Text Block'
+              : 'Untitled Field',
       fieldName: this.generateUniqueFieldName(type),
       placeholder: '',
       helpText: '',
-      required: type === FormFieldType.HEADING ? false : false, // Headings are never required
+      required:
+        type === FormFieldType.HEADING ||
+        type === FormFieldType.IMAGE ||
+        type === FormFieldType.TEXT_BLOCK
+          ? false
+          : false, // Display-only fields are never required
       order: fields.length,
       validation: {},
     };
@@ -337,6 +365,34 @@ export class FormBuilderService {
           headingLevel: 'h2',
           alignment: 'left',
           fontWeight: 'bold',
+        },
+      };
+    }
+
+    // Add IMAGE-specific metadata
+    if (type === FormFieldType.IMAGE) {
+      return {
+        ...baseField,
+        metadata: {
+          altText: 'Image',
+          alignment: 'center',
+          width: '100%',
+          height: 'auto',
+          objectFit: 'contain',
+        },
+      };
+    }
+
+    // Add TEXT_BLOCK-specific metadata
+    if (type === FormFieldType.TEXT_BLOCK) {
+      return {
+        ...baseField,
+        metadata: {
+          content: '<p>Add your instructions here...</p>',
+          alignment: 'left',
+          padding: 'medium',
+          collapsible: false,
+          collapsed: false,
         },
       };
     }
@@ -426,6 +482,55 @@ export class FormBuilderService {
       return updated;
     });
     this.markDirty();
+  }
+
+  /**
+   * Updates field property instantly for real-time canvas preview (Story 16.5).
+   * Use for simple properties like label, placeholder, required.
+   * Does NOT mark form as dirty (preview-only update).
+   * @param fieldId - The ID of the field to update
+   * @param updates - Partial field updates
+   */
+  updateFieldPropertyInstant(fieldId: string, updates: Partial<FormField>): void {
+    this.applyFieldUpdateWithoutMarkingDirty(fieldId, updates);
+    // Update selected field signal to trigger re-render
+    const updatedField = this._formFields().find((f) => f.id === fieldId);
+    if (updatedField && this._selectedField()?.id === fieldId) {
+      this._selectedField.set(updatedField);
+    }
+  }
+
+  /**
+   * Updates field property with debounce (300ms) for real-time canvas preview (Story 16.5).
+   * Use for expensive updates like custom CSS.
+   * Does NOT mark form as dirty (preview-only update).
+   * @param fieldId - The ID of the field to update
+   * @param updates - Partial field updates
+   */
+  updateFieldPropertyDebounced(fieldId: string, updates: Partial<FormField>): void {
+    this.propertyChangeSubject.next({ fieldId, updates });
+  }
+
+  /**
+   * Applies field updates to form schema signal WITHOUT marking form as dirty.
+   * Used for real-time preview updates (Story 16.5).
+   * @private
+   * @param fieldId - The ID of the field to update
+   * @param updates - Partial field updates
+   */
+  private applyFieldUpdateWithoutMarkingDirty(fieldId: string, updates: Partial<FormField>): void {
+    this._formFields.update((fields) => {
+      const index = fields.findIndex((f) => f.id === fieldId);
+      if (index === -1) return fields;
+      const updated = [...fields];
+      updated[index] = { ...updated[index], ...updates };
+      return updated;
+    });
+    // Update selected field signal to trigger re-render
+    const updatedField = this._formFields().find((f) => f.id === fieldId);
+    if (updatedField && this._selectedField()?.id === fieldId) {
+      this._selectedField.set(updatedField);
+    }
   }
 
   /**

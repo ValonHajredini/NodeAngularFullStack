@@ -1,0 +1,88 @@
+schema: 1
+story: '15.2'
+story_title: 'Add IMAGE Field Type for Visual Content Display'
+gate: CONCERNS
+status_reason: 'Implementation is functionally complete and follows architectural patterns, but lacks test coverage for new IMAGE field type functionality. Missing tests create risk for regressions during future development.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2025-10-10T00:00:00Z'
+
+top_issues:
+  - severity: medium
+    category: testing
+    description: 'No unit or integration tests found for IMAGE field upload endpoint'
+    impact: 'Upload functionality unvalidated - potential for file type, size, or security regressions'
+    refs:
+      - 'apps/api/src/controllers/forms-upload.controller.ts:uploadFormImage'
+    suggested_owner: dev
+
+  - severity: medium
+    category: testing
+    description: 'No frontend unit tests for ImagePreviewComponent'
+    impact: 'Image rendering, metadata handling, and responsive behavior unvalidated'
+    refs:
+      - 'apps/web/src/app/features/tools/components/form-builder/form-canvas/field-preview-renderer/image-preview.component.ts'
+    suggested_owner: dev
+
+  - severity: low
+    category: testing
+    description: 'FormRendererComponent IMAGE rendering not explicitly tested'
+    impact: 'Public form image display, lazy loading, and error states unvalidated'
+    refs:
+      - 'apps/web/src/app/features/public/form-renderer/form-renderer.component.ts'
+    suggested_owner: dev
+
+  - severity: low
+    category: code-quality
+    description: 'JSDoc documentation incomplete for ImageMetadata properties'
+    impact: 'Reduced developer understanding of alignment and objectFit behavior'
+    refs:
+      - 'packages/shared/src/types/forms.types.ts:ImageMetadata'
+    suggested_owner: dev
+
+waiver: { active: false }
+
+quality_score: 70
+expires: '2025-10-24T00:00:00Z'
+
+evidence:
+  tests_reviewed: 0
+  risks_identified: 4
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 9, 10, 11, 12]
+    ac_gaps: [8, 13, 14, 15, 16, 17]
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'File type validation, size limits (5MB), and authentication enforced. Multer middleware correctly configured. Image URLs validated in metadata. No XSS risk from imageUrl (URL format validation).'
+  performance:
+    status: PASS
+    notes: 'Lazy loading implemented for images. CDN delivery from DO Spaces. Responsive image sizing with max-width constraints. 5MB file size limit prevents excessive storage costs.'
+  reliability:
+    status: CONCERNS
+    notes: 'Error handling implemented for upload failures and missing images. However, lack of tests means error paths are unvalidated. Loading states present in FormRendererComponent.'
+  maintainability:
+    status: CONCERNS
+    notes: 'Code follows existing patterns (HEADING field type). Well-structured with separate preview components. However, missing JSDoc for some metadata properties reduces clarity. Test gap makes refactoring risky.'
+  accessibility:
+    status: PASS
+    notes: 'Alt text required (enforced in metadata defaults). Lazy loading attribute present. Images use semantic HTML with proper alt attributes. Screen reader compatible.'
+
+recommendations:
+  immediate:
+    - action: 'Add unit tests for uploadFormImage endpoint (file validation, size limits, auth)'
+      refs: ['apps/api/src/controllers/forms-upload.controller.ts']
+    - action: 'Add unit tests for ImagePreviewComponent (rendering, metadata, responsive behavior)'
+      refs: ['apps/web/src/app/features/tools/components/form-builder/form-canvas/field-preview-renderer/image-preview.component.ts']
+    - action: 'Add integration test for IMAGE field in published form workflow'
+      refs: ['apps/api/tests/integration/forms-publish.test.ts']
+
+  future:
+    - action: 'Add JSDoc comments to ImageMetadata properties (alignment, objectFit, caption)'
+      refs: ['packages/shared/src/types/forms.types.ts']
+    - action: 'Add E2E test for complete IMAGE field workflow (upload → save → publish → render)'
+      refs: ['tests/e2e/']
+    - action: 'Consider image compression/optimization (sharp library) for storage cost reduction'
+      refs: ['apps/api/src/controllers/forms-upload.controller.ts']
+    - action: 'Add error boundary for image loading failures in FormRendererComponent'
+      refs: ['apps/web/src/app/features/public/form-renderer/form-renderer.component.ts']

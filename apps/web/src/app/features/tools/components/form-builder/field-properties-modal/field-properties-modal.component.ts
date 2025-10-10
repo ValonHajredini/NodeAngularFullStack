@@ -9,6 +9,7 @@ import {
   OnDestroy,
   signal,
   effect,
+  HostListener,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
@@ -29,6 +30,10 @@ import { ButtonModule } from 'primeng/button';
 import { Select } from 'primeng/select';
 import { InputNumber } from 'primeng/inputnumber';
 import { ToggleSwitch } from 'primeng/toggleswitch';
+import { Toast } from 'primeng/toast';
+import { ConfirmDialog } from 'primeng/confirmdialog';
+import { Tooltip } from 'primeng/tooltip';
+import { MessageService, ConfirmationService } from 'primeng/api';
 import { CdkDrag, CdkDropList, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { FormField, FormFieldType, FormFieldOption } from '@nodeangularfullstack/shared';
 import { FormBuilderService } from '../form-builder.service';
@@ -55,9 +60,13 @@ import { Subject, takeUntil } from 'rxjs';
     Select,
     InputNumber,
     ToggleSwitch,
+    Toast,
+    ConfirmDialog,
+    Tooltip,
     CdkDrag,
     CdkDropList,
   ],
+  providers: [MessageService, ConfirmationService],
   template: `
     <p-dialog
       header="Field Properties"
@@ -65,21 +74,35 @@ import { Subject, takeUntil } from 'rxjs';
       [modal]="true"
       [closable]="true"
       [dismissableMask]="true"
-      [closeOnEscape]="true"
+      [closeOnEscape]="false"
       [draggable]="false"
       [resizable]="false"
       [blockScroll]="true"
       appendTo="body"
       [style]="{ width: '640px', maxWidth: '90vw', maxHeight: '90vh' }"
       [contentStyle]="{ maxHeight: 'calc(90vh - 180px)', overflow: 'auto' }"
+      [attr.aria-keyshortcuts]="'Control+S Escape'"
       (onHide)="onDialogHide()"
       (onShow)="onDialogShow()"
     >
       @if (field) {
-        <div class="mb-4">
+        <!-- Keyboard Shortcut Hints (Accessibility) -->
+        <div class="sr-only" role="status" aria-live="polite">
+          Keyboard shortcuts: Press Control+S to save, Escape to close
+        </div>
+
+        <!-- Visible hint and field type -->
+        <div class="mb-4 flex items-center justify-between">
           <span class="inline-block bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full">
             {{ field.type }}
           </span>
+          <div class="text-xs text-gray-600 flex items-center gap-2">
+            <i class="pi pi-info-circle"></i>
+            <span>
+              <kbd class="px-1 py-0.5 bg-gray-200 rounded text-xs">Ctrl+S</kbd> to save,
+              <kbd class="px-1 py-0.5 bg-gray-200 rounded text-xs">ESC</kbd> to close
+            </span>
+          </div>
         </div>
 
         <form [formGroup]="propertiesForm" class="space-y-4">
@@ -468,7 +491,10 @@ import { Subject, takeUntil } from 'rxjs';
                 <p-accordion-content>
                   <div class="space-y-4 pt-4">
                     <div class="field">
-                      <label for="acceptedTypes" class="block text-sm font-medium text-gray-700 mb-1">
+                      <label
+                        for="acceptedTypes"
+                        class="block text-sm font-medium text-gray-700 mb-1"
+                      >
                         Accepted File Types
                       </label>
                       <input
@@ -519,7 +545,7 @@ import { Subject, takeUntil } from 'rxjs';
       }
 
       <ng-template pTemplate="footer">
-        <div class="flex justify-between gap-2">
+        <div class="flex justify-between items-center gap-2">
           <button
             pButton
             type="button"
@@ -529,7 +555,16 @@ import { Subject, takeUntil } from 'rxjs';
             [outlined]="true"
             (click)="onDeleteField()"
           ></button>
-          <div class="flex gap-2">
+
+          <div class="flex items-center gap-3">
+            <!-- Dirty indicator -->
+            @if (isDirty()) {
+              <div class="flex items-center gap-2 text-sm text-orange-600">
+                <i class="pi pi-circle-fill text-orange-500" style="font-size: 0.5rem;"></i>
+                <span>Unsaved changes</span>
+              </div>
+            }
+
             <button
               pButton
               type="button"
@@ -541,20 +576,32 @@ import { Subject, takeUntil } from 'rxjs';
             <button
               pButton
               type="button"
-              label="Save"
+              label="Save Changes"
               icon="pi pi-check"
               (click)="onSave()"
               [disabled]="propertiesForm.invalid"
+              [pTooltip]="
+                propertiesForm.invalid ? 'Fix validation errors before saving' : 'Save (Ctrl+S)'
+              "
+              tooltipPosition="top"
             ></button>
           </div>
         </div>
       </ng-template>
     </p-dialog>
+
+    <!-- Toast Notifications -->
+    <p-toast position="top-right"></p-toast>
+
+    <!-- Confirmation Dialog -->
+    <p-confirmDialog></p-confirmDialog>
   `,
 })
 export class FieldPropertiesModalComponent implements OnInit, OnDestroy {
   readonly formBuilderService = inject(FormBuilderService);
   private readonly fb = inject(FormBuilder);
+  private readonly messageService = inject(MessageService);
+  private readonly confirmationService = inject(ConfirmationService);
   private readonly destroy$ = new Subject<void>();
 
   @Input() visible = false;
@@ -566,6 +613,13 @@ export class FieldPropertiesModalComponent implements OnInit, OnDestroy {
   @Output() fieldDeleted = new EventEmitter<void>();
 
   propertiesForm: FormGroup;
+  private initialFormValue: any;
+
+  // Dirty state tracking (Story 16.7)
+  readonly isDirty = signal(false);
+
+  // Auto-save configuration (Story 16.7)
+  readonly autoSaveEnabled = true;
 
   // Operator options for conditional visibility
   readonly operatorOptions = [
@@ -620,12 +674,50 @@ export class FieldPropertiesModalComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // Form is initialized via loadFieldProperties when dialog opens
+    // Setup dirty state tracking (Story 16.7 - Task 2)
+    this.setupDirtyStateTracking();
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  /**
+   * Handles keyboard shortcuts for save (Ctrl+S/Cmd+S) and close (ESC).
+   * Story 16.7 - Task 1: Keyboard shortcut handling
+   */
+  @HostListener('document:keydown', ['$event'])
+  handleKeyboardShortcut(event: KeyboardEvent): void {
+    // Only handle shortcuts when modal is visible
+    if (!this.visible) return;
+
+    // Ctrl+S (Windows/Linux) or Cmd+S (Mac)
+    if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+      event.preventDefault(); // Prevent browser save dialog
+      this.saveProperties();
+      return;
+    }
+
+    // ESC key
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.attemptClose();
+      return;
+    }
+  }
+
+  /**
+   * Setup dirty state tracking for form value changes.
+   * Story 16.7 - Task 2: Dirty state tracking
+   */
+  private setupDirtyStateTracking(): void {
+    this.propertiesForm.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(() => {
+      // Compare current value with initial value
+      const hasChanges =
+        JSON.stringify(this.propertiesForm.value) !== JSON.stringify(this.initialFormValue);
+      this.isDirty.set(hasChanges);
+    });
   }
 
   /**
@@ -783,6 +875,109 @@ export class FieldPropertiesModalComponent implements OnInit, OnDestroy {
     );
 
     this.propertiesForm.markAsPristine();
+
+    // Store initial form value for dirty checking (Story 16.7 - Task 2)
+    this.initialFormValue = this.propertiesForm.value;
+    this.isDirty.set(false);
+  }
+
+  /**
+   * Saves field properties if form is valid.
+   * Marks all fields as touched to show validation errors if invalid.
+   * Closes modal after successful save and resets dirty state.
+   * Story 16.7 - Task 1, Task 6: Keyboard shortcut and Save Changes button
+   * @throws Displays error toast if form validation fails
+   */
+  saveProperties(): void {
+    if (this.propertiesForm.invalid) {
+      // Mark all fields as touched to show validation errors
+      Object.keys(this.propertiesForm.controls).forEach((key) => {
+        this.propertiesForm.get(key)?.markAsTouched();
+      });
+
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Validation Error',
+        detail: 'Please fix validation errors before saving',
+        life: 3000,
+      });
+      return;
+    }
+
+    // Call the existing onSave method which emits the save event
+    this.onSave();
+  }
+
+  /**
+   * Attempts to close modal, checking for unsaved changes first.
+   * If dirty, shows confirmation dialog. Otherwise closes immediately.
+   * Story 16.7 - Task 4: Cancel button with confirmation
+   */
+  attemptClose(): void {
+    if (this.isDirty()) {
+      this.showUnsavedChangesConfirmation();
+    } else {
+      this.closeModal();
+    }
+  }
+
+  /**
+   * Shows confirmation dialog for unsaved changes.
+   * Presents "Discard Changes" and "Keep Editing" options to user.
+   * Story 16.7 - Task 3: Unsaved changes confirmation
+   */
+  private showUnsavedChangesConfirmation(): void {
+    this.confirmationService.confirm({
+      message: 'You have unsaved changes. Do you want to discard them?',
+      header: 'Unsaved Changes',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Discard Changes',
+      rejectLabel: 'Keep Editing',
+      acceptButtonStyleClass: 'p-button-danger',
+      rejectButtonStyleClass: 'p-button-secondary',
+      accept: () => {
+        this.isDirty.set(false);
+        this.closeModal();
+      },
+      reject: () => {
+        // User wants to keep editing - do nothing
+      },
+    });
+  }
+
+  /**
+   * Closes modal with optional auto-save.
+   * Auto-saves valid changes if enabled and form is dirty.
+   * Shows confirmation for invalid changes that cannot be saved.
+   * Story 16.7 - Task 5: Auto-save on modal close
+   */
+  closeModal(): void {
+    // Auto-save valid changes if enabled and dirty
+    if (this.autoSaveEnabled && this.isDirty() && this.propertiesForm.valid) {
+      // Save changes automatically - onSave() already shows success toast
+      this.onSave();
+      return; // onSave() closes the modal
+    } else if (this.isDirty() && this.propertiesForm.invalid) {
+      // Form has invalid changes - show warning
+      this.confirmationService.confirm({
+        message: 'Your changes contain errors and cannot be saved. Discard changes?',
+        header: 'Invalid Changes',
+        icon: 'pi pi-exclamation-triangle',
+        acceptLabel: 'Discard',
+        rejectLabel: 'Fix Errors',
+        acceptButtonStyleClass: 'p-button-danger',
+        accept: () => {
+          this.isDirty.set(false);
+          this.visible = false;
+          this.visibleChange.emit(false);
+        },
+      });
+      return; // Don't close yet, wait for user decision
+    } else {
+      // Form is clean - close immediately
+      this.visible = false;
+      this.visibleChange.emit(false);
+    }
   }
 
   /**
@@ -864,6 +1059,7 @@ export class FieldPropertiesModalComponent implements OnInit, OnDestroy {
 
   /**
    * Handle save button click
+   * Updated for Story 16.7 to reset dirty state after save
    */
   onSave(): void {
     if (this.propertiesForm.invalid || !this.field) return;
@@ -913,6 +1109,17 @@ export class FieldPropertiesModalComponent implements OnInit, OnDestroy {
       conditional,
     };
 
+    // Reset dirty state after successful save (Story 16.7)
+    this.isDirty.set(false);
+
+    // Show success message
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Saved',
+      detail: 'Field properties saved successfully',
+      life: 2000,
+    });
+
     this.save.emit(updatedField);
     this.visible = false;
     this.visibleChange.emit(false);
@@ -920,11 +1127,10 @@ export class FieldPropertiesModalComponent implements OnInit, OnDestroy {
 
   /**
    * Handle cancel button click
+   * Updated for Story 16.7 to check for unsaved changes
    */
   onCancel(): void {
-    this.cancel.emit();
-    this.visible = false;
-    this.visibleChange.emit(false);
+    this.attemptClose();
   }
 
   /**
@@ -937,7 +1143,8 @@ export class FieldPropertiesModalComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Handle dialog show event
+   * Handle dialog show event.
+   * Loads field properties into form when dialog opens.
    */
   onDialogShow(): void {
     if (this.field) {
@@ -946,12 +1153,14 @@ export class FieldPropertiesModalComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Handle dialog hide event
+   * Handle dialog hide event (triggered by X button, backdrop click, or programmatic close).
+   * Note: This is a cleanup callback - the dialog is already closing at this point.
+   * Story 16.7: Ensures form state is reset when dialog closes.
    */
   onDialogHide(): void {
-    // Reset form to clean state
+    // Reset form to clean state when dialog closes
+    // Auto-save and confirmations are handled in closeModal() which is called before hide
     this.propertiesForm.reset();
-    this.visible = false;
-    this.visibleChange.emit(false);
+    this.isDirty.set(false);
   }
 }

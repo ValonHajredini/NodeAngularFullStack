@@ -24,9 +24,14 @@ import {
   FormFieldType,
   FormBackgroundSettings,
   HeadingMetadata,
+  TextBlockMetadata,
   isInputField,
   isDisplayElement,
 } from '@nodeangularfullstack/shared';
+
+// Shared Services
+import { HtmlSanitizerService } from '../../../shared/services/html-sanitizer.service';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
 // Service
 import { FormRendererService, FormRenderError, FormRenderErrorType } from './form-renderer.service';
@@ -95,10 +100,14 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private token = '';
 
+  private collapsedTextBlocks = new Set<string>();
+
   constructor(
     private route: ActivatedRoute,
     private formRendererService: FormRendererService,
     private fb: FormBuilder,
+    private htmlSanitizer: HtmlSanitizerService,
+    private domSanitizer: DomSanitizer,
   ) {}
 
   ngOnInit(): void {
@@ -502,14 +511,23 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Gets user-friendly error message for field
+   * Gets user-friendly error message for field.
+   * Story 16.3: If custom error message is defined, it takes precedence for all validation errors.
+   * Otherwise, falls back to default error messages.
    */
   getErrorMessage(field: FormField): string {
     const control = this.formGroup?.get(field.fieldName);
     if (!control?.errors) return '';
 
     const errors = control.errors;
+    const customMessage = field.validation?.errorMessage;
 
+    // If custom error message is defined, use it for any validation error (Story 16.3)
+    if (customMessage && customMessage.trim() !== '') {
+      return customMessage;
+    }
+
+    // Otherwise, fall back to default error messages
     if (errors['required']) {
       return 'This field is required';
     }
@@ -535,7 +553,7 @@ export class FormRendererComponent implements OnInit, OnDestroy {
     }
 
     if (errors['pattern']) {
-      return field.validation?.errorMessage || 'Invalid format';
+      return 'Invalid format';
     }
 
     return 'Invalid value';
@@ -703,5 +721,77 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   shouldShowBackgroundOverlay(): boolean {
     const bg = this.getBackgroundImage();
     return !!bg && !!bg.imageUrl && bg.imageOpacity !== undefined && bg.imageOpacity < 100;
+  }
+
+  /**
+   * Get sanitized HTML content for TEXT_BLOCK field
+   */
+  getSanitizedContent(field: FormField): SafeHtml {
+    const metadata = field.metadata as TextBlockMetadata;
+    const sanitized = this.htmlSanitizer.sanitize(metadata?.content || '');
+    return this.domSanitizer.bypassSecurityTrustHtml(sanitized);
+  }
+
+  /**
+   * Check if TEXT_BLOCK content is long (> 500 words)
+   */
+  isTextBlockLong(field: FormField): boolean {
+    const metadata = field.metadata as TextBlockMetadata;
+    return this.htmlSanitizer.isContentLong(metadata?.content || '', 500);
+  }
+
+  /**
+   * Check if TEXT_BLOCK is currently collapsed
+   */
+  isTextBlockCollapsed(fieldId: string): boolean {
+    return this.collapsedTextBlocks.has(fieldId);
+  }
+
+  /**
+   * Toggle TEXT_BLOCK collapsed state
+   */
+  toggleTextBlockCollapse(fieldId: string): void {
+    if (this.collapsedTextBlocks.has(fieldId)) {
+      this.collapsedTextBlocks.delete(fieldId);
+    } else {
+      this.collapsedTextBlocks.add(fieldId);
+    }
+  }
+
+  /**
+   * Parse custom CSS string from field metadata into Angular style object.
+   * Converts CSS string (e.g., "color: red; padding: 10px") to object {color: 'red', padding: '10px'}
+   * Returns empty object if no custom style is defined.
+   * Story 16.2: Universal Custom CSS Support
+   *
+   * @param field - The form field containing potential customStyle metadata
+   * @returns Style object for ngStyle binding
+   */
+  getFieldCustomStyles(field: FormField): { [key: string]: string } {
+    const customStyle = (field.metadata as any)?.customStyle;
+    if (!customStyle || typeof customStyle !== 'string') {
+      return {};
+    }
+
+    const styles: { [key: string]: string } = {};
+
+    // Parse CSS string: split by semicolons, then split each rule by colon
+    customStyle.split(';').forEach((rule) => {
+      const colonIndex = rule.indexOf(':');
+      if (colonIndex === -1) return; // Skip malformed rules
+
+      const property = rule.substring(0, colonIndex).trim();
+      const value = rule.substring(colonIndex + 1).trim();
+
+      if (property && value) {
+        // Convert kebab-case CSS property to camelCase for Angular style binding
+        const camelCaseProperty = property.replace(/-([a-z])/g, (_, letter) =>
+          letter.toUpperCase(),
+        );
+        styles[camelCaseProperty] = value;
+      }
+    });
+
+    return styles;
   }
 }

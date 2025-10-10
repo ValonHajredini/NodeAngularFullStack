@@ -5,6 +5,7 @@ import {
   FormFieldType,
   isInputField,
 } from '@nodeangularfullstack/shared';
+import { validateRegexPattern } from '../utils/safe-regex.util';
 
 /**
  * Validation rules for creating a new form.
@@ -119,7 +120,14 @@ export const validateFormSchema = (
       fieldName?: string;
       label?: string;
       parentGroupId?: string;
-      validation?: { pattern?: string };
+      validation?: {
+        pattern?: string;
+        minLength?: number;
+        maxLength?: number;
+        min?: number;
+        max?: number;
+        errorMessage?: string;
+      };
       metadata?: {
         groupTitle?: string;
         groupBorderStyle?: string;
@@ -164,14 +172,94 @@ export const validateFormSchema = (
         }
       }
 
-      // Validate regex patterns if present
+      // Validate regex patterns with ReDoS protection
       if (field.validation?.pattern) {
-        try {
-          new RegExp(field.validation.pattern);
-        } catch (error) {
+        const patternValidation = validateRegexPattern(
+          field.validation.pattern
+        );
+        if (!patternValidation.valid) {
           errors.push(
-            `Invalid regex pattern for field ${field.fieldName}: ${field.validation.pattern}`
+            `Invalid regex pattern for field ${field.fieldName}: ${patternValidation.errors.join(', ')}`
           );
+        }
+      }
+
+      // Validate other validation properties
+      if (field.validation) {
+        // Validate minLength (must be non-negative integer)
+        if (field.validation.minLength !== undefined) {
+          const minLength = field.validation.minLength as number;
+          if (
+            typeof minLength !== 'number' ||
+            minLength < 0 ||
+            !Number.isInteger(minLength)
+          ) {
+            errors.push(
+              `Invalid minLength for field ${field.fieldName}: must be a non-negative integer`
+            );
+          }
+        }
+
+        // Validate maxLength (must be positive integer, greater than minLength if both present)
+        if (field.validation.maxLength !== undefined) {
+          const maxLength = field.validation.maxLength as number;
+          if (
+            typeof maxLength !== 'number' ||
+            maxLength <= 0 ||
+            !Number.isInteger(maxLength)
+          ) {
+            errors.push(
+              `Invalid maxLength for field ${field.fieldName}: must be a positive integer`
+            );
+          } else if (
+            field.validation.minLength !== undefined &&
+            maxLength < (field.validation.minLength as number)
+          ) {
+            errors.push(
+              `Invalid validation for field ${field.fieldName}: maxLength must be greater than or equal to minLength`
+            );
+          }
+        }
+
+        // Validate min (must be a number)
+        if (field.validation.min !== undefined) {
+          const min = field.validation.min as number;
+          if (typeof min !== 'number') {
+            errors.push(
+              `Invalid min for field ${field.fieldName}: must be a number`
+            );
+          }
+        }
+
+        // Validate max (must be a number, greater than min if both present)
+        if (field.validation.max !== undefined) {
+          const max = field.validation.max as number;
+          if (typeof max !== 'number') {
+            errors.push(
+              `Invalid max for field ${field.fieldName}: must be a number`
+            );
+          } else if (
+            field.validation.min !== undefined &&
+            max < (field.validation.min as number)
+          ) {
+            errors.push(
+              `Invalid validation for field ${field.fieldName}: max must be greater than or equal to min`
+            );
+          }
+        }
+
+        // Validate errorMessage (must be string with max 500 characters)
+        if (field.validation.errorMessage !== undefined) {
+          const errorMessage = field.validation.errorMessage as string;
+          if (typeof errorMessage !== 'string') {
+            errors.push(
+              `Invalid errorMessage for field ${field.fieldName}: must be a string`
+            );
+          } else if (errorMessage.length > 500) {
+            errors.push(
+              `Invalid errorMessage for field ${field.fieldName}: must not exceed 500 characters`
+            );
+          }
         }
       }
 

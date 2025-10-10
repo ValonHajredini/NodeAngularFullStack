@@ -1332,6 +1332,8 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
       [FormFieldType.DIVIDER]: 'Section Divider',
       [FormFieldType.GROUP]: 'Group Container',
       [FormFieldType.HEADING]: 'Untitled Heading',
+      [FormFieldType.IMAGE]: 'Image',
+      [FormFieldType.TEXT_BLOCK]: 'Text Block',
     };
     return labelMap[type] || 'Field';
   }

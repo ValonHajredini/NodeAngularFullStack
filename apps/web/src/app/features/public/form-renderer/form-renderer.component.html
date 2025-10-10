@@ -130,7 +130,7 @@
                               track field.id
                             ) {
                               @if (isFieldVisible(field)) {
-                                <div class="form-field">
+                                <div class="form-field" [ngStyle]="getFieldCustomStyles(field)">
                                   <div class="field-wrapper">
                                     @if (
                                       field.type !== fieldTypes.DIVIDER &&
@@ -405,6 +405,57 @@
                                       </div>
                                     }
 
+                                    <!-- Text Block -->
+                                    @if (field.type === fieldTypes.TEXT_BLOCK) {
+                                      <div
+                                        class="text-block-field col-span-full rounded"
+                                        [class.text-left]="
+                                          $any(field.metadata)?.alignment === 'left'
+                                        "
+                                        [class.text-center]="
+                                          $any(field.metadata)?.alignment === 'center'
+                                        "
+                                        [class.text-right]="
+                                          $any(field.metadata)?.alignment === 'right'
+                                        "
+                                        [class.text-justify]="
+                                          $any(field.metadata)?.alignment === 'justify'
+                                        "
+                                        [style.background-color]="
+                                          $any(field.metadata)?.backgroundColor || 'transparent'
+                                        "
+                                        [class.p-0]="$any(field.metadata)?.padding === 'none'"
+                                        [class.p-2]="$any(field.metadata)?.padding === 'small'"
+                                        [class.p-4]="$any(field.metadata)?.padding === 'medium'"
+                                        [class.p-6]="$any(field.metadata)?.padding === 'large'"
+                                      >
+                                        <div
+                                          class="text-block-content prose prose-sm max-w-none"
+                                          [class.line-clamp-6]="
+                                            isTextBlockCollapsed(field.id) &&
+                                            $any(field.metadata)?.collapsible
+                                          "
+                                          [innerHTML]="getSanitizedContent(field)"
+                                        ></div>
+                                        @if (
+                                          $any(field.metadata)?.collapsible &&
+                                          isTextBlockLong(field)
+                                        ) {
+                                          <button
+                                            type="button"
+                                            class="read-more-btn text-blue-600 hover:text-blue-700 mt-2 text-sm font-medium"
+                                            (click)="toggleTextBlockCollapse(field.id)"
+                                          >
+                                            {{
+                                              isTextBlockCollapsed(field.id)
+                                                ? 'Read more ▼'
+                                                : 'Read less ▲'
+                                            }}
+                                          </button>
+                                        }
+                                      </div>
+                                    }
+
                                     @if (field.helpText) {
                                       <small class="text-gray-500 text-sm">{{
                                         field.helpText
@@ -431,7 +482,11 @@
                 <div class="form-fields-grid" [ngClass]="getGridClass()">
                   @for (field of getFieldsWithoutPosition(); track field.id) {
                     @if (isFieldVisible(field)) {
-                      <div class="form-field" [ngClass]="getFieldSpacingClass()">
+                      <div
+                        class="form-field"
+                        [ngClass]="getFieldSpacingClass()"
+                        [ngStyle]="getFieldCustomStyles(field)"
+                      >
                         <div class="field-wrapper">
                           @if (
                             field.type !== fieldTypes.DIVIDER &&
@@ -664,6 +719,44 @@
                                     {{ field.label }}
                                   </h6>
                                 }
+                              }
+                            </div>
+                          }
+
+                          <!-- Text Block -->
+                          @if (field.type === fieldTypes.TEXT_BLOCK) {
+                            <div
+                              class="text-block-field col-span-full rounded"
+                              [class.text-left]="$any(field.metadata)?.alignment === 'left'"
+                              [class.text-center]="$any(field.metadata)?.alignment === 'center'"
+                              [class.text-right]="$any(field.metadata)?.alignment === 'right'"
+                              [class.text-justify]="$any(field.metadata)?.alignment === 'justify'"
+                              [style.background-color]="
+                                $any(field.metadata)?.backgroundColor || 'transparent'
+                              "
+                              [class.p-0]="$any(field.metadata)?.padding === 'none'"
+                              [class.p-2]="$any(field.metadata)?.padding === 'small'"
+                              [class.p-4]="$any(field.metadata)?.padding === 'medium'"
+                              [class.p-6]="$any(field.metadata)?.padding === 'large'"
+                            >
+                              <div
+                                class="text-block-content prose prose-sm max-w-none"
+                                [class.line-clamp-6]="
+                                  isTextBlockCollapsed(field.id) &&
+                                  $any(field.metadata)?.collapsible
+                                "
+                                [innerHTML]="getSanitizedContent(field)"
+                              ></div>
+                              @if ($any(field.metadata)?.collapsible && isTextBlockLong(field)) {
+                                <button
+                                  type="button"
+                                  class="read-more-btn text-blue-600 hover:text-blue-700 mt-2 text-sm font-medium"
+                                  (click)="toggleTextBlockCollapse(field.id)"
+                                >
+                                  {{
+                                    isTextBlockCollapsed(field.id) ? 'Read more ▼' : 'Read less ▲'
+                                  }}
+                                </button>
                               }
                             </div>
                           }

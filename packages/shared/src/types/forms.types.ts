@@ -35,6 +35,10 @@ export enum FormFieldType {
   GROUP = 'group',
   /** Heading/title for form sections (non-input, display only) */
   HEADING = 'heading',
+  /** Image display field (non-input, display only) */
+  IMAGE = 'image',
+  /** Text block for instructions/explanations (non-input, display only) */
+  TEXT_BLOCK = 'text_block',
 }
 
 /**
@@ -59,6 +63,8 @@ export const FIELD_TYPE_CATEGORIES = {
   /** Display elements that don't collect data (visual/organizational) */
   DISPLAY_ELEMENTS: [
     FormFieldType.HEADING,
+    FormFieldType.IMAGE,
+    FormFieldType.TEXT_BLOCK,
     FormFieldType.DIVIDER,
     FormFieldType.GROUP,
   ] as const,
@@ -123,9 +129,17 @@ export interface FormFieldOption {
 }
 
 /**
+ * Base metadata interface with common properties for all field types
+ */
+export interface BaseFieldMetadata {
+  /** Custom CSS styling applied to field container (max 5000 characters) */
+  customStyle?: string;
+}
+
+/**
  * Group-specific metadata for GROUP field type
  */
-export interface GroupMetadata {
+export interface GroupMetadata extends BaseFieldMetadata {
   /** Group title/heading */
   groupTitle?: string;
   /** Border style for group container */
@@ -139,7 +153,7 @@ export interface GroupMetadata {
 /**
  * Heading-specific metadata for HEADING field type
  */
-export interface HeadingMetadata {
+export interface HeadingMetadata extends BaseFieldMetadata {
   /** HTML heading level (h1-h6) */
   headingLevel: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
   /** Text alignment */
@@ -148,6 +162,56 @@ export interface HeadingMetadata {
   color?: string;
   /** Font weight */
   fontWeight?: 'normal' | 'bold';
+}
+
+/**
+ * Image-specific metadata for IMAGE field type
+ */
+export interface ImageMetadata extends BaseFieldMetadata {
+  /** S3/DO Spaces image URL */
+  imageUrl?: string;
+  /** Alt text for accessibility (required) */
+  altText: string;
+  /** Image width (px, %, or CSS value) */
+  width?: number | string;
+  /** Image height (px, auto, or CSS value) */
+  height?: number | string;
+  /**
+   * Image horizontal alignment within its container
+   * - 'left': Align image to left edge
+   * - 'center': Center image horizontally (default)
+   * - 'right': Align image to right edge
+   * - 'full': Stretch image to full container width
+   */
+  alignment?: 'left' | 'center' | 'right' | 'full';
+  /** Optional caption text displayed below image for additional context */
+  caption?: string;
+  /**
+   * CSS object-fit property controlling how image scales within dimensions
+   * - 'contain': Fit entire image within bounds, maintain aspect ratio (default)
+   * - 'cover': Fill entire bounds, crop if needed, maintain aspect ratio
+   * - 'fill': Stretch to fill bounds, may distort aspect ratio
+   * - 'none': Display image at original size, may overflow/underflow
+   */
+  objectFit?: 'contain' | 'cover' | 'fill' | 'none';
+}
+
+/**
+ * Text block metadata for TEXT_BLOCK field type
+ */
+export interface TextBlockMetadata extends BaseFieldMetadata {
+  /** HTML content (sanitized) */
+  content: string;
+  /** Text alignment */
+  alignment?: 'left' | 'center' | 'right' | 'justify';
+  /** Optional background color (hex format) */
+  backgroundColor?: string;
+  /** Padding size */
+  padding?: 'none' | 'small' | 'medium' | 'large';
+  /** Show "Read more" for long content */
+  collapsible?: boolean;
+  /** Initial collapsed state */
+  collapsed?: boolean;
 }
 
 /**
@@ -208,8 +272,8 @@ export interface FormField {
   order: number;
   /** Parent group ID for nested fields */
   parentGroupId?: string;
-  /** Additional metadata for special field types (e.g., GROUP, HEADING) */
-  metadata?: GroupMetadata | HeadingMetadata;
+  /** Additional metadata for special field types (e.g., GROUP, HEADING, IMAGE, TEXT_BLOCK) */
+  metadata?: GroupMetadata | HeadingMetadata | ImageMetadata | TextBlockMetadata;
   /** Position within row-column layout (optional, for row-based layouts) */
   position?: FieldPosition;
 }
@@ -434,4 +498,16 @@ export interface SubmissionFilterOptions {
   dateTo?: Date;
   /** Array of field value filters (AND logic - all must match) */
   fieldFilters?: { field: string; value: any }[];
+}
+
+/**
+ * CSS validation result for custom field styling
+ */
+export interface CSSValidationResult {
+  /** Whether the CSS is valid */
+  valid: boolean;
+  /** Array of warning messages (non-blocking) */
+  warnings: string[];
+  /** Array of error messages (blocking) */
+  errors: string[];
 }

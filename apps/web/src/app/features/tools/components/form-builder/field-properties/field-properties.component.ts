@@ -8,10 +8,13 @@ import {
   OnDestroy,
   signal,
   effect,
+  computed,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import {
   ReactiveFormsModule,
+  FormsModule,
   FormBuilder,
   FormGroup,
   FormArray,
@@ -19,6 +22,7 @@ import {
   AbstractControl,
   ValidationErrors,
 } from '@angular/forms';
+import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { InputTextModule } from 'primeng/inputtext';
 import { Checkbox } from 'primeng/checkbox';
 import { TextareaModule } from 'primeng/textarea';
@@ -26,20 +30,40 @@ import { ButtonDirective } from 'primeng/button';
 import { Select } from 'primeng/select';
 import { InputNumber } from 'primeng/inputnumber';
 import { ToggleSwitch } from 'primeng/toggleswitch';
-import { Panel } from 'primeng/panel';
-import { Slider } from 'primeng/slider';
-import { ColorPicker } from 'primeng/colorpicker';
-import { SelectButton } from 'primeng/selectbutton';
-import { CdkDrag, CdkDropList, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
-import { FormField, FormFieldType, FormFieldOption } from '@nodeangularfullstack/shared';
+import { Accordion, AccordionPanel } from 'primeng/accordion';
+import { Tooltip } from 'primeng/tooltip';
+import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
+import {
+  FormField,
+  FormFieldType,
+  FormFieldOption,
+  isInputField,
+} from '@nodeangularfullstack/shared';
 import { FormBuilderService } from '../form-builder.service';
-import { Subject, takeUntil, debounceTime } from 'rxjs';
+import { Subject, takeUntil, debounceTime, map, distinctUntilChanged } from 'rxjs';
 import { MonacoEditorModule } from 'ngx-monaco-editor-v2';
 import {
   sanitizeCustomBackground,
   containsDangerousPatterns,
 } from '../../../../../shared/utils/sanitizer';
 import { validateCSS, CSSValidationResult } from '../../../../../shared/utils/css-validator';
+import { AccordionStateService } from './accordion-state.service';
+import { CssValidatorService } from '../../../../../shared/services/css-validator.service';
+import { Message } from 'primeng/message';
+import { ValidationPresetsService, ValidationPreset } from './validation-presets.service';
+// Custom validators (Story 16.6)
+import { uniqueFieldNameValidator } from './validators/unique-field-name.validator';
+import { regexSyntaxValidator } from './validators/regex-syntax.validator';
+import { minMaxRangeValidator } from './validators/min-max-range.validator';
+// Slug utility (Story 16.6)
+import { slugify } from './utils/slugify.util';
+// Field-type specific property panels (Story 16.4)
+import { HeadingPropertiesPanelComponent } from './panels/heading-properties-panel.component';
+import { ImagePropertiesPanelComponent } from './panels/image-properties-panel.component';
+import { TextBlockPropertiesPanelComponent } from './panels/text-block-properties-panel.component';
+import { OptionsPropertiesPanelComponent } from './panels/options-properties-panel.component';
+import { FilePropertiesPanelComponent } from './panels/file-properties-panel.component';
+import { GroupPropertiesPanelComponent } from './panels/group-properties-panel.component';
 
 /**
  * Field properties component for editing selected field properties.
@@ -52,6 +76,7 @@ import { validateCSS, CSSValidationResult } from '../../../../../shared/utils/cs
   imports: [
     CommonModule,
     ReactiveFormsModule,
+    FormsModule,
     InputTextModule,
     Checkbox,
     TextareaModule,
@@ -59,13 +84,18 @@ import { validateCSS, CSSValidationResult } from '../../../../../shared/utils/cs
     Select,
     InputNumber,
     ToggleSwitch,
-    Panel,
-    Slider,
-    ColorPicker,
-    SelectButton,
-    CdkDrag,
-    CdkDropList,
+    Accordion,
+    AccordionPanel,
+    Tooltip,
     MonacoEditorModule,
+    Message,
+    // Field-type specific property panels
+    HeadingPropertiesPanelComponent,
+    ImagePropertiesPanelComponent,
+    TextBlockPropertiesPanelComponent,
+    OptionsPropertiesPanelComponent,
+    FilePropertiesPanelComponent,
+    GroupPropertiesPanelComponent,
   ],
   template: `
     <div class="field-properties h-full bg-white border-l border-gray-200 overflow-y-auto">
@@ -79,712 +109,643 @@ import { validateCSS, CSSValidationResult } from '../../../../../shared/utils/cs
           <p class="text-gray-600">Select a field to configure its properties</p>
         </div>
       } @else {
-        <div class="p-4 space-y-4">
+        <div class="p-4">
           <div class="mb-4">
             <span class="inline-block bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full">
               {{ formBuilderService.selectedField()!.type }}
             </span>
           </div>
 
-          <form [formGroup]="propertiesForm" class="space-y-6">
-            <!-- Basic Properties Section -->
-            <p-panel header="Basic Properties" [toggleable]="true">
-              <div class="space-y-4">
-                <div class="field">
-                  <label for="label" class="block text-sm font-medium text-gray-700 mb-1">
-                    Label <span class="text-red-500">*</span>
-                  </label>
-                  <input
-                    pInputText
-                    id="label"
-                    formControlName="label"
-                    class="w-full"
-                    placeholder="Enter field label"
-                    (blur)="onLabelBlur()"
-                  />
-                  @if (
-                    propertiesForm.get('label')?.invalid && propertiesForm.get('label')?.touched
-                  ) {
-                    <small class="text-red-500 text-xs"
-                      >Label is required (max 200 characters)</small
-                    >
-                  }
-                </div>
-
-                <div class="field">
-                  <label for="fieldName" class="block text-sm font-medium text-gray-700 mb-1">
-                    Field Name <span class="text-red-500">*</span>
-                  </label>
-                  <input
-                    pInputText
-                    id="fieldName"
-                    formControlName="fieldName"
-                    class="w-full"
-                    placeholder="Enter field name"
-                  />
-                  @if (
-                    propertiesForm.get('fieldName')?.errors?.['required'] &&
-                    propertiesForm.get('fieldName')?.touched
-                  ) {
-                    <small class="text-red-500 text-xs">Field name is required</small>
-                  }
-                  @if (propertiesForm.get('fieldName')?.errors?.['pattern']) {
-                    <small class="text-red-500 text-xs"
-                      >Must be kebab-case (e.g., first-name)</small
-                    >
-                  }
-                  @if (propertiesForm.get('fieldName')?.errors?.['duplicateFieldName']) {
-                    <small class="text-red-500 text-xs">Field name must be unique</small>
-                  }
-                  <small class="text-gray-500 text-xs">
-                    Used in form data (e.g., first-name, email-address)
-                  </small>
-                </div>
-
-                <div class="field">
-                  <label for="placeholder" class="block text-sm font-medium text-gray-700 mb-1">
-                    Placeholder
-                  </label>
-                  <input
-                    pInputText
-                    id="placeholder"
-                    formControlName="placeholder"
-                    class="w-full"
-                    placeholder="Enter placeholder text"
-                  />
-                </div>
-
-                <div class="field">
-                  <label for="helpText" class="block text-sm font-medium text-gray-700 mb-1">
-                    Help Text
-                  </label>
-                  <textarea
-                    pTextarea
-                    id="helpText"
-                    formControlName="helpText"
-                    class="w-full"
-                    rows="3"
-                    placeholder="Enter help text"
-                  ></textarea>
-                </div>
-              </div>
-            </p-panel>
-
-            <!-- Validation Properties Section -->
-            <p-panel header="Validation" [toggleable]="true">
-              <div class="space-y-4">
-                <div class="field flex items-center">
-                  <p-checkbox
-                    formControlName="required"
-                    [binary]="true"
-                    inputId="required"
-                  ></p-checkbox>
-                  <label for="required" class="ml-2 text-sm font-medium text-gray-700">
-                    Required field
-                  </label>
-                </div>
-
-                @if (isNumberField()) {
-                  <div class="field">
-                    <label for="minValue" class="block text-sm font-medium text-gray-700 mb-1">
-                      Minimum Value
-                    </label>
-                    <p-inputNumber
-                      formControlName="minValue"
-                      inputId="minValue"
-                      [showButtons]="true"
-                      class="w-full"
-                    />
-                  </div>
-
-                  <div class="field">
-                    <label for="maxValue" class="block text-sm font-medium text-gray-700 mb-1">
-                      Maximum Value
-                    </label>
-                    <p-inputNumber
-                      formControlName="maxValue"
-                      inputId="maxValue"
-                      [showButtons]="true"
-                      class="w-full"
-                    />
-                  </div>
-                }
-
-                @if (isTextField()) {
-                  <div class="field">
-                    <label for="minLength" class="block text-sm font-medium text-gray-700 mb-1">
-                      Minimum Length
-                    </label>
-                    <p-inputNumber
-                      formControlName="minLength"
-                      inputId="minLength"
-                      [showButtons]="true"
-                      [min]="0"
-                      class="w-full"
-                    />
-                  </div>
-
-                  <div class="field">
-                    <label for="maxLength" class="block text-sm font-medium text-gray-700 mb-1">
-                      Maximum Length
-                    </label>
-                    <p-inputNumber
-                      formControlName="maxLength"
-                      inputId="maxLength"
-                      [showButtons]="true"
-                      [min]="1"
-                      class="w-full"
-                    />
-                  </div>
-
-                  <div class="field">
-                    <label for="pattern" class="block text-sm font-medium text-gray-700 mb-1">
-                      Regex Pattern
-                    </label>
-                    <input
-                      pInputText
-                      id="pattern"
-                      formControlName="pattern"
-                      class="w-full"
-                      placeholder="^[A-Za-z]+$"
-                    />
-                    @if (propertiesForm.get('pattern')?.errors?.['invalidPattern']) {
-                      <small class="text-red-500 text-xs">Invalid regular expression</small>
-                    }
-                    <small class="text-gray-500 text-xs">
-                      Regular expression for custom validation
-                    </small>
-                  </div>
-                }
-
-                @if (isEmailField()) {
-                  <div class="field flex items-center">
-                    <p-toggleSwitch
-                      formControlName="emailFormat"
-                      inputId="emailFormat"
-                    ></p-toggleSwitch>
-                    <label for="emailFormat" class="ml-2 text-sm font-medium text-gray-700">
-                      Strict email validation
-                    </label>
-                  </div>
-                }
-              </div>
-            </p-panel>
-
-            <!-- Behavior Properties Section -->
-            <p-panel header="Behavior" [toggleable]="true">
-              <div class="space-y-4">
-                <div class="field flex items-center">
-                  <p-toggleSwitch formControlName="disabled" inputId="disabled"></p-toggleSwitch>
-                  <label for="disabled" class="ml-2 text-sm font-medium text-gray-700">
-                    Disabled
-                  </label>
-                </div>
-
-                <div class="field flex items-center">
-                  <p-toggleSwitch formControlName="readOnly" inputId="readOnly"></p-toggleSwitch>
-                  <label for="readOnly" class="ml-2 text-sm font-medium text-gray-700">
-                    Read-only
-                  </label>
-                </div>
-
-                <div class="field">
-                  <label for="defaultValue" class="block text-sm font-medium text-gray-700 mb-1">
-                    Default Value
-                  </label>
-                  @if (isCheckboxOrToggle()) {
-                    <p-toggleSwitch
-                      formControlName="defaultValue"
-                      inputId="defaultValue"
-                    ></p-toggleSwitch>
-                  } @else if (isNumberField()) {
-                    <p-inputNumber
-                      formControlName="defaultValue"
-                      inputId="defaultValue"
-                      class="w-full"
-                    />
-                  } @else {
-                    <input
-                      pInputText
-                      id="defaultValue"
-                      formControlName="defaultValue"
-                      class="w-full"
-                      placeholder="Enter default value"
-                    />
-                  }
-                </div>
-              </div>
-            </p-panel>
-
-            <!-- Conditional Visibility Section -->
-            <p-panel header="Conditional Visibility" [toggleable]="true" [collapsed]="true">
-              <div class="space-y-4">
-                <div class="field">
-                  <label for="showIfField" class="block text-sm font-medium text-gray-700 mb-1">
-                    Show If Field
-                  </label>
-                  <p-select
-                    formControlName="showIfField"
-                    [options]="otherFieldsOptions()"
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder="Select field"
-                    [showClear]="true"
-                    class="w-full"
-                  />
-                </div>
-
-                @if (propertiesForm.get('showIfField')?.value) {
-                  <div class="field">
-                    <label
-                      for="showIfOperator"
-                      class="block text-sm font-medium text-gray-700 mb-1"
-                    >
-                      Operator
-                    </label>
-                    <p-select
-                      formControlName="showIfOperator"
-                      [options]="operatorOptions"
-                      optionLabel="label"
-                      optionValue="value"
-                      placeholder="Select operator"
-                      class="w-full"
-                    />
-                  </div>
-
-                  <div class="field">
-                    <label for="showIfValue" class="block text-sm font-medium text-gray-700 mb-1">
-                      Value
-                    </label>
-                    <input
-                      pInputText
-                      id="showIfValue"
-                      formControlName="showIfValue"
-                      class="w-full"
-                      placeholder="Enter comparison value"
-                    />
-                  </div>
-
-                  <button
-                    pButton
-                    type="button"
-                    label="Clear Rule"
-                    icon="pi pi-times"
-                    severity="secondary"
-                    size="small"
-                    (click)="clearConditionalRule()"
-                  ></button>
-                }
-              </div>
-            </p-panel>
-
-            <!-- Select/Radio Options Section -->
-            @if (isSelectOrRadio()) {
-              <p-panel header="Options" [toggleable]="true">
+          <form [formGroup]="propertiesForm">
+            <p-accordion
+              [multiple]="isMobile()"
+              [(value)]="activeIndex"
+              (valueChange)="onAccordionChange($event)"
+              class="w-full"
+            >
+              <!-- Basic Properties Panel -->
+              <p-accordionpanel header="Basic Properties">
                 <div class="space-y-4">
-                  @if (isSelectField()) {
-                    <div class="field flex items-center">
+                  <div class="field">
+                    <label for="label" class="block text-sm font-medium text-gray-700 mb-1">
+                      Label <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      pInputText
+                      id="label"
+                      formControlName="label"
+                      class="w-full"
+                      placeholder="Enter field label"
+                      (blur)="onLabelBlur()"
+                      [attr.aria-invalid]="
+                        propertiesForm.get('label')?.invalid && propertiesForm.get('label')?.touched
+                      "
+                      [attr.aria-describedby]="
+                        propertiesForm.get('label')?.invalid && propertiesForm.get('label')?.touched
+                          ? 'label-error'
+                          : null
+                      "
+                    />
+                    @if (
+                      propertiesForm.get('label')?.invalid && propertiesForm.get('label')?.touched
+                    ) {
+                      <p-message
+                        severity="error"
+                        id="label-error"
+                        aria-live="polite"
+                        styleClass="w-full mt-2"
+                      >
+                        <div class="flex items-center gap-2">
+                          <i class="pi pi-exclamation-circle"></i>
+                          <span>Label is required</span>
+                        </div>
+                      </p-message>
+                    }
+                  </div>
+
+                  <div class="field">
+                    <label for="fieldName" class="block text-sm font-medium text-gray-700 mb-1">
+                      Field Name <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      pInputText
+                      id="fieldName"
+                      formControlName="fieldName"
+                      class="w-full font-mono text-sm"
+                      placeholder="Enter field name"
+                      [attr.aria-invalid]="
+                        propertiesForm.get('fieldName')?.invalid &&
+                        propertiesForm.get('fieldName')?.touched
+                      "
+                      [attr.aria-describedby]="
+                        propertiesForm.get('fieldName')?.invalid &&
+                        propertiesForm.get('fieldName')?.touched
+                          ? 'fieldname-error'
+                          : null
+                      "
+                    />
+                    <small class="text-gray-600 text-xs block mt-1">
+                      Auto-generated from label. Edit to customize.
+                    </small>
+                    @if (
+                      propertiesForm.get('fieldName')?.errors?.['required'] &&
+                      propertiesForm.get('fieldName')?.touched
+                    ) {
+                      <p-message
+                        severity="error"
+                        id="fieldname-error"
+                        aria-live="polite"
+                        styleClass="w-full mt-2"
+                      >
+                        <div class="flex items-center gap-2">
+                          <i class="pi pi-exclamation-circle"></i>
+                          <span>Field name is required</span>
+                        </div>
+                      </p-message>
+                    }
+                    @if (
+                      propertiesForm.get('fieldName')?.errors?.['pattern'] &&
+                      propertiesForm.get('fieldName')?.touched
+                    ) {
+                      <p-message
+                        severity="error"
+                        id="fieldname-error"
+                        aria-live="polite"
+                        styleClass="w-full mt-2"
+                      >
+                        <div class="flex items-center gap-2">
+                          <i class="pi pi-exclamation-circle"></i>
+                          <span
+                            >Must use lowercase letters, numbers, and underscores only (e.g.,
+                            first_name, email_address)</span
+                          >
+                        </div>
+                      </p-message>
+                    }
+                    @if (
+                      propertiesForm.get('fieldName')?.errors?.['duplicateFieldName'] &&
+                      propertiesForm.get('fieldName')?.touched
+                    ) {
+                      <p-message
+                        severity="error"
+                        id="fieldname-error"
+                        aria-live="polite"
+                        styleClass="w-full mt-2"
+                      >
+                        <div class="flex items-center gap-2">
+                          <i class="pi pi-exclamation-circle"></i>
+                          <span>Field name must be unique within this form</span>
+                        </div>
+                      </p-message>
+                    }
+                  </div>
+
+                  <div class="field">
+                    <label for="placeholder" class="block text-sm font-medium text-gray-700 mb-1">
+                      Placeholder
+                    </label>
+                    <input
+                      pInputText
+                      id="placeholder"
+                      formControlName="placeholder"
+                      class="w-full"
+                      placeholder="Enter placeholder text"
+                    />
+                  </div>
+
+                  <div class="field">
+                    <label for="helpText" class="block text-sm font-medium text-gray-700 mb-1">
+                      Help Text
+                    </label>
+                    <textarea
+                      pTextarea
+                      id="helpText"
+                      formControlName="helpText"
+                      class="w-full"
+                      rows="3"
+                      placeholder="Enter help text"
+                    ></textarea>
+                  </div>
+
+                  <div class="field flex items-center">
+                    <p-checkbox
+                      formControlName="required"
+                      [binary]="true"
+                      inputId="required"
+                    ></p-checkbox>
+                    <label for="required" class="ml-2 text-sm font-medium text-gray-700">
+                      Required field
+                    </label>
+                  </div>
+
+                  <div class="field">
+                    <label for="defaultValue" class="block text-sm font-medium text-gray-700 mb-1">
+                      Default Value
+                    </label>
+                    @if (isCheckboxOrToggle()) {
                       <p-toggleSwitch
-                        formControlName="multiSelect"
-                        inputId="multiSelect"
+                        formControlName="defaultValue"
+                        inputId="defaultValue"
                       ></p-toggleSwitch>
-                      <label for="multiSelect" class="ml-2 text-sm font-medium text-gray-700">
-                        Allow multiple selections
-                      </label>
+                    } @else if (isNumberField()) {
+                      <p-inputNumber
+                        formControlName="defaultValue"
+                        inputId="defaultValue"
+                        class="w-full"
+                      />
+                    } @else {
+                      <input
+                        pInputText
+                        id="defaultValue"
+                        formControlName="defaultValue"
+                        class="w-full"
+                        placeholder="Enter default value"
+                      />
+                    }
+                  </div>
+                </div>
+              </p-accordionpanel>
+
+              <!-- Validation Panel (conditional on input field types) -->
+              @if (showValidationSection()) {
+                <p-accordionpanel header="Validation">
+                  <div class="space-y-4">
+                    @if (isNumberField()) {
+                      <div class="field">
+                        <label for="minValue" class="block text-sm font-medium text-gray-700 mb-1">
+                          Minimum Value
+                        </label>
+                        <p-inputNumber
+                          formControlName="minValue"
+                          inputId="minValue"
+                          [showButtons]="true"
+                          class="w-full"
+                        />
+                      </div>
+
+                      <div class="field">
+                        <label for="maxValue" class="block text-sm font-medium text-gray-700 mb-1">
+                          Maximum Value
+                        </label>
+                        <p-inputNumber
+                          formControlName="maxValue"
+                          inputId="maxValue"
+                          [showButtons]="true"
+                          class="w-full"
+                        />
+                      </div>
+
+                      <!-- Min/Max Range Error (Story 16.6 - Task 6) -->
+                      @if (
+                        propertiesForm.hasError('minMaxRange') &&
+                        (propertiesForm.get('minValue')?.touched ||
+                          propertiesForm.get('maxValue')?.touched)
+                      ) {
+                        <p-message severity="error" aria-live="polite" styleClass="w-full mt-2">
+                          <div class="flex items-center gap-2">
+                            <i class="pi pi-exclamation-circle"></i>
+                            <span>Minimum must be less than or equal to maximum</span>
+                          </div>
+                        </p-message>
+                      }
+                    }
+
+                    @if (isTextField()) {
+                      <div class="field">
+                        <label for="minLength" class="block text-sm font-medium text-gray-700 mb-1">
+                          Minimum Length
+                        </label>
+                        <p-inputNumber
+                          formControlName="minLength"
+                          inputId="minLength"
+                          [showButtons]="true"
+                          [min]="0"
+                          class="w-full"
+                        />
+                      </div>
+
+                      <div class="field">
+                        <label for="maxLength" class="block text-sm font-medium text-gray-700 mb-1">
+                          Maximum Length
+                        </label>
+                        <p-inputNumber
+                          formControlName="maxLength"
+                          inputId="maxLength"
+                          [showButtons]="true"
+                          [min]="1"
+                          class="w-full"
+                        />
+                      </div>
+
+                      <!-- Min/Max Range Error (Story 16.6 - Task 6) -->
+                      @if (
+                        propertiesForm.hasError('minMaxRange') &&
+                        (propertiesForm.get('minLength')?.touched ||
+                          propertiesForm.get('maxLength')?.touched)
+                      ) {
+                        <p-message severity="error" aria-live="polite" styleClass="w-full mt-2">
+                          <div class="flex items-center gap-2">
+                            <i class="pi pi-exclamation-circle"></i>
+                            <span>Minimum must be less than or equal to maximum</span>
+                          </div>
+                        </p-message>
+                      }
+
+                      <!-- Pattern Preset Dropdown (Story 16.3) -->
+                      <div class="field space-y-2">
+                        <label
+                          for="patternPreset"
+                          class="block text-sm font-medium text-gray-700 mb-1"
+                        >
+                          Validation Pattern
+                        </label>
+                        <p-select
+                          [options]="validationPresets"
+                          [(ngModel)]="selectedPreset"
+                          (onChange)="onPresetChange($event)"
+                          [ngModelOptions]="{ standalone: true }"
+                          optionLabel="label"
+                          placeholder="Select pattern preset"
+                          class="w-full"
+                          inputId="patternPreset"
+                        />
+
+                        <textarea
+                          pTextarea
+                          formControlName="pattern"
+                          rows="2"
+                          class="w-full font-mono text-sm"
+                          placeholder="Enter regex pattern (e.g., ^[A-Za-z]+$)"
+                          [disabled]="selectedPreset?.name !== 'custom'"
+                          [attr.aria-invalid]="
+                            propertiesForm.get('pattern')?.invalid &&
+                            propertiesForm.get('pattern')?.touched
+                          "
+                          [attr.aria-describedby]="
+                            propertiesForm.get('pattern')?.invalid &&
+                            propertiesForm.get('pattern')?.touched
+                              ? 'pattern-error'
+                              : null
+                          "
+                        ></textarea>
+
+                        @if (selectedPreset && selectedPreset.name !== 'custom') {
+                          <p class="text-xs text-gray-600 flex items-start gap-1 mt-1">
+                            <i class="pi pi-info-circle mt-0.5"></i>
+                            <span>
+                              {{ selectedPreset.description }}
+                              <br />
+                              <span class="font-medium">Example:</span> {{ selectedPreset.example }}
+                            </span>
+                          </p>
+                        }
+
+                        @if (
+                          propertiesForm.get('pattern')?.errors?.['invalidRegex'] &&
+                          propertiesForm.get('pattern')?.touched
+                        ) {
+                          <p-message
+                            severity="error"
+                            id="pattern-error"
+                            aria-live="polite"
+                            styleClass="w-full mt-2"
+                          >
+                            <div class="flex items-center gap-2">
+                              <i class="pi pi-exclamation-circle"></i>
+                              <span
+                                >Invalid regex pattern:
+                                {{
+                                  propertiesForm.get('pattern')?.errors?.['invalidRegex']?.message
+                                }}</span
+                              >
+                            </div>
+                          </p-message>
+                        }
+                      </div>
+
+                      <!-- Custom Error Message (Story 16.3) -->
+                      <div class="field space-y-2">
+                        <label
+                          for="errorMessage"
+                          class="block text-sm font-medium text-gray-700 mb-1"
+                        >
+                          Custom Error Message
+                        </label>
+                        <textarea
+                          pTextarea
+                          id="errorMessage"
+                          formControlName="errorMessage"
+                          rows="2"
+                          maxlength="200"
+                          class="w-full"
+                          placeholder="Enter custom error message shown when validation fails"
+                        ></textarea>
+                        <div class="flex justify-between text-xs text-gray-500">
+                          <span
+                            >Optional - defaults to generic validation error if not provided</span
+                          >
+                          <span
+                            >{{ propertiesForm.get('errorMessage')?.value?.length || 0 }}/200</span
+                          >
+                        </div>
+                      </div>
+                    }
+
+                    @if (isEmailField()) {
+                      <div class="field flex items-center">
+                        <p-toggleSwitch
+                          formControlName="emailFormat"
+                          inputId="emailFormat"
+                        ></p-toggleSwitch>
+                        <label for="emailFormat" class="ml-2 text-sm font-medium text-gray-700">
+                          Strict email validation
+                        </label>
+                      </div>
+                    }
+                  </div>
+                </p-accordionpanel>
+              }
+
+              <!-- Styling Panel -->
+              <p-accordionpanel header="Styling">
+                <div class="space-y-4">
+                  <div class="field">
+                    <label for="customStyle" class="block text-sm font-medium text-gray-700 mb-1">
+                      Custom CSS
+                    </label>
+                    <textarea
+                      pTextarea
+                      id="customStyle"
+                      formControlName="customStyle"
+                      class="w-full font-mono text-sm"
+                      rows="8"
+                      placeholder="Enter custom CSS (e.g., color: blue; padding: 10px;)"
+                      (blur)="onCustomStyleBlur()"
+                    ></textarea>
+
+                    <!-- Character counter -->
+                    <div class="flex justify-between items-center mt-1">
+                      <small class="text-gray-500 text-xs">
+                        Custom CSS properties to style this field
+                      </small>
+                      <small
+                        [class.text-gray-500]="
+                          (propertiesForm.get('customStyle')?.value?.length || 0) <= 5000
+                        "
+                        [class.text-red-500]="
+                          (propertiesForm.get('customStyle')?.value?.length || 0) > 5000
+                        "
+                        class="text-xs font-medium"
+                      >
+                        {{ propertiesForm.get('customStyle')?.value?.length || 0 }}/5000
+                      </small>
+                    </div>
+
+                    <!-- Validation errors -->
+                    @if (propertiesForm.get('customStyle')?.errors?.['maxlength']) {
+                      <small class="text-red-500 text-xs block mt-1">
+                        CSS exceeds maximum length of 5000 characters
+                      </small>
+                    }
+
+                    <!-- CSS validation warnings -->
+                    @if (customStyleWarnings().length > 0) {
+                      <div class="mt-2 space-y-1">
+                        @for (warning of customStyleWarnings(); track $index) {
+                          <p-message severity="warn" [text]="warning" styleClass="w-full" />
+                        }
+                      </div>
+                    }
+                  </div>
+                </div>
+              </p-accordionpanel>
+
+              <!-- Advanced Panel -->
+              <p-accordionpanel header="Advanced">
+                <div class="space-y-6">
+                  <!-- Behavior Settings (for input fields) -->
+                  @if (showValidationSection()) {
+                    <div class="border-b border-gray-200 pb-4">
+                      <h4 class="text-sm font-semibold text-gray-700 mb-3">Behavior Settings</h4>
+                      <div class="space-y-3">
+                        <div class="field flex items-center">
+                          <p-toggleSwitch
+                            formControlName="disabled"
+                            inputId="disabled"
+                          ></p-toggleSwitch>
+                          <label for="disabled" class="ml-2 text-sm font-medium text-gray-700">
+                            Disabled
+                          </label>
+                        </div>
+
+                        <div class="field flex items-center">
+                          <p-toggleSwitch
+                            formControlName="readOnly"
+                            inputId="readOnly"
+                          ></p-toggleSwitch>
+                          <label for="readOnly" class="ml-2 text-sm font-medium text-gray-700">
+                            Read-only
+                          </label>
+                        </div>
+                      </div>
                     </div>
                   }
 
-                  <div formArrayName="options">
-                    <div
-                      cdkDropList
-                      (cdkDropListDropped)="onOptionsReorder($event)"
-                      class="space-y-2"
-                    >
-                      @for (option of options.controls; track $index; let i = $index) {
-                        <div
-                          [formGroupName]="i"
-                          cdkDrag
-                          class="flex gap-2 items-start p-2 border border-gray-200 rounded bg-gray-50"
-                        >
-                          <i class="pi pi-bars text-gray-400 cursor-move mt-2" cdkDragHandle></i>
-                          <div class="flex-1 space-y-2">
-                            <input
-                              pInputText
-                              formControlName="label"
-                              placeholder="Option label"
-                              class="w-full"
-                            />
-                            <input
-                              pInputText
-                              formControlName="value"
-                              placeholder="Option value"
+                  <!-- Conditional Visibility Section (for input fields) -->
+                  @if (showValidationSection()) {
+                    <div class="border-b border-gray-200 pb-4">
+                      <h4 class="text-sm font-semibold text-gray-700 mb-3">
+                        Conditional Visibility
+                      </h4>
+                      <div class="space-y-4">
+                        <div class="field">
+                          <label
+                            for="showIfField"
+                            class="block text-sm font-medium text-gray-700 mb-1"
+                          >
+                            Show If Field
+                          </label>
+                          <p-select
+                            formControlName="showIfField"
+                            [options]="otherFieldsOptions()"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Select field"
+                            [showClear]="true"
+                            class="w-full"
+                          />
+                        </div>
+
+                        @if (propertiesForm.get('showIfField')?.value) {
+                          <div class="field">
+                            <label
+                              for="showIfOperator"
+                              class="block text-sm font-medium text-gray-700 mb-1"
+                            >
+                              Operator
+                            </label>
+                            <p-select
+                              formControlName="showIfOperator"
+                              [options]="operatorOptions"
+                              optionLabel="label"
+                              optionValue="value"
+                              placeholder="Select operator"
                               class="w-full"
                             />
                           </div>
+
+                          <div class="field">
+                            <label
+                              for="showIfValue"
+                              class="block text-sm font-medium text-gray-700 mb-1"
+                            >
+                              Value
+                            </label>
+                            <input
+                              pInputText
+                              id="showIfValue"
+                              formControlName="showIfValue"
+                              class="w-full"
+                              placeholder="Enter comparison value"
+                            />
+                          </div>
+
                           <button
                             pButton
                             type="button"
-                            icon="pi pi-trash"
-                            severity="danger"
-                            [text]="true"
-                            (click)="removeOption(i)"
+                            label="Clear Rule"
+                            icon="pi pi-times"
+                            severity="secondary"
+                            size="small"
+                            (click)="clearConditionalRule()"
                           ></button>
-                        </div>
+                        }
+                      </div>
+                    </div>
+                  }
+
+                  <!-- Field-Type Specific Properties (Dynamic Panel Loading) -->
+                  <div>
+                    <h4 class="text-sm font-semibold text-gray-700 mb-3">
+                      Field-Specific Properties
+                    </h4>
+
+                    <div>
+                      @switch (formBuilderService.selectedField()?.type) {
+                        @case ('heading') {
+                          <app-heading-properties-panel
+                            [field]="formBuilderService.selectedField()!"
+                            (fieldChange)="onPanelFieldChange($event)"
+                          />
+                        }
+                        @case ('image') {
+                          <app-image-properties-panel
+                            [field]="formBuilderService.selectedField()!"
+                            (fieldChange)="onPanelFieldChange($event)"
+                          />
+                        }
+                        @case ('text_block') {
+                          <app-text-block-properties-panel
+                            [field]="formBuilderService.selectedField()!"
+                            (fieldChange)="onPanelFieldChange($event)"
+                          />
+                        }
+                        @case ('select') {
+                          <app-options-properties-panel
+                            [field]="formBuilderService.selectedField()!"
+                            (fieldChange)="onPanelFieldChange($event)"
+                          />
+                        }
+                        @case ('radio') {
+                          <app-options-properties-panel
+                            [field]="formBuilderService.selectedField()!"
+                            (fieldChange)="onPanelFieldChange($event)"
+                          />
+                        }
+                        @case ('checkbox') {
+                          <app-options-properties-panel
+                            [field]="formBuilderService.selectedField()!"
+                            (fieldChange)="onPanelFieldChange($event)"
+                          />
+                        }
+                        @case ('file') {
+                          <app-file-properties-panel
+                            [field]="formBuilderService.selectedField()!"
+                            (fieldChange)="onPanelFieldChange($event)"
+                          />
+                        }
+                        @case ('group') {
+                          <app-group-properties-panel
+                            [field]="formBuilderService.selectedField()!"
+                            (fieldChange)="onPanelFieldChange($event)"
+                          />
+                        }
+                        @default {
+                          <p class="text-sm text-gray-500 italic">
+                            No advanced properties available for this field type.
+                          </p>
+                        }
                       }
                     </div>
                   </div>
-
-                  <button
-                    pButton
-                    type="button"
-                    label="Add Option"
-                    icon="pi pi-plus"
-                    severity="secondary"
-                    size="small"
-                    (click)="addOption()"
-                  ></button>
                 </div>
-              </p-panel>
-            }
+              </p-accordionpanel>
+            </p-accordion>
 
-            <!-- File Upload Settings Section -->
-            @if (isFileField()) {
-              <p-panel header="File Upload Settings" [toggleable]="true">
-                <div class="space-y-4">
-                  <div class="field">
-                    <label for="acceptedTypes" class="block text-sm font-medium text-gray-700 mb-1">
-                      Accepted File Types
-                    </label>
-                    <input
-                      pInputText
-                      id="acceptedTypes"
-                      formControlName="acceptedTypes"
-                      class="w-full"
-                      placeholder="image/*, application/pdf, .docx"
-                    />
-                    <small class="text-gray-500 text-xs">
-                      Comma-separated MIME types or extensions
-                    </small>
-                  </div>
-
-                  <div class="field">
-                    <label for="maxFileSize" class="block text-sm font-medium text-gray-700 mb-1">
-                      Max File Size (MB)
-                    </label>
-                    <p-inputNumber
-                      formControlName="maxFileSize"
-                      inputId="maxFileSize"
-                      [showButtons]="true"
-                      [min]="1"
-                      [max]="100"
-                      class="w-full"
-                    />
-                  </div>
-
-                  <div class="field">
-                    <label for="maxFiles" class="block text-sm font-medium text-gray-700 mb-1">
-                      Max Files
-                    </label>
-                    <p-inputNumber
-                      formControlName="maxFiles"
-                      inputId="maxFiles"
-                      [showButtons]="true"
-                      [min]="1"
-                      [max]="10"
-                      class="w-full"
-                    />
-                  </div>
-                </div>
-              </p-panel>
-            }
-
-            <!-- Heading Settings Section -->
-            @if (isHeadingField()) {
-              <p-panel header="Heading Settings" [toggleable]="true">
-                <div class="space-y-4">
-                  <div class="field">
-                    <label for="headingText" class="block text-sm font-medium text-gray-700 mb-1">
-                      Heading Text <span class="text-red-500">*</span>
-                    </label>
-                    <input
-                      pInputText
-                      id="headingText"
-                      formControlName="label"
-                      class="w-full"
-                      placeholder="Enter heading text"
-                    />
-                    <small class="text-gray-500 text-xs">
-                      This text will be displayed as the heading
-                    </small>
-                  </div>
-
-                  <div class="field">
-                    <label for="headingLevel" class="block text-sm font-medium text-gray-700 mb-1">
-                      Heading Level
-                    </label>
-                    <p-select
-                      formControlName="headingLevel"
-                      inputId="headingLevel"
-                      [options]="headingLevelOptions"
-                      optionLabel="label"
-                      optionValue="value"
-                      class="w-full"
-                    />
-                    <small class="text-gray-500 text-xs">
-                      H1 is largest, H6 is smallest (H2 recommended for sections)
-                    </small>
-                  </div>
-
-                  <div class="field">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                      Text Alignment
-                    </label>
-                    <p-selectbutton
-                      formControlName="headingAlignment"
-                      [options]="headingAlignmentOptions"
-                      optionLabel="label"
-                      optionValue="value"
-                    />
-                  </div>
-
-                  <div class="field">
-                    <label for="headingColor" class="block text-sm font-medium text-gray-700 mb-1">
-                      Text Color
-                    </label>
-                    <p-colorpicker
-                      formControlName="headingColor"
-                      inputId="headingColor"
-                      format="hex"
-                    />
-                    <small class="text-gray-500 text-xs"> Leave empty for default color </small>
-                  </div>
-
-                  <div class="field">
-                    <label
-                      for="headingFontWeight"
-                      class="block text-sm font-medium text-gray-700 mb-1"
-                    >
-                      Font Weight
-                    </label>
-                    <p-select
-                      formControlName="headingFontWeight"
-                      inputId="headingFontWeight"
-                      [options]="fontWeightOptions"
-                      optionLabel="label"
-                      optionValue="value"
-                      class="w-full"
-                    />
-                  </div>
-                </div>
-              </p-panel>
-            }
-
-            <!-- Background Image Settings Section -->
-            @if (isBackgroundImageField()) {
-              <p-panel header="Background Image Settings" [toggleable]="true">
-                <div class="space-y-4">
-                  <div class="field">
-                    <label for="imageUrl" class="block text-sm font-medium text-gray-700 mb-1">
-                      Image URL
-                    </label>
-                    <input
-                      pInputText
-                      id="imageUrl"
-                      formControlName="imageUrl"
-                      class="w-full"
-                      placeholder="https://example.com/image.jpg"
-                    />
-                    <small class="text-gray-500 text-xs">
-                      Enter a URL or upload an image below
-                    </small>
-                  </div>
-
-                  <div class="field">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                      Or Upload Image
-                    </label>
-                    <input
-                      #fileInput
-                      type="file"
-                      accept="image/*"
-                      (change)="onImageFileSelected($event)"
-                      class="hidden"
-                    />
-                    <button
-                      pButton
-                      type="button"
-                      label="Choose Image"
-                      icon="pi pi-upload"
-                      severity="secondary"
-                      size="small"
-                      (click)="fileInput.click()"
-                    ></button>
-                    <small class="text-gray-500 text-xs block mt-1">
-                      Max 5MB (JPG, PNG, GIF, WebP)
-                    </small>
-                  </div>
-
-                  @if (imagePreviewUrl()) {
-                    <div class="field">
-                      <label class="block text-sm font-medium text-gray-700 mb-1">Preview</label>
-                      <img
-                        [src]="imagePreviewUrl()"
-                        alt="Background preview"
-                        class="w-full h-32 object-cover rounded border border-gray-300"
-                      />
-                    </div>
-                  }
-
-                  <div class="field">
-                    <label for="imagePosition" class="block text-sm font-medium text-gray-700 mb-1">
-                      Background Size
-                    </label>
-                    <p-select
-                      formControlName="imagePosition"
-                      [options]="positionOptions"
-                      optionLabel="label"
-                      optionValue="value"
-                      placeholder="Select background size"
-                      class="w-full"
-                    />
-                  </div>
-
-                  <div class="field">
-                    <label
-                      for="imageAlignment"
-                      class="block text-sm font-medium text-gray-700 mb-1"
-                    >
-                      Alignment
-                    </label>
-                    <p-select
-                      formControlName="imageAlignment"
-                      [options]="alignmentOptions"
-                      optionLabel="label"
-                      optionValue="value"
-                      placeholder="Select alignment"
-                      class="w-full"
-                    />
-                  </div>
-
-                  <div class="field">
-                    <label for="imageOpacity" class="block text-sm font-medium text-gray-700 mb-1">
-                      Opacity: {{ propertiesForm.get('imageOpacity')?.value || 100 }}%
-                    </label>
-                    <p-slider formControlName="imageOpacity" [min]="0" [max]="100" class="w-full" />
-                  </div>
-
-                  <div class="field">
-                    <label for="imageBlur" class="block text-sm font-medium text-gray-700 mb-1">
-                      Blur: {{ propertiesForm.get('imageBlur')?.value || 0 }}px
-                    </label>
-                    <p-slider formControlName="imageBlur" [min]="0" [max]="20" class="w-full" />
-                    <small class="text-gray-500 text-xs">
-                      Apply blur effect to background image (0-20 pixels)
-                    </small>
-                  </div>
-                </div>
-              </p-panel>
-            }
-
-            <!-- Custom Background Settings Section -->
-            @if (isCustomBackgroundField()) {
-              <p-panel header="Custom Background Settings" [toggleable]="true">
-                <div class="space-y-4">
-                  <!-- Security Warning -->
-                  <div class="bg-yellow-50 border border-yellow-200 rounded p-3 mb-4">
-                    <div class="flex items-start gap-2">
-                      <i class="pi pi-exclamation-triangle text-yellow-600 mt-1"></i>
-                      <div>
-                        <p class="text-sm font-medium text-yellow-800">Security Notice</p>
-                        <p class="text-xs text-yellow-700 mt-1">
-                          Only whitelisted HTML tags are allowed. All scripts and event handlers are
-                          removed automatically.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- HTML Editor -->
-                  <div class="field">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                      HTML Editor
-                    </label>
-                    <ngx-monaco-editor
-                      [options]="htmlEditorOptions"
-                      formControlName="customHtml"
-                      (ngModelChange)="onCustomHTMLChange($event)"
-                      style="height: 200px; border: 1px solid #d1d5db; border-radius: 6px;"
-                    ></ngx-monaco-editor>
-                    <small class="text-xs text-gray-600 mt-1 block">
-                      Allowed tags: div, span, p, h1-h3, style. Max 10000 characters.
-                    </small>
-                  </div>
-
-                  <!-- CSS Editor -->
-                  <div class="field">
-                    <label class="block text-sm font-medium text-gray-700 mb-1"> CSS Editor </label>
-                    <ngx-monaco-editor
-                      [options]="cssEditorOptions"
-                      formControlName="customCss"
-                      (ngModelChange)="onCustomCSSChange($event)"
-                      style="height: 200px; border: 1px solid #d1d5db; border-radius: 6px;"
-                    ></ngx-monaco-editor>
-                    <small class="text-xs text-gray-600 mt-1 block">
-                      Max 5000 characters. JavaScript URLs are not allowed.
-                    </small>
-                  </div>
-
-                  <!-- Validation Errors -->
-                  @if (cssValidationErrors().length > 0) {
-                    <div class="bg-red-50 border border-red-200 rounded p-3">
-                      <p class="text-sm font-medium text-red-800 mb-2">
-                        <i class="pi pi-times-circle mr-1"></i>
-                        Validation Errors:
-                      </p>
-                      <ul class="text-sm text-red-700 list-disc list-inside space-y-1">
-                        @for (error of cssValidationErrors(); track error) {
-                          <li>{{ error }}</li>
-                        }
-                      </ul>
-                    </div>
-                  }
-
-                  <!-- Validation Warnings -->
-                  @if (cssValidationWarnings().length > 0) {
-                    <div class="bg-yellow-50 border border-yellow-200 rounded p-3">
-                      <p class="text-sm font-medium text-yellow-800 mb-2">
-                        <i class="pi pi-exclamation-triangle mr-1"></i>
-                        Warnings:
-                      </p>
-                      <ul class="text-sm text-yellow-700 list-disc list-inside space-y-1">
-                        @for (warning of cssValidationWarnings(); track warning) {
-                          <li>{{ warning }}</li>
-                        }
-                      </ul>
-                    </div>
-                  }
-
-                  <!-- Dangerous Patterns Warning -->
-                  @if (htmlContainsDangerousPatterns()) {
-                    <div class="bg-orange-50 border border-orange-200 rounded p-3">
-                      <p class="text-sm font-medium text-orange-800">
-                        <i class="pi pi-shield mr-1"></i>
-                        Dangerous content detected and will be removed
-                      </p>
-                      <p class="text-xs text-orange-700 mt-1">
-                        Your HTML contains scripts or event handlers that will be automatically
-                        sanitized.
-                      </p>
-                    </div>
-                  }
-                </div>
-              </p-panel>
-            }
-
-            <!-- Action Buttons -->
+            <!-- Action Buttons (Story 16.6 - Task 8) -->
             <div
               class="flex gap-2 pt-4 sticky bottom-0 bg-white border-t border-gray-200 p-4 -mx-4"
             >
+              <button
+                pButton
+                type="button"
+                label="Save Changes"
+                icon="pi pi-check"
+                [disabled]="propertiesForm.invalid"
+                [pTooltip]="propertiesForm.invalid ? 'Fix validation errors before saving' : ''"
+                tooltipPosition="top"
+                (click)="onSaveField()"
+              ></button>
               <button
                 pButton
                 type="button"
@@ -820,9 +781,41 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
   readonly formBuilderService = inject(FormBuilderService);
   private readonly fb = inject(FormBuilder);
   private readonly destroy$ = new Subject<void>();
+  private readonly accordionStateService = inject(AccordionStateService);
+  private readonly breakpointObserver = inject(BreakpointObserver);
+  private readonly cssValidatorService = inject(CssValidatorService);
+  private readonly validationPresetsService = inject(ValidationPresetsService);
 
   propertiesForm: FormGroup;
   readonly hasChanges = signal<boolean>(false);
+
+  // Field name manual edit tracking (Story 16.6)
+  private isFieldNameManuallyEdited = false;
+
+  // Custom style validation warnings (Story 16.2)
+  readonly customStyleWarnings = signal<string[]>([]);
+
+  // Validation pattern presets (Story 16.3)
+  readonly validationPresets: ValidationPreset[] = this.validationPresetsService.getPresets();
+  selectedPreset: ValidationPreset | null = null;
+
+  // Accordion state management
+  activeIndex = signal<number | number[]>([0]);
+
+  // Mobile responsive behavior
+  private readonly isMobile$ = this.breakpointObserver
+    .observe([
+      Breakpoints.XSmall, // < 600px
+      Breakpoints.Small, // 600px - 959px
+    ])
+    .pipe(map((result) => result.matches));
+  readonly isMobile = toSignal(this.isMobile$, { initialValue: false });
+
+  // Computed signal for showing Validation section
+  readonly showValidationSection = computed(() => {
+    const selectedField = this.formBuilderService.selectedField();
+    return selectedField ? isInputField(selectedField.type) : false;
+  });
 
   @Output() propertyChanged = new EventEmitter<Partial<FormField>>();
   @Output() fieldDeleted = new EventEmitter<void>();
@@ -834,14 +827,14 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
     { label: 'Contains', value: 'contains' },
   ];
 
-  // Background image position options
+  // Background image position options (kept for backward compatibility)
   readonly positionOptions = [
     { label: 'Cover (fill container)', value: 'cover' },
     { label: 'Contain (fit inside)', value: 'contain' },
     { label: 'Repeat', value: 'repeat' },
   ];
 
-  // Background image alignment options
+  // Background image alignment options (kept for backward compatibility)
   readonly alignmentOptions = [
     { label: 'Top', value: 'top' },
     { label: 'Center', value: 'center' },
@@ -869,10 +862,24 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
     { label: 'Bold', value: 'bold' },
   ];
 
-  // Image preview URL signal
+  readonly textBlockAlignmentOptions = [
+    { label: 'Left', value: 'left', icon: 'pi pi-align-left' },
+    { label: 'Center', value: 'center', icon: 'pi pi-align-center' },
+    { label: 'Right', value: 'right', icon: 'pi pi-align-right' },
+    { label: 'Justify', value: 'justify', icon: 'pi pi-align-justify' },
+  ];
+
+  readonly paddingOptions = [
+    { label: 'None', value: 'none' },
+    { label: 'Small', value: 'small' },
+    { label: 'Medium', value: 'medium' },
+    { label: 'Large', value: 'large' },
+  ];
+
+  // Image preview URL signal (kept for backward compatibility)
   readonly imagePreviewUrl = signal<string | null>(null);
 
-  // Custom background validation signals
+  // Custom background validation signals (kept for backward compatibility)
   readonly cssValidationErrors = signal<string[]>([]);
   readonly cssValidationWarnings = signal<string[]>([]);
   readonly htmlContainsDangerousPatterns = signal<boolean>(false);
@@ -899,65 +906,87 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
   };
 
   constructor() {
-    this.propertiesForm = this.fb.group({
-      // Basic properties
-      label: ['', [Validators.required, Validators.maxLength(200)]],
-      fieldName: [
-        '',
-        [
-          Validators.required,
-          Validators.pattern(/^[a-z0-9-]+$/),
-          this.uniqueFieldNameValidator.bind(this),
+    this.propertiesForm = this.fb.group(
+      {
+        // Basic properties
+        label: ['', [Validators.required, Validators.maxLength(200)]],
+        fieldName: [
+          '',
+          [
+            Validators.required,
+            Validators.pattern(/^[a-z0-9_]+$/), // Allow underscores for slug format
+          ],
         ],
-      ],
-      placeholder: ['', Validators.maxLength(100)],
-      helpText: ['', Validators.maxLength(500)],
-      required: [false],
+        placeholder: ['', Validators.maxLength(100)],
+        helpText: ['', Validators.maxLength(500)],
+        required: [false],
 
-      // Validation properties
-      minValue: [null],
-      maxValue: [null],
-      minLength: [null],
-      maxLength: [null],
-      pattern: ['', this.regexPatternValidator()],
-      emailFormat: [false],
+        // Validation properties
+        minValue: [null],
+        maxValue: [null],
+        minLength: [null],
+        maxLength: [null],
+        pattern: ['', regexSyntaxValidator()],
+        errorMessage: ['', Validators.maxLength(200)],
+        emailFormat: [false],
 
-      // Behavior properties
-      disabled: [false],
-      readOnly: [false],
-      defaultValue: [null],
+        // Behavior properties
+        disabled: [false],
+        readOnly: [false],
+        defaultValue: [null],
 
-      // Conditional visibility
-      showIfField: [''],
-      showIfOperator: ['equals'],
-      showIfValue: [''],
+        // Conditional visibility
+        showIfField: [''],
+        showIfOperator: ['equals'],
+        showIfValue: [''],
 
-      // Select/Radio specific
-      multiSelect: [false],
-      options: this.fb.array([]),
+        // Select/Radio specific
+        multiSelect: [false],
+        options: this.fb.array([]),
 
-      // File upload specific
-      acceptedTypes: [''],
-      maxFileSize: [null],
-      maxFiles: [1],
+        // File upload specific
+        acceptedTypes: [''],
+        maxFileSize: [null],
+        maxFiles: [1],
 
-      // Background image specific
-      imageUrl: [''],
-      imagePosition: ['cover'],
-      imageOpacity: [100],
-      imageAlignment: ['center'],
-      imageBlur: [0],
+        // Background image specific (kept for backward compatibility)
+        imageUrl: [''],
+        imagePosition: ['cover'],
+        imageOpacity: [100],
+        imageAlignment: ['center'],
+        imageBlur: [0],
 
-      // Custom background specific
-      customHtml: ['', [Validators.maxLength(10000)]],
-      customCss: ['', [Validators.maxLength(5000)]],
+        // Custom background specific (kept for backward compatibility)
+        customHtml: ['', [Validators.maxLength(10000)]],
+        customCss: ['', [Validators.maxLength(5000)]],
 
-      // Heading specific
-      headingLevel: ['h2'],
-      headingAlignment: ['left'],
-      headingColor: [''],
-      headingFontWeight: ['bold'],
-    });
+        // Custom field styling (Story 16.2)
+        customStyle: ['', [Validators.maxLength(5000)]],
+
+        // Heading specific
+        headingLevel: ['h2'],
+        headingAlignment: ['left'],
+        headingColor: [''],
+        headingFontWeight: ['bold'],
+
+        // Text block specific
+        textBlockContent: [
+          '<p>Add your instructions here...</p>',
+          [Validators.required, Validators.maxLength(5000)],
+        ],
+        textBlockAlignment: ['left'],
+        textBlockBgColor: ['', [this.hexColorValidator()]],
+        textBlockPadding: ['medium'],
+        textBlockCollapsible: [false],
+        textBlockCollapsed: [false],
+      },
+      {
+        validators: [
+          minMaxRangeValidator('minLength', 'maxLength'),
+          minMaxRangeValidator('minValue', 'maxValue'),
+        ],
+      },
+    );
 
     // Watch for selected field changes using effect
     effect(() => {
@@ -966,17 +995,42 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
         this.loadFieldProperties(selectedField);
       }
     });
+
+    // Watch for mobile state or field changes to update accordion state
+    effect(() => {
+      const selectedField = this.formBuilderService.selectedField();
+      const isMobile = this.isMobile();
+
+      if (!selectedField) return;
+
+      if (isMobile) {
+        // On mobile, expand all panels
+        this.activeIndex.set([0, 1, 2, 3]);
+      } else {
+        // On desktop, load saved state or default to Basic Properties
+        const savedState = this.accordionStateService.loadAccordionState(selectedField.type);
+        this.activeIndex.set(savedState);
+      }
+    });
   }
 
   ngOnInit(): void {
-    // Subscribe to form value changes for live updates (debounced)
+    // Setup field name auto-generation (Story 16.6 - Task 3)
+    this.setupFieldNameAutoGeneration();
+
+    // Setup instant preview updates for basic properties (Story 16.5 - AC 1, 2, 3)
+    this.setupInstantPreviewUpdates();
+
+    // Setup debounced preview updates for custom CSS (Story 16.5 - AC 4)
+    this.setupDebouncedCSSPreview();
+
+    // Keep existing debounced form changes for Save button
     this.propertiesForm.valueChanges
       .pipe(debounceTime(300), takeUntil(this.destroy$))
       .subscribe(() => {
         this.hasChanges.set(this.propertiesForm.dirty);
-        if (this.propertiesForm.valid && this.propertiesForm.dirty) {
-          this.applyChangesImmediately();
-        }
+        // Note: applyChangesImmediately is now used only when user clicks Save
+        // Real-time preview uses instant/debounced update methods
       });
   }
 
@@ -1057,6 +1111,14 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Check if current field is text block field
+   */
+  isTextBlockField(): boolean {
+    const fieldType = this.formBuilderService.selectedField()?.type;
+    return fieldType === FormFieldType.TEXT_BLOCK;
+  }
+
+  /**
    * Check if current field is background image
    * NOTE: Background images are now form-level settings, not fields
    */
@@ -1107,41 +1169,53 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Custom validator for unique field names
+   * Custom validator for hex color format
+   * Validates 3-digit (#RGB) and 6-digit (#RRGGBB) hex colors
    */
-  private uniqueFieldNameValidator(control: AbstractControl): ValidationErrors | null {
-    if (!control.value) return null;
+  private hexColorValidator() {
+    return (control: AbstractControl): ValidationErrors | null => {
+      if (!control.value) return null; // Allow empty values
 
-    const currentField = this.formBuilderService.selectedField();
-    if (!currentField) return null;
+      const hexColorPattern = /^#([0-9A-Fa-f]{3}){1,2}$/;
+      const isValid = hexColorPattern.test(control.value);
 
-    const isDuplicate = this.formBuilderService
-      .formFields()
-      .some((f) => f.id !== currentField.id && f.fieldName === control.value);
-
-    return isDuplicate ? { duplicateFieldName: true } : null;
+      return isValid ? null : { invalidHexColor: true };
+    };
   }
 
   /**
-   * Custom validator for regex patterns
+   * Handle accordion panel state changes
+   * Saves the active panel indices to localStorage (only on desktop)
    */
-  private regexPatternValidator() {
-    return (control: AbstractControl): ValidationErrors | null => {
-      if (!control.value) return null;
+  onAccordionChange(event: any): void {
+    const selectedField = this.formBuilderService.selectedField();
+    if (!selectedField) return;
 
-      try {
-        new RegExp(control.value);
-        return null;
-      } catch (e) {
-        return { invalidPattern: true };
-      }
-    };
+    // Only save state on desktop (mobile always shows all panels)
+    if (!this.isMobile()) {
+      // event.index can be a number or array of numbers
+      this.accordionStateService.saveAccordionState(selectedField.type, event.index);
+    }
   }
 
   /**
    * Load field properties into form
    */
   private loadFieldProperties(field: FormField): void {
+    // Reset manual edit flag (Story 16.6 - Task 3)
+    this.isFieldNameManuallyEdited = false;
+
+    // Add unique field name validator dynamically (Story 16.6 - Task 2)
+    const fieldNameControl = this.propertiesForm.get('fieldName');
+    if (fieldNameControl) {
+      fieldNameControl.setValidators([
+        Validators.required,
+        Validators.pattern(/^[a-z0-9_]+$/),
+        uniqueFieldNameValidator(this.formBuilderService, field.id),
+      ]);
+      fieldNameControl.updateValueAndValidity({ emitEvent: false });
+    }
+
     // Clear options array first
     while (this.options.length) {
       this.options.removeAt(0);
@@ -1172,6 +1246,7 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
         minLength: field.validation?.minLength ?? null,
         maxLength: field.validation?.maxLength ?? null,
         pattern: field.validation?.pattern || '',
+        errorMessage: field.validation?.errorMessage || '',
         emailFormat: false,
         disabled: false,
         readOnly: false,
@@ -1185,13 +1260,13 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
           ? field.validation.maxFileSize / (1024 * 1024)
           : null,
         maxFiles: 1,
-        // Background image metadata
+        // Background image metadata (kept for backward compatibility)
         imageUrl: (field.metadata as any)?.imageUrl || '',
         imagePosition: (field.metadata as any)?.imagePosition || 'cover',
         imageOpacity: (field.metadata as any)?.imageOpacity ?? 100,
         imageAlignment: (field.metadata as any)?.imageAlignment || 'center',
         imageBlur: (field.metadata as any)?.imageBlur ?? 0,
-        // Custom background metadata
+        // Custom background metadata (kept for backward compatibility)
         customHtml: (field.metadata as any)?.html || '',
         customCss: (field.metadata as any)?.css || '',
         // Heading metadata
@@ -1199,11 +1274,21 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
         headingAlignment: (field.metadata as any)?.alignment || 'left',
         headingColor: (field.metadata as any)?.color || '',
         headingFontWeight: (field.metadata as any)?.fontWeight || 'bold',
+        // Text block metadata
+        textBlockContent:
+          (field.metadata as any)?.content || '<p>Add your instructions here...</p>',
+        textBlockAlignment: (field.metadata as any)?.alignment || 'left',
+        textBlockBgColor: (field.metadata as any)?.backgroundColor || '',
+        textBlockPadding: (field.metadata as any)?.padding || 'medium',
+        textBlockCollapsible: (field.metadata as any)?.collapsible || false,
+        textBlockCollapsed: (field.metadata as any)?.collapsed || false,
+        // Custom styling (Story 16.2)
+        customStyle: (field.metadata as any)?.customStyle || '',
       },
       { emitEvent: false },
     );
 
-    // Set image preview if URL exists
+    // Set image preview if URL exists (kept for backward compatibility)
     const imageUrl = (field.metadata as any)?.imageUrl;
     if (imageUrl) {
       this.imagePreviewUrl.set(imageUrl);
@@ -1211,7 +1296,7 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
       this.imagePreviewUrl.set(null);
     }
 
-    // Reset custom background validation signals
+    // Reset custom background validation signals (kept for backward compatibility)
     this.cssValidationErrors.set([]);
     this.cssValidationWarnings.set([]);
     this.htmlContainsDangerousPatterns.set(false);
@@ -1219,32 +1304,40 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
     // Background fields are no longer supported as field types
     // They are now form-level settings managed in form-settings.component
 
+    // Add IMAGE-specific validation for alt text (Story 16.6 - Task 4)
+    if (field.type === FormFieldType.IMAGE) {
+      const altText = (field.metadata as any)?.altText || '';
+      if (!this.propertiesForm.contains('altText')) {
+        this.propertiesForm.addControl('altText', this.fb.control(altText, Validators.required));
+      } else {
+        this.propertiesForm.get('altText')?.setValue(altText, { emitEvent: false });
+        this.propertiesForm.get('altText')?.setValidators(Validators.required);
+        this.propertiesForm.get('altText')?.updateValueAndValidity({ emitEvent: false });
+      }
+    } else {
+      // Remove alt text control for non-IMAGE fields
+      if (this.propertiesForm.contains('altText')) {
+        this.propertiesForm.removeControl('altText');
+      }
+    }
+
     this.propertiesForm.markAsPristine();
     this.hasChanges.set(false);
   }
 
   /**
-   * Auto-generate field name from label on blur
+   * Auto-generate field name from label on blur (Story 16.6 - Task 3)
+   * NOTE: This is for backward compatibility. Auto-generation is now handled
+   * in setupFieldNameAutoGeneration() which runs on label value changes.
    */
   onLabelBlur(): void {
     const labelControl = this.propertiesForm.get('label');
     const fieldNameControl = this.propertiesForm.get('fieldName');
 
-    if (labelControl?.value && !fieldNameControl?.dirty) {
-      const generatedFieldName = this.convertToKebabCase(labelControl.value);
-      fieldNameControl?.setValue(generatedFieldName);
+    if (labelControl?.value && !this.isFieldNameManuallyEdited && !fieldNameControl?.value) {
+      const generatedFieldName = slugify(labelControl.value);
+      fieldNameControl?.setValue(generatedFieldName, { emitEvent: false });
     }
-  }
-
-  /**
-   * Convert string to kebab-case
-   */
-  private convertToKebabCase(str: string): string {
-    return str
-      .replace(/([a-z])([A-Z])/g, '$1-$2')
-      .replace(/[\s_]+/g, '-')
-      .toLowerCase()
-      .replace(/[^a-z0-9-]/g, '');
   }
 
   /**
@@ -1268,6 +1361,7 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
     if (formValues.minLength !== null) validation.minLength = formValues.minLength;
     if (formValues.maxLength !== null) validation.maxLength = formValues.maxLength;
     if (formValues.pattern) validation.pattern = formValues.pattern;
+    if (formValues.errorMessage) validation.errorMessage = formValues.errorMessage;
     if (formValues.acceptedTypes) {
       validation.acceptedFileTypes = formValues.acceptedTypes
         .split(',')
@@ -1291,14 +1385,31 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
     // Build options array
     const options = this.options.value.length > 0 ? this.options.value : undefined;
 
-    // Build metadata object (GROUP and HEADING fields)
-    let metadata = currentField.metadata;
+    // Build metadata object (GROUP, HEADING, and TEXT_BLOCK fields)
+    let metadata: any = currentField.metadata || {};
     if (currentField.type === FormFieldType.HEADING) {
       metadata = {
         headingLevel: formValues.headingLevel,
         alignment: formValues.headingAlignment,
         color: formValues.headingColor || undefined,
         fontWeight: formValues.headingFontWeight,
+        customStyle: formValues.customStyle || undefined,
+      };
+    } else if (currentField.type === FormFieldType.TEXT_BLOCK) {
+      metadata = {
+        content: formValues.textBlockContent,
+        alignment: formValues.textBlockAlignment,
+        backgroundColor: formValues.textBlockBgColor || undefined,
+        padding: formValues.textBlockPadding,
+        collapsible: formValues.textBlockCollapsible,
+        collapsed: formValues.textBlockCollapsed,
+        customStyle: formValues.customStyle || undefined,
+      };
+    } else {
+      // For all other field types, just add customStyle to existing metadata
+      metadata = {
+        ...metadata,
+        customStyle: formValues.customStyle || undefined,
       };
     }
 
@@ -1367,6 +1478,7 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
   /**
    * Handle image file selection for background image
    * Converts image to base64 data URL for storage
+   * NOTE: Background images are now form-level settings, not fields
    */
   onImageFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -1399,6 +1511,171 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
       alert('Error reading image file. Please try again.');
     };
     reader.readAsDataURL(file);
+  }
+
+  /**
+   * Validate custom CSS on blur (debounced)
+   * Shows warnings for potentially dangerous patterns
+   */
+  onCustomStyleBlur(): void {
+    const customStyle = this.propertiesForm.get('customStyle')?.value || '';
+
+    if (!customStyle.trim()) {
+      this.customStyleWarnings.set([]);
+      return;
+    }
+
+    // Use debounced validation (500ms delay)
+    setTimeout(() => {
+      const validationResult = this.cssValidatorService.validateCSS(customStyle);
+      this.customStyleWarnings.set(validationResult.warnings);
+    }, 500);
+  }
+
+  /**
+   * Handle validation preset selection change (Story 16.3)
+   * Auto-fills pattern input with selected preset regex
+   */
+  onPresetChange(event: any): void {
+    const preset: ValidationPreset = event.value;
+    if (preset) {
+      this.selectedPreset = preset;
+      if (preset.name !== 'custom') {
+        // Auto-fill pattern with preset regex
+        this.propertiesForm.patchValue({ pattern: preset.pattern });
+      }
+      // Mark form as dirty to trigger live update
+      this.propertiesForm.markAsDirty();
+    }
+  }
+
+  /**
+   * Handle field changes from field-type specific panels (Story 16.4)
+   * Updates the field in FormBuilderService when panel emits changes
+   */
+  onPanelFieldChange(updatedField: FormField): void {
+    const fieldIndex = this.formBuilderService.selectedFieldIndex();
+    if (fieldIndex >= 0) {
+      this.formBuilderService.updateField(fieldIndex, updatedField);
+      // Update selection to trigger canvas re-render
+      this.formBuilderService.selectField(updatedField);
+      this.propertyChanged.emit(updatedField);
+    }
+  }
+
+  /**
+   * Setup instant preview updates for basic properties (Story 16.5 - AC 1, 2, 3).
+   * Updates canvas immediately as user types (no debounce).
+   * Does NOT mark form as dirty (preview-only).
+   * @private
+   */
+  private setupInstantPreviewUpdates(): void {
+    // Label instant updates
+    this.propertiesForm
+      .get('label')
+      ?.valueChanges.pipe(takeUntil(this.destroy$))
+      .subscribe((label) => {
+        const currentField = this.formBuilderService.selectedField();
+        if (currentField) {
+          this.formBuilderService.updateFieldPropertyInstant(currentField.id, { label });
+        }
+      });
+
+    // Placeholder instant updates
+    this.propertiesForm
+      .get('placeholder')
+      ?.valueChanges.pipe(takeUntil(this.destroy$))
+      .subscribe((placeholder) => {
+        const currentField = this.formBuilderService.selectedField();
+        if (currentField) {
+          this.formBuilderService.updateFieldPropertyInstant(currentField.id, { placeholder });
+        }
+      });
+
+    // Required toggle instant updates
+    this.propertiesForm
+      .get('required')
+      ?.valueChanges.pipe(takeUntil(this.destroy$))
+      .subscribe((required) => {
+        const currentField = this.formBuilderService.selectedField();
+        if (currentField) {
+          this.formBuilderService.updateFieldPropertyInstant(currentField.id, { required });
+        }
+      });
+  }
+
+  /**
+   * Setup debounced preview updates for custom CSS (Story 16.5 - AC 4).
+   * Updates canvas after 300ms delay to prevent lag on every keystroke.
+   * Does NOT mark form as dirty (preview-only).
+   * @private
+   */
+  private setupDebouncedCSSPreview(): void {
+    // Custom CSS debounced updates (300ms)
+    this.propertiesForm
+      .get('customStyle')
+      ?.valueChanges.pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$))
+      .subscribe((customStyle) => {
+        const currentField = this.formBuilderService.selectedField();
+        if (currentField) {
+          const metadata = { ...(currentField.metadata || {}), customStyle };
+          this.formBuilderService.updateFieldPropertyDebounced(currentField.id, { metadata });
+        }
+      });
+  }
+
+  /**
+   * Setup field name auto-generation from label (Story 16.6 - Task 3).
+   * Auto-generates fieldName from label using slug format (underscores).
+   * Stops auto-generation if user manually edits fieldName.
+   * @private
+   */
+  private setupFieldNameAutoGeneration(): void {
+    // Track manual edits to fieldName
+    this.propertiesForm
+      .get('fieldName')
+      ?.valueChanges.pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        // Mark as manually edited only if user actually typed something
+        if (this.propertiesForm.get('fieldName')?.dirty) {
+          this.isFieldNameManuallyEdited = true;
+        }
+      });
+
+    // Auto-generate fieldName from label (if not manually edited)
+    this.propertiesForm
+      .get('label')
+      ?.valueChanges.pipe(takeUntil(this.destroy$))
+      .subscribe((label) => {
+        if (!this.isFieldNameManuallyEdited && label) {
+          const slugifiedName = slugify(label);
+          this.propertiesForm.patchValue(
+            { fieldName: slugifiedName },
+            { emitEvent: false }, // Don't trigger manual edit flag
+          );
+        }
+      });
+  }
+
+  /**
+   * Save field properties (Story 16.6 - Task 8)
+   * Validates form and applies changes permanently
+   */
+  onSaveField(): void {
+    if (this.propertiesForm.invalid) {
+      // Mark all fields as touched to show errors
+      Object.keys(this.propertiesForm.controls).forEach((key) => {
+        this.propertiesForm.get(key)?.markAsTouched();
+      });
+      return;
+    }
+
+    // Apply changes immediately to FormBuilderService
+    this.applyChangesImmediately();
+
+    // Mark form as pristine after successful save
+    this.propertiesForm.markAsPristine();
+    this.hasChanges.set(false);
   }
 
   /**

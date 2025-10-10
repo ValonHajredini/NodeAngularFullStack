@@ -1361,4 +1361,453 @@ describe('FormRendererComponent', () => {
       expect(formRendererService.getFormSchema).toHaveBeenCalled();
     });
   });
+
+  describe('TEXT_BLOCK Field Type (Story 15.3)', () => {
+    let htmlSanitizer: any;
+    let domSanitizer: any;
+
+    beforeEach(() => {
+      fixture.detectChanges();
+      htmlSanitizer = (component as any).htmlSanitizer;
+      domSanitizer = (component as any).domSanitizer;
+    });
+
+    describe('getSanitizedContent', () => {
+      it('should sanitize TEXT_BLOCK content using HtmlSanitizerService', () => {
+        const textBlockField: any = {
+          id: 'text-block-1',
+          type: FormFieldType.TEXT_BLOCK,
+          label: 'Instructions',
+          fieldName: 'text-block-1',
+          required: false,
+          order: 1,
+          metadata: {
+            content:
+              '<p><strong>Important</strong> instructions with <script>alert("XSS")</script></p>',
+            alignment: 'left',
+            padding: 'medium',
+          },
+        };
+
+        spyOn(htmlSanitizer, 'sanitize').and.returnValue(
+          '<p><strong>Important</strong> instructions with </p>',
+        );
+        spyOn(domSanitizer, 'bypassSecurityTrustHtml').and.callThrough();
+
+        component.getSanitizedContent(textBlockField);
+
+        expect(htmlSanitizer.sanitize).toHaveBeenCalledWith(
+          '<p><strong>Important</strong> instructions with <script>alert("XSS")</script></p>',
+        );
+        expect(domSanitizer.bypassSecurityTrustHtml).toHaveBeenCalled();
+      });
+
+      it('should handle empty content gracefully', () => {
+        const textBlockField: any = {
+          id: 'text-block-empty',
+          type: FormFieldType.TEXT_BLOCK,
+          label: 'Empty',
+          fieldName: 'text-block-empty',
+          required: false,
+          order: 1,
+          metadata: {
+            content: '',
+            alignment: 'left',
+            padding: 'medium',
+          },
+        };
+
+        spyOn(htmlSanitizer, 'sanitize').and.returnValue('');
+
+        const result = component.getSanitizedContent(textBlockField);
+
+        expect(htmlSanitizer.sanitize).toHaveBeenCalledWith('');
+        expect(result).toBeTruthy(); // SafeHtml object is always truthy
+      });
+
+      it('should handle null/undefined metadata content', () => {
+        const textBlockField: any = {
+          id: 'text-block-null',
+          type: FormFieldType.TEXT_BLOCK,
+          label: 'Null Content',
+          fieldName: 'text-block-null',
+          required: false,
+          order: 1,
+          metadata: {
+            content: null,
+          },
+        };
+
+        spyOn(htmlSanitizer, 'sanitize').and.returnValue('');
+
+        component.getSanitizedContent(textBlockField);
+
+        expect(htmlSanitizer.sanitize).toHaveBeenCalledWith('');
+      });
+    });
+
+    describe('isTextBlockLong', () => {
+      it('should return true when content exceeds 500 words', () => {
+        const longContent = '<p>' + 'word '.repeat(600) + '</p>'; // 600 words
+        const textBlockField: any = {
+          id: 'text-block-long',
+          type: FormFieldType.TEXT_BLOCK,
+          label: 'Long Block',
+          fieldName: 'text-block-long',
+          required: false,
+          order: 1,
+          metadata: {
+            content: longContent,
+            alignment: 'left',
+            padding: 'medium',
+          },
+        };
+
+        spyOn(htmlSanitizer, 'isContentLong').and.returnValue(true);
+
+        const result = component.isTextBlockLong(textBlockField);
+
+        expect(htmlSanitizer.isContentLong).toHaveBeenCalledWith(longContent, 500);
+        expect(result).toBe(true);
+      });
+
+      it('should return false when content is 500 words or less', () => {
+        const shortContent = '<p>' + 'word '.repeat(400) + '</p>'; // 400 words
+        const textBlockField: any = {
+          id: 'text-block-short',
+          type: FormFieldType.TEXT_BLOCK,
+          label: 'Short Block',
+          fieldName: 'text-block-short',
+          required: false,
+          order: 1,
+          metadata: {
+            content: shortContent,
+            alignment: 'left',
+            padding: 'medium',
+          },
+        };
+
+        spyOn(htmlSanitizer, 'isContentLong').and.returnValue(false);
+
+        const result = component.isTextBlockLong(textBlockField);
+
+        expect(htmlSanitizer.isContentLong).toHaveBeenCalledWith(shortContent, 500);
+        expect(result).toBe(false);
+      });
+
+      it('should handle empty content', () => {
+        const textBlockField: any = {
+          id: 'text-block-empty',
+          type: FormFieldType.TEXT_BLOCK,
+          label: 'Empty',
+          fieldName: 'text-block-empty',
+          required: false,
+          order: 1,
+          metadata: {
+            content: '',
+            alignment: 'left',
+            padding: 'medium',
+          },
+        };
+
+        spyOn(htmlSanitizer, 'isContentLong').and.returnValue(false);
+
+        const result = component.isTextBlockLong(textBlockField);
+
+        expect(result).toBe(false);
+      });
+    });
+
+    describe('Collapse/Expand Functionality', () => {
+      describe('isTextBlockCollapsed', () => {
+        it('should return true when field is in collapsed set', () => {
+          (component as any).collapsedTextBlocks.add('text-block-1');
+
+          expect(component.isTextBlockCollapsed('text-block-1')).toBe(true);
+        });
+
+        it('should return false when field is not in collapsed set', () => {
+          expect(component.isTextBlockCollapsed('text-block-999')).toBe(false);
+        });
+
+        it('should handle empty collapsed set', () => {
+          (component as any).collapsedTextBlocks.clear();
+
+          expect(component.isTextBlockCollapsed('any-id')).toBe(false);
+        });
+      });
+
+      describe('toggleTextBlockCollapse', () => {
+        it('should add field to collapsed set when not already collapsed', () => {
+          const fieldId = 'text-block-1';
+          expect(component.isTextBlockCollapsed(fieldId)).toBe(false);
+
+          component.toggleTextBlockCollapse(fieldId);
+
+          expect(component.isTextBlockCollapsed(fieldId)).toBe(true);
+        });
+
+        it('should remove field from collapsed set when already collapsed', () => {
+          const fieldId = 'text-block-2';
+          (component as any).collapsedTextBlocks.add(fieldId);
+          expect(component.isTextBlockCollapsed(fieldId)).toBe(true);
+
+          component.toggleTextBlockCollapse(fieldId);
+
+          expect(component.isTextBlockCollapsed(fieldId)).toBe(false);
+        });
+
+        it('should toggle field state multiple times correctly', () => {
+          const fieldId = 'text-block-3';
+
+          // Start expanded
+          expect(component.isTextBlockCollapsed(fieldId)).toBe(false);
+
+          // First toggle: collapse
+          component.toggleTextBlockCollapse(fieldId);
+          expect(component.isTextBlockCollapsed(fieldId)).toBe(true);
+
+          // Second toggle: expand
+          component.toggleTextBlockCollapse(fieldId);
+          expect(component.isTextBlockCollapsed(fieldId)).toBe(false);
+
+          // Third toggle: collapse again
+          component.toggleTextBlockCollapse(fieldId);
+          expect(component.isTextBlockCollapsed(fieldId)).toBe(true);
+        });
+
+        it('should handle multiple TEXT_BLOCK fields independently', () => {
+          const field1 = 'text-block-1';
+          const field2 = 'text-block-2';
+          const field3 = 'text-block-3';
+
+          // Collapse field1
+          component.toggleTextBlockCollapse(field1);
+          expect(component.isTextBlockCollapsed(field1)).toBe(true);
+          expect(component.isTextBlockCollapsed(field2)).toBe(false);
+          expect(component.isTextBlockCollapsed(field3)).toBe(false);
+
+          // Collapse field3
+          component.toggleTextBlockCollapse(field3);
+          expect(component.isTextBlockCollapsed(field1)).toBe(true);
+          expect(component.isTextBlockCollapsed(field2)).toBe(false);
+          expect(component.isTextBlockCollapsed(field3)).toBe(true);
+
+          // Expand field1
+          component.toggleTextBlockCollapse(field1);
+          expect(component.isTextBlockCollapsed(field1)).toBe(false);
+          expect(component.isTextBlockCollapsed(field2)).toBe(false);
+          expect(component.isTextBlockCollapsed(field3)).toBe(true);
+        });
+      });
+    });
+
+    describe('TEXT_BLOCK Exclusion from FormGroup', () => {
+      it('should not create FormControl for TEXT_BLOCK fields', () => {
+        const schemaWithTextBlock: FormSchema = {
+          ...mockSchema,
+          fields: [
+            {
+              id: 'text-block-1',
+              type: FormFieldType.TEXT_BLOCK,
+              label: 'Instructions',
+              fieldName: 'text-block-instructions',
+              required: false,
+              order: 1,
+              metadata: {
+                content: '<p>Follow these instructions...</p>',
+              },
+            },
+            {
+              id: 'field-text',
+              type: FormFieldType.TEXT,
+              label: 'Name',
+              fieldName: 'name',
+              required: true,
+              order: 2,
+            },
+          ],
+        };
+
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: schemaWithTextBlock, settings: mockSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        // TEXT_BLOCK should NOT create a FormControl
+        expect(newComponent.formGroup?.get('text-block-instructions')).toBeFalsy();
+
+        // Regular input field SHOULD create a FormControl
+        expect(newComponent.formGroup?.get('name')).toBeTruthy();
+      });
+
+      it('should exclude HEADING fields from FormGroup (same pattern)', () => {
+        const schemaWithHeading: FormSchema = {
+          ...mockSchema,
+          fields: [
+            {
+              id: 'heading-1',
+              type: FormFieldType.HEADING,
+              label: 'Section Title',
+              fieldName: 'heading-section',
+              required: false,
+              order: 1,
+              metadata: {
+                level: 'h3',
+                text: 'Section Title',
+              },
+            },
+            {
+              id: 'field-email',
+              type: FormFieldType.EMAIL,
+              label: 'Email',
+              fieldName: 'email',
+              required: true,
+              order: 2,
+            },
+          ],
+        };
+
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: schemaWithHeading, settings: mockSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        // HEADING should NOT create a FormControl
+        expect(newComponent.formGroup?.get('heading-section')).toBeFalsy();
+
+        // Regular input field SHOULD create a FormControl
+        expect(newComponent.formGroup?.get('email')).toBeTruthy();
+      });
+
+      it('should exclude IMAGE fields from FormGroup (same pattern)', () => {
+        const schemaWithImage: FormSchema = {
+          ...mockSchema,
+          fields: [
+            {
+              id: 'image-1',
+              type: FormFieldType.IMAGE,
+              label: 'Logo',
+              fieldName: 'image-logo',
+              required: false,
+              order: 1,
+              metadata: {
+                imageUrl: 'https://example.com/logo.png',
+                altText: 'Company Logo',
+                size: 'medium',
+              },
+            },
+            {
+              id: 'field-number',
+              type: FormFieldType.NUMBER,
+              label: 'Age',
+              fieldName: 'age',
+              required: true,
+              order: 2,
+            },
+          ],
+        };
+
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: schemaWithImage, settings: mockSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        // IMAGE should NOT create a FormControl
+        expect(newComponent.formGroup?.get('image-logo')).toBeFalsy();
+
+        // Regular input field SHOULD create a FormControl
+        expect(newComponent.formGroup?.get('age')).toBeTruthy();
+      });
+
+      it('should handle mixed input and display fields correctly', () => {
+        const mixedSchema: FormSchema = {
+          ...mockSchema,
+          fields: [
+            {
+              id: 'heading-1',
+              type: FormFieldType.HEADING,
+              label: 'Form Title',
+              fieldName: 'heading-title',
+              required: false,
+              order: 1,
+              metadata: { level: 'h2', text: 'Registration Form' },
+            },
+            {
+              id: 'text-block-1',
+              type: FormFieldType.TEXT_BLOCK,
+              label: 'Instructions',
+              fieldName: 'text-block-instructions',
+              required: false,
+              order: 2,
+              metadata: { content: '<p>Please fill out...</p>' },
+            },
+            {
+              id: 'field-name',
+              type: FormFieldType.TEXT,
+              label: 'Name',
+              fieldName: 'name',
+              required: true,
+              order: 3,
+            },
+            {
+              id: 'image-1',
+              type: FormFieldType.IMAGE,
+              label: 'Photo',
+              fieldName: 'image-photo',
+              required: false,
+              order: 4,
+              metadata: { imageUrl: 'photo.jpg', altText: 'Photo' },
+            },
+            {
+              id: 'field-email',
+              type: FormFieldType.EMAIL,
+              label: 'Email',
+              fieldName: 'email',
+              required: true,
+              order: 5,
+            },
+            {
+              id: 'divider-1',
+              type: FormFieldType.DIVIDER,
+              label: '',
+              fieldName: 'divider-1',
+              required: false,
+              order: 6,
+            },
+          ],
+        };
+
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: mixedSchema, settings: mockSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        // Display fields should NOT create FormControls
+        expect(newComponent.formGroup?.get('heading-title')).toBeFalsy();
+        expect(newComponent.formGroup?.get('text-block-instructions')).toBeFalsy();
+        expect(newComponent.formGroup?.get('image-photo')).toBeFalsy();
+        expect(newComponent.formGroup?.get('divider-1')).toBeFalsy();
+
+        // Input fields SHOULD create FormControls
+        expect(newComponent.formGroup?.get('name')).toBeTruthy();
+        expect(newComponent.formGroup?.get('email')).toBeTruthy();
+
+        // FormGroup should only have 2 controls
+        expect(Object.keys(newComponent.formGroup?.controls || {}).length).toBe(2);
+      });
+    });
+  });
 });

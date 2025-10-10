@@ -539,6 +539,526 @@ describe('Forms API Endpoints', () => {
     });
   });
 
+  describe('Schema Validation and ReDoS Protection', () => {
+    describe('ReDoS Pattern Validation', () => {
+      it('should reject ReDoS vulnerable pattern (a+)+', async () => {
+        const response = await request(app)
+          .post('/api/v1/forms')
+          .set('Authorization', `Bearer ${userToken}`)
+          .send({
+            title: 'ReDoS Test Form',
+            schema: {
+              fields: [
+                {
+                  type: 'text',
+                  fieldName: 'email',
+                  label: 'Email',
+                  validation: {
+                    pattern: '(a+)+', // ReDoS vulnerable
+                  },
+                },
+              ],
+            },
+          });
+
+        expect(response.status).toBe(400);
+        expect(response.body.success).toBe(false);
+        expect(response.body.error.code).toBe('SCHEMA_VALIDATION_ERROR');
+        expect(
+          response.body.error.details.some((e: string) => e.includes('ReDoS'))
+        ).toBe(true);
+      });
+
+      it('should reject ReDoS vulnerable pattern (a*)*', async () => {
+        const response = await request(app)
+          .post('/api/v1/forms')
+          .set('Authorization', `Bearer ${userToken}`)
+          .send({
+            title: 'ReDoS Test Form',
+            schema: {
+              fields: [
+                {
+                  type: 'text',
+                  fieldName: 'input',
+                  label: 'Input',
+                  validation: {
+                    pattern: '(a*)*', // ReDoS vulnerable
+                  },
+                },
+              ],
+            },
+          });
+
+        expect(response.status).toBe(400);
+        expect(response.body.success).toBe(false);
+        expect(
+          response.body.error.details.some((e: string) => e.includes('ReDoS'))
+        ).toBe(true);
+      });
+
+      it('should reject pattern exceeding 500 characters', async () => {
+        const response = await request(app)
+          .post('/api/v1/forms')
+          .set('Authorization', `Bearer ${userToken}`)
+          .send({
+            title: 'Long Pattern Form',
+            schema: {
+              fields: [
+                {
+                  type: 'text',
+                  fieldName: 'input',
+                  label: 'Input',
+                  validation: {
+                    pattern: 'a'.repeat(501),
+                  },
+                },
+              ],
+            },
+          });
+
+        expect(response.status).toBe(400);
+        expect(response.body.success).toBe(false);
+        expect(
+          response.body.error.details.some((e: string) =>
+            e.includes('exceeds maximum length')
+          )
+        ).toBe(true);
+      });
+
+      it('should reject pattern with invalid syntax', async () => {
+        const response = await request(app)
+          .post('/api/v1/forms')
+          .set('Authorization', `Bearer ${userToken}`)
+          .send({
+            title: 'Invalid Syntax Form',
+            schema: {
+              fields: [
+                {
+                  type: 'text',
+                  fieldName: 'input',
+                  label: 'Input',
+                  validation: {
+                    pattern: '[a-z', // Unclosed bracket
+                  },
+                },
+              ],
+            },
+          });
+
+        expect(response.status).toBe(400);
+        expect(response.body.success).toBe(false);
+        expect(
+          response.body.error.details.some((e: string) => e.includes('syntax'))
+        ).toBe(true);
+      });
+
+      it('should accept safe email pattern', async () => {
+        const response = await request(app)
+          .post('/api/v1/forms')
+          .set('Authorization', `Bearer ${userToken}`)
+          .send({
+            title: 'Safe Pattern Form',
+            schema: {
+              fields: [
+                {
+                  type: 'email',
+                  fieldName: 'email',
+                  label: 'Email',
+                  validation: {
+                    pattern: '^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$',
+                  },
+                },
+              ],
+            },
+          });
+
+        expect(response.status).toBe(201);
+        expect(response.body.success).toBe(true);
+      });
+
+      it('should accept safe phone pattern', async () => {
+        const response = await request(app)
+          .post('/api/v1/forms')
+          .set('Authorization', `Bearer ${userToken}`)
+          .send({
+            title: 'Phone Pattern Form',
+            schema: {
+              fields: [
+                {
+                  type: 'text',
+                  fieldName: 'phone',
+                  label: 'Phone',
+                  validation: {
+                    pattern:
+                      '^\\+?1?\\s?\\(?\\d{3}\\)?[\\s.-]?\\d{3}[\\s.-]?\\d{4}$',
+                  },
+                },
+              ],
+            },
+          });
+
+        expect(response.status).toBe(201);
+        expect(response.body.success).toBe(true);
+      });
+
+      it('should accept empty pattern (no validation)', async () => {
+        const response = await request(app)
+          .post('/api/v1/forms')
+          .set('Authorization', `Bearer ${userToken}`)
+          .send({
+            title: 'Empty Pattern Form',
+            schema: {
+              fields: [
+                {
+                  type: 'text',
+                  fieldName: 'input',
+                  label: 'Input',
+                  validation: {
+                    pattern: '',
+                  },
+                },
+              ],
+            },
+          });
+
+        expect(response.status).toBe(201);
+        expect(response.body.success).toBe(true);
+      });
+    });
+
+    describe('Validation Property Checks', () => {
+      it('should reject invalid minLength (negative)', async () => {
+        const response = await request(app)
+          .post('/api/v1/forms')
+          .set('Authorization', `Bearer ${userToken}`)
+          .send({
+            title: 'Invalid minLength Form',
+            schema: {
+              fields: [
+                {
+                  type: 'text',
+                  fieldName: 'input',
+                  label: 'Input',
+                  validation: {
+                    minLength: -1,
+                  },
+                },
+              ],
+            },
+          });
+
+        expect(response.status).toBe(400);
+        expect(response.body.success).toBe(false);
+        expect(
+          response.body.error.details.some((e: string) =>
+            e.includes('Invalid minLength')
+          )
+        ).toBe(true);
+      });
+
+      it('should reject invalid maxLength (zero)', async () => {
+        const response = await request(app)
+          .post('/api/v1/forms')
+          .set('Authorization', `Bearer ${userToken}`)
+          .send({
+            title: 'Invalid maxLength Form',
+            schema: {
+              fields: [
+                {
+                  type: 'text',
+                  fieldName: 'input',
+                  label: 'Input',
+                  validation: {
+                    maxLength: 0,
+                  },
+                },
+              ],
+            },
+          });
+
+        expect(response.status).toBe(400);
+        expect(response.body.success).toBe(false);
+        expect(
+          response.body.error.details.some((e: string) =>
+            e.includes('Invalid maxLength')
+          )
+        ).toBe(true);
+      });
+
+      it('should reject maxLength less than minLength', async () => {
+        const response = await request(app)
+          .post('/api/v1/forms')
+          .set('Authorization', `Bearer ${userToken}`)
+          .send({
+            title: 'Invalid Length Range Form',
+            schema: {
+              fields: [
+                {
+                  type: 'text',
+                  fieldName: 'input',
+                  label: 'Input',
+                  validation: {
+                    minLength: 10,
+                    maxLength: 5,
+                  },
+                },
+              ],
+            },
+          });
+
+        expect(response.status).toBe(400);
+        expect(response.body.success).toBe(false);
+        expect(
+          response.body.error.details.some((e: string) =>
+            e.includes('maxLength must be greater than or equal to minLength')
+          )
+        ).toBe(true);
+      });
+
+      it('should accept valid minLength and maxLength', async () => {
+        const response = await request(app)
+          .post('/api/v1/forms')
+          .set('Authorization', `Bearer ${userToken}`)
+          .send({
+            title: 'Valid Length Form',
+            schema: {
+              fields: [
+                {
+                  type: 'text',
+                  fieldName: 'input',
+                  label: 'Input',
+                  validation: {
+                    minLength: 5,
+                    maxLength: 100,
+                  },
+                },
+              ],
+            },
+          });
+
+        expect(response.status).toBe(201);
+        expect(response.body.success).toBe(true);
+      });
+
+      it('should reject max less than min for numeric fields', async () => {
+        const response = await request(app)
+          .post('/api/v1/forms')
+          .set('Authorization', `Bearer ${userToken}`)
+          .send({
+            title: 'Invalid Range Form',
+            schema: {
+              fields: [
+                {
+                  type: 'number',
+                  fieldName: 'age',
+                  label: 'Age',
+                  validation: {
+                    min: 100,
+                    max: 18,
+                  },
+                },
+              ],
+            },
+          });
+
+        expect(response.status).toBe(400);
+        expect(response.body.success).toBe(false);
+        expect(
+          response.body.error.details.some((e: string) =>
+            e.includes('max must be greater than or equal to min')
+          )
+        ).toBe(true);
+      });
+
+      it('should accept valid min and max', async () => {
+        const response = await request(app)
+          .post('/api/v1/forms')
+          .set('Authorization', `Bearer ${userToken}`)
+          .send({
+            title: 'Valid Range Form',
+            schema: {
+              fields: [
+                {
+                  type: 'number',
+                  fieldName: 'age',
+                  label: 'Age',
+                  validation: {
+                    min: 18,
+                    max: 100,
+                  },
+                },
+              ],
+            },
+          });
+
+        expect(response.status).toBe(201);
+        expect(response.body.success).toBe(true);
+      });
+
+      it('should reject errorMessage exceeding 500 characters', async () => {
+        const response = await request(app)
+          .post('/api/v1/forms')
+          .set('Authorization', `Bearer ${userToken}`)
+          .send({
+            title: 'Long Error Message Form',
+            schema: {
+              fields: [
+                {
+                  type: 'text',
+                  fieldName: 'input',
+                  label: 'Input',
+                  validation: {
+                    errorMessage: 'A'.repeat(501),
+                  },
+                },
+              ],
+            },
+          });
+
+        expect(response.status).toBe(400);
+        expect(response.body.success).toBe(false);
+        expect(
+          response.body.error.details.some((e: string) =>
+            e.includes('errorMessage')
+          )
+        ).toBe(true);
+      });
+
+      it('should accept valid custom error message', async () => {
+        const response = await request(app)
+          .post('/api/v1/forms')
+          .set('Authorization', `Bearer ${userToken}`)
+          .send({
+            title: 'Custom Error Message Form',
+            schema: {
+              fields: [
+                {
+                  type: 'email',
+                  fieldName: 'email',
+                  label: 'Email',
+                  validation: {
+                    pattern: '^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$',
+                    errorMessage: 'Please enter a valid email address',
+                  },
+                },
+              ],
+            },
+          });
+
+        expect(response.status).toBe(201);
+        expect(response.body.success).toBe(true);
+      });
+    });
+
+    describe('Backward Compatibility', () => {
+      it('should accept form without validation object', async () => {
+        const response = await request(app)
+          .post('/api/v1/forms')
+          .set('Authorization', `Bearer ${userToken}`)
+          .send({
+            title: 'No Validation Form',
+            schema: {
+              fields: [
+                {
+                  type: 'text',
+                  fieldName: 'input',
+                  label: 'Input',
+                  // No validation object
+                },
+              ],
+            },
+          });
+
+        expect(response.status).toBe(201);
+        expect(response.body.success).toBe(true);
+      });
+
+      it('should accept form with empty validation object', async () => {
+        const response = await request(app)
+          .post('/api/v1/forms')
+          .set('Authorization', `Bearer ${userToken}`)
+          .send({
+            title: 'Empty Validation Form',
+            schema: {
+              fields: [
+                {
+                  type: 'text',
+                  fieldName: 'input',
+                  label: 'Input',
+                  validation: {},
+                },
+              ],
+            },
+          });
+
+        expect(response.status).toBe(201);
+        expect(response.body.success).toBe(true);
+      });
+
+      it('should accept form with partial validation properties', async () => {
+        const response = await request(app)
+          .post('/api/v1/forms')
+          .set('Authorization', `Bearer ${userToken}`)
+          .send({
+            title: 'Partial Validation Form',
+            schema: {
+              fields: [
+                {
+                  type: 'text',
+                  fieldName: 'input',
+                  label: 'Input',
+                  validation: {
+                    minLength: 5,
+                    // Only minLength, no other properties
+                  },
+                },
+              ],
+            },
+          });
+
+        expect(response.status).toBe(201);
+        expect(response.body.success).toBe(true);
+      });
+
+      it('should accept form with comprehensive validation', async () => {
+        const response = await request(app)
+          .post('/api/v1/forms')
+          .set('Authorization', `Bearer ${userToken}`)
+          .send({
+            title: 'Comprehensive Validation Form',
+            schema: {
+              fields: [
+                {
+                  type: 'email',
+                  fieldName: 'email',
+                  label: 'Email Address',
+                  validation: {
+                    pattern: '^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$',
+                    minLength: 5,
+                    maxLength: 255,
+                    errorMessage: 'Please enter a valid email address',
+                  },
+                },
+                {
+                  type: 'number',
+                  fieldName: 'age',
+                  label: 'Age',
+                  validation: {
+                    min: 18,
+                    max: 120,
+                    errorMessage: 'Age must be between 18 and 120',
+                  },
+                },
+              ],
+            },
+          });
+
+        expect(response.status).toBe(201);
+        expect(response.body.success).toBe(true);
+      });
+    });
+  });
+
   describe('Existing Routes Regression Tests', () => {
     it('should not affect health check endpoint', async () => {
       const response = await request(app).get('/api/v1/health');

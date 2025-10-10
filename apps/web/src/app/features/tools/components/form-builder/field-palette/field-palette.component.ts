@@ -108,6 +108,8 @@ export class FieldPaletteComponent {
     { type: FormFieldType.TOGGLE, icon: 'pi-toggle-on', label: 'Toggle' },
     { type: FormFieldType.DIVIDER, icon: 'pi-minus', label: 'Section Divider' },
     { type: FormFieldType.HEADING, icon: 'pi-align-center', label: 'Heading' },
+    { type: FormFieldType.IMAGE, icon: 'pi-image', label: 'Image' },
+    { type: FormFieldType.TEXT_BLOCK, icon: 'pi-align-justify', label: 'Text Block' },
     // Note: Background Image and Custom Background moved to Form Settings
   ];
 

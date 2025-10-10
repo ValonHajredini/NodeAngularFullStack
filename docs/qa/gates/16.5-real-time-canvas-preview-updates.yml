@@ -1,0 +1,202 @@
+schema: 1
+story: '16.5'
+story_title: 'Real-Time Canvas Preview Updates for Property Changes'
+gate: CONCERNS
+status_reason: 'Critical test coverage gaps (missing test file, no Story 16.5 tests) and unverified performance requirements (AC 8, 10) prevent PASS gate. Implementation is architecturally sound.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2025-10-10T00:00:00Z'
+
+top_issues:
+  - severity: high
+    category: test_coverage
+    description: 'Missing test file: field-preview-renderer.component.spec.ts (446 lines of logic untested)'
+    refs:
+      - 'apps/web/src/app/features/tools/components/form-builder/form-canvas/field-preview-renderer/field-preview-renderer.component.ts'
+    suggested_owner: dev
+  - severity: high
+    category: test_coverage
+    description: 'No tests for Story 16.5 functionality in FormBuilderService (updateFieldPropertyInstant, updateFieldPropertyDebounced)'
+    refs:
+      - 'apps/web/src/app/features/tools/components/form-builder/form-builder.service.spec.ts:1-1388'
+    suggested_owner: dev
+  - severity: high
+    category: test_coverage
+    description: 'No tests for real-time preview methods in FieldPropertiesComponent (setupInstantPreviewUpdates, setupDebouncedCSSPreview)'
+    refs:
+      - 'apps/web/src/app/features/tools/components/form-builder/field-properties/field-properties.component.spec.ts:1-390'
+    suggested_owner: dev
+  - severity: medium
+    category: performance
+    description: 'No performance tests to verify AC 8 (< 100ms perceived delay) and AC 10 (no regression)'
+    refs:
+      - 'docs/stories/16.5-real-time-canvas-preview-updates.md:28-33'
+    suggested_owner: dev
+  - severity: medium
+    category: implementation
+    description: 'CSS parsing memoization mentioned in story design but not implemented (customStyles getter runs on every change detection)'
+    refs:
+      - 'apps/web/src/app/features/tools/components/form-builder/form-canvas/field-preview-renderer/field-preview-renderer.component.ts:273-299'
+    suggested_owner: dev
+  - severity: low
+    category: error_handling
+    description: 'No error handling for update failures in instant/debounced update methods'
+    refs:
+      - 'apps/web/src/app/features/tools/components/form-builder/form-builder.service.ts:481-521'
+    suggested_owner: dev
+
+waiver:
+  active: false
+
+quality_score: 60
+# Calculation: 100 - (20 × 0 FAILs) - (10 × 4 HIGH/MEDIUM issues) = 60
+# Issues: 3 HIGH test coverage + 1 MEDIUM performance + 1 MEDIUM implementation + 1 LOW error handling
+
+expires: '2025-10-24T00:00:00Z'
+# 2 weeks from review date
+
+evidence:
+  tests_reviewed: 2
+  # FormBuilderService tests, FieldPropertiesComponent tests
+  # Note: field-preview-renderer tests don't exist
+  risks_identified: 6
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7, 9]
+    # AC 1: Label instant - implemented
+    # AC 2: Placeholder instant - implemented
+    # AC 3: Required instant - implemented
+    # AC 4: CSS debounce - implemented
+    # AC 5: Validation indicators - implemented
+    # AC 6: Field-specific updates - implemented
+    # AC 7: CSS summary footer - implemented
+    # AC 9: No dirty state - implemented
+    ac_gaps: [8, 10]
+    # AC 8: < 100ms delay - no performance tests to verify
+    # AC 10: No regression - no performance benchmarks to verify
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'No security concerns. Custom CSS sanitized, no XSS vectors, no sensitive data exposure.'
+  performance:
+    status: CONCERNS
+    notes: 'Performance requirements (AC 8: < 100ms delay, AC 10: no regression) not verified. CSS parsing runs on every change detection without memoization. Needs performance tests and benchmarks.'
+  reliability:
+    status: CONCERNS
+    notes: 'No error handling for update failures. Updates may fail silently. Needs try-catch blocks and error logging.'
+  maintainability:
+    status: PASS
+    notes: 'Clean code structure, good separation of concerns, proper TypeScript typing, well-documented.'
+
+recommendations:
+  immediate:
+    # Must fix before production
+    - action: 'Create field-preview-renderer.component.spec.ts with comprehensive tests'
+      refs:
+        - 'apps/web/src/app/features/tools/components/form-builder/form-canvas/field-preview-renderer/'
+      priority: CRITICAL
+      estimated_effort: '2-3 hours'
+    - action: 'Add FormBuilderService tests for updateFieldPropertyInstant/Debounced and applyFieldUpdateWithoutMarkingDirty'
+      refs:
+        - 'apps/web/src/app/features/tools/components/form-builder/form-builder.service.spec.ts'
+      priority: CRITICAL
+      estimated_effort: '1-2 hours'
+    - action: 'Add FieldPropertiesComponent tests for setupInstantPreviewUpdates and setupDebouncedCSSPreview'
+      refs:
+        - 'apps/web/src/app/features/tools/components/form-builder/field-properties/field-properties.component.spec.ts'
+      priority: CRITICAL
+      estimated_effort: '1-2 hours'
+    - action: 'Add performance tests to verify AC 8 (< 100ms) and AC 10 (no regression)'
+      refs:
+        - 'apps/web/tests/performance/'
+      priority: HIGH
+      estimated_effort: '2-3 hours'
+  future:
+    # Can be addressed in follow-up stories
+    - action: 'Implement CSS parsing memoization using WeakMap'
+      refs:
+        - 'apps/web/src/app/features/tools/components/form-builder/form-canvas/field-preview-renderer/field-preview-renderer.component.ts:273-299'
+      priority: MEDIUM
+      estimated_effort: '1 hour'
+    - action: 'Add error handling with try-catch and user-friendly error messages'
+      refs:
+        - 'apps/web/src/app/features/tools/components/form-builder/form-builder.service.ts:481-521'
+      priority: MEDIUM
+      estimated_effort: '1 hour'
+    - action: 'Add E2E tests for complete real-time preview workflow'
+      refs:
+        - 'tests/e2e/form-builder/'
+      priority: LOW
+      estimated_effort: '2-3 hours'
+    - action: 'Add visual regression tests for canvas preview changes'
+      refs:
+        - 'tests/visual/'
+      priority: LOW
+      estimated_effort: '2-3 hours'
+
+technical_debt:
+  identified:
+    - type: test_coverage
+      description: 'Missing test file for FieldPreviewRendererComponent (446 LOC untested)'
+      severity: HIGH
+      estimated_effort: '2-3 hours'
+    - type: test_coverage
+      description: 'Story 16.5 functionality not tested in existing test files'
+      severity: HIGH
+      estimated_effort: '2-4 hours'
+    - type: performance
+      description: 'CSS parsing without memoization may cause performance issues'
+      severity: MEDIUM
+      estimated_effort: '1 hour'
+    - type: error_handling
+      description: 'No error handling for failed updates'
+      severity: LOW
+      estimated_effort: '1 hour'
+
+notes: |
+  **Summary:**
+  The real-time canvas preview feature is architecturally sound with excellent code quality:
+  - Signal-based reactivity for instant updates
+  - Proper separation of instant vs debounced updates
+  - OnPush change detection strategy
+  - Clean RxJS patterns (debounceTime, distinctUntilChanged, takeUntil)
+
+  However, CRITICAL test coverage gaps prevent a PASS gate:
+  1. Missing test file: field-preview-renderer.component.spec.ts
+  2. No tests for Story 16.5 specific methods in existing test files
+  3. No performance tests to verify AC 8 and AC 10
+
+  **Positive Findings:**
+  - All 10 acceptance criteria implemented correctly
+  - No security concerns identified
+  - Good maintainability and code quality
+  - Proper use of Angular 20+ patterns
+
+  **CONCERNS Gate Reason:**
+  Test coverage gaps are blocking production readiness. The implementation itself is solid.
+
+  **Estimated Effort to Address:**
+  4-6 hours to create missing tests and verify performance requirements.
+
+  **Next Steps:**
+  1. Create field-preview-renderer.component.spec.ts (2-3 hours)
+  2. Add Story 16.5 tests to existing test files (2-4 hours)
+  3. Add performance tests (2-3 hours)
+  4. Re-review to verify all tests pass and performance meets requirements
+
+  Once tests are added and passing, this feature should be production-ready.
+
+risk_profile:
+  overall_risk: MEDIUM
+  # Test coverage gaps create risk, but implementation quality is high
+
+  by_category:
+    security: LOW
+    performance: MEDIUM
+    reliability: MEDIUM
+    maintainability: LOW
+    testability: HIGH
+
+  mitigations:
+    - 'Add comprehensive test suite (addresses testability, reliability, performance risks)'
+    - 'Add performance benchmarks (addresses performance risk)'
+    - 'Add error handling (addresses reliability risk)'

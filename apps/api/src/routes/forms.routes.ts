@@ -4,6 +4,7 @@ import { FormsUploadController } from '../controllers/forms-upload.controller';
 import { AuthMiddleware } from '../middleware/auth.middleware';
 import { RateLimitMiddleware } from '../middleware/rate-limit.middleware';
 import { sanitizeFormHTML } from '../middleware/sanitize-html.middleware';
+import { cssSanitizerMiddleware } from '../middleware/css-sanitizer.middleware';
 import {
   createFormValidator,
   updateFormValidator,
@@ -99,6 +100,7 @@ router.post(
   AuthMiddleware.authenticate,
   xssProtection,
   sanitizeFormHTML, // Sanitize custom background HTML before validation
+  cssSanitizerMiddleware, // Validate custom field CSS (Story 16.2)
   createFormValidator,
   validateFormSchema,
   formsController.createForm
@@ -396,6 +398,74 @@ router.post(
 
 /**
  * @swagger
+ * /api/forms/{formId}/upload-image:
+ *   post:
+ *     summary: Upload an image for a form field
+ *     description: Upload an image file to DigitalOcean Spaces for use in IMAGE field type
+ *     tags: [Forms]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: formId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Form ID (UUID)
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [image]
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: Image file (JPEG, PNG, GIF, WebP) - max 5MB
+ *     responses:
+ *       200:
+ *         description: Image uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     imageUrl:
+ *                       type: string
+ *                       description: Public CDN URL of uploaded image
+ *                     fileName:
+ *                       type: string
+ *                     size:
+ *                       type: number
+ *                     mimeType:
+ *                       type: string
+ *       400:
+ *         description: No file provided, invalid file type, or file too large
+ *       401:
+ *         description: Authentication required
+ *       500:
+ *         description: Upload failed
+ */
+router.post(
+  '/:formId/upload-image',
+  AuthMiddleware.authenticate,
+  formsUploadController.uploadFieldImageMiddleware,
+  formsUploadController.uploadFormImage
+);
+
+/**
+ * @swagger
  * /api/forms/{id}:
  *   get:
  *     summary: Get form by ID
@@ -561,6 +631,7 @@ router.put(
   formIdValidator,
   xssProtection,
   sanitizeFormHTML, // Sanitize custom background HTML before validation
+  cssSanitizerMiddleware, // Validate custom field CSS (Story 16.2)
   updateFormValidator,
   validateFormSchema,
   formsController.updateForm
