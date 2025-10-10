@@ -171,67 +171,76 @@ import { Subject, takeUntil } from 'rxjs';
                     }
                   </div>
 
-                  <div class="field">
-                    <label for="fieldName" class="block text-sm font-medium text-gray-700 mb-1">
-                      Field Name <span class="text-red-500">*</span>
-                    </label>
-                    <input
-                      pInputText
-                      id="fieldName"
-                      formControlName="fieldName"
-                      class="w-full"
-                      placeholder="Enter field name"
-                      [attr.aria-required]="'true'"
-                    />
-                    @if (
-                      propertiesForm.get('fieldName')?.errors?.['required'] &&
-                      propertiesForm.get('fieldName')?.touched
-                    ) {
-                      <small class="text-red-500 text-xs" role="alert"
-                        >Field name is required</small
-                      >
-                    }
-                    @if (propertiesForm.get('fieldName')?.errors?.['pattern']) {
-                      <small class="text-red-500 text-xs" role="alert"
-                        >Must be kebab-case (e.g., first-name)</small
-                      >
-                    }
-                    @if (propertiesForm.get('fieldName')?.errors?.['duplicateFieldName']) {
-                      <small class="text-red-500 text-xs" role="alert"
-                        >Field name must be unique</small
-                      >
-                    }
-                    <small class="text-gray-500 text-xs">
-                      Used in form data (e.g., first-name, email-address)
-                    </small>
-                  </div>
+                  <!-- Field Name (hidden for preview elements) -->
+                  @if (isInputField(field.type)) {
+                    <div class="field">
+                      <label for="fieldName" class="block text-sm font-medium text-gray-700 mb-1">
+                        Field Name <span class="text-red-500">*</span>
+                      </label>
+                      <input
+                        pInputText
+                        id="fieldName"
+                        formControlName="fieldName"
+                        class="w-full"
+                        placeholder="Enter field name"
+                        [attr.aria-required]="'true'"
+                      />
+                      @if (
+                        propertiesForm.get('fieldName')?.errors?.['required'] &&
+                        propertiesForm.get('fieldName')?.touched
+                      ) {
+                        <small class="text-red-500 text-xs" role="alert"
+                          >Field name is required</small
+                        >
+                      }
+                      @if (propertiesForm.get('fieldName')?.errors?.['pattern']) {
+                        <small class="text-red-500 text-xs" role="alert"
+                          >Must be kebab-case (e.g., first-name)</small
+                        >
+                      }
+                      @if (propertiesForm.get('fieldName')?.errors?.['duplicateFieldName']) {
+                        <small class="text-red-500 text-xs" role="alert"
+                          >Field name must be unique</small
+                        >
+                      }
+                      <small class="text-gray-500 text-xs">
+                        Used in form data (e.g., first-name, email-address)
+                      </small>
+                    </div>
+                  }
 
-                  <div class="field">
-                    <label for="placeholder" class="block text-sm font-medium text-gray-700 mb-1">
-                      Placeholder
-                    </label>
-                    <input
-                      pInputText
-                      id="placeholder"
-                      formControlName="placeholder"
-                      class="w-full"
-                      placeholder="Enter placeholder text"
-                    />
-                  </div>
+                  <!-- Placeholder (hidden for preview elements) -->
+                  @if (isInputField(field.type)) {
+                    <div class="field">
+                      <label for="placeholder" class="block text-sm font-medium text-gray-700 mb-1">
+                        Placeholder
+                      </label>
+                      <input
+                        pInputText
+                        id="placeholder"
+                        formControlName="placeholder"
+                        class="w-full"
+                        placeholder="Enter placeholder text"
+                      />
+                    </div>
+                  }
 
-                  <div class="field">
-                    <label for="helpText" class="block text-sm font-medium text-gray-700 mb-1">
-                      Help Text
-                    </label>
-                    <textarea
-                      pTextarea
-                      id="helpText"
-                      formControlName="helpText"
-                      class="w-full"
-                      rows="3"
-                      placeholder="Enter help text"
-                    ></textarea>
-                  </div>
+                  <!-- Help Text (hidden for preview elements) -->
+                  @if (isInputField(field.type)) {
+                    <div class="field">
+                      <label for="helpText" class="block text-sm font-medium text-gray-700 mb-1">
+                        Help Text
+                      </label>
+                      <textarea
+                        pTextarea
+                        id="helpText"
+                        formControlName="helpText"
+                        class="w-full"
+                        rows="3"
+                        placeholder="Enter help text"
+                      ></textarea>
+                    </div>
+                  }
                 </div>
               </p-tabpanel>
 

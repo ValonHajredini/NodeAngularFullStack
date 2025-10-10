@@ -149,13 +149,19 @@ import { ValidationPresetsService } from '../../field-properties/validation-pres
             <app-group-preview [field]="field" />
           }
           @case (FormFieldType.HEADING) {
-            <app-heading-preview [field]="field" />
+            <app-heading-preview
+              [field]="field"
+              (headingTextChanged)="onHeadingTextChanged($event)"
+            />
           }
           @case (FormFieldType.IMAGE) {
             <app-image-preview [field]="field" />
           }
           @case (FormFieldType.TEXT_BLOCK) {
-            <app-text-block-preview [field]="field" />
+            <app-text-block-preview
+              [field]="field"
+              (contentChanged)="onTextBlockContentChanged($event)"
+            />
           }
           @default {
             <div class="p-4 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
@@ -441,5 +447,26 @@ export class FieldPreviewRendererComponent {
   protected getCSSRuleCount(): number {
     const customStyle = (this.field.metadata as any)?.customStyle || '';
     return customStyle.split(';').filter((rule: string) => rule.trim().length > 0).length;
+  }
+
+  /**
+   * Handle heading text change from inline editor.
+   * Updates the field label with the new heading text.
+   */
+  onHeadingTextChanged(newText: string): void {
+    this.fieldUpdated.emit({ label: newText });
+  }
+
+  /**
+   * Handle text block content change from inline editor.
+   * Updates the metadata.content with the new plain text content.
+   */
+  onTextBlockContentChanged(newContent: string): void {
+    this.fieldUpdated.emit({
+      metadata: {
+        ...this.field.metadata,
+        content: newContent,
+      },
+    });
   }
 }

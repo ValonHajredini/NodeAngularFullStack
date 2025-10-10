@@ -1,53 +1,44 @@
-import { Component, Input, ChangeDetectionStrategy, inject } from '@angular/core';
+import {
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  ChangeDetectionStrategy,
+  inject,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormField, TextBlockMetadata } from '@nodeangularfullstack/shared';
 import { HtmlSanitizerService } from '../../../../../../shared/services/html-sanitizer.service';
+import { InlineTextBlockEditorComponent } from './inline-text-block-editor.component';
 
 /**
  * Text block preview component for form builder canvas.
- * Renders a truncated plain text preview of the HTML content.
+ * Renders plain text content with inline editing support.
  */
 @Component({
   selector: 'app-text-block-preview',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule],
+  imports: [CommonModule, InlineTextBlockEditorComponent],
   template: `
-    <div
-      class="text-block-preview border rounded p-3"
-      [style.background-color]="metadata.backgroundColor || 'transparent'"
-      [style.text-align]="metadata.alignment || 'left'"
-      [class.p-0]="metadata.padding === 'none'"
-      [class.p-2]="metadata.padding === 'small'"
-      [class.p-3]="metadata.padding === 'medium'"
-      [class.p-6]="metadata.padding === 'large'"
-    >
-      <div class="text-sm text-gray-700 whitespace-pre-wrap">{{ previewText }}</div>
-      @if (isTruncated) {
-        <p class="text-xs text-gray-500 mt-2 mb-0">... Click to edit</p>
-      }
-    </div>
+    <app-inline-text-block-editor
+      [content]="plainTextContent"
+      [fieldId]="field.id"
+      [alignment]="metadata.alignment || 'left'"
+      [backgroundColor]="metadata.backgroundColor"
+      [padding]="metadata.padding || 'medium'"
+      (contentChanged)="onContentChanged($event)"
+      (click)="$event.stopPropagation()"
+      style="pointer-events: auto;"
+    />
   `,
-  styles: [
-    `
-      .text-block-preview {
-        position: relative;
-        min-height: 60px;
-        transition: all 0.2s;
-      }
-
-      .text-block-preview:hover {
-        background-color: rgba(59, 130, 246, 0.05);
-        border-color: #3b82f6;
-      }
-    `,
-  ],
+  styles: [],
 })
 export class TextBlockPreviewComponent {
   @Input({ required: true }) field!: FormField;
+  @Output() contentChanged = new EventEmitter<string>();
 
   private readonly htmlSanitizer = inject(HtmlSanitizerService);
-  private readonly maxPreviewLength = 150;
 
   /**
    * Get text block metadata with type safety
@@ -65,18 +56,16 @@ export class TextBlockPreviewComponent {
   }
 
   /**
-   * Get plain text preview (stripped of HTML tags and truncated)
+   * Get plain text content (stripped of HTML tags)
    */
-  get previewText(): string {
-    const plainText = this.htmlSanitizer.stripHtml(this.metadata.content || '');
-    return this.htmlSanitizer.truncate(plainText, this.maxPreviewLength);
+  get plainTextContent(): string {
+    return this.htmlSanitizer.stripHtml(this.metadata.content || '');
   }
 
   /**
-   * Check if content is truncated
+   * Handle content change from inline editor
    */
-  get isTruncated(): boolean {
-    const plainText = this.htmlSanitizer.stripHtml(this.metadata.content || '');
-    return plainText.length > this.maxPreviewLength;
+  onContentChanged(newContent: string): void {
+    this.contentChanged.emit(newContent);
   }
 }

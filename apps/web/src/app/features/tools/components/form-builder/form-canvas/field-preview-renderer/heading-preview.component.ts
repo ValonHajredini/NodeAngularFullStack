@@ -1,74 +1,33 @@
-import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormField, HeadingMetadata } from '@nodeangularfullstack/shared';
+import { InlineHeadingEditorComponent } from './inline-heading-editor.component';
 
 /**
  * Heading preview component for form builder canvas.
  * Renders a heading with configurable level, alignment, color, and weight.
+ * Supports inline editing of heading text.
  */
 @Component({
   selector: 'app-heading-preview',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule],
+  imports: [CommonModule, InlineHeadingEditorComponent],
   template: `
-    <div class="heading-preview" [style.text-align]="metadata.alignment || 'left'">
-      @switch (metadata.headingLevel || 'h2') {
-        @case ('h1') {
-          <h1
-            class="text-4xl mb-0"
-            [style.color]="metadata.color || 'inherit'"
-            [style.font-weight]="metadata.fontWeight || 'bold'"
-          >
-            {{ field.label }}
-          </h1>
-        }
-        @case ('h2') {
-          <h2
-            class="text-3xl mb-0"
-            [style.color]="metadata.color || 'inherit'"
-            [style.font-weight]="metadata.fontWeight || 'bold'"
-          >
-            {{ field.label }}
-          </h2>
-        }
-        @case ('h3') {
-          <h3
-            class="text-2xl mb-0"
-            [style.color]="metadata.color || 'inherit'"
-            [style.font-weight]="metadata.fontWeight || 'bold'"
-          >
-            {{ field.label }}
-          </h3>
-        }
-        @case ('h4') {
-          <h4
-            class="text-xl mb-0"
-            [style.color]="metadata.color || 'inherit'"
-            [style.font-weight]="metadata.fontWeight || 'bold'"
-          >
-            {{ field.label }}
-          </h4>
-        }
-        @case ('h5') {
-          <h5
-            class="text-lg mb-0"
-            [style.color]="metadata.color || 'inherit'"
-            [style.font-weight]="metadata.fontWeight || 'bold'"
-          >
-            {{ field.label }}
-          </h5>
-        }
-        @case ('h6') {
-          <h6
-            class="text-base mb-0"
-            [style.color]="metadata.color || 'inherit'"
-            [style.font-weight]="metadata.fontWeight || 'bold'"
-          >
-            {{ field.label }}
-          </h6>
-        }
-      }
+    <div
+      class="heading-preview"
+      [style.color]="metadata.color || 'inherit'"
+      [style.font-weight]="metadata.fontWeight || 'bold'"
+    >
+      <app-inline-heading-editor
+        [text]="field.label"
+        [fieldId]="field.id"
+        [headingLevel]="metadata.headingLevel || 'h2'"
+        [alignment]="metadata.alignment || 'left'"
+        (textChanged)="onHeadingTextChanged($event)"
+        (click)="$event.stopPropagation()"
+        style="pointer-events: auto;"
+      />
     </div>
   `,
   styles: [
@@ -91,6 +50,7 @@ import { FormField, HeadingMetadata } from '@nodeangularfullstack/shared';
 })
 export class HeadingPreviewComponent {
   @Input({ required: true }) field!: FormField;
+  @Output() headingTextChanged = new EventEmitter<string>();
 
   /**
    * Get heading metadata with type safety
@@ -103,5 +63,12 @@ export class HeadingPreviewComponent {
         fontWeight: 'bold',
       }
     );
+  }
+
+  /**
+   * Handle heading text change from inline editor
+   */
+  onHeadingTextChanged(newText: string): void {
+    this.headingTextChanged.emit(newText);
   }
 }
