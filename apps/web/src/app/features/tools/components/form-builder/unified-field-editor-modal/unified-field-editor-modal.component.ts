@@ -35,7 +35,12 @@ import { ConfirmDialog } from 'primeng/confirmdialog';
 import { Tooltip } from 'primeng/tooltip';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { CdkDrag, CdkDropList, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
-import { FormField, FormFieldType } from '@nodeangularfullstack/shared';
+import {
+  FormField,
+  FormFieldType,
+  isInputField,
+  isDisplayElement,
+} from '@nodeangularfullstack/shared';
 import { FormBuilderService } from '../form-builder.service';
 import { Subject, takeUntil } from 'rxjs';
 
@@ -95,9 +100,21 @@ import { Subject, takeUntil } from 'rxjs';
 
         <!-- Visible hint and field type -->
         <div class="mb-4 flex items-center justify-between">
-          <span class="inline-block bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full">
-            {{ field.type }}
-          </span>
+          <div class="flex flex-wrap gap-2">
+            <span class="inline-block bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full">
+              {{ field.type }}
+            </span>
+            <span
+              [class]="
+                'inline-block text-xs px-3 py-1 rounded-full font-semibold ' +
+                (isInputField(field.type)
+                  ? 'bg-green-100 text-green-800'
+                  : 'bg-purple-100 text-purple-800')
+              "
+            >
+              {{ isInputField(field.type) ? 'Input' : 'Preview' }}
+            </span>
+          </div>
           <div class="text-xs text-gray-600 flex items-center gap-2">
             <i class="pi pi-info-circle"></i>
             <span>
@@ -802,6 +819,16 @@ export class UnifiedFieldEditorModalComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Expose isInputField helper for template usage
+   */
+  readonly isInputField = isInputField;
+
+  /**
+   * Expose isDisplayElement helper for template usage
+   */
+  readonly isDisplayElement = isDisplayElement;
+
+  /**
    * Check if current field is a number type
    */
   isNumberField(): boolean {
@@ -1277,5 +1304,9 @@ export class UnifiedFieldEditorModalComponent implements OnInit, OnDestroy {
     this.propertiesForm.reset();
     this.isDirty.set(false);
     this.activeTabIndex = '0';
+
+    // Ensure parent component knows modal is closed (fixes issue when X button is clicked)
+    this.visible = false;
+    this.visibleChange.emit(false);
   }
 }

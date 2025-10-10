@@ -2,12 +2,13 @@ import { Component, ChangeDetectionStrategy, Output, EventEmitter } from '@angul
 import { CommonModule } from '@angular/common';
 import { ScrollPanelModule } from 'primeng/scrollpanel';
 import { DragDropModule } from '@angular/cdk/drag-drop';
-import { FormFieldType } from '@nodeangularfullstack/shared';
+import { FormFieldType, isInputField, isDisplayElement } from '@nodeangularfullstack/shared';
 
 interface FieldTypeDefinition {
   type: FormFieldType;
   icon: string;
   label: string;
+  category: 'input' | 'preview';
 }
 
 /**
@@ -33,33 +34,81 @@ interface FieldTypeDefinition {
           id="palette-drop-list"
           [cdkDropListData]="fieldTypes"
           [cdkDropListSortingDisabled]="true"
-          class="p-3 space-y-2"
+          class="p-3 space-y-4"
         >
-          @for (fieldType of fieldTypes; track fieldType.type) {
-            <div
-              cdkDrag
-              [cdkDragData]="fieldType"
-              class="field-type-card p-3 border border-gray-300 rounded-lg cursor-move hover:bg-blue-50 hover:border-blue-400 transition-all"
-              (click)="onFieldTypeSelected(fieldType.type)"
-            >
-              <div class="flex items-center gap-3">
-                <i [class]="'pi ' + fieldType.icon + ' text-blue-600 text-xl'"></i>
-                <span class="text-sm font-medium text-gray-800">{{ fieldType.label }}</span>
-              </div>
-
-              <div
-                *cdkDragPreview
-                class="drag-preview p-3 bg-white border-2 border-blue-400 rounded-lg shadow-lg opacity-90"
+          <!-- Input Fields Section -->
+          <div>
+            <div class="flex items-center gap-2 mb-2 px-1">
+              <span class="text-xs font-bold text-green-700 uppercase tracking-wider"
+                >Input Fields</span
               >
-                <div class="flex items-center gap-3">
-                  <i [class]="'pi ' + fieldType.icon + ' text-blue-600 text-xl'"></i>
-                  <span class="text-sm font-medium text-gray-800">{{ fieldType.label }}</span>
-                </div>
-              </div>
-
-              <div *cdkDragPlaceholder class="field-type-placeholder"></div>
+              <span class="flex-1 h-px bg-green-200"></span>
             </div>
-          }
+            <div class="space-y-2">
+              @for (fieldType of inputFields; track fieldType.type) {
+                <div
+                  cdkDrag
+                  [cdkDragData]="fieldType"
+                  class="field-type-card p-3 border border-gray-300 rounded-lg cursor-move hover:bg-green-50 hover:border-green-400 transition-all"
+                  (click)="onFieldTypeSelected(fieldType.type)"
+                >
+                  <div class="flex items-center gap-3">
+                    <i [class]="'pi ' + fieldType.icon + ' text-green-600 text-xl'"></i>
+                    <span class="text-sm font-medium text-gray-800">{{ fieldType.label }}</span>
+                  </div>
+
+                  <div
+                    *cdkDragPreview
+                    class="drag-preview p-3 bg-white border-2 border-green-400 rounded-lg shadow-lg opacity-90"
+                  >
+                    <div class="flex items-center gap-3">
+                      <i [class]="'pi ' + fieldType.icon + ' text-green-600 text-xl'"></i>
+                      <span class="text-sm font-medium text-gray-800">{{ fieldType.label }}</span>
+                    </div>
+                  </div>
+
+                  <div *cdkDragPlaceholder class="field-type-placeholder bg-green-50"></div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Preview Elements Section -->
+          <div>
+            <div class="flex items-center gap-2 mb-2 px-1">
+              <span class="text-xs font-bold text-purple-700 uppercase tracking-wider"
+                >Preview Elements</span
+              >
+              <span class="flex-1 h-px bg-purple-200"></span>
+            </div>
+            <div class="space-y-2">
+              @for (fieldType of previewFields; track fieldType.type) {
+                <div
+                  cdkDrag
+                  [cdkDragData]="fieldType"
+                  class="field-type-card p-3 border border-gray-300 rounded-lg cursor-move hover:bg-purple-50 hover:border-purple-400 transition-all"
+                  (click)="onFieldTypeSelected(fieldType.type)"
+                >
+                  <div class="flex items-center gap-3">
+                    <i [class]="'pi ' + fieldType.icon + ' text-purple-600 text-xl'"></i>
+                    <span class="text-sm font-medium text-gray-800">{{ fieldType.label }}</span>
+                  </div>
+
+                  <div
+                    *cdkDragPreview
+                    class="drag-preview p-3 bg-white border-2 border-purple-400 rounded-lg shadow-lg opacity-90"
+                  >
+                    <div class="flex items-center gap-3">
+                      <i [class]="'pi ' + fieldType.icon + ' text-purple-600 text-xl'"></i>
+                      <span class="text-sm font-medium text-gray-800">{{ fieldType.label }}</span>
+                    </div>
+                  </div>
+
+                  <div *cdkDragPlaceholder class="field-type-placeholder bg-purple-50"></div>
+                </div>
+              }
+            </div>
+          </div>
         </div>
       </p-scrollpanel>
     </div>
@@ -95,23 +144,37 @@ export class FieldPaletteComponent {
   @Output() fieldSelected = new EventEmitter<FormFieldType>();
 
   readonly fieldTypes: FieldTypeDefinition[] = [
-    { type: FormFieldType.TEXT, icon: 'pi-pencil', label: 'Text Input' },
-    { type: FormFieldType.EMAIL, icon: 'pi-envelope', label: 'Email' },
-    { type: FormFieldType.NUMBER, icon: 'pi-hashtag', label: 'Number' },
-    { type: FormFieldType.SELECT, icon: 'pi-list', label: 'Select' },
-    { type: FormFieldType.TEXTAREA, icon: 'pi-align-left', label: 'Textarea' },
-    { type: FormFieldType.FILE, icon: 'pi-upload', label: 'File Upload' },
-    { type: FormFieldType.CHECKBOX, icon: 'pi-check-square', label: 'Checkbox' },
-    { type: FormFieldType.RADIO, icon: 'pi-circle', label: 'Radio Group' },
-    { type: FormFieldType.DATE, icon: 'pi-calendar', label: 'Date' },
-    { type: FormFieldType.DATETIME, icon: 'pi-clock', label: 'DateTime' },
-    { type: FormFieldType.TOGGLE, icon: 'pi-toggle-on', label: 'Toggle' },
-    { type: FormFieldType.DIVIDER, icon: 'pi-minus', label: 'Section Divider' },
-    { type: FormFieldType.HEADING, icon: 'pi-align-center', label: 'Heading' },
-    { type: FormFieldType.IMAGE, icon: 'pi-image', label: 'Image' },
-    { type: FormFieldType.TEXT_BLOCK, icon: 'pi-align-justify', label: 'Text Block' },
+    { type: FormFieldType.TEXT, icon: 'pi-pencil', label: 'Text Input', category: 'input' },
+    { type: FormFieldType.EMAIL, icon: 'pi-envelope', label: 'Email', category: 'input' },
+    { type: FormFieldType.NUMBER, icon: 'pi-hashtag', label: 'Number', category: 'input' },
+    { type: FormFieldType.SELECT, icon: 'pi-list', label: 'Select', category: 'input' },
+    { type: FormFieldType.TEXTAREA, icon: 'pi-align-left', label: 'Textarea', category: 'input' },
+    { type: FormFieldType.FILE, icon: 'pi-upload', label: 'File Upload', category: 'input' },
+    { type: FormFieldType.CHECKBOX, icon: 'pi-check-square', label: 'Checkbox', category: 'input' },
+    { type: FormFieldType.RADIO, icon: 'pi-circle', label: 'Radio Group', category: 'input' },
+    { type: FormFieldType.DATE, icon: 'pi-calendar', label: 'Date', category: 'input' },
+    { type: FormFieldType.DATETIME, icon: 'pi-clock', label: 'DateTime', category: 'input' },
+    { type: FormFieldType.TOGGLE, icon: 'pi-toggle-on', label: 'Toggle', category: 'input' },
+    {
+      type: FormFieldType.DIVIDER,
+      icon: 'pi-minus',
+      label: 'Section Divider',
+      category: 'preview',
+    },
+    { type: FormFieldType.HEADING, icon: 'pi-align-center', label: 'Heading', category: 'preview' },
+    { type: FormFieldType.IMAGE, icon: 'pi-image', label: 'Image', category: 'preview' },
+    {
+      type: FormFieldType.TEXT_BLOCK,
+      icon: 'pi-align-justify',
+      label: 'Text Block',
+      category: 'preview',
+    },
     // Note: Background Image and Custom Background moved to Form Settings
   ];
+
+  // Computed arrays for Input and Preview fields
+  readonly inputFields = this.fieldTypes.filter((f) => f.category === 'input');
+  readonly previewFields = this.fieldTypes.filter((f) => f.category === 'preview');
 
   /**
    * Emits the selected field type when a user clicks on a field type card.

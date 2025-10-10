@@ -38,6 +38,7 @@ import {
   FormFieldType,
   FormFieldOption,
   isInputField,
+  isDisplayElement,
 } from '@nodeangularfullstack/shared';
 import { FormBuilderService } from '../form-builder.service';
 import { Subject, takeUntil, debounceTime, map, distinctUntilChanged } from 'rxjs';
@@ -110,9 +111,17 @@ import { GroupPropertiesPanelComponent } from './panels/group-properties-panel.c
         </div>
       } @else {
         <div class="p-4">
-          <div class="mb-4">
+          <div class="mb-4 flex flex-wrap gap-2">
             <span class="inline-block bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full">
               {{ formBuilderService.selectedField()!.type }}
+            </span>
+            <span
+              [class]="
+                'inline-block text-xs px-3 py-1 rounded-full font-semibold ' +
+                fieldCategoryBadgeClass()
+              "
+            >
+              {{ fieldCategoryLabel() }}
             </span>
           </div>
 
@@ -815,6 +824,22 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
   readonly showValidationSection = computed(() => {
     const selectedField = this.formBuilderService.selectedField();
     return selectedField ? isInputField(selectedField.type) : false;
+  });
+
+  // Computed signal for field category label
+  readonly fieldCategoryLabel = computed(() => {
+    const selectedField = this.formBuilderService.selectedField();
+    if (!selectedField) return '';
+    return isInputField(selectedField.type) ? 'Input' : 'Preview';
+  });
+
+  // Computed signal for field category badge color
+  readonly fieldCategoryBadgeClass = computed(() => {
+    const selectedField = this.formBuilderService.selectedField();
+    if (!selectedField) return 'bg-gray-100 text-gray-800';
+    return isInputField(selectedField.type)
+      ? 'bg-green-100 text-green-800'
+      : 'bg-purple-100 text-purple-800';
   });
 
   @Output() propertyChanged = new EventEmitter<Partial<FormField>>();
