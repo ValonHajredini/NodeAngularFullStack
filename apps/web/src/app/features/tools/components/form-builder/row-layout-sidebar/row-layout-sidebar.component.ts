@@ -70,9 +70,9 @@ import { FormBuilderService } from '../form-builder.service';
             <p-tabpanels>
               <!-- Row Layout Tab Panel -->
               <p-tabpanel value="0">
-                <div class="p-4">
+                <div>
                   <!-- Header with enable/disable toggle -->
-                  <div class="flex items-center justify-between mb-4">
+                  <div class="flex items-center justify-between mb-4 px-2 pt-4">
                     <h3 class="text-base font-semibold">Row Layout</h3>
                     <p-toggleSwitch
                       [(ngModel)]="rowLayoutEnabled"
@@ -85,12 +85,18 @@ import { FormBuilderService } from '../form-builder.service';
 
                   @if (formBuilderService.rowLayoutEnabled()) {
                     <!-- Row list with column configuration -->
-                    <div class="row-list space-y-3 mb-4">
+                    <div class="row-list space-y-3 mb-4 px-2">
                       @for (row of formBuilderService.rowConfigs(); track row.rowId) {
                         <div class="row-item p-3 border border-gray-200 rounded bg-gray-50">
-                          <!-- Row header with delete button -->
+                          <!-- Row header with column count and delete button -->
                           <div class="flex items-center justify-between mb-3">
-                            <span class="font-medium text-sm">Row {{ row.order + 1 }}</span>
+                            <span class="font-medium text-sm">
+                              Row {{ row.order + 1 }}
+                              <span class="text-gray-500 font-normal"
+                                >| {{ row.columnCount }}
+                                {{ row.columnCount === 1 ? 'column' : 'columns' }}</span
+                              >
+                            </span>
                             <button
                               pButton
                               icon="pi pi-trash"
@@ -118,28 +124,26 @@ import { FormBuilderService } from '../form-builder.service';
                               ></button>
                             }
                           </div>
-
-                          <div class="text-xs text-gray-500 mt-2 text-center">
-                            {{ row.columnCount }} {{ row.columnCount === 1 ? 'column' : 'columns' }}
-                          </div>
                         </div>
                       }
                     </div>
 
                     <!-- Add row button -->
-                    <button
-                      pButton
-                      label="Add Row"
-                      icon="pi pi-plus"
-                      size="small"
-                      (click)="onAddRow()"
-                      class="w-full"
-                      severity="secondary"
-                      [outlined]="true"
-                    ></button>
+                    <div class="px-2 pb-4">
+                      <button
+                        pButton
+                        label="Add Row"
+                        icon="pi pi-plus"
+                        size="small"
+                        (click)="onAddRow()"
+                        class="w-full"
+                        severity="secondary"
+                        [outlined]="true"
+                      ></button>
+                    </div>
                   } @else {
                     <!-- Migration UI when row layout is disabled -->
-                    <div class="text-center py-6 px-2">
+                    <div class="text-center py-6 px-4">
                       <i class="pi pi-th-large text-4xl text-gray-400 mb-3 block"></i>
                       <p class="text-sm text-gray-600 mb-4">
                         Row layout is disabled. Enable to configure columns per row for more
@@ -163,7 +167,7 @@ import { FormBuilderService } from '../form-builder.service';
 
               <!-- Settings Tab Panel -->
               <p-tabpanel value="1">
-                <div class="p-4">
+                <div class="py-4 px-4">
                   <h3 class="text-base font-semibold mb-4">Form Settings</h3>
                   <p class="text-sm text-gray-600">Form-level settings will be available here.</p>
                 </div>
