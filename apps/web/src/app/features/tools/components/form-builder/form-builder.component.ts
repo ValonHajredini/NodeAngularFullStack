@@ -198,21 +198,21 @@ import { FormSchema } from '@nodeangularfullstack/shared';
 
       <!-- Three-panel layout -->
       <div class="flex-1 flex overflow-hidden" cdkDropListGroup>
-        <!-- Left sidebar: Field Palette -->
-        <div class="w-64 flex-shrink-0">
+        <!-- Left sidebar: Field Palette (sticky) -->
+        <div class="w-64 flex-shrink-0 sticky-sidebar">
           <app-field-palette (fieldSelected)="onFieldTypeSelected($event)"></app-field-palette>
         </div>
 
-        <!-- Center: Form Canvas (expanded to fill remaining space) -->
-        <div class="flex-1 overflow-auto">
+        <!-- Center: Form Canvas (scrollable independently) -->
+        <div class="flex-1 overflow-y-auto overflow-x-hidden">
           <app-form-canvas
             [settings]="formSettings()"
             (fieldClicked)="onFieldClicked($event)"
           ></app-form-canvas>
         </div>
 
-        <!-- Right sidebar: Row Layout -->
-        <div class="flex-shrink-0">
+        <!-- Right sidebar: Row Layout (sticky) -->
+        <div class="flex-shrink-0 sticky-sidebar">
           <app-row-layout-sidebar></app-row-layout-sidebar>
         </div>
       </div>
@@ -357,12 +357,24 @@ import { FormSchema } from '@nodeangularfullstack/shared';
   styles: [
     `
       .form-builder-container {
-        height: 100%;
+        height: calc(100vh - 64px);
+        max-height: calc(100vh - 64px);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
       }
 
       :host {
         display: block;
+        height: calc(100vh - 70px);
+        overflow: hidden;
+        // border: 1px solid red
+      }
+
+      .sticky-sidebar {
         height: 100%;
+        overflow-y: hidden;
+        overflow-x: hidden;
       }
     `,
   ],
