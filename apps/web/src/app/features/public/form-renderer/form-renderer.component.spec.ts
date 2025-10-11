@@ -293,7 +293,7 @@ describe('FormRendererComponent', () => {
       };
 
       formRendererService.getFormSchema.and.returnValue(
-        of({ schema: conditionalSchema, settings: mockSettings }),
+        of({ schema: conditionalSchema, settings: mockSettings as FormSettings }),
       );
 
       const newFixture = TestBed.createComponent(FormRendererComponent);
@@ -344,7 +344,7 @@ describe('FormRendererComponent', () => {
       };
 
       formRendererService.getFormSchema.and.returnValue(
-        of({ schema: conditionalSchema, settings: mockSettings }),
+        of({ schema: conditionalSchema, settings: mockSettings as FormSettings }),
       );
 
       const newFixture = TestBed.createComponent(FormRendererComponent);
@@ -535,7 +535,7 @@ describe('FormRendererComponent', () => {
       };
 
       formRendererService.getFormSchema.and.returnValue(
-        of({ schema: schemaWithRadio, settings: mockSettings }),
+        of({ schema: schemaWithRadio, settings: mockSettings as FormSettings }),
       );
 
       const newFixture = TestBed.createComponent(FormRendererComponent);
@@ -561,7 +561,7 @@ describe('FormRendererComponent', () => {
       };
 
       formRendererService.getFormSchema.and.returnValue(
-        of({ schema: schemaWithToggle, settings: mockSettings }),
+        of({ schema: schemaWithToggle, settings: mockSettings as FormSettings }),
       );
 
       const newFixture = TestBed.createComponent(FormRendererComponent);
@@ -588,7 +588,7 @@ describe('FormRendererComponent', () => {
       };
 
       formRendererService.getFormSchema.and.returnValue(
-        of({ schema: schemaWithDate, settings: mockSettings }),
+        of({ schema: schemaWithDate, settings: mockSettings as FormSettings }),
       );
 
       const newFixture = TestBed.createComponent(FormRendererComponent);
@@ -614,7 +614,7 @@ describe('FormRendererComponent', () => {
       };
 
       formRendererService.getFormSchema.and.returnValue(
-        of({ schema: schemaWithDateTime, settings: mockSettings }),
+        of({ schema: schemaWithDateTime, settings: mockSettings as FormSettings }),
       );
 
       const newFixture = TestBed.createComponent(FormRendererComponent);
@@ -648,7 +648,7 @@ describe('FormRendererComponent', () => {
       };
 
       formRendererService.getFormSchema.and.returnValue(
-        of({ schema: schemaWithDivider, settings: mockSettings }),
+        of({ schema: schemaWithDivider, settings: mockSettings as FormSettings }),
       );
 
       const newFixture = TestBed.createComponent(FormRendererComponent);
@@ -883,7 +883,7 @@ describe('FormRendererComponent', () => {
         };
 
         formRendererService.getFormSchema.and.returnValue(
-          of({ schema: mockSchema, settings: rowLayoutSettings }),
+          of({ schema: mockSchema, settings: rowLayoutSettings as FormSettings }),
         );
 
         const newFixture = TestBed.createComponent(FormRendererComponent);
@@ -903,7 +903,7 @@ describe('FormRendererComponent', () => {
         };
 
         formRendererService.getFormSchema.and.returnValue(
-          of({ schema: mockSchema, settings: rowLayoutSettings }),
+          of({ schema: mockSchema, settings: rowLayoutSettings as FormSettings }),
         );
 
         const newFixture = TestBed.createComponent(FormRendererComponent);
@@ -920,7 +920,7 @@ describe('FormRendererComponent', () => {
         };
 
         formRendererService.getFormSchema.and.returnValue(
-          of({ schema: mockSchema, settings: settingsWithoutRowLayout }),
+          of({ schema: mockSchema, settings: settingsWithoutRowLayout as FormSettings }),
         );
 
         const newFixture = TestBed.createComponent(FormRendererComponent);
@@ -946,7 +946,7 @@ describe('FormRendererComponent', () => {
         };
 
         formRendererService.getFormSchema.and.returnValue(
-          of({ schema: mockSchema, settings: rowLayoutSettings }),
+          of({ schema: mockSchema, settings: rowLayoutSettings as FormSettings }),
         );
 
         const newFixture = TestBed.createComponent(FormRendererComponent);
@@ -1003,7 +1003,7 @@ describe('FormRendererComponent', () => {
         };
 
         formRendererService.getFormSchema.and.returnValue(
-          of({ schema: schemaWithPositions, settings: mockSettings }),
+          of({ schema: schemaWithPositions, settings: mockSettings as FormSettings }),
         );
 
         const newFixture = TestBed.createComponent(FormRendererComponent);
@@ -1058,7 +1058,7 @@ describe('FormRendererComponent', () => {
         };
 
         formRendererService.getFormSchema.and.returnValue(
-          of({ schema: schemaWithMultiplePositions, settings: mockSettings }),
+          of({ schema: schemaWithMultiplePositions, settings: mockSettings as FormSettings }),
         );
 
         const newFixture = TestBed.createComponent(FormRendererComponent);
@@ -1105,7 +1105,7 @@ describe('FormRendererComponent', () => {
         };
 
         formRendererService.getFormSchema.and.returnValue(
-          of({ schema: schemaWithMissingOrderInColumn, settings: mockSettings }),
+          of({ schema: schemaWithMissingOrderInColumn, settings: mockSettings as FormSettings }),
         );
 
         const newFixture = TestBed.createComponent(FormRendererComponent);
@@ -1158,7 +1158,7 @@ describe('FormRendererComponent', () => {
         };
 
         formRendererService.getFormSchema.and.returnValue(
-          of({ schema: schemaWithoutPositions, settings: mockSettings }),
+          of({ schema: schemaWithoutPositions, settings: mockSettings as FormSettings }),
         );
 
         const newFixture = TestBed.createComponent(FormRendererComponent);
@@ -1195,7 +1195,7 @@ describe('FormRendererComponent', () => {
         };
 
         formRendererService.getFormSchema.and.returnValue(
-          of({ schema: mixedSchema, settings: mockSettings }),
+          of({ schema: mixedSchema, settings: mockSettings as FormSettings }),
         );
 
         const newFixture = TestBed.createComponent(FormRendererComponent);
@@ -1630,7 +1630,7 @@ describe('FormRendererComponent', () => {
         };
 
         formRendererService.getFormSchema.and.returnValue(
-          of({ schema: schemaWithTextBlock, settings: mockSettings }),
+          of({ schema: schemaWithTextBlock, settings: mockSettings as FormSettings }),
         );
 
         const newFixture = TestBed.createComponent(FormRendererComponent);
@@ -1672,7 +1672,7 @@ describe('FormRendererComponent', () => {
         };
 
         formRendererService.getFormSchema.and.returnValue(
-          of({ schema: schemaWithHeading, settings: mockSettings }),
+          of({ schema: schemaWithHeading, settings: mockSettings as FormSettings }),
         );
 
         const newFixture = TestBed.createComponent(FormRendererComponent);
@@ -1715,7 +1715,7 @@ describe('FormRendererComponent', () => {
         };
 
         formRendererService.getFormSchema.and.returnValue(
-          of({ schema: schemaWithImage, settings: mockSettings }),
+          of({ schema: schemaWithImage, settings: mockSettings as FormSettings }),
         );
 
         const newFixture = TestBed.createComponent(FormRendererComponent);
@@ -1788,7 +1788,7 @@ describe('FormRendererComponent', () => {
         };
 
         formRendererService.getFormSchema.and.returnValue(
-          of({ schema: mixedSchema, settings: mockSettings }),
+          of({ schema: mixedSchema, settings: mockSettings as FormSettings }),
         );
 
         const newFixture = TestBed.createComponent(FormRendererComponent);

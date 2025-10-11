@@ -42,6 +42,8 @@ import {
   isDisplayElement,
 } from '@nodeangularfullstack/shared';
 import { FormBuilderService } from '../form-builder.service';
+import { ImagePropertiesPanelComponent } from '../field-properties/panels/image-properties-panel.component';
+import { ImageUploadComponent } from '../field-properties/panels/image-upload.component';
 import { Subject, takeUntil } from 'rxjs';
 
 /**
@@ -72,6 +74,8 @@ import { Subject, takeUntil } from 'rxjs';
     Tooltip,
     CdkDrag,
     CdkDropList,
+    ImagePropertiesPanelComponent,
+    ImageUploadComponent,
   ],
   providers: [MessageService, ConfirmationService],
   template: `
@@ -135,8 +139,13 @@ import { Subject, takeUntil } from 'rxjs';
               @if (!isDisplayField()) {
                 <p-tab value="1">Validation</p-tab>
               }
-              <p-tab [value]="isDisplayField() ? '1' : '2'">Behavior</p-tab>
-              <p-tab [value]="isDisplayField() ? '2' : '3'">Conditional Visibility</p-tab>
+              @if (isImageField()) {
+                <p-tab value="1">Image Properties</p-tab>
+              }
+              <p-tab [value]="isImageField() ? '2' : isDisplayField() ? '1' : '2'">Behavior</p-tab>
+              <p-tab [value]="isImageField() ? '3' : isDisplayField() ? '2' : '3'"
+                >Conditional Visibility</p-tab
+              >
               @if (isSelectOrRadioOrCheckbox()) {
                 <p-tab [value]="isDisplayField() ? '3' : '4'">Options</p-tab>
               }
@@ -149,27 +158,44 @@ import { Subject, takeUntil } from 'rxjs';
               <!-- Basic Tab -->
               <p-tabpanel value="0" [attr.aria-label]="'Basic properties'">
                 <div class="space-y-4 pt-4">
-                  <div class="field">
-                    <label for="label" class="block text-sm font-medium text-gray-700 mb-1">
-                      Label <span class="text-red-500">*</span>
-                    </label>
-                    <input
-                      pInputText
-                      id="label"
-                      formControlName="label"
-                      class="w-full"
-                      placeholder="Enter field label"
-                      (blur)="onLabelBlur()"
-                      [attr.aria-required]="'true'"
-                    />
-                    @if (
-                      propertiesForm.get('label')?.invalid && propertiesForm.get('label')?.touched
-                    ) {
-                      <small class="text-red-500 text-xs" role="alert"
-                        >Label is required (max 200 characters)</small
-                      >
-                    }
-                  </div>
+                  <!-- Image Upload (for IMAGE field type only) -->
+                  @if (field.type === FormFieldType.IMAGE) {
+                    <div class="field">
+                      <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Image Upload
+                      </label>
+                      <app-image-upload
+                        [formId]="formId"
+                        [imageUrl]="imagePreviewUrl"
+                        (imageUploaded)="onImageUploaded($event)"
+                      />
+                    </div>
+                  }
+
+                  <!-- Label (hidden for IMAGE field type) -->
+                  @if (field.type !== FormFieldType.IMAGE) {
+                    <div class="field">
+                      <label for="label" class="block text-sm font-medium text-gray-700 mb-1">
+                        Label <span class="text-red-500">*</span>
+                      </label>
+                      <input
+                        pInputText
+                        id="label"
+                        formControlName="label"
+                        class="w-full"
+                        placeholder="Enter field label"
+                        (blur)="onLabelBlur()"
+                        [attr.aria-required]="'true'"
+                      />
+                      @if (
+                        propertiesForm.get('label')?.invalid && propertiesForm.get('label')?.touched
+                      ) {
+                        <small class="text-red-500 text-xs" role="alert"
+                          >Label is required (max 200 characters)</small
+                        >
+                      }
+                    </div>
+                  }
 
                   <!-- Field Name (hidden for preview elements) -->
                   @if (isInputField(field.type)) {
@@ -349,9 +375,22 @@ import { Subject, takeUntil } from 'rxjs';
                 </p-tabpanel>
               }
 
+              <!-- Image Properties Tab (for IMAGE field type) -->
+              @if (isImageField()) {
+                <p-tabpanel value="1" [attr.aria-label]="'Image properties'">
+                  <div class="pt-4">
+                    <app-image-properties-panel
+                      [field]="field"
+                      [formId]="formId"
+                      (fieldChange)="onImageFieldChange($event)"
+                    />
+                  </div>
+                </p-tabpanel>
+              }
+
               <!-- Behavior Tab -->
               <p-tabpanel
-                [value]="isDisplayField() ? '1' : '2'"
+                [value]="isImageField() ? '2' : isDisplayField() ? '1' : '2'"
                 [attr.aria-label]="'Behavior settings'"
               >
                 <div class="space-y-4 pt-4">
@@ -675,6 +714,7 @@ export class UnifiedFieldEditorModalComponent implements OnInit, OnDestroy {
 
   @Input() visible = false;
   @Input() field: FormField | null = null;
+  @Input() formId!: string;
 
   @Output() visibleChange = new EventEmitter<boolean>();
   @Output() save = new EventEmitter<FormField>();
@@ -693,6 +733,9 @@ export class UnifiedFieldEditorModalComponent implements OnInit, OnDestroy {
 
   // Auto-save configuration (Story 16.7)
   readonly autoSaveEnabled = true;
+
+  // Image upload state
+  readonly imagePreviewUrl = signal<string | null>(null);
 
   // Operator options for conditional visibility
   readonly operatorOptions = [
@@ -838,6 +881,11 @@ export class UnifiedFieldEditorModalComponent implements OnInit, OnDestroy {
   readonly isDisplayElement = isDisplayElement;
 
   /**
+   * Expose FormFieldType enum for template usage
+   */
+  readonly FormFieldType = FormFieldType;
+
+  /**
    * Check if current field is a number type
    */
   isNumberField(): boolean {
@@ -892,6 +940,13 @@ export class UnifiedFieldEditorModalComponent implements OnInit, OnDestroy {
    */
   isFileField(): boolean {
     return this.field?.type === FormFieldType.FILE;
+  }
+
+  /**
+   * Check if current field is image type
+   */
+  isImageField(): boolean {
+    return this.field?.type === FormFieldType.IMAGE;
   }
 
   /**
@@ -961,6 +1016,12 @@ export class UnifiedFieldEditorModalComponent implements OnInit, OnDestroy {
     // Clear options array first
     while (this.options.length) {
       this.options.removeAt(0);
+    }
+
+    // Load image URL for IMAGE field type
+    if (field.type === FormFieldType.IMAGE) {
+      const imageMetadata = field.metadata as any;
+      this.imagePreviewUrl.set(imageMetadata?.imageUrl || null);
     }
 
     // Load options if present
@@ -1317,5 +1378,60 @@ export class UnifiedFieldEditorModalComponent implements OnInit, OnDestroy {
     // Ensure parent component knows modal is closed (fixes issue when X button is clicked)
     this.visible = false;
     this.visibleChange.emit(false);
+  }
+
+  /**
+   * Handle image field change from image properties panel.
+   * Updates the field with new metadata from the image panel.
+   * Immediately saves metadata changes to FormBuilderService so canvas preview updates in real-time.
+   */
+  onImageFieldChange(updatedField: FormField): void {
+    // Update the field with new metadata from image panel
+    this.field = updatedField;
+    this.isDirty.set(true);
+
+    // Immediately update the field in the service so the canvas preview updates
+    this.formBuilderService.updateFieldProperties(this.field.id, {
+      metadata: updatedField.metadata,
+    });
+  }
+
+  /**
+   * Handle image upload from image upload component.
+   * Updates the field metadata with new image URL and marks form as dirty.
+   */
+  onImageUploaded(imageUrl: string): void {
+    if (!this.field) return;
+
+    // Update preview URL signal
+    this.imagePreviewUrl.set(imageUrl);
+
+    // Update field metadata with new image URL
+    const updatedMetadata = {
+      ...(this.field.metadata || {}),
+      imageUrl,
+    };
+
+    // Update the field
+    this.field = {
+      ...this.field,
+      metadata: updatedMetadata,
+    };
+
+    // Mark form as dirty
+    this.isDirty.set(true);
+
+    // Immediately update the field in the service so the canvas preview updates
+    this.formBuilderService.updateFieldProperties(this.field.id, {
+      metadata: updatedMetadata,
+    });
+
+    // Show success message
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Image Uploaded',
+      detail: 'Image uploaded successfully',
+      life: 2000,
+    });
   }
 }

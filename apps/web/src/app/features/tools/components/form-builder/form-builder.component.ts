@@ -221,6 +221,7 @@ import { FormSchema } from '@nodeangularfullstack/shared';
       <app-unified-field-editor-modal
         [visible]="fieldPropertiesModalVisible()"
         [field]="selectedFieldForModal()"
+        [formId]="formBuilderService.currentFormId() || ''"
         (visibleChange)="onFieldPropertiesModalVisibleChange($event)"
         (save)="onFieldPropertiesSaved($event)"
         (cancelModal)="onFieldPropertiesCancelled()"

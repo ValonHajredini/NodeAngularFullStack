@@ -6,65 +6,37 @@ import {
   OnInit,
   inject,
   ChangeDetectionStrategy,
-  signal,
 } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
 import { FormField, ImageMetadata } from '@nodeangularfullstack/shared';
 import { InputTextModule } from 'primeng/inputtext';
 import { Select } from 'primeng/select';
 import { TextareaModule } from 'primeng/textarea';
-import { FileUpload } from 'primeng/fileupload';
-import { Message } from 'primeng/message';
-
-/**
- * Image upload response from backend
- */
-interface ImageUploadResponse {
-  imageUrl: string;
-  fileName: string;
-  fileSize: number;
-}
 
 /**
  * Properties panel for IMAGE field type.
- * Allows configuration of image upload, alt text, dimensions, alignment, and styling.
+ * Allows configuration of alt text, dimensions, alignment, object fit, and caption.
+ * Note: Image upload is handled in the Basic tab via ImageUploadComponent.
  */
 @Component({
   selector: 'app-image-properties-panel',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, InputTextModule, Select, TextareaModule, FileUpload, Message],
+  imports: [ReactiveFormsModule, InputTextModule, Select, TextareaModule],
   template: `
     <div [formGroup]="form" class="space-y-4">
-      <!-- Image Upload -->
-      <div class="field">
-        <label class="block text-sm font-medium text-gray-700 mb-2"> Image Upload </label>
-
-        @if (imagePreviewUrl()) {
-          <div class="mb-3">
-            <img
-              [src]="imagePreviewUrl()!"
-              alt="Preview"
-              class="max-w-full h-auto max-h-48 rounded border border-gray-300"
-            />
+      <!-- Info message about upload location -->
+      <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+        <div class="flex items-start gap-2">
+          <i class="pi pi-info-circle text-blue-600 mt-0.5"></i>
+          <div class="text-sm text-blue-800">
+            <p class="font-medium mb-1">Image Upload</p>
+            <p class="text-xs text-blue-700">
+              Upload your image in the <strong>Basic</strong> tab. This tab is for styling
+              properties only.
+            </p>
           </div>
-        }
-
-        <p-fileupload
-          mode="basic"
-          chooseLabel="Choose Image"
-          accept="image/*"
-          [maxFileSize]="5242880"
-          (onSelect)="onImageSelect($event)"
-          [auto]="false"
-          chooseIcon="pi pi-upload"
-        />
-        <small class="text-gray-500 text-xs"> Max 5MB (JPG, PNG, GIF, WebP) </small>
-
-        @if (uploadError()) {
-          <p-message severity="error" [text]="uploadError()!" styleClass="w-full mt-2" />
-        }
+        </div>
       </div>
 
       <!-- Alt Text (Required) -->
@@ -165,14 +137,12 @@ interface ImageUploadResponse {
 })
 export class ImagePropertiesPanelComponent implements OnInit {
   @Input() field!: FormField;
+  @Input() formId!: string;
   @Output() fieldChange = new EventEmitter<FormField>();
 
   private readonly fb = inject(FormBuilder);
-  private readonly http = inject(HttpClient);
 
   protected form!: FormGroup;
-  protected readonly imagePreviewUrl = signal<string | null>(null);
-  protected readonly uploadError = signal<string | null>(null);
 
   protected readonly alignmentOptions = [
     { label: 'Left', value: 'left' },
@@ -191,13 +161,7 @@ export class ImagePropertiesPanelComponent implements OnInit {
   ngOnInit(): void {
     const metadata = this.field.metadata as ImageMetadata;
 
-    // Set initial preview if imageUrl exists
-    if (metadata?.imageUrl) {
-      this.imagePreviewUrl.set(metadata.imageUrl);
-    }
-
     this.form = this.fb.group({
-      imageUrl: [metadata?.imageUrl || ''],
       altText: [metadata?.altText || '', Validators.required],
       width: [metadata?.width || '100%'],
       height: [metadata?.height || 'auto'],
@@ -214,43 +178,19 @@ export class ImagePropertiesPanelComponent implements OnInit {
     });
   }
 
-  /**
-   * Handle image file selection and upload
-   */
-  protected onImageSelect(event: any): void {
-    const file = event.files[0];
-    if (!file) return;
-
-    this.uploadError.set(null);
-
-    // Upload to backend
-    const formData = new FormData();
-    formData.append('image', file);
-
-    this.http.post<ImageUploadResponse>('/api/forms/upload', formData).subscribe({
-      next: (response) => {
-        // Update form with uploaded image URL
-        this.form.patchValue({ imageUrl: response.imageUrl });
-        this.imagePreviewUrl.set(response.imageUrl);
-        this.uploadError.set(null);
-      },
-      error: (err) => {
-        console.error('Image upload failed:', err);
-        this.uploadError.set(err.error?.message || 'Image upload failed. Please try again.');
-      },
-    });
-  }
-
   private emitFieldChange(): void {
+    // Preserve existing imageUrl from field metadata
+    const existingMetadata = this.field.metadata as ImageMetadata;
+
     const metadata: ImageMetadata = {
-      imageUrl: this.form.value.imageUrl || undefined,
+      imageUrl: existingMetadata?.imageUrl, // Preserve existing imageUrl (upload is handled in Basic tab)
       altText: this.form.value.altText,
       width: this.form.value.width || undefined,
       height: this.form.value.height || undefined,
       alignment: this.form.value.alignment || 'center',
       objectFit: this.form.value.objectFit || 'contain',
       caption: this.form.value.caption || undefined,
-      customStyle: (this.field.metadata as ImageMetadata)?.customStyle, // Preserve custom CSS
+      customStyle: existingMetadata?.customStyle, // Preserve custom CSS
     };
 
     this.fieldChange.emit({

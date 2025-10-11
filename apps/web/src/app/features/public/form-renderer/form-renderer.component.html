@@ -1,5 +1,5 @@
 <div
-  class="form-renderer-container min-h-screen py-8 px-4 relative overflow-hidden"
+  class="form-renderer-container min-h-screen py-8 px-4 relative"
   [ngClass]="{ 'bg-gray-50': !hasBackgroundImage() }"
 >
   @if (hasBackgroundImage()) {
@@ -456,6 +456,61 @@
                                       </div>
                                     }
 
+                                    <!-- Image Display -->
+                                    @if (field.type === fieldTypes.IMAGE) {
+                                      <div
+                                        class="image-field col-span-full"
+                                        [class.text-left]="
+                                          $any(field.metadata)?.alignment === 'left'
+                                        "
+                                        [class.text-center]="
+                                          $any(field.metadata)?.alignment === 'center'
+                                        "
+                                        [class.text-right]="
+                                          $any(field.metadata)?.alignment === 'right'
+                                        "
+                                        [class.w-full]="$any(field.metadata)?.alignment === 'full'"
+                                      >
+                                        @if ($any(field.metadata)?.imageUrl) {
+                                          <img
+                                            [src]="$any(field.metadata)?.imageUrl"
+                                            [alt]="$any(field.metadata)?.altText || field.label"
+                                            [style.width]="$any(field.metadata)?.width || '100%'"
+                                            [style.height]="$any(field.metadata)?.height || 'auto'"
+                                            [style.object-fit]="
+                                              $any(field.metadata)?.objectFit || 'contain'
+                                            "
+                                            [style]="$any(field.metadata)?.customStyle || ''"
+                                            class="rounded-lg max-w-full"
+                                          />
+                                          @if ($any(field.metadata)?.caption) {
+                                            <p
+                                              class="mt-2 text-sm text-gray-600 italic"
+                                              [class.text-left]="
+                                                $any(field.metadata)?.alignment === 'left'
+                                              "
+                                              [class.text-center]="
+                                                $any(field.metadata)?.alignment === 'center' ||
+                                                $any(field.metadata)?.alignment === 'full'
+                                              "
+                                              [class.text-right]="
+                                                $any(field.metadata)?.alignment === 'right'
+                                              "
+                                            >
+                                              {{ $any(field.metadata)?.caption }}
+                                            </p>
+                                          }
+                                        } @else {
+                                          <div
+                                            class="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center"
+                                          >
+                                            <i class="pi pi-image text-4xl text-gray-400 mb-2"></i>
+                                            <p class="text-gray-500 text-sm">No image uploaded</p>
+                                          </div>
+                                        }
+                                      </div>
+                                    }
+
                                     @if (field.helpText) {
                                       <small class="text-gray-500 text-sm">{{
                                         field.helpText
@@ -757,6 +812,49 @@
                                     isTextBlockCollapsed(field.id) ? 'Read more ▼' : 'Read less ▲'
                                   }}
                                 </button>
+                              }
+                            </div>
+                          }
+
+                          <!-- Image Display -->
+                          @if (field.type === fieldTypes.IMAGE) {
+                            <div
+                              class="image-field col-span-full"
+                              [class.text-left]="$any(field.metadata)?.alignment === 'left'"
+                              [class.text-center]="$any(field.metadata)?.alignment === 'center'"
+                              [class.text-right]="$any(field.metadata)?.alignment === 'right'"
+                              [class.w-full]="$any(field.metadata)?.alignment === 'full'"
+                            >
+                              @if ($any(field.metadata)?.imageUrl) {
+                                <img
+                                  [src]="$any(field.metadata)?.imageUrl"
+                                  [alt]="$any(field.metadata)?.altText || field.label"
+                                  [style.width]="$any(field.metadata)?.width || '100%'"
+                                  [style.height]="$any(field.metadata)?.height || 'auto'"
+                                  [style.object-fit]="$any(field.metadata)?.objectFit || 'contain'"
+                                  [style]="$any(field.metadata)?.customStyle || ''"
+                                  class="rounded-lg max-w-full"
+                                />
+                                @if ($any(field.metadata)?.caption) {
+                                  <p
+                                    class="mt-2 text-sm text-gray-600 italic"
+                                    [class.text-left]="$any(field.metadata)?.alignment === 'left'"
+                                    [class.text-center]="
+                                      $any(field.metadata)?.alignment === 'center' ||
+                                      $any(field.metadata)?.alignment === 'full'
+                                    "
+                                    [class.text-right]="$any(field.metadata)?.alignment === 'right'"
+                                  >
+                                    {{ $any(field.metadata)?.caption }}
+                                  </p>
+                                }
+                              } @else {
+                                <div
+                                  class="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center"
+                                >
+                                  <i class="pi pi-image text-4xl text-gray-400 mb-2"></i>
+                                  <p class="text-gray-500 text-sm">No image uploaded</p>
+                                </div>
                               }
                             </div>
                           }

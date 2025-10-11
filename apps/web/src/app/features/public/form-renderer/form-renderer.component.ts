@@ -25,6 +25,7 @@ import {
   FormBackgroundSettings,
   HeadingMetadata,
   TextBlockMetadata,
+  ImageMetadata,
   isInputField,
   isDisplayElement,
 } from '@nodeangularfullstack/shared';

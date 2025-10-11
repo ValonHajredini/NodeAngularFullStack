@@ -1,26 +1,19 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { ImagePropertiesPanelComponent } from './image-properties-panel.component';
 import { FormField, FormFieldType, ImageMetadata } from '@nodeangularfullstack/shared';
 
 describe('ImagePropertiesPanelComponent', () => {
   let component: ImagePropertiesPanelComponent;
   let fixture: ComponentFixture<ImagePropertiesPanelComponent>;
-  let httpMock: HttpTestingController;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ImagePropertiesPanelComponent, ReactiveFormsModule, HttpClientTestingModule],
+      imports: [ImagePropertiesPanelComponent, ReactiveFormsModule],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ImagePropertiesPanelComponent);
     component = fixture.componentInstance;
-    httpMock = TestBed.inject(HttpTestingController);
-  });
-
-  afterEach(() => {
-    httpMock.verify();
   });
 
   it('should create', () => {
@@ -45,7 +38,6 @@ describe('ImagePropertiesPanelComponent', () => {
 
       // Assert
       expect(component['form'].value).toEqual({
-        imageUrl: '',
         altText: '',
         width: '100%',
         height: 'auto',
@@ -81,37 +73,12 @@ describe('ImagePropertiesPanelComponent', () => {
       component.ngOnInit();
 
       // Assert
-      expect(component['form'].value.imageUrl).toBe('https://example.com/image.jpg');
       expect(component['form'].value.altText).toBe('Profile picture');
       expect(component['form'].value.width).toBe('500px');
       expect(component['form'].value.height).toBe('300px');
       expect(component['form'].value.alignment).toBe('right');
       expect(component['form'].value.objectFit).toBe('cover');
       expect(component['form'].value.caption).toBe('My profile photo');
-    });
-
-    it('should set image preview URL when imageUrl exists in metadata', () => {
-      // Arrange
-      const metadata: ImageMetadata = {
-        imageUrl: 'https://example.com/test.jpg',
-        altText: 'Test image',
-      };
-      const field: FormField = {
-        id: 'field-1',
-        type: FormFieldType.IMAGE,
-        fieldName: 'imageField',
-        label: 'Image Field',
-        required: false,
-        order: 0,
-        metadata,
-      };
-      component.field = field;
-
-      // Act
-      component.ngOnInit();
-
-      // Assert
-      expect(component['imagePreviewUrl']()).toBe('https://example.com/test.jpg');
     });
   });
 
@@ -146,117 +113,15 @@ describe('ImagePropertiesPanelComponent', () => {
       expect(component['form'].valid).toBe(true);
     });
 
-    it('should allow empty imageUrl field', () => {
+    it('should allow optional caption field', () => {
       // Arrange
       component['form'].get('altText')?.setValue('Test alt text');
 
       // Act
-      component['form'].get('imageUrl')?.setValue('');
+      component['form'].get('caption')?.setValue('');
 
       // Assert
-      expect(component['form'].get('imageUrl')?.valid).toBe(true);
-    });
-  });
-
-  describe('Image Upload', () => {
-    beforeEach(() => {
-      const field: FormField = {
-        id: 'field-1',
-        type: FormFieldType.IMAGE,
-        fieldName: 'imageField',
-        label: 'Image',
-        required: false,
-        order: 0,
-      };
-      component.field = field;
-      component.ngOnInit();
-    });
-
-    it('should upload image and update form with imageUrl', () => {
-      // Arrange
-      const mockFile = new File(['test content'], 'test.jpg', { type: 'image/jpeg' });
-      const mockEvent = { files: [mockFile] };
-      const mockResponse = {
-        imageUrl: 'https://cdn.example.com/uploads/test.jpg',
-        fileName: 'test.jpg',
-        fileSize: 12345,
-      };
-
-      // Act
-      component['onImageSelect'](mockEvent);
-
-      // Assert HTTP request
-      const req = httpMock.expectOne('/api/forms/upload');
-      expect(req.request.method).toBe('POST');
-      expect(req.request.body instanceof FormData).toBe(true);
-
-      req.flush(mockResponse);
-
-      // Verify form updated
-      expect(component['form'].value.imageUrl).toBe('https://cdn.example.com/uploads/test.jpg');
-      expect(component['imagePreviewUrl']()).toBe('https://cdn.example.com/uploads/test.jpg');
-    });
-
-    it('should clear upload error on successful upload', () => {
-      // Arrange
-      const mockFile = new File(['test'], 'test.jpg', { type: 'image/jpeg' });
-      const mockEvent = { files: [mockFile] };
-      const mockResponse = {
-        imageUrl: 'https://cdn.example.com/test.jpg',
-        fileName: 'test.jpg',
-        fileSize: 100,
-      };
-
-      // Set initial error
-      component['uploadError'].set('Previous error');
-
-      // Act
-      component['onImageSelect'](mockEvent);
-      const req = httpMock.expectOne('/api/forms/upload');
-      req.flush(mockResponse);
-
-      // Assert
-      expect(component['uploadError']()).toBeNull();
-    });
-
-    it('should handle upload error and set error message', () => {
-      // Arrange
-      const mockFile = new File(['test'], 'test.jpg', { type: 'image/jpeg' });
-      const mockEvent = { files: [mockFile] };
-      const mockError = { error: { message: 'File too large' } };
-
-      // Act
-      component['onImageSelect'](mockEvent);
-      const req = httpMock.expectOne('/api/forms/upload');
-      req.flush(mockError, { status: 400, statusText: 'Bad Request' });
-
-      // Assert
-      expect(component['uploadError']()).toBe('File too large');
-    });
-
-    it('should handle upload error with generic message when no error message provided', () => {
-      // Arrange
-      const mockFile = new File(['test'], 'test.jpg', { type: 'image/jpeg' });
-      const mockEvent = { files: [mockFile] };
-
-      // Act
-      component['onImageSelect'](mockEvent);
-      const req = httpMock.expectOne('/api/forms/upload');
-      req.flush(null, { status: 500, statusText: 'Server Error' });
-
-      // Assert
-      expect(component['uploadError']()).toBe('Image upload failed. Please try again.');
-    });
-
-    it('should not upload when no file is selected', () => {
-      // Arrange
-      const mockEvent = { files: [] };
-
-      // Act
-      component['onImageSelect'](mockEvent);
-
-      // Assert - no HTTP request should be made
-      httpMock.expectNone('/api/forms/upload');
+      expect(component['form'].get('caption')?.valid).toBe(true);
     });
   });
 
@@ -380,7 +245,7 @@ describe('ImagePropertiesPanelComponent', () => {
 
       component.fieldChange.subscribe((updatedField) => {
         const metadata = updatedField.metadata as ImageMetadata;
-        // Assert
+        // Assert - imageUrl should be preserved from field metadata (undefined in this case)
         expect(metadata.imageUrl).toBeUndefined();
         expect(metadata.caption).toBeUndefined();
         expect(metadata.width).toBeUndefined();
@@ -440,7 +305,7 @@ describe('ImagePropertiesPanelComponent', () => {
 
       // Assert
       expect(component['form'].value.altText).toBe('');
-      expect(component['imagePreviewUrl']()).toBeNull();
+      // imagePreviewUrl is not used in this component (handled by ImageUploadComponent)
     });
 
     it('should handle metadata with null imageUrl', () => {
@@ -463,8 +328,8 @@ describe('ImagePropertiesPanelComponent', () => {
       // Act
       component.ngOnInit();
 
-      // Assert
-      expect(component['imagePreviewUrl']()).toBeNull();
+      // Assert - altText should be loaded from metadata
+      expect(component['form'].value.altText).toBe('Test');
     });
   });
 });
