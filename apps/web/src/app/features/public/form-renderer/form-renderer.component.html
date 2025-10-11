@@ -228,21 +228,41 @@
                                       </div>
                                     }
 
-                                    <!-- Checkbox -->
+                                    <!-- Checkbox Group -->
                                     @if (field.type === fieldTypes.CHECKBOX) {
-                                      <div class="flex items-center">
-                                        <input
-                                          type="checkbox"
-                                          [id]="field.fieldName"
-                                          [formControlName]="field.fieldName"
-                                          class="mr-2"
-                                        />
-                                        <label [for]="field.fieldName">
+                                      <div class="space-y-2">
+                                        <label class="field-label">
                                           {{ field.label }}
                                           @if (field.required) {
                                             <span class="text-red-500">*</span>
                                           }
                                         </label>
+                                        @for (option of field.options; track option.value) {
+                                          <div class="flex items-center">
+                                            <input
+                                              type="checkbox"
+                                              [id]="field.fieldName + '-' + option.value"
+                                              [value]="option.value"
+                                              [checked]="
+                                                isCheckboxOptionSelected(
+                                                  field.fieldName,
+                                                  option.value
+                                                )
+                                              "
+                                              (change)="
+                                                onCheckboxChange(
+                                                  $event,
+                                                  field.fieldName,
+                                                  option.value
+                                                )
+                                              "
+                                              class="mr-2"
+                                            />
+                                            <label [for]="field.fieldName + '-' + option.value">
+                                              {{ option.label }}
+                                            </label>
+                                          </div>
+                                        }
                                       </div>
                                     }
 
@@ -639,21 +659,34 @@
                             </div>
                           }
 
-                          <!-- Checkbox -->
+                          <!-- Checkbox Group -->
                           @if (field.type === fieldTypes.CHECKBOX) {
-                            <div class="flex items-center">
-                              <input
-                                type="checkbox"
-                                [id]="field.fieldName"
-                                [formControlName]="field.fieldName"
-                                class="mr-2"
-                              />
-                              <label [for]="field.fieldName">
+                            <div class="space-y-2">
+                              <label class="field-label">
                                 {{ field.label }}
                                 @if (field.required) {
                                   <span class="text-red-500">*</span>
                                 }
                               </label>
+                              @for (option of field.options; track option.value) {
+                                <div class="flex items-center">
+                                  <input
+                                    type="checkbox"
+                                    [id]="field.fieldName + '-' + option.value"
+                                    [value]="option.value"
+                                    [checked]="
+                                      isCheckboxOptionSelected(field.fieldName, option.value)
+                                    "
+                                    (change)="
+                                      onCheckboxChange($event, field.fieldName, option.value)
+                                    "
+                                    class="mr-2"
+                                  />
+                                  <label [for]="field.fieldName + '-' + option.value">
+                                    {{ option.label }}
+                                  </label>
+                                </div>
+                              }
                             </div>
                           }
 

@@ -1,4 +1,11 @@
-import { Component, ChangeDetectionStrategy, signal, inject, OnInit } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  signal,
+  inject,
+  OnInit,
+  OnDestroy,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -7,6 +14,7 @@ import { ConfirmationService } from 'primeng/api';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { Tabs, TabList, Tab, TabPanels, TabPanel } from 'primeng/tabs';
 import { FormBuilderService } from '../form-builder.service';
+import { trigger, state, style, transition, animate } from '@angular/animations';
 
 /**
  * Collapsible right sidebar component for row-based layout configuration.
@@ -39,27 +47,64 @@ import { FormBuilderService } from '../form-builder.service';
     TabPanel,
   ],
   providers: [ConfirmationService],
+  animations: [
+    trigger('slideInOut', [
+      transition(':enter', [
+        style({ transform: 'translateX(100%)', opacity: 0 }),
+        animate('300ms ease-out', style({ transform: 'translateX(0)', opacity: 1 })),
+      ]),
+      transition(':leave', [
+        animate('300ms ease-in', style({ transform: 'translateX(100%)', opacity: 0 })),
+      ]),
+    ]),
+    trigger('fadeIn', [
+      transition(':enter', [
+        style({ opacity: 0, transform: 'scale(0.9)' }),
+        animate('200ms 100ms ease-out', style({ opacity: 1, transform: 'scale(1)' })),
+      ]),
+    ]),
+  ],
   template: `
     <!-- Confirmation dialog for destructive actions -->
     <p-confirmDialog></p-confirmDialog>
 
-    <!-- Sidebar container -->
-    <div
-      class="row-layout-sidebar h-full bg-white border-l border-gray-200 transition-all duration-300"
-      [class.collapsed]="isCollapsed()"
-    >
-      <!-- Toggle button -->
+    <!-- Floating toggle button (only visible when collapsed) -->
+    @if (isCollapsed()) {
       <button
+        @fadeIn
         pButton
-        [icon]="isCollapsed() ? 'pi pi-angle-left' : 'pi pi-angle-right'"
+        icon="pi pi-table"
         (click)="toggleCollapse()"
-        class="toggle-btn w-full"
-        [attr.aria-label]="isCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
-        [attr.aria-expanded]="!isCollapsed()"
+        class="floating-toggle-btn"
+        [attr.aria-label]="'Expand layout settings'"
+        severity="primary"
+        [rounded]="true"
       ></button>
+    }
 
-      <!-- Sidebar content (only visible when expanded) -->
-      @if (!isCollapsed()) {
+    <!-- Sidebar container (only visible when expanded) -->
+    @if (!isCollapsed()) {
+      <div
+        @slideInOut
+        class="row-layout-sidebar h-full bg-white border-l border-gray-200"
+        (click)="resetInactivityTimer()"
+        (scroll)="resetInactivityTimer()"
+        (mousemove)="onMouseMove()"
+      >
+        <!-- Close button header -->
+        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+          <span class="text-sm font-semibold text-gray-700">Layout Settings</span>
+          <button
+            pButton
+            icon="pi pi-times"
+            (click)="toggleCollapse()"
+            size="small"
+            [text]="true"
+            [rounded]="true"
+            [attr.aria-label]="'Collapse sidebar'"
+          ></button>
+        </div>
+
         <div class="sidebar-content overflow-auto h-[calc(100%-56px)]">
           <!-- Tabbed interface -->
           <p-tabs value="0" styleClass="sidebar-tabs">
@@ -175,8 +220,8 @@ import { FormBuilderService } from '../form-builder.service';
             </p-tabpanels>
           </p-tabs>
         </div>
-      }
-    </div>
+      </div>
+    }
   `,
   styles: [
     `
@@ -185,24 +230,20 @@ import { FormBuilderService } from '../form-builder.service';
         min-width: 320px;
       }
 
-      .row-layout-sidebar.collapsed {
+      .floating-toggle-btn {
+        position: fixed;
+        right: 16px;
+        top: 25%;
+        transform: translateY(-50%);
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         width: 48px;
-        min-width: 48px;
-      }
-
-      .toggle-btn {
-        margin: 8px;
-        width: calc(100% - 16px);
+        height: 48px;
       }
 
       .sidebar-content {
         opacity: 1;
         transition: opacity 0.3s ease-in-out;
-      }
-
-      .row-layout-sidebar.collapsed .sidebar-content {
-        opacity: 0;
-        pointer-events: none;
       }
 
       .row-item {
@@ -232,10 +273,14 @@ import { FormBuilderService } from '../form-builder.service';
     `,
   ],
 })
-export class RowLayoutSidebarComponent implements OnInit {
+export class RowLayoutSidebarComponent implements OnInit, OnDestroy {
   readonly formBuilderService = inject(FormBuilderService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly STORAGE_KEY = 'formBuilder.rowSidebarCollapsed';
+  private inactivityTimer?: number;
+  private timeoutStartTime?: number;
+  private readonly INACTIVITY_TIMEOUT = 30000; // 30 seconds
+  private readonly HOVER_GRACE_PERIOD = 5000; // 5 seconds
 
   /**
    * Signal tracking the collapsed state of the sidebar.
@@ -257,11 +302,29 @@ export class RowLayoutSidebarComponent implements OnInit {
   }
 
   /**
+   * Lifecycle hook for cleanup.
+   * Clears inactivity timer to prevent memory leaks.
+   */
+  ngOnDestroy(): void {
+    this.clearInactivityTimer();
+  }
+
+  /**
    * Toggles the sidebar collapse state and persists it to localStorage.
+   * Manages inactivity timer: starts when opening, clears when closing.
    */
   toggleCollapse(): void {
+    const wasCollapsed = this.isCollapsed();
     this.isCollapsed.update((collapsed) => !collapsed);
     localStorage.setItem(this.STORAGE_KEY, String(this.isCollapsed()));
+
+    if (wasCollapsed) {
+      // Opening sidebar - start inactivity timer
+      this.startInactivityTimer();
+    } else {
+      // Closing sidebar - clear timer
+      this.clearInactivityTimer();
+    }
   }
 
   /**
@@ -354,5 +417,63 @@ export class RowLayoutSidebarComponent implements OnInit {
       // Default to collapsed on small screens
       this.isCollapsed.set(window.innerWidth < 1024);
     }
+  }
+
+  /**
+   * Handles mouse move events.
+   * Only resets timer if less than 5 seconds remaining (grace period).
+   */
+  onMouseMove(): void {
+    const remainingTime = this.getRemainingTime();
+    if (remainingTime !== null && remainingTime < this.HOVER_GRACE_PERIOD) {
+      this.resetInactivityTimer();
+    }
+  }
+
+  /**
+   * Starts the inactivity timer.
+   * After timeout, automatically closes the sidebar.
+   */
+  private startInactivityTimer(): void {
+    this.clearInactivityTimer();
+    this.timeoutStartTime = Date.now();
+    this.inactivityTimer = window.setTimeout(() => {
+      this.isCollapsed.set(true);
+      localStorage.setItem(this.STORAGE_KEY, 'true');
+      this.clearInactivityTimer();
+    }, this.INACTIVITY_TIMEOUT);
+  }
+
+  /**
+   * Resets the inactivity timer.
+   * Called on user interactions (click, scroll, drag).
+   */
+  resetInactivityTimer(): void {
+    if (!this.isCollapsed()) {
+      this.startInactivityTimer();
+    }
+  }
+
+  /**
+   * Clears the inactivity timer.
+   */
+  private clearInactivityTimer(): void {
+    if (this.inactivityTimer) {
+      window.clearTimeout(this.inactivityTimer);
+      this.inactivityTimer = undefined;
+      this.timeoutStartTime = undefined;
+    }
+  }
+
+  /**
+   * Calculates remaining time on the inactivity timer.
+   * @returns Milliseconds remaining, or null if no timer active
+   */
+  private getRemainingTime(): number | null {
+    if (!this.timeoutStartTime || !this.inactivityTimer) {
+      return null;
+    }
+    const elapsed = Date.now() - this.timeoutStartTime;
+    return Math.max(0, this.INACTIVITY_TIMEOUT - elapsed);
   }
 }

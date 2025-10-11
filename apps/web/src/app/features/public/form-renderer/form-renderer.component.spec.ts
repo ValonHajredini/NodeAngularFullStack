@@ -510,6 +510,94 @@ describe('FormRendererComponent', () => {
       expect(checkboxControl?.value).toBe(false);
     });
 
+    it('should prepare submission payload with selected checkbox options', () => {
+      const schemaWithCheckboxOptions: FormSchema = {
+        ...mockSchema,
+        fields: [
+          {
+            id: 'field-checkbox-multi',
+            type: FormFieldType.CHECKBOX,
+            label: 'Pick letters',
+            fieldName: 'pick-letters',
+            required: false,
+            order: 1,
+            options: [
+              { label: 'A', value: 'a' },
+              { label: 'B', value: 'b' },
+              { label: 'C', value: 'c' },
+            ],
+          },
+        ],
+      };
+
+      formRendererService.getFormSchema.and.returnValue(
+        of({ schema: schemaWithCheckboxOptions, settings: mockSettings as FormSettings }),
+      );
+
+      const newFixture = TestBed.createComponent(FormRendererComponent);
+      const newComponent = newFixture.componentInstance;
+
+      newFixture.detectChanges();
+
+      const checkEvent = { target: { checked: true } as HTMLInputElement } as unknown as Event;
+      const uncheckEvent = { target: { checked: false } as HTMLInputElement } as unknown as Event;
+
+      newComponent.onCheckboxChange(checkEvent, 'pick-letters', 'a');
+      newComponent.onCheckboxChange(checkEvent, 'pick-letters', 'c');
+
+      const preparedValues = newComponent['prepareSubmissionData']() as Record<string, unknown>;
+
+      expect(preparedValues['pick-letters']).toBe('a,c');
+
+      newComponent.onCheckboxChange(uncheckEvent, 'pick-letters', 'a');
+
+      const updatedPreparedValues = newComponent['prepareSubmissionData']() as Record<
+        string,
+        unknown
+      >;
+
+      expect(updatedPreparedValues['pick-letters']).toBe('c');
+    });
+
+    it('should prepare submission payload when checkbox option values are numeric', () => {
+      const schemaWithNumericOptions: FormSchema = {
+        ...mockSchema,
+        fields: [
+          {
+            id: 'field-checkbox-numeric',
+            type: FormFieldType.CHECKBOX,
+            label: 'Pick numbers',
+            fieldName: 'pick-numbers',
+            required: false,
+            order: 1,
+            options: [
+              { label: 'One', value: 1 },
+              { label: 'Two', value: 2 },
+              { label: 'Three', value: 3 },
+            ],
+          },
+        ],
+      };
+
+      formRendererService.getFormSchema.and.returnValue(
+        of({ schema: schemaWithNumericOptions, settings: mockSettings as FormSettings }),
+      );
+
+      const newFixture = TestBed.createComponent(FormRendererComponent);
+      const newComponent = newFixture.componentInstance;
+
+      newFixture.detectChanges();
+
+      const checkEvent = { target: { checked: true } as HTMLInputElement } as unknown as Event;
+
+      newComponent.onCheckboxChange(checkEvent, 'pick-numbers', 1);
+      newComponent.onCheckboxChange(checkEvent, 'pick-numbers', 3);
+
+      const preparedValues = newComponent['prepareSubmissionData']() as Record<string, unknown>;
+
+      expect(preparedValues['pick-numbers']).toBe('1,3');
+    });
+
     it('should handle TEXTAREA field type', () => {
       fixture.detectChanges();
       expect(component.formGroup?.get('comments')).toBeTruthy();

@@ -27,6 +27,7 @@ import { RowLayoutSidebarComponent } from './row-layout-sidebar/row-layout-sideb
 import { PreviewDialogComponent } from './preview-dialog/preview-dialog.component';
 import { Dialog } from 'primeng/dialog';
 import { FormSchema } from '@nodeangularfullstack/shared';
+import { trigger, transition, style, animate } from '@angular/animations';
 
 /**
  * Form Builder main component.
@@ -55,6 +56,14 @@ import { FormSchema } from '@nodeangularfullstack/shared';
     Dialog,
   ],
   providers: [MessageService, ConfirmationService],
+  animations: [
+    trigger('fadeInCanvas', [
+      transition(':enter', [
+        style({ opacity: 0, transform: 'scale(0.98)' }),
+        animate('400ms 150ms ease-out', style({ opacity: 1, transform: 'scale(1)' })),
+      ]),
+    ]),
+  ],
   template: `
     <div class="form-builder-container flex flex-col h-full bg-gray-50">
       <!-- Breadcrumb Navigation -->
@@ -198,17 +207,19 @@ import { FormSchema } from '@nodeangularfullstack/shared';
 
       <!-- Three-panel layout -->
       <div class="flex-1 flex overflow-hidden" cdkDropListGroup>
-        <!-- Left sidebar: Field Palette (sticky) -->
-        <div class="w-64 flex-shrink-0 sticky-sidebar">
+        <!-- Left sidebar: Field Palette (collapsible) -->
+        <div class="flex-shrink-0 sticky-sidebar">
           <app-field-palette (fieldSelected)="onFieldTypeSelected($event)"></app-field-palette>
         </div>
 
         <!-- Center: Form Canvas (scrollable independently) -->
-        <div class="flex-1 overflow-y-auto overflow-x-hidden">
-          <app-form-canvas
-            [settings]="formSettings()"
-            (fieldClicked)="onFieldClicked($event)"
-          ></app-form-canvas>
+        <div @fadeInCanvas id="form-canvas" class="flex-1 overflow-y-auto overflow-x-hidden">
+          <div id="canvasForm" class="canvas-container">
+            <app-form-canvas
+              [settings]="formSettings()"
+              (fieldClicked)="onFieldClicked($event)"
+            ></app-form-canvas>
+          </div>
         </div>
 
         <!-- Right sidebar: Row Layout (sticky) -->
@@ -373,8 +384,14 @@ import { FormSchema } from '@nodeangularfullstack/shared';
 
       .sticky-sidebar {
         height: 100%;
-        overflow-y: hidden;
+        overflow-y: auto;
         overflow-x: hidden;
+      }
+
+      .canvas-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
       }
     `,
   ],
@@ -430,6 +447,10 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
     const formId = this.route.snapshot.paramMap.get('id');
     if (formId) {
       this.loadExistingForm(formId);
+    } else {
+      // New form: enable row layout with 1 column by default and add a text input field
+      this.formBuilderService.enableRowLayout(1);
+      this.addDefaultTextField();
     }
 
     // Setup auto-save interval (30 seconds)
@@ -453,6 +474,17 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
         this.saveDraft(true); // true = auto-save mode
       }
     }, 30000); // 30 seconds
+  }
+
+  /**
+   * Adds a default text input field to the first row, first column.
+   * Called when creating a new form.
+   */
+  private addDefaultTextField(): void {
+    this.fieldCounter++;
+    const newField = this.formBuilderService.addFieldFromType(FormFieldType.TEXT);
+    // Mark as dirty to show unsaved changes indicator
+    this.formBuilderService.markDirty();
   }
 
   /**

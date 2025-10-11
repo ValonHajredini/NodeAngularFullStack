@@ -70,17 +70,27 @@ export class StatisticsEngineService {
     // Initialize all options with 0 count
     options.forEach((opt) => counts.set(opt.value, 0));
 
-    // Count occurrences (handle both single values and arrays for checkboxes)
+    // Count occurrences (handle arrays, comma-separated strings, and single values)
     values.forEach((val) => {
       if (val != null) {
         if (Array.isArray(val)) {
-          // Handle checkbox fields with multiple selections
+          // Handle checkbox fields with multiple selections as arrays
           val.forEach((v) => {
             if (v != null) {
               counts.set(v, (counts.get(v) ?? 0) + 1);
             }
           });
+        } else if (typeof val === 'string' && val.includes(',')) {
+          // Handle checkbox fields stored as comma-separated strings (from backend)
+          const selections = val
+            .split(',')
+            .map((v) => v.trim())
+            .filter(Boolean);
+          selections.forEach((selection) => {
+            counts.set(selection, (counts.get(selection) ?? 0) + 1);
+          });
         } else {
+          // Handle single values (radio, select, etc.)
           counts.set(val, (counts.get(val) ?? 0) + 1);
         }
       }

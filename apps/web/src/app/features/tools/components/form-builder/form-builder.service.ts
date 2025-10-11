@@ -628,12 +628,13 @@ export class FormBuilderService {
   /**
    * Enable row-based layout mode.
    * Creates an initial row if none exist.
+   * @param defaultColumns - Number of columns for the initial row (default: 1)
    */
-  enableRowLayout(): void {
+  enableRowLayout(defaultColumns: 1 | 2 | 3 | 4 = 1): void {
     this._rowLayoutEnabled.set(true);
     // Create initial row if none exist
     if (this._rowConfigs().length === 0) {
-      this.addRow(2);
+      this.addRow(defaultColumns);
     }
     this.markDirty();
   }
@@ -656,7 +657,7 @@ export class FormBuilderService {
    * @returns Row ID of the created row
    */
   addRow(columnCount: 1 | 2 | 3 | 4 = 2): string {
-    const rowId = `row_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const rowId = `row_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     const order = this._rowConfigs().length;
 
     this._rowConfigs.update((rows) => [...rows, { rowId, columnCount, order }]);
@@ -810,7 +811,6 @@ export class FormBuilderService {
     if (!field?.position) return;
 
     const { rowId, columnIndex } = field.position;
-    const columnFields = this.getFieldsInColumn(rowId, columnIndex);
     const oldOrderInColumn = field.position.orderInColumn ?? 0;
 
     // Update target field's orderInColumn

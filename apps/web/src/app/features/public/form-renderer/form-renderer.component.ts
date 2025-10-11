@@ -102,6 +102,7 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   private token = '';
 
   private collapsedTextBlocks = new Set<string>();
+  private checkboxSelections = new Map<string, string[]>();
 
   constructor(
     private route: ActivatedRoute,
@@ -260,6 +261,7 @@ export class FormRendererComponent implements OnInit, OnDestroy {
    */
   private buildFormGroup(schema: FormSchema): FormGroup {
     const group: Record<string, FormControl> = {};
+    this.checkboxSelections.clear();
 
     schema.fields.forEach((field) => {
       // Skip display elements (heading, divider, group) - only add input fields to form
@@ -269,6 +271,11 @@ export class FormRendererComponent implements OnInit, OnDestroy {
 
       const validators = this.buildValidators(field);
       const defaultValue = this.getDefaultValue(field);
+
+      if (field.type === FormFieldType.CHECKBOX && Array.isArray(defaultValue)) {
+        // Track multi-select checkbox defaults so we can maintain selections during user interaction
+        this.checkboxSelections.set(field.fieldName, [...defaultValue]);
+      }
 
       group[field.fieldName] = new FormControl(defaultValue, validators);
     });
@@ -321,19 +328,64 @@ export class FormRendererComponent implements OnInit, OnDestroy {
    * Gets default value for field based on type
    */
   private getDefaultValue(field: FormField): any {
-    if (field.defaultValue !== undefined) {
-      return field.defaultValue;
-    }
-
     switch (field.type) {
       case FormFieldType.CHECKBOX:
+        // Checkbox fields support both single boolean toggles (no options) and multi-select arrays (with options).
+        if (field.options && field.options.length > 0) {
+          return this.normalizeCheckboxDefault(field);
+        }
+
+        return this.normalizeSingleCheckboxValue(field.defaultValue);
       case FormFieldType.TOGGLE:
-        return false;
+        return this.normalizeSingleCheckboxValue(field.defaultValue);
       case FormFieldType.NUMBER:
-        return null;
+        return field.defaultValue ?? null;
       default:
-        return '';
+        return field.defaultValue ?? '';
     }
+  }
+
+  /**
+   * Prepares form data for submission by transforming field values.
+   * Converts checkbox arrays to comma-separated strings for proper backend storage and analytics display.
+   * @returns Prepared submission data with transformed values
+   */
+  private prepareSubmissionData(): Record<string, any> {
+    if (!this.formGroup || !this.schema) {
+      return {};
+    }
+
+    // Ensure checkbox selection cache reflects latest control values before preparing payload
+    this.syncCheckboxSelectionsFromForm();
+
+    const rawValues = this.formGroup.value;
+    const preparedValues: Record<string, any> = {};
+    console.log('[SUBMIT DEBUG] Raw form values:', rawValues);
+
+    // Transform field values based on field type
+    this.schema.fields.forEach((field) => {
+      // Skip display elements (they don't have form controls)
+      if (isDisplayElement(field.type)) {
+        return;
+      }
+
+      const value = rawValues[field.fieldName];
+
+      // Handle checkbox fields - always convert arrays to comma-separated strings
+      if (field.type === FormFieldType.CHECKBOX) {
+        if (field.options && field.options.length > 0) {
+          preparedValues[field.fieldName] = this.prepareCheckboxValue(field, value);
+        } else {
+          preparedValues[field.fieldName] = this.normalizeSingleCheckboxValue(value);
+        }
+      } else {
+        // All other fields: use as-is
+        preparedValues[field.fieldName] = value;
+      }
+    });
+
+    console.log('[SUBMIT DEBUG] Prepared submission data:', preparedValues);
+    return preparedValues;
   }
 
   /**
@@ -614,9 +666,9 @@ export class FormRendererComponent implements OnInit, OnDestroy {
       errorType: null,
     };
 
-    // Submit form values
+    // Submit form values (with prepared/transformed data)
     this.formRendererService
-      .submitForm(this.token, this.formGroup.value)
+      .submitForm(this.token, this.prepareSubmissionData())
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (result) => {
@@ -657,6 +709,7 @@ export class FormRendererComponent implements OnInit, OnDestroy {
    */
   submitAnother(): void {
     this.formGroup?.reset();
+    this.syncCheckboxSelectionsFromForm();
     this.state = {
       ...this.state,
       submitted: false,
@@ -794,5 +847,215 @@ export class FormRendererComponent implements OnInit, OnDestroy {
     });
 
     return styles;
+  }
+
+  /**
+   * Handles checkbox change event for checkbox groups.
+   * Updates form control value with array of selected checkbox values.
+   *
+   * @param event - The checkbox change event
+   * @param fieldName - The form field name
+   * @param value - The checkbox option value
+   */
+  onCheckboxChange(event: Event, fieldName: string, value: string | number): void {
+    const target = event.target as HTMLInputElement;
+    const control = this.formGroup?.get(fieldName);
+
+    if (!control) return;
+
+    let valueUpdated = false;
+
+    // Multi-select checkbox groups are tracked via checkboxSelections map
+    if (this.checkboxSelections.has(fieldName)) {
+      const currentSelections = this.checkboxSelections.get(fieldName) ?? [];
+      const normalizedValue = String(value);
+
+      let updatedSelections: string[] | null = null;
+
+      if (target.checked) {
+        if (!currentSelections.includes(normalizedValue)) {
+          updatedSelections = [...currentSelections, normalizedValue];
+        }
+      } else if (currentSelections.includes(normalizedValue)) {
+        updatedSelections = currentSelections.filter((selection) => selection !== normalizedValue);
+      }
+
+      if (updatedSelections !== null) {
+        this.checkboxSelections.set(fieldName, updatedSelections);
+        control.setValue([...updatedSelections]);
+        valueUpdated = true;
+      }
+    } else {
+      // Fallback for legacy single checkbox fields without options
+      const normalized = this.normalizeSingleCheckboxValue(target.checked);
+      if (control.value !== normalized) {
+        control.setValue(normalized);
+        valueUpdated = true;
+      }
+    }
+
+    control.markAsTouched();
+
+    if (valueUpdated) {
+      control.markAsDirty();
+      control.updateValueAndValidity({ emitEvent: true });
+    }
+  }
+
+  /**
+   * Determine if a checkbox option should be rendered as selected.
+   * Falls back to checking the form control value directly when selections map is empty.
+   * @param fieldName - The checkbox field name
+   * @param optionValue - The option value to check
+   */
+  isCheckboxOptionSelected(fieldName: string, optionValue: string | number): boolean {
+    const selections = this.checkboxSelections.get(fieldName);
+    const normalizedOption = String(optionValue);
+
+    if (selections) {
+      return selections.includes(normalizedOption);
+    }
+
+    const controlValue = this.formGroup?.get(fieldName)?.value;
+
+    if (Array.isArray(controlValue)) {
+      return controlValue.map(String).includes(normalizedOption);
+    }
+
+    if (typeof controlValue === 'string') {
+      return controlValue
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean)
+        .includes(normalizedOption);
+    }
+
+    return controlValue === normalizedOption;
+  }
+
+  /**
+   * Normalize default selections for checkbox groups to an array of valid option values.
+   * @param field - Checkbox field definition
+   */
+  private normalizeCheckboxDefault(field: FormField): string[] {
+    if (!field.options || field.options.length === 0) {
+      return [];
+    }
+
+    const validValues = new Set(field.options.map((option) => String(option.value)));
+    const rawDefault = field.defaultValue;
+
+    if (rawDefault == null) {
+      return [];
+    }
+
+    const parsedValues: string[] = Array.isArray(rawDefault)
+      ? rawDefault.map((value) => String(value))
+      : typeof rawDefault === 'string'
+        ? rawDefault
+            .split(',')
+            .map((value) => value.trim())
+            .filter(Boolean)
+        : [String(rawDefault)];
+
+    return parsedValues.filter((value) => validValues.has(value));
+  }
+
+  /**
+   * Prepare checkbox field values for submission by converting selected options to comma-separated value string.
+   * Ensures only valid option values are included.
+   * @param field - Checkbox field definition
+   * @param rawValue - Current form control value
+   */
+  private prepareCheckboxValue(field: FormField, rawValue: unknown): string {
+    const validValues = new Set((field.options || []).map((option) => String(option.value)));
+    const trackedSelections = this.checkboxSelections.get(field.fieldName) ?? null;
+
+    let selections: string[] = [];
+
+    if (Array.isArray(rawValue)) {
+      selections = rawValue.map((value) => String(value));
+    } else if (typeof rawValue === 'string' && rawValue.trim() !== '') {
+      selections = rawValue
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean)
+        .map((value) => String(value));
+    } else if (trackedSelections) {
+      selections = [...trackedSelections];
+    }
+
+    const uniqueValidSelections = Array.from(new Set(selections)).filter((value) =>
+      validValues.size > 0 ? validValues.has(value) : true,
+    );
+
+    if (uniqueValidSelections.length === 0) {
+      return '';
+    }
+
+    return uniqueValidSelections.join(',');
+  }
+
+  /**
+   * Normalize legacy single checkbox values to a strict boolean.
+   * Accepts truthy string/number representations to maintain compatibility with older schemas.
+   */
+  private normalizeSingleCheckboxValue(value: unknown): boolean {
+    if (value === null || value === undefined) {
+      return false;
+    }
+
+    if (typeof value === 'boolean') {
+      return value;
+    }
+
+    if (typeof value === 'string') {
+      const normalized = value.trim().toLowerCase();
+      return ['true', '1', 'yes', 'on'].includes(normalized);
+    }
+
+    if (typeof value === 'number') {
+      return value !== 0;
+    }
+
+    return Boolean(value);
+  }
+
+  /**
+   * Synchronize internal checkbox selections map with current FormGroup values.
+   * Useful after operations like reset() where Angular updates control values directly.
+   */
+  private syncCheckboxSelectionsFromForm(): void {
+    if (!this.formGroup || !this.schema) {
+      return;
+    }
+
+    this.checkboxSelections.clear();
+
+    this.schema.fields
+      .filter(
+        (field) =>
+          field.type === FormFieldType.CHECKBOX && field.options && field.options.length > 0,
+      )
+      .forEach((field) => {
+        const controlValue = this.formGroup?.get(field.fieldName)?.value;
+
+        if (Array.isArray(controlValue)) {
+          this.checkboxSelections.set(
+            field.fieldName,
+            controlValue.map((value) => String(value)),
+          );
+        } else if (typeof controlValue === 'string' && controlValue.trim() !== '') {
+          const values = controlValue
+            .split(',')
+            .map((value) => value.trim())
+            .filter(Boolean)
+            .map((value) => String(value));
+
+          this.checkboxSelections.set(field.fieldName, values);
+        } else {
+          this.checkboxSelections.set(field.fieldName, []);
+        }
+      });
   }
 }
