@@ -281,7 +281,7 @@ import { ExportDialogComponent } from './export-dialog.component';
       [style]="{ width: '500px' }"
     >
       <div class="flex flex-col gap-3">
-        @for (field of formFields(); track field.id) {
+        @for (field of inputFieldsOnly(); track field.id) {
           <div class="flex items-center gap-2">
             <p-checkbox
               [binary]="true"
@@ -371,6 +371,17 @@ export class FormAnalyticsComponent implements OnInit {
   // Total submissions for export preview
   readonly totalSubmissions = computed(() => this.totalRecords());
 
+  // Input fields only (excludes display-only fields)
+  readonly inputFieldsOnly = computed<FormField[]>(() => {
+    const displayOnlyFields = [
+      FormFieldType.HEADING,
+      FormFieldType.IMAGE,
+      FormFieldType.TEXT_BLOCK,
+      FormFieldType.DIVIDER,
+    ];
+    return this.formFields().filter((field) => !displayOnlyFields.includes(field.type));
+  });
+
   // Field statistics computed from submissions
   readonly fieldStatistics = computed<FieldStatistics[]>(() => {
     const submissions = this.submissions();
@@ -380,8 +391,16 @@ export class FormAnalyticsComponent implements OnInit {
       return [];
     }
 
+    // Filter out display-only fields that don't collect user input
+    const displayOnlyFields = [
+      FormFieldType.HEADING,
+      FormFieldType.IMAGE,
+      FormFieldType.TEXT_BLOCK,
+      FormFieldType.DIVIDER,
+    ];
+
     return fields
-      .filter((field) => field.type !== FormFieldType.DIVIDER)
+      .filter((field) => !displayOnlyFields.includes(field.type))
       .map((field) => {
         const values = submissions.map((s) => s.values[field.fieldName]);
 
@@ -608,11 +627,11 @@ export class FormAnalyticsComponent implements OnInit {
   }
 
   /**
-   * Initializes default visible fields (all fields).
+   * Initializes default visible fields (all input fields only).
    */
   private initializeDefaultVisibleFields(): void {
-    const allFieldIds = this.formFields().map((f) => f.id);
-    this.visibleFieldIds.set(new Set(allFieldIds));
+    const inputFieldIds = this.inputFieldsOnly().map((f) => f.id);
+    this.visibleFieldIds.set(new Set(inputFieldIds));
   }
 
   /**

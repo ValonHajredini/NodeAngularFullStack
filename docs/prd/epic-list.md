@@ -38,3 +38,19 @@ rendering.
 **Epic 12: Advanced Canvas Elements & Background Customization** Extend Form Builder with group
 containers, background images, and custom HTML/CSS elements for richer form layouts and visual
 customization.
+
+**Epic 13: Row-Based Multi-Column Layout System** Implement flexible row-based layout with
+configurable column counts per row, multi-field column support, and responsive mobile rendering.
+
+**Epic 14: Multi-Field Columns & Public Rendering** Enable multiple fields per column with vertical
+stacking, drag-drop reordering, and row-based rendering in public form views.
+
+**Epic 15: Content Display Fields** Add non-input display fields (Heading, Text Block, Image,
+Divider) with WYSIWYG editing and real-time preview.
+
+**Epic 16: Field Properties System** Implement comprehensive field property configuration with
+validation, conditional logic, placeholder customization, and advanced input settings.
+
+**Epic 17: Dynamic Chart Type Selection for Analytics** Enable users to dynamically select and
+change chart types (bar, line, pie, polar, radar, area, doughnut) for each field in form analytics
+dashboard with persistent preferences.
