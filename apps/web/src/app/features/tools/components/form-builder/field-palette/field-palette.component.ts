@@ -308,6 +308,12 @@ export class FieldPaletteComponent implements OnInit, OnDestroy {
     { type: FormFieldType.DATETIME, icon: 'pi-clock', label: 'DateTime', category: 'input' },
     { type: FormFieldType.TOGGLE, icon: 'pi-toggle-on', label: 'Toggle', category: 'input' },
     {
+      type: FormFieldType.IMAGE_GALLERY,
+      icon: 'pi-images',
+      label: 'Image Gallery',
+      category: 'input',
+    },
+    {
       type: FormFieldType.DIVIDER,
       icon: 'pi-minus',
       label: 'Section Divider',

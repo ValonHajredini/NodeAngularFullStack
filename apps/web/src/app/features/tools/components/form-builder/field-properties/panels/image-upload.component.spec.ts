@@ -48,7 +48,7 @@ describe('ImageUploadComponent', () => {
       };
       const expectedUrl = `${environment.apiUrl}/forms/${component.formId}/upload-image`;
 
-      let emittedImageUrl: string | null = null;
+      let emittedImageUrl = '';
       component.imageUploaded.subscribe((url: string) => {
         emittedImageUrl = url;
       });
@@ -74,7 +74,7 @@ describe('ImageUploadComponent', () => {
       const mockError = { error: { message: 'File too large' } };
       const expectedUrl = `${environment.apiUrl}/forms/${component.formId}/upload-image`;
 
-      let emittedError: string | null = null;
+      let emittedError = '';
       component.uploadErrorEvent.subscribe((error: string) => {
         emittedError = error;
       });

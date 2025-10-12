@@ -1379,6 +1379,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
       [FormFieldType.HEADING]: 'Untitled Heading',
       [FormFieldType.IMAGE]: 'Image',
       [FormFieldType.TEXT_BLOCK]: 'Text Block',
+      [FormFieldType.IMAGE_GALLERY]: 'Image Gallery',
     };
     return labelMap[type] || 'Field';
   }

@@ -233,10 +233,20 @@ const ALL_CHART_TYPE_OPTIONS: ChartTypeOption[] = [
                 </th>
                 <th style="min-width: 150px">IP Address</th>
                 @for (field of inputFieldsOnly(); track field.id) {
-                  <th [pSortableColumn]="'values.' + field.fieldName" style="min-width: 200px">
-                    {{ field.label }}
-                    <p-sortIcon [field]="'values.' + field.fieldName"></p-sortIcon>
-                  </th>
+                  @if (field.type === FormFieldType.IMAGE_GALLERY) {
+                    <!-- IMAGE_GALLERY: Two separate columns -->
+                    <th [pSortableColumn]="'values.' + field.fieldName" style="min-width: 120px">
+                      {{ field.label }} (Value)
+                      <p-sortIcon [field]="'values.' + field.fieldName"></p-sortIcon>
+                    </th>
+                    <th style="min-width: 120px">{{ field.label }} (Image)</th>
+                  } @else {
+                    <!-- Other field types: Single column -->
+                    <th [pSortableColumn]="'values.' + field.fieldName" style="min-width: 200px">
+                      {{ field.label }}
+                      <p-sortIcon [field]="'values.' + field.fieldName"></p-sortIcon>
+                    </th>
+                  }
                 }
               </tr>
             </ng-template>
@@ -247,7 +257,36 @@ const ALL_CHART_TYPE_OPTIONS: ChartTypeOption[] = [
                 <td>{{ submission.submittedAt | date: 'MMM dd, yyyy HH:mm' }}</td>
                 <td>{{ maskIpAddress(submission.submitterIp) }}</td>
                 @for (field of inputFieldsOnly(); track field.id) {
-                  <td>{{ formatFieldValue(submission.values[field.fieldName]) }}</td>
+                  @if (field.type === FormFieldType.IMAGE_GALLERY) {
+                    <!-- IMAGE_GALLERY: Value column -->
+                    <td class="text-center">
+                      @if (submission.values[field.fieldName]) {
+                        <span class="font-semibold text-gray-700 text-lg">{{
+                          submission.values[field.fieldName]
+                        }}</span>
+                      } @else {
+                        <span class="text-gray-400">-</span>
+                      }
+                    </td>
+                    <!-- IMAGE_GALLERY: Image column -->
+                    <td class="text-center">
+                      @if (getImageThumbnailUrl(field, submission.values[field.fieldName])) {
+                        <img
+                          [src]="getImageThumbnailUrl(field, submission.values[field.fieldName])"
+                          [alt]="'Selected image ' + submission.values[field.fieldName]"
+                          class="w-16 h-16 object-cover rounded border border-gray-300 mx-auto"
+                          loading="lazy"
+                        />
+                      } @else {
+                        <span class="text-gray-400">-</span>
+                      }
+                    </td>
+                  } @else {
+                    <!-- Other field types: Standard text formatting -->
+                    <td>
+                      {{ formatFieldValue(submission.values[field.fieldName]) }}
+                    </td>
+                  }
                 }
               </tr>
             </ng-template>
@@ -255,7 +294,7 @@ const ALL_CHART_TYPE_OPTIONS: ChartTypeOption[] = [
             <!-- Empty Message -->
             <ng-template pTemplate="emptymessage">
               <tr>
-                <td [attr.colspan]="inputFieldsOnly().length + 2" class="text-center py-8">
+                <td [attr.colspan]="getTotalColumnCount()" class="text-center py-8">
                   <i class="pi pi-inbox text-4xl text-gray-400 mb-2"></i>
                   <p class="text-gray-600">No submissions found</p>
                 </td>
@@ -441,6 +480,9 @@ export class FormAnalyticsComponent implements OnInit {
   private readonly statisticsEngine = inject(StatisticsEngineService);
   private readonly chartPreferenceService = inject(ChartPreferenceService);
 
+  // Expose FormFieldType enum to template
+  protected readonly FormFieldType = FormFieldType;
+
   readonly formId = signal<string>('');
   readonly formTitle = signal<string>('');
   readonly formFields = signal<FormField[]>([]);
@@ -527,6 +569,21 @@ export class FormAnalyticsComponent implements OnInit {
             data = this.statisticsEngine.calculateChoiceDistribution(
               values as (string | number | string[])[],
               field.options ?? [],
+            );
+            break;
+
+          case FormFieldType.IMAGE_GALLERY:
+            type = 'choice';
+            // Generate options dynamically from metadata images
+            const metadata = field.metadata as any;
+            const imageOptions =
+              metadata?.images?.map((img: any, index: number) => ({
+                value: (index + 1).toString(), // 1-based index
+                label: img.alt || `Image ${index + 1}`,
+              })) || [];
+            data = this.statisticsEngine.calculateChoiceDistribution(
+              values as (string | number)[],
+              imageOptions,
             );
             break;
 
@@ -730,6 +787,53 @@ export class FormAnalyticsComponent implements OnInit {
       return JSON.stringify(value);
     }
     return String(value);
+  }
+
+  /**
+   * Gets thumbnail URL for IMAGE_GALLERY field based on stored index.
+   * @param field - FormField with IMAGE_GALLERY type
+   * @param indexValue - Stored 1-based index as string (e.g., "1", "2", "3")
+   * @returns Image URL or null if not found
+   */
+  getImageThumbnailUrl(field: FormField, indexValue: string): string | null {
+    if (!indexValue || field.type !== FormFieldType.IMAGE_GALLERY) {
+      return null;
+    }
+
+    const metadata = field.metadata as any;
+    if (!metadata?.images || metadata.images.length === 0) {
+      return null;
+    }
+
+    // Convert 1-based index to 0-based array index
+    const arrayIndex = parseInt(indexValue, 10) - 1;
+
+    if (arrayIndex >= 0 && arrayIndex < metadata.images.length) {
+      return metadata.images[arrayIndex].url;
+    }
+
+    return null;
+  }
+
+  /**
+   * Calculates total number of table columns for colspan.
+   * IMAGE_GALLERY fields use 2 columns (value + image), other fields use 1 column.
+   * Always adds 2 for Submitted and IP Address columns.
+   * @returns Total column count
+   */
+  getTotalColumnCount(): number {
+    const fields = this.inputFieldsOnly();
+    let count = 2; // Submitted + IP Address
+
+    fields.forEach((field) => {
+      if (field.type === FormFieldType.IMAGE_GALLERY) {
+        count += 2; // Value + Image columns
+      } else {
+        count += 1; // Single column
+      }
+    });
+
+    return count;
   }
 
   /**

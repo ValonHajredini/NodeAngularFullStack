@@ -65,6 +65,7 @@ import { TextBlockPropertiesPanelComponent } from './panels/text-block-propertie
 import { OptionsPropertiesPanelComponent } from './panels/options-properties-panel.component';
 import { FilePropertiesPanelComponent } from './panels/file-properties-panel.component';
 import { GroupPropertiesPanelComponent } from './panels/group-properties-panel.component';
+import { ImageGalleryPropertiesPanelComponent } from './panels/image-gallery-properties-panel.component';
 
 /**
  * Field properties component for editing selected field properties.
@@ -97,6 +98,7 @@ import { GroupPropertiesPanelComponent } from './panels/group-properties-panel.c
     OptionsPropertiesPanelComponent,
     FilePropertiesPanelComponent,
     GroupPropertiesPanelComponent,
+    ImageGalleryPropertiesPanelComponent,
   ],
   template: `
     <div class="field-properties h-full bg-white border-l border-gray-200 overflow-y-auto">
@@ -727,6 +729,13 @@ import { GroupPropertiesPanelComponent } from './panels/group-properties-panel.c
                           <app-group-properties-panel
                             [field]="formBuilderService.selectedField()!"
                             (fieldChange)="onPanelFieldChange($event)"
+                          />
+                        }
+                        @case ('image_gallery') {
+                          <app-image-gallery-properties-panel
+                            [field]="formBuilderService.selectedField()!"
+                            [formId]="formBuilderService.currentFormId()"
+                            (metadataChange)="onGalleryMetadataChange($event)"
                           />
                         }
                         @default {
@@ -1581,6 +1590,27 @@ export class FieldPropertiesComponent implements OnInit, OnDestroy {
   onPanelFieldChange(updatedField: FormField): void {
     const fieldIndex = this.formBuilderService.selectedFieldIndex();
     if (fieldIndex >= 0) {
+      this.formBuilderService.updateField(fieldIndex, updatedField);
+      // Update selection to trigger canvas re-render
+      this.formBuilderService.selectField(updatedField);
+      this.propertyChanged.emit(updatedField);
+    }
+  }
+
+  /**
+   * Handle metadata changes from ImageGalleryPropertiesPanel (Story 18.2)
+   * Updates the field's metadata with the new gallery configuration
+   */
+  onGalleryMetadataChange(metadata: any): void {
+    const currentField = this.formBuilderService.selectedField();
+    const fieldIndex = this.formBuilderService.selectedFieldIndex();
+
+    if (currentField && fieldIndex >= 0) {
+      const updatedField: FormField = {
+        ...currentField,
+        metadata,
+      };
+
       this.formBuilderService.updateField(fieldIndex, updatedField);
       // Update selection to trigger canvas re-render
       this.formBuilderService.selectField(updatedField);

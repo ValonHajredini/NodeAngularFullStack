@@ -343,7 +343,9 @@ export class FormBuilderService {
             ? 'Image'
             : type === FormFieldType.TEXT_BLOCK
               ? 'Text Block'
-              : 'Untitled Field',
+              : type === FormFieldType.IMAGE_GALLERY
+                ? 'Image Gallery'
+                : 'Untitled Field',
       fieldName: this.generateUniqueFieldName(type),
       placeholder: '',
       helpText: '',
@@ -393,6 +395,19 @@ export class FormBuilderService {
           padding: 'medium',
           collapsible: false,
           collapsed: false,
+        },
+      };
+    }
+
+    // Add IMAGE_GALLERY-specific metadata (Story 18.2)
+    if (type === FormFieldType.IMAGE_GALLERY) {
+      return {
+        ...baseField,
+        metadata: {
+          images: [],
+          columns: 4,
+          aspectRatio: 'square',
+          maxImages: 10,
         },
       };
     }

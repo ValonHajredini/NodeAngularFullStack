@@ -37,6 +37,9 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 // Service
 import { FormRendererService, FormRenderError, FormRenderErrorType } from './form-renderer.service';
 
+// Field Renderers
+import { ImageGalleryRendererComponent } from './image-gallery-renderer.component';
+
 /**
  * Component state for UI management
  */
@@ -63,7 +66,14 @@ interface ComponentState {
 @Component({
   selector: 'app-form-renderer',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ProgressSpinner, Card, ButtonDirective],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    ProgressSpinner,
+    Card,
+    ButtonDirective,
+    ImageGalleryRendererComponent,
+  ],
   templateUrl: './form-renderer.component.html',
   styleUrls: ['./form-renderer.component.scss'],
 })

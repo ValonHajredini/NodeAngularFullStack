@@ -210,7 +210,7 @@ interface ImageUploadResponse {
   ],
 })
 export class ImageUploadComponent {
-  @Input() formId!: string;
+  @Input() formId!: string | null;
   @Input() imageUrl = signal<string | null>(null);
 
   @Output() imageUploaded = new EventEmitter<string>();

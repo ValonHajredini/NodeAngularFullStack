@@ -531,6 +531,14 @@
                                       </div>
                                     }
 
+                                    <!-- Image Gallery Selector -->
+                                    @if (field.type === fieldTypes.IMAGE_GALLERY) {
+                                      <app-image-gallery-renderer
+                                        [field]="field"
+                                        [control]="$any(formGroup.controls[field.fieldName])"
+                                      />
+                                    }
+
                                     @if (field.helpText) {
                                       <small class="text-gray-500 text-sm">{{
                                         field.helpText
@@ -890,6 +898,14 @@
                                 </div>
                               }
                             </div>
+                          }
+
+                          <!-- Image Gallery Selector -->
+                          @if (field.type === fieldTypes.IMAGE_GALLERY) {
+                            <app-image-gallery-renderer
+                              [field]="field"
+                              [control]="$any(formGroup.controls[field.fieldName])"
+                            />
                           }
 
                           @if (field.helpText) {

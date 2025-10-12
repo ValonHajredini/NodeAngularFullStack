@@ -5,7 +5,7 @@ import { FormBuilderService } from './form-builder.service';
 import { MessageService } from 'primeng/api';
 import { FormsApiService } from './forms-api.service';
 import { of, throwError } from 'rxjs';
-import { FormStatus } from '@nodeangularfullstack/shared';
+import { FormStatus, FormFieldType } from '@nodeangularfullstack/shared';
 
 describe('FormBuilderComponent', () => {
   let component: FormBuilderComponent;

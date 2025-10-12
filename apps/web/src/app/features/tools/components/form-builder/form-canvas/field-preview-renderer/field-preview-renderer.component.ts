@@ -21,13 +21,16 @@ import { GroupPreviewComponent } from './group-preview.component';
 import { HeadingPreviewComponent } from './heading-preview.component';
 import { ImagePreviewComponent } from './image-preview.component';
 import { TextBlockPreviewComponent } from './text-block-preview.component';
+import { ImageGalleryPreviewComponent } from './image-gallery-preview.component';
 import { InlineLabelEditorComponent } from './inline-label-editor.component';
 import { InlineOptionManagerComponent } from './inline-option-manager.component';
+import { InlineImageGalleryManagerComponent } from './inline-image-gallery-manager.component';
 import { ButtonModule } from 'primeng/button';
 import { BadgeModule } from 'primeng/badge';
 import { TagModule } from 'primeng/tag';
-import { FormFieldOption } from '@nodeangularfullstack/shared';
+import { FormFieldOption, ImageGalleryMetadata } from '@nodeangularfullstack/shared';
 import { ValidationPresetsService } from '../../field-properties/validation-presets.service';
+import { FormBuilderService } from '../../form-builder.service';
 
 /**
  * Field preview renderer wrapper component.
@@ -54,8 +57,10 @@ import { ValidationPresetsService } from '../../field-properties/validation-pres
     HeadingPreviewComponent,
     ImagePreviewComponent,
     TextBlockPreviewComponent,
+    ImageGalleryPreviewComponent,
     InlineLabelEditorComponent,
     InlineOptionManagerComponent,
+    InlineImageGalleryManagerComponent,
     ButtonModule,
     BadgeModule,
     TagModule,
@@ -163,6 +168,9 @@ import { ValidationPresetsService } from '../../field-properties/validation-pres
               (contentChanged)="onTextBlockContentChanged($event)"
             />
           }
+          @case (FormFieldType.IMAGE_GALLERY) {
+            <app-image-gallery-preview [field]="field" />
+          }
           @default {
             <div class="p-4 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
               Unknown field type: {{ field.type }}
@@ -229,6 +237,15 @@ import { ValidationPresetsService } from '../../field-properties/validation-pres
         <app-inline-option-manager [field]="field" (optionsChanged)="onOptionsChanged($event)" />
       }
 
+      <!-- Inline Image Gallery Manager (for IMAGE_GALLERY field) -->
+      @if (field.type === FormFieldType.IMAGE_GALLERY) {
+        <app-inline-image-gallery-manager
+          [field]="field"
+          [formId]="getFormId()"
+          (metadataChange)="onGalleryMetadataChange($event)"
+        />
+      }
+
       <!-- Settings Button -->
       <button
         type="button"
@@ -276,8 +293,9 @@ export class FieldPreviewRendererComponent {
   // Expose FormFieldType enum to template
   readonly FormFieldType = FormFieldType;
 
-  // Inject ValidationPresetsService for pattern identification
+  // Inject services
   private readonly validationPresetsService = inject(ValidationPresetsService);
+  private readonly formBuilderService = inject(FormBuilderService);
 
   /**
    * Parse custom CSS string into Angular style object.
@@ -468,5 +486,22 @@ export class FieldPreviewRendererComponent {
         content: newContent,
       },
     });
+  }
+
+  /**
+   * Get the current form ID from FormBuilderService or null if not saved yet.
+   * Used by InlineImageGalleryManagerComponent for image uploads.
+   * @returns Form ID string or null
+   */
+  getFormId(): string | null {
+    return this.formBuilderService.currentFormId();
+  }
+
+  /**
+   * Handle gallery metadata change from inline image gallery manager.
+   * Updates the field metadata with new gallery configuration.
+   */
+  onGalleryMetadataChange(metadata: ImageGalleryMetadata): void {
+    this.fieldUpdated.emit({ metadata });
   }
 }

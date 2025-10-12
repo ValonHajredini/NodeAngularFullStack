@@ -39,6 +39,8 @@ export enum FormFieldType {
   IMAGE = 'image',
   /** Text block for instructions/explanations (non-input, display only) */
   TEXT_BLOCK = 'text_block',
+  /** Image gallery selector (input field for selecting one image from gallery) */
+  IMAGE_GALLERY = 'image_gallery',
 }
 
 /**
@@ -58,6 +60,7 @@ export const FIELD_TYPE_CATEGORIES = {
     FormFieldType.DATE,
     FormFieldType.DATETIME,
     FormFieldType.TOGGLE,
+    FormFieldType.IMAGE_GALLERY,
   ] as const,
 
   /** Display elements that don't collect data (visual/organizational) */
@@ -215,6 +218,21 @@ export interface TextBlockMetadata extends BaseFieldMetadata {
 }
 
 /**
+ * Image gallery metadata for IMAGE_GALLERY field type
+ * Stores array of images for single-selection gallery
+ */
+export interface ImageGalleryMetadata extends BaseFieldMetadata {
+  /** Array of gallery images (2-10 images recommended) */
+  images: { key: string; url: string; alt: string }[];
+  /** Number of grid columns (2-4) - Default: 4 */
+  columns?: 2 | 3 | 4;
+  /** Image aspect ratio - Default: 'square' */
+  aspectRatio?: 'square' | '16:9' | 'auto';
+  /** Maximum number of images allowed - Default: 10 */
+  maxImages?: number;
+}
+
+/**
  * Row layout configuration for multi-column form rows
  */
 export interface RowLayoutConfig {
@@ -272,8 +290,13 @@ export interface FormField {
   order: number;
   /** Parent group ID for nested fields */
   parentGroupId?: string;
-  /** Additional metadata for special field types (e.g., GROUP, HEADING, IMAGE, TEXT_BLOCK) */
-  metadata?: GroupMetadata | HeadingMetadata | ImageMetadata | TextBlockMetadata;
+  /** Additional metadata for special field types (e.g., GROUP, HEADING, IMAGE, TEXT_BLOCK, IMAGE_GALLERY) */
+  metadata?:
+    | GroupMetadata
+    | HeadingMetadata
+    | ImageMetadata
+    | TextBlockMetadata
+    | ImageGalleryMetadata;
   /** Position within row-column layout (optional, for row-based layouts) */
   position?: FieldPosition;
 }
