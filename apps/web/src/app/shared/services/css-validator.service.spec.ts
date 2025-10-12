@@ -78,7 +78,6 @@ describe('CssValidatorService', () => {
 
     describe('Dangerous Pattern Detection', () => {
       it('should detect javascript: protocol', () => {
-        // eslint-disable-next-line no-script-url
         const css = 'background: url(javascript:alert(1));';
         const result = service.validateCSS(css);
 
@@ -89,7 +88,6 @@ describe('CssValidatorService', () => {
       });
 
       it('should detect javascript: protocol (case insensitive)', () => {
-        // eslint-disable-next-line no-script-url
         const css = 'background: url(JAVASCRIPT:alert(1));';
         const result = service.validateCSS(css);
 
@@ -272,13 +270,11 @@ describe('CssValidatorService', () => {
 
     describe('XSS Attack Vectors', () => {
       it('should detect CSS-based XSS with javascript protocol', () => {
-        /* eslint-disable no-script-url */
         const attacks = [
           'background-image: url(javascript:alert("XSS"));',
           'list-style-image: url(javascript:void(alert(1)));',
           'background: url("javascript:alert(\'XSS\')");',
         ];
-        /* eslint-enable no-script-url */
 
         attacks.forEach((attack) => {
           const result = service.validateCSS(attack);

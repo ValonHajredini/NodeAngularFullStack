@@ -280,7 +280,7 @@ describe('TextBlockPreviewComponent', () => {
     });
 
     it('should handle all alignment options', () => {
-      const alignments: Array<'left' | 'center' | 'right' | 'justify'> = [
+      const alignments: ('left' | 'center' | 'right' | 'justify')[] = [
         'left',
         'center',
         'right',
@@ -297,7 +297,7 @@ describe('TextBlockPreviewComponent', () => {
     });
 
     it('should handle all padding options', () => {
-      const paddings: Array<'none' | 'small' | 'medium' | 'large'> = [
+      const paddings: ('none' | 'small' | 'medium' | 'large')[] = [
         'none',
         'small',
         'medium',

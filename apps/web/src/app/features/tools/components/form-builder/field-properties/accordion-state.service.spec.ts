@@ -3,7 +3,7 @@ import { AccordionStateService } from './accordion-state.service';
 
 describe('AccordionStateService', () => {
   let service: AccordionStateService;
-  let localStorageMock: { [key: string]: string };
+  let localStorageMock: Record<string, string>;
 
   beforeEach(() => {
     // Mock localStorage

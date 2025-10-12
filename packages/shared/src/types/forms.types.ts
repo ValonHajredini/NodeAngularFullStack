@@ -484,6 +484,8 @@ export interface FieldStatistics {
   type: 'numeric' | 'choice' | 'timeseries' | 'text' | 'toggle' | 'none';
   /** Statistics data (type depends on visualization type) */
   data: NumericStatistics | ChoiceDistribution[] | TimeSeriesData[] | null;
+  /** Selected or default chart type for this field */
+  chartType: ChartType;
 }
 
 /**
@@ -510,4 +512,30 @@ export interface CSSValidationResult {
   warnings: string[];
   /** Array of error messages (blocking) */
   errors: string[];
+}
+
+/**
+ * Supported chart types for analytics visualization
+ */
+export type ChartType =
+  | 'bar'
+  | 'line'
+  | 'pie'
+  | 'polar'
+  | 'radar'
+  | 'area'
+  | 'doughnut'
+  | 'horizontal-bar'
+  | 'stat';
+
+/**
+ * Chart type option for UI selection
+ */
+export interface ChartTypeOption {
+  /** Chart type value */
+  value: ChartType;
+  /** Display label */
+  label: string;
+  /** PrimeNG icon class */
+  icon: string;
 }

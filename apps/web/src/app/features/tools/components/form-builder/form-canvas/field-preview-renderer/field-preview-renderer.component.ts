@@ -286,13 +286,13 @@ export class FieldPreviewRendererComponent {
    *
    * @returns Style object for ngStyle binding
    */
-  protected get customStyles(): { [key: string]: string } {
+  protected get customStyles(): Record<string, string> {
     const customStyle = (this.field.metadata as any)?.customStyle;
     if (!customStyle || typeof customStyle !== 'string') {
       return {};
     }
 
-    const styles: { [key: string]: string } = {};
+    const styles: Record<string, string> = {};
 
     // Parse CSS string: split by semicolons, then split each rule by colon
     customStyle.split(';').forEach((rule) => {

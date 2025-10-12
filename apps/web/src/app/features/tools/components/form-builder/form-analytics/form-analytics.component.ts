@@ -21,15 +21,61 @@ import {
   FormField,
   FormFieldType,
   FieldStatistics,
+  ChartType,
+  ChartTypeOption,
 } from '@nodeangularfullstack/shared';
 import { FormsApiService } from '../forms-api.service';
 import { ToolConfigService } from '@core/services/tool-config.service';
 import { StatisticsEngineService } from './statistics-engine.service';
+import { ChartPreferenceService } from './chart-preference.service';
 import { BarChartComponent } from './charts/bar-chart.component';
 import { LineChartComponent } from './charts/line-chart.component';
 import { PieChartComponent } from './charts/pie-chart.component';
 import { StatCardComponent } from './charts/stat-card.component';
+import { PolarChartComponent } from './charts/polar-chart.component';
+import { RadarChartComponent } from './charts/radar-chart.component';
+import { AreaChartComponent } from './charts/area-chart.component';
+import { DoughnutChartComponent } from './charts/doughnut-chart.component';
+import { HorizontalBarChartComponent } from './charts/horizontal-bar-chart.component';
 import { ExportDialogComponent } from './export-dialog.component';
+
+/**
+ * Chart type compatibility matrix defining which chart types work with which data types.
+ * Used to filter chart type options based on field data type.
+ */
+const CHART_TYPE_COMPATIBILITY: Record<string, ChartType[]> = {
+  numeric: ['stat', 'bar', 'line', 'area'],
+  choice: ['bar', 'pie', 'doughnut', 'polar', 'radar', 'horizontal-bar'],
+  timeseries: ['line', 'area', 'bar'],
+  toggle: ['pie', 'doughnut', 'polar', 'bar'],
+};
+
+/**
+ * Default chart types for each data type.
+ * Used as fallback when no user preference exists.
+ */
+const DEFAULT_CHART_TYPES: Record<string, ChartType> = {
+  numeric: 'stat',
+  choice: 'bar',
+  timeseries: 'line',
+  toggle: 'pie',
+};
+
+/**
+ * All available chart type options with labels and icons.
+ * Used to populate chart type selector dropdown.
+ */
+const ALL_CHART_TYPE_OPTIONS: ChartTypeOption[] = [
+  { value: 'bar', label: 'Bar Chart', icon: 'pi pi-chart-bar' },
+  { value: 'line', label: 'Line Chart', icon: 'pi pi-chart-line' },
+  { value: 'pie', label: 'Pie Chart', icon: 'pi pi-chart-pie' },
+  { value: 'polar', label: 'Polar Chart', icon: 'pi pi-circle' },
+  { value: 'radar', label: 'Radar Chart', icon: 'pi pi-star' },
+  { value: 'area', label: 'Area Chart', icon: 'pi pi-wave' },
+  { value: 'doughnut', label: 'Doughnut Chart', icon: 'pi pi-circle-off' },
+  { value: 'horizontal-bar', label: 'Horizontal Bar', icon: 'pi pi-align-left' },
+  { value: 'stat', label: 'Stat Card', icon: 'pi pi-calculator' },
+];
 
 /**
  * Form analytics component displaying all submissions for a form.
@@ -53,6 +99,11 @@ import { ExportDialogComponent } from './export-dialog.component';
     LineChartComponent,
     PieChartComponent,
     StatCardComponent,
+    PolarChartComponent,
+    RadarChartComponent,
+    AreaChartComponent,
+    DoughnutChartComponent,
+    HorizontalBarChartComponent,
     ExportDialogComponent,
   ],
   providers: [MessageService],
@@ -231,37 +282,84 @@ import { ExportDialogComponent } from './export-dialog.component';
             @for (stat of fieldStatistics(); track stat.field.id) {
               @if (visibleFieldIds().has(stat.field.id)) {
                 <div class="bg-white rounded-lg shadow p-6">
-                  @switch (stat.type) {
-                    @case ('numeric') {
-                      @if (stat.data) {
-                        <app-stat-card
-                          [title]="stat.field.label"
-                          [data]="$any(stat.data)"
-                        ></app-stat-card>
+                  <!-- Field card header with chart type selector -->
+                  <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">{{ stat.field.label }}</h3>
+                    <select
+                      [ngModel]="stat.chartType"
+                      (ngModelChange)="onChartTypeChange(stat.field.id, $event)"
+                      [attr.aria-label]="'Select chart type for ' + stat.field.label"
+                      class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    >
+                      @for (option of getAvailableChartTypes(stat); track option.value) {
+                        <option [value]="option.value">{{ option.label }}</option>
                       }
-                    }
-                    @case ('choice') {
-                      @if (stat.data) {
+                    </select>
+                  </div>
+
+                  <!-- Dynamic chart rendering based on selected chart type -->
+                  @if (stat.data) {
+                    @switch (stat.chartType) {
+                      @case ('bar') {
                         <app-bar-chart
                           [title]="stat.field.label"
                           [data]="$any(stat.data)"
                         ></app-bar-chart>
                       }
-                    }
-                    @case ('timeseries') {
-                      @if (stat.data) {
+                      @case ('line') {
                         <app-line-chart
                           [title]="stat.field.label + ' - Timeline'"
                           [data]="$any(stat.data)"
                         ></app-line-chart>
                       }
-                    }
-                    @case ('toggle') {
-                      @if (stat.data) {
+                      @case ('pie') {
                         <app-pie-chart
                           [title]="stat.field.label"
                           [data]="$any(stat.data)"
                         ></app-pie-chart>
+                      }
+                      @case ('polar') {
+                        <app-polar-chart
+                          [title]="stat.field.label"
+                          [data]="$any(stat.data)"
+                        ></app-polar-chart>
+                      }
+                      @case ('radar') {
+                        <app-radar-chart
+                          [title]="stat.field.label"
+                          [data]="$any(stat.data)"
+                        ></app-radar-chart>
+                      }
+                      @case ('area') {
+                        <app-area-chart
+                          [title]="stat.field.label + ' - Timeline'"
+                          [data]="$any(stat.data)"
+                        ></app-area-chart>
+                      }
+                      @case ('doughnut') {
+                        <app-doughnut-chart
+                          [title]="stat.field.label"
+                          [data]="$any(stat.data)"
+                        ></app-doughnut-chart>
+                      }
+                      @case ('horizontal-bar') {
+                        <app-horizontal-bar-chart
+                          [title]="stat.field.label"
+                          [data]="$any(stat.data)"
+                        ></app-horizontal-bar-chart>
+                      }
+                      @case ('stat') {
+                        <app-stat-card
+                          [title]="stat.field.label"
+                          [data]="$any(stat.data)"
+                        ></app-stat-card>
+                      }
+                      @default {
+                        <!-- Fallback to bar chart for unknown types -->
+                        <app-bar-chart
+                          [title]="stat.field.label"
+                          [data]="$any(stat.data)"
+                        ></app-bar-chart>
                       }
                     }
                   }
@@ -341,6 +439,7 @@ export class FormAnalyticsComponent implements OnInit {
   private readonly toolConfigService = inject(ToolConfigService);
   private readonly messageService = inject(MessageService);
   private readonly statisticsEngine = inject(StatisticsEngineService);
+  private readonly chartPreferenceService = inject(ChartPreferenceService);
 
   readonly formId = signal<string>('');
   readonly formTitle = signal<string>('');
@@ -386,6 +485,7 @@ export class FormAnalyticsComponent implements OnInit {
   readonly fieldStatistics = computed<FieldStatistics[]>(() => {
     const submissions = this.submissions();
     const fields = this.formFields();
+    const formId = this.formId();
 
     if (submissions.length === 0 || fields.length === 0) {
       return [];
@@ -403,59 +503,112 @@ export class FormAnalyticsComponent implements OnInit {
       .filter((field) => !displayOnlyFields.includes(field.type))
       .map((field) => {
         const values = submissions.map((s) => s.values[field.fieldName]);
+        let type: 'numeric' | 'choice' | 'timeseries' | 'toggle' | 'none';
+        let data: any;
 
+        // Determine data type and calculate statistics
         switch (field.type) {
           case FormFieldType.NUMBER:
-            return {
-              field,
-              type: 'numeric' as const,
-              data: this.statisticsEngine.calculateNumericStats(values as number[]),
-            };
+            type = 'numeric';
+            data = this.statisticsEngine.calculateNumericStats(values as number[]);
+            break;
 
           case FormFieldType.SELECT:
           case FormFieldType.RADIO:
-            return {
-              field,
-              type: 'choice' as const,
-              data: this.statisticsEngine.calculateChoiceDistribution(
-                values as (string | number)[],
-                field.options ?? [],
-              ),
-            };
+            type = 'choice';
+            data = this.statisticsEngine.calculateChoiceDistribution(
+              values as (string | number)[],
+              field.options ?? [],
+            );
+            break;
 
           case FormFieldType.CHECKBOX:
-            return {
-              field,
-              type: 'choice' as const,
-              data: this.statisticsEngine.calculateChoiceDistribution(
-                values as (string | number | string[])[],
-                field.options ?? [],
-              ),
-            };
+            type = 'choice';
+            data = this.statisticsEngine.calculateChoiceDistribution(
+              values as (string | number | string[])[],
+              field.options ?? [],
+            );
+            break;
 
           case FormFieldType.DATE:
           case FormFieldType.DATETIME:
-            return {
-              field,
-              type: 'timeseries' as const,
-              data: this.statisticsEngine.generateTimeSeries(
-                values.filter((v) => v != null).map((v) => new Date(v as string)),
-                'day',
-              ),
-            };
+            type = 'timeseries';
+            data = this.statisticsEngine.generateTimeSeries(
+              values.filter((v) => v != null).map((v) => new Date(v as string)),
+              'day',
+            );
+            break;
 
           case FormFieldType.TOGGLE:
-            return {
-              field,
-              type: 'toggle' as const,
-              data: this.statisticsEngine.calculateToggleDistribution(values as boolean[]),
-            };
+            type = 'toggle';
+            data = this.statisticsEngine.calculateToggleDistribution(values as boolean[]);
+            break;
 
           default:
-            return { field, type: 'none' as const, data: null };
+            type = 'none';
+            data = null;
         }
+
+        // Determine chart type based on preference or default
+        let chartType: ChartType;
+        const savedPreference = this.chartPreferenceService.getChartType(formId, field.id);
+
+        if (savedPreference && this.isCompatibleChartType(type, savedPreference)) {
+          // Use saved preference if compatible
+          chartType = savedPreference;
+        } else {
+          // Fall back to default chart type for data type
+          chartType = DEFAULT_CHART_TYPES[type] || 'bar';
+        }
+
+        return { field, type, data, chartType };
       });
   });
+
+  /**
+   * Check if a chart type is compatible with a data type.
+   * @param dataType - Field data type (numeric, choice, timeseries, toggle, none)
+   * @param chartType - Chart type to validate
+   * @returns True if compatible, false otherwise
+   */
+  private isCompatibleChartType(dataType: string, chartType: ChartType): boolean {
+    return CHART_TYPE_COMPATIBILITY[dataType]?.includes(chartType) ?? false;
+  }
+
+  /**
+   * Get available chart types for a field based on its data type.
+   * Filters ALL_CHART_TYPE_OPTIONS to show only compatible types.
+   * @param stat - Field statistics containing data type
+   * @returns Array of compatible chart type options
+   */
+  getAvailableChartTypes(stat: FieldStatistics): ChartTypeOption[] {
+    const compatibleTypes = CHART_TYPE_COMPATIBILITY[stat.type] || [];
+    return ALL_CHART_TYPE_OPTIONS.filter((option) => compatibleTypes.includes(option.value));
+  }
+
+  /**
+   * Handles chart type selection change for a field.
+   * Saves preference to localStorage and triggers fieldStatistics re-computation.
+   * @param fieldId - Field identifier
+   * @param chartType - New chart type selection
+   */
+  onChartTypeChange(fieldId: string, chartType: ChartType): void {
+    try {
+      this.chartPreferenceService.setChartType(this.formId(), fieldId, chartType);
+      // Trigger re-computation of fieldStatistics by updating submissions signal
+      // This forces the computed signal to re-evaluate and pick up new preference
+      const currentSubmissions = this.submissions();
+      this.submissions.set([...currentSubmissions]);
+    } catch (error) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Preference Not Saved',
+        detail:
+          'Unable to save chart preference. Your browser storage may be full. The chart will still update for this session.',
+        life: 5000,
+      });
+    }
+  }
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');

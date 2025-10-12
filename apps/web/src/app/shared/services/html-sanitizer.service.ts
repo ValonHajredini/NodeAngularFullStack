@@ -124,7 +124,7 @@ export class HtmlSanitizerService {
    * @param wordLimit - Maximum word count
    * @returns True if content exceeds word limit
    */
-  isContentLong(html: string, wordLimit: number = 500): boolean {
+  isContentLong(html: string, wordLimit = 500): boolean {
     return this.countWords(html) > wordLimit;
   }
 }

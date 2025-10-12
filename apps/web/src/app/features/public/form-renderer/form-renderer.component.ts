@@ -478,7 +478,7 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   /**
    * Get row configurations from form settings, sorted by order
    */
-  getRowConfigs(): Array<{ rowId: string; columnCount: number; order: number }> {
+  getRowConfigs(): { rowId: string; columnCount: number; order: number }[] {
     if (!this.settings?.rowLayout?.enabled || !this.settings.rowLayout.rows) {
       return [];
     }
@@ -821,13 +821,13 @@ export class FormRendererComponent implements OnInit, OnDestroy {
    * @param field - The form field containing potential customStyle metadata
    * @returns Style object for ngStyle binding
    */
-  getFieldCustomStyles(field: FormField): { [key: string]: string } {
+  getFieldCustomStyles(field: FormField): Record<string, string> {
     const customStyle = (field.metadata as any)?.customStyle;
     if (!customStyle || typeof customStyle !== 'string') {
       return {};
     }
 
-    const styles: { [key: string]: string } = {};
+    const styles: Record<string, string> = {};
 
     // Parse CSS string: split by semicolons, then split each rule by colon
     customStyle.split(';').forEach((rule) => {
