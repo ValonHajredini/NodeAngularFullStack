@@ -232,7 +232,7 @@ const ALL_CHART_TYPE_OPTIONS: ChartTypeOption[] = [
                   <p-sortIcon field="submittedAt"></p-sortIcon>
                 </th>
                 <th style="min-width: 150px">IP Address</th>
-                @for (field of formFields(); track field.id) {
+                @for (field of inputFieldsOnly(); track field.id) {
                   <th [pSortableColumn]="'values.' + field.fieldName" style="min-width: 200px">
                     {{ field.label }}
                     <p-sortIcon [field]="'values.' + field.fieldName"></p-sortIcon>
@@ -246,7 +246,7 @@ const ALL_CHART_TYPE_OPTIONS: ChartTypeOption[] = [
               <tr>
                 <td>{{ submission.submittedAt | date: 'MMM dd, yyyy HH:mm' }}</td>
                 <td>{{ maskIpAddress(submission.submitterIp) }}</td>
-                @for (field of formFields(); track field.id) {
+                @for (field of inputFieldsOnly(); track field.id) {
                   <td>{{ formatFieldValue(submission.values[field.fieldName]) }}</td>
                 }
               </tr>
@@ -255,7 +255,7 @@ const ALL_CHART_TYPE_OPTIONS: ChartTypeOption[] = [
             <!-- Empty Message -->
             <ng-template pTemplate="emptymessage">
               <tr>
-                <td [attr.colspan]="formFields().length + 2" class="text-center py-8">
+                <td [attr.colspan]="inputFieldsOnly().length + 2" class="text-center py-8">
                   <i class="pi pi-inbox text-4xl text-gray-400 mb-2"></i>
                   <p class="text-gray-600">No submissions found</p>
                 </td>
@@ -397,7 +397,7 @@ const ALL_CHART_TYPE_OPTIONS: ChartTypeOption[] = [
     <app-export-dialog
       [(visible)]="exportDialogVisible"
       [formId]="formId()"
-      [formFields]="formFields()"
+      [formFields]="inputFieldsOnly()"
       [totalSubmissions]="totalSubmissions()"
     ></app-export-dialog>
 

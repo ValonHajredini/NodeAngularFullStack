@@ -2,21 +2,36 @@
 
 ## **Epic Goal**
 
-Add a collapsible right sidebar to the form builder that enables row-by-row column configuration (0-4 columns), allowing users to precisely control field placement within each row for flexible multi-column form layouts.
+Add a collapsible right sidebar to the form builder that enables row-by-row column configuration
+(0-4 columns), allowing users to precisely control field placement within each row for flexible
+multi-column form layouts.
 
 ## **Epic Description**
 
 ### **Existing System Context:**
 
-- **Current relevant functionality:** Angular 20+ form builder with drag-and-drop field placement, two-panel layout (left field palette, center canvas), field properties modal, and global column layout settings (1-3 columns)
-- **Technology stack:** Angular 20+ standalone components, PrimeNG 17+, Tailwind CSS, Angular CDK Drag-Drop, NgRx Signals for state management, TypeScript shared types in monorepo
+- **Current relevant functionality:** Angular 20+ form builder with drag-and-drop field placement,
+  two-panel layout (left field palette, center canvas), field properties modal, and global column
+  layout settings (1-3 columns)
+- **Technology stack:** Angular 20+ standalone components, PrimeNG 17+, Tailwind CSS, Angular CDK
+  Drag-Drop, NgRx Signals for state management, TypeScript shared types in monorepo
 - **Integration points:**
-  - FormBuilderComponent ([form-builder.component.ts:354](apps/web/src/app/features/tools/components/form-builder/form-builder.component.ts#L354)) - Main component managing layout and settings
-  - FormCanvasComponent ([form-canvas/form-canvas.component.ts](apps/web/src/app/features/tools/components/form-builder/form-canvas/form-canvas.component.ts)) - Canvas for field rendering with drag-drop
-  - FormBuilderService ([form-builder.service.ts](apps/web/src/app/features/tools/components/form-builder/form-builder.service.ts)) - State management for form fields
-  - FormSettings interface ([form-settings.component.ts:24](apps/web/src/app/features/tools/components/form-builder/form-settings/form-settings.component.ts#L24)) - Form configuration settings
-  - FormField interface ([forms.types.ts:99](packages/shared/src/types/forms.types.ts#L99)) - Shared type definitions
-  - FormLayout interface ([forms.types.ts:133](packages/shared/src/types/forms.types.ts#L133)) - Layout configuration (columns: 1-4)
+  - FormBuilderComponent
+    ([form-builder.component.ts:354](apps/web/src/app/features/tools/components/form-builder/form-builder.component.ts#L354)) -
+    Main component managing layout and settings
+  - FormCanvasComponent
+    ([form-canvas/form-canvas.component.ts](apps/web/src/app/features/tools/components/form-builder/form-canvas/form-canvas.component.ts)) -
+    Canvas for field rendering with drag-drop
+  - FormBuilderService
+    ([form-builder.service.ts](apps/web/src/app/features/tools/components/form-builder/form-builder.service.ts)) -
+    State management for form fields
+  - FormSettings interface
+    ([form-settings.component.ts:24](apps/web/src/app/features/tools/components/form-builder/form-settings/form-settings.component.ts#L24)) -
+    Form configuration settings
+  - FormField interface ([forms.types.ts:99](packages/shared/src/types/forms.types.ts#L99)) - Shared
+    type definitions
+  - FormLayout interface ([forms.types.ts:133](packages/shared/src/types/forms.types.ts#L133)) -
+    Layout configuration (columns: 1-4)
 
 ### **Enhancement Details:**
 
@@ -46,9 +61,11 @@ Add a collapsible right sidebar to the form builder that enables row-by-row colu
 
 ### 1. **Story 1: Collapsible Right Sidebar Component**
 
-Create a collapsible right sidebar that displays form rows and allows users to configure column layouts per row.
+Create a collapsible right sidebar that displays form rows and allows users to configure column
+layouts per row.
 
 **Acceptance Criteria:**
+
 - Sidebar component created as standalone Angular component (`RowLayoutSidebarComponent`)
 - Toggle button to collapse/expand sidebar (icon changes based on state)
 - Sidebar displays list of all form rows with visual row indicators
@@ -58,6 +75,7 @@ Create a collapsible right sidebar that displays form rows and allows users to c
 - Follows existing PrimeNG + Tailwind styling patterns
 
 **Technical Details:**
+
 - Location: `apps/web/src/app/features/tools/components/form-builder/row-layout-sidebar/`
 - Integration point: FormBuilderComponent template (after `<app-form-canvas>`)
 - State management: Signal-based local state for collapse/expand
@@ -70,6 +88,7 @@ Create a collapsible right sidebar that displays form rows and allows users to c
 Extend the form schema and state management to support row-based column configuration.
 
 **Acceptance Criteria:**
+
 - Shared types extended with row/column metadata:
   - `RowLayoutConfig` interface (rowId, columnCount: 0-4)
   - `FieldPosition` interface (rowId, columnIndex: 0-3)
@@ -83,8 +102,10 @@ Extend the form schema and state management to support row-based column configur
 - Migration helper function to convert global column layout to row-based layout
 
 **Technical Details:**
+
 - Extend `packages/shared/src/types/forms.types.ts`
-- Update `FormBuilderService` in `apps/web/src/app/features/tools/components/form-builder/form-builder.service.ts`
+- Update `FormBuilderService` in
+  `apps/web/src/app/features/tools/components/form-builder/form-builder.service.ts`
 - Schema version bump or feature detection for row layout support
 - Default row creation when fields are added without explicit row assignment
 
@@ -92,9 +113,11 @@ Extend the form schema and state management to support row-based column configur
 
 ### 3. **Story 3: Enhanced Drag-Drop with Row-Column Zones**
 
-Update the form canvas to render row-based column drop zones and handle field placement within specific row-column positions.
+Update the form canvas to render row-based column drop zones and handle field placement within
+specific row-column positions.
 
 **Acceptance Criteria:**
+
 - FormCanvasComponent renders visual row separators and column drop zones
 - Each row displays configured number of columns (0-4) as drop zones
 - Drag-drop handlers updated to:
@@ -109,7 +132,9 @@ Update the form canvas to render row-based column drop zones and handle field pl
 - Empty columns show placeholder "Drop field here" state
 
 **Technical Details:**
-- Update `apps/web/src/app/features/tools/components/form-builder/form-canvas/form-canvas.component.ts`
+
+- Update
+  `apps/web/src/app/features/tools/components/form-builder/form-canvas/form-canvas.component.ts`
 - Angular CDK Drag-Drop with custom drop predicates
 - Row/column rendering using CSS Grid layout
 - Event emitters for field position changes
@@ -130,7 +155,8 @@ Update the form canvas to render row-based column drop zones and handle field pl
 - **Mitigation:**
   - Feature flag for row layout mode (default: disabled for existing forms, enabled for new forms)
   - Comprehensive unit tests for new drag-drop logic (Jasmine/Karma)
-  - Backward compatibility layer: forms without row metadata render using existing single-column logic
+  - Backward compatibility layer: forms without row metadata render using existing single-column
+    logic
   - Migration helper to convert global column layout to row-based layout (optional user action)
   - Visual indicator in UI showing row layout mode active/inactive
 - **Rollback Plan:**
@@ -162,18 +188,21 @@ Update the form canvas to render row-based column drop zones and handle field pl
 ## **Validation Checklist**
 
 ### **Scope Validation:**
+
 - [x] Epic can be completed in 1-3 stories maximum ✓ (3 stories defined)
 - [x] No architectural documentation is required ✓ (follows existing patterns)
 - [x] Enhancement follows existing patterns ✓ (Angular standalone, PrimeNG, Tailwind)
 - [x] Integration complexity is manageable ✓ (extends existing components)
 
 ### **Risk Assessment:**
+
 - [x] Risk to existing system is low ✓ (backward compatible, feature flag)
 - [x] Rollback plan is feasible ✓ (hide sidebar, degrade gracefully)
 - [x] Testing approach covers existing functionality ✓ (unit + E2E tests)
 - [x] Team has sufficient knowledge of integration points ✓ (Angular CDK, signals)
 
 ### **Completeness Check:**
+
 - [x] Epic goal is clear and achievable ✓
 - [x] Stories are properly scoped ✓ (UI, schema, drag-drop)
 - [x] Success criteria are measurable ✓
@@ -187,7 +216,8 @@ Update the form canvas to render row-based column drop zones and handle field pl
 
 "Please develop detailed user stories for this brownfield epic. Key considerations:
 
-- This is an enhancement to an existing system running **Angular 20+ standalone components, PrimeNG 17+, Tailwind CSS, Angular CDK Drag-Drop**
+- This is an enhancement to an existing system running **Angular 20+ standalone components, PrimeNG
+  17+, Tailwind CSS, Angular CDK Drag-Drop**
 - Integration points:
   - **FormBuilderComponent** - Main layout component (add sidebar integration)
   - **FormCanvasComponent** - Drag-drop canvas (add row-column zones)
@@ -209,7 +239,8 @@ Update the form canvas to render row-based column drop zones and handle field pl
   - Form save/load/publish workflows
   - Settings dialog
 
-The epic should maintain system integrity while delivering **row-by-row multi-column layout control via collapsible right sidebar**."
+The epic should maintain system integrity while delivering **row-by-row multi-column layout control
+via collapsible right sidebar**."
 
 ---
 
