@@ -67,20 +67,14 @@ import { FormBuilderService } from '../../form-builder.service';
   ],
   template: `
     <div class="field-preview-wrapper relative" [ngStyle]="customStyles">
-      <!-- Required Badge (top-right corner) -->
-      @if (
-        field.required &&
-        field.type !== FormFieldType.DIVIDER &&
-        field.type !== FormFieldType.GROUP &&
-        field.type !== FormFieldType.HEADING &&
-        field.type !== FormFieldType.IMAGE &&
-        field.type !== FormFieldType.TEXT_BLOCK
-      ) {
-        <span
-          class="absolute top-0 right-0 px-2 py-1 text-xs font-semibold text-white bg-red-500 rounded-bl rounded-tr z-10"
-        >
-          Required
-        </span>
+      <!-- Field Type and Required Badges (above label) -->
+      @if (shouldShowTypeBadge()) {
+        <div class="field-badges flex gap-1">
+          <p-tag [value]="getFieldTypeLabel()" severity="info" styleClass="badge-small" />
+          @if (field.required) {
+            <p-tag value="required" severity="danger" styleClass="badge-small" />
+          }
+        </div>
       }
 
       <!-- Inline Label Editor (for non-divider, non-group, non-heading, non-image, and non-text-block fields) -->
@@ -160,7 +154,11 @@ import { FormBuilderService } from '../../form-builder.service';
             />
           }
           @case (FormFieldType.IMAGE) {
-            <app-image-preview [field]="field" />
+            <app-image-preview
+              [field]="field"
+              [formId]="getFormId()"
+              (imageUpdated)="onImageUpdated($event)"
+            />
           }
           @case (FormFieldType.TEXT_BLOCK) {
             <app-text-block-preview
@@ -266,6 +264,20 @@ import { FormBuilderService } from '../../form-builder.service';
 
       .field-control {
         pointer-events: none;
+      }
+
+      .field-badges {
+        ::ng-deep .badge-small {
+          opacity: 0.8;
+          font-size: 0.65rem;
+          padding: 0.15rem 0.35rem;
+          border-radius: 0.375rem;
+        }
+
+        ::ng-deep .badge-small .p-tag-value {
+          font-size: 0.65rem;
+          line-height: 1;
+        }
       }
 
       .settings-button {
@@ -503,5 +515,57 @@ export class FieldPreviewRendererComponent {
    */
   onGalleryMetadataChange(metadata: ImageGalleryMetadata): void {
     this.fieldUpdated.emit({ metadata });
+  }
+
+  /**
+   * Handle image upload from image preview component.
+   * Updates the field metadata with the new image URL.
+   */
+  onImageUpdated(imageUrl: string): void {
+    const currentMetadata = this.field.metadata || {};
+    this.fieldUpdated.emit({
+      metadata: {
+        ...currentMetadata,
+        imageUrl,
+      } as typeof this.field.metadata,
+    });
+  }
+
+  /**
+   * Determine if the field type badge should be shown.
+   * Shows badge for all field types except GROUP (which is a container).
+   * @returns True if field type badge should be displayed
+   */
+  shouldShowTypeBadge(): boolean {
+    // Only exclude GROUP type (it's a container, not a field)
+    return this.field.type !== FormFieldType.GROUP;
+  }
+
+  /**
+   * Get human-readable label for field type badge.
+   * Maps FormFieldType enum values to user-friendly labels.
+   * @returns Field type label (e.g., "text", "email", "number")
+   */
+  getFieldTypeLabel(): string {
+    const typeLabels: Record<FormFieldType, string> = {
+      [FormFieldType.TEXT]: 'text',
+      [FormFieldType.EMAIL]: 'email',
+      [FormFieldType.NUMBER]: 'number',
+      [FormFieldType.SELECT]: 'select',
+      [FormFieldType.TEXTAREA]: 'textarea',
+      [FormFieldType.CHECKBOX]: 'checkbox',
+      [FormFieldType.RADIO]: 'radio',
+      [FormFieldType.DATE]: 'date',
+      [FormFieldType.DATETIME]: 'datetime',
+      [FormFieldType.FILE]: 'file',
+      [FormFieldType.TOGGLE]: 'toggle',
+      [FormFieldType.DIVIDER]: 'divider',
+      [FormFieldType.GROUP]: 'group',
+      [FormFieldType.HEADING]: 'heading',
+      [FormFieldType.IMAGE]: 'image',
+      [FormFieldType.TEXT_BLOCK]: 'text block',
+      [FormFieldType.IMAGE_GALLERY]: 'gallery',
+    };
+    return typeLabels[this.field.type] || this.field.type.toLowerCase();
   }
 }
