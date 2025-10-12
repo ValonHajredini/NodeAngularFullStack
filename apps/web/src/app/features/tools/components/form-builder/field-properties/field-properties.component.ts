@@ -251,32 +251,34 @@ import { ImageGalleryPropertiesPanelComponent } from './panels/image-gallery-pro
                     }
                   </div>
 
-                  <div class="field">
-                    <label for="placeholder" class="block text-sm font-medium text-gray-700 mb-1">
-                      Placeholder
-                    </label>
-                    <input
-                      pInputText
-                      id="placeholder"
-                      formControlName="placeholder"
-                      class="w-full"
-                      placeholder="Enter placeholder text"
-                    />
-                  </div>
+                  @if (formBuilderService.selectedField()?.type !== 'image_gallery') {
+                    <div class="field">
+                      <label for="placeholder" class="block text-sm font-medium text-gray-700 mb-1">
+                        Placeholder
+                      </label>
+                      <input
+                        pInputText
+                        id="placeholder"
+                        formControlName="placeholder"
+                        class="w-full"
+                        placeholder="Enter placeholder text"
+                      />
+                    </div>
 
-                  <div class="field">
-                    <label for="helpText" class="block text-sm font-medium text-gray-700 mb-1">
-                      Help Text
-                    </label>
-                    <textarea
-                      pTextarea
-                      id="helpText"
-                      formControlName="helpText"
-                      class="w-full"
-                      rows="3"
-                      placeholder="Enter help text"
-                    ></textarea>
-                  </div>
+                    <div class="field">
+                      <label for="helpText" class="block text-sm font-medium text-gray-700 mb-1">
+                        Help Text
+                      </label>
+                      <textarea
+                        pTextarea
+                        id="helpText"
+                        formControlName="helpText"
+                        class="w-full"
+                        rows="3"
+                        placeholder="Enter help text"
+                      ></textarea>
+                    </div>
+                  }
 
                   <div class="field flex items-center">
                     <p-checkbox

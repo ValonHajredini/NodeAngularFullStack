@@ -136,7 +136,8 @@
                                       field.type !== fieldTypes.DIVIDER &&
                                       field.type !== fieldTypes.HEADING &&
                                       field.type !== fieldTypes.CHECKBOX &&
-                                      field.type !== fieldTypes.TOGGLE
+                                      field.type !== fieldTypes.TOGGLE &&
+                                      field.type !== fieldTypes.IMAGE_GALLERY
                                     ) {
                                       <label [for]="field.fieldName" class="field-label">
                                         {{ field.label }}
@@ -575,7 +576,8 @@
                             field.type !== fieldTypes.DIVIDER &&
                             field.type !== fieldTypes.HEADING &&
                             field.type !== fieldTypes.CHECKBOX &&
-                            field.type !== fieldTypes.TOGGLE
+                            field.type !== fieldTypes.TOGGLE &&
+                            field.type !== fieldTypes.IMAGE_GALLERY
                           ) {
                             <label [for]="field.fieldName" class="field-label">
                               {{ field.label }}

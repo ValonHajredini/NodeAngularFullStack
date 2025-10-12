@@ -18,9 +18,6 @@ import { ImageGallerySelectorComponent } from '../../../../../../shared/componen
       <!-- Field Label -->
       <div class="block text-sm font-medium text-gray-700 mb-2" role="heading" aria-level="3">
         {{ field.label }}
-        @if (field.required) {
-          <span class="text-red-500 ml-1">*</span>
-        }
       </div>
 
       @if (metadata.images && metadata.images.length > 0) {

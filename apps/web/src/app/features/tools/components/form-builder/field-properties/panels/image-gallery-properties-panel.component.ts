@@ -49,17 +49,27 @@ interface GalleryImage {
     <p-accordion>
       <!-- Gallery Images Section -->
       <p-accordionpanel header="Gallery Images">
-        <!-- Status Bar -->
-        <div class="mb-4">
-          <p class="text-xs text-gray-500">
-            {{ images().length }} / {{ maxImages() }} images
-            @if (images().length < minImagesRequired) {
-              <span class="text-orange-600 ml-2">⚠️ Minimum {{ minImagesRequired }} required</span>
+        <!-- Status Bar (Styled Box) -->
+        <div class="status-box mb-4">
+          <div class="flex items-center justify-between">
+            <span class="font-medium text-sm text-gray-700">
+              Gallery Images: {{ images().length }} / {{ maxImages() }}
+            </span>
+            @if (isUploading()) {
+              <span class="text-xs text-blue-600 flex items-center gap-1">
+                <i class="pi pi-spin pi-spinner"></i>
+                Uploading...
+              </span>
             }
-            @if (!allImagesHaveAltText()) {
-              <span class="text-orange-600 ml-2">⚠️ All images need alt text</span>
-            }
-          </p>
+          </div>
+          @if (images().length < minImagesRequired) {
+            <p class="text-xs text-orange-600 mt-1">
+              ⚠️ Minimum {{ minImagesRequired }} images required
+            </p>
+          }
+          @if (!allImagesHaveAltText()) {
+            <p class="text-xs text-orange-600 mt-1">⚠️ All images need alt text</p>
+          }
         </div>
 
         <!-- Hidden Image Upload Component -->
@@ -70,6 +80,7 @@ interface GalleryImage {
             [imageUrl]="signal(null)"
             (imageUploaded)="onImageUploaded($event)"
             (uploadErrorEvent)="onUploadError($event)"
+            (uploadingChange)="onUploadingChange($event)"
           />
         </div>
 
@@ -154,6 +165,13 @@ interface GalleryImage {
         display: none !important;
       }
 
+      .status-box {
+        padding: 0.75rem 1rem;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+      }
+
       .empty-gallery-state {
         display: flex;
         flex-direction: column;
@@ -190,6 +208,7 @@ export class ImageGalleryPropertiesPanelComponent implements OnInit {
     ImageGalleryPropertiesPanelComponent.DEFAULT_MAX_IMAGES,
   );
   protected readonly selectedImageKey = signal<string | null>(null);
+  protected readonly isUploading = signal<boolean>(false);
 
   // Dropdown options
   protected readonly columnOptions = [
@@ -291,6 +310,13 @@ export class ImageGalleryPropertiesPanelComponent implements OnInit {
   protected onUploadError(error: string): void {
     console.error('Image upload error:', error);
     // Error is already displayed by ImageUploadComponent
+  }
+
+  /**
+   * Handle uploading state change from ImageUploadComponent
+   */
+  protected onUploadingChange(isUploading: boolean): void {
+    this.isUploading.set(isUploading);
   }
 
   /**

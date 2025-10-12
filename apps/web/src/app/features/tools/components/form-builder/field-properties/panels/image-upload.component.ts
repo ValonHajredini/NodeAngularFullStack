@@ -215,6 +215,7 @@ export class ImageUploadComponent {
 
   @Output() imageUploaded = new EventEmitter<string>();
   @Output() uploadErrorEvent = new EventEmitter<string>();
+  @Output() uploadingChange = new EventEmitter<boolean>();
 
   private readonly http = inject(HttpClient);
 
@@ -317,6 +318,7 @@ export class ImageUploadComponent {
   private uploadFile(file: File): void {
     this.uploadError.set(null);
     this.isUploading.set(true);
+    this.uploadingChange.emit(true);
 
     const formData = new FormData();
     formData.append('image', file);
@@ -329,6 +331,7 @@ export class ImageUploadComponent {
       .subscribe({
         next: (response) => {
           this.isUploading.set(false);
+          this.uploadingChange.emit(false);
 
           const uploadedImageUrl = response?.data?.imageUrl ?? response?.imageUrl ?? null;
 
@@ -345,6 +348,7 @@ export class ImageUploadComponent {
         },
         error: (err) => {
           this.isUploading.set(false);
+          this.uploadingChange.emit(false);
           console.error('Image upload failed:', err);
           const errorMessage = err.error?.message || 'Image upload failed. Please try again.';
           this.uploadError.set(errorMessage);
