@@ -6,37 +6,63 @@ import {
   ViewChild,
   ElementRef,
   ChangeDetectionStrategy,
+  signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { QuillModule } from 'ngx-quill';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
 /**
  * Inline text block content editor component.
- * Allows users to click and edit text block content directly using a textarea.
+ * Allows users to click and edit text block content directly using a rich text editor.
  */
 @Component({
   selector: 'app-inline-text-block-editor',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, QuillModule],
   template: `
     <div
       class="inline-text-block-editor"
-      [class.editing]="isEditing"
+      [class.editing]="isEditing()"
       [style.text-align]="alignment"
       (click)="enterEditMode()"
     >
-      @if (isEditing) {
-        <textarea
-          #contentTextarea
-          [(ngModel)]="editedContent"
-          (blur)="saveContent()"
-          (keydown.escape)="cancelEdit(); $event.preventDefault()"
+      @if (isEditing()) {
+        <div
+          class="inline-editor-wrapper"
           (click)="$event.stopPropagation()"
-          class="inline-text-block-textarea"
-          rows="5"
-          [attr.aria-label]="'Edit text block content'"
-        ></textarea>
+          (mousedown)="preventDrag($event)"
+          (dragstart)="preventDrag($event)"
+          draggable="false"
+        >
+          <quill-editor
+            [(ngModel)]="editedContent"
+            [modules]="quillModules"
+            [styles]="quillStyles"
+            (click)="$event.stopPropagation()"
+            (mousedown)="preventDrag($event)"
+            (dragstart)="preventDrag($event)"
+            placeholder="Write your text here..."
+          ></quill-editor>
+          <div class="editor-actions flex gap-2 mt-2">
+            <button
+              type="button"
+              class="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+              (click)="saveContent(); $event.stopPropagation()"
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              class="px-3 py-1 text-sm bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+              (click)="cancelEdit(); $event.stopPropagation()"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       } @else {
         <div
           class="text-block-display border rounded p-3"
@@ -46,23 +72,17 @@ import { FormsModule } from '@angular/forms';
           [class.p-3]="padding === 'medium'"
           [class.p-6]="padding === 'large'"
         >
-          <div class="text-sm text-gray-700 whitespace-pre-wrap">{{ displayContent }}</div>
-          @if (isTruncated) {
-            <p class="text-xs text-gray-500 mt-2 mb-0 flex items-center gap-1">
-              <i class="pi pi-pencil"></i>
-              <span>Click to edit...</span>
-            </p>
-          } @else {
-            <div
-              class="edit-hint opacity-0 text-xs text-gray-500 mt-2 mb-0 flex items-center gap-1"
-            >
-              <i class="pi pi-pencil"></i>
-              <span>Click to edit</span>
-            </div>
-          }
+          <div
+            class="text-sm text-gray-700 prose prose-sm max-w-none"
+            [innerHTML]="sanitizedContent"
+          ></div>
+          <div class="edit-hint opacity-0 text-xs text-gray-500 mt-2 mb-0 flex items-center gap-1">
+            <i class="pi pi-pencil"></i>
+            <span>Click to edit</span>
+          </div>
         </div>
       }
-      @if (showError) {
+      @if (showError()) {
         <small class="p-error block mt-1">Content cannot be empty</small>
       }
     </div>
@@ -76,28 +96,35 @@ import { FormsModule } from '@angular/forms';
       }
 
       .inline-text-block-editor.editing {
+        cursor: default;
+      }
+
+      .inline-editor-wrapper {
+        border: 2px solid #3b82f6;
+        border-radius: 0.375rem;
+        background: white;
+        padding: 0;
+        user-select: text;
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
         cursor: text;
       }
 
-      .inline-text-block-textarea {
-        border: 2px solid #3b82f6;
-        outline: none;
-        padding: 0.75rem;
-        border-radius: 0.375rem;
-        width: 100%;
-        font-size: 0.875rem;
-        line-height: 1.5;
-        resize: vertical;
-        min-height: 100px;
-        max-height: 400px;
-        background: white;
-        font-family: inherit;
+      .inline-editor-wrapper * {
+        user-select: text;
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
       }
 
       .text-block-display {
         position: relative;
         min-height: 60px;
         transition: all 0.2s;
+        overflow: hidden;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
       }
 
       .text-block-display:hover {
@@ -112,6 +139,27 @@ import { FormsModule } from '@angular/forms';
       .edit-hint {
         transition: opacity 0.2s;
       }
+
+      .editor-actions {
+        padding: 0.5rem;
+        border-top: 1px solid #e5e7eb;
+      }
+
+      .text-block-display .prose {
+        overflow-wrap: break-word;
+        word-break: break-word;
+      }
+
+      .text-block-display .prose * {
+        max-width: 100%;
+      }
+
+      .text-block-display .prose p,
+      .text-block-display .prose li,
+      .text-block-display .prose div {
+        overflow-wrap: break-word;
+        word-break: break-word;
+      }
     `,
   ],
 })
@@ -122,52 +170,52 @@ export class InlineTextBlockEditorComponent {
   @Input() backgroundColor?: string;
   @Input() padding: 'none' | 'small' | 'medium' | 'large' = 'medium';
   @Output() contentChanged = new EventEmitter<string>();
-  @ViewChild('contentTextarea') contentTextarea?: ElementRef<HTMLTextAreaElement>;
 
-  isEditing = false;
-  editedContent = '';
-  originalContent = '';
-  showError = false;
-  private readonly maxPreviewLength = 150;
+  protected readonly isEditing = signal(false);
+  protected readonly showError = signal(false);
+  protected editedContent = '';
+  private originalContent = '';
 
-  /**
-   * Get display content (truncated if too long)
-   */
-  get displayContent(): string {
-    if (this.content.length <= this.maxPreviewLength) {
-      return this.content;
-    }
-    return this.content.substring(0, this.maxPreviewLength);
-  }
+  constructor(private sanitizer: DomSanitizer) {}
 
   /**
-   * Check if content is truncated
+   * Quill editor configuration with formatting toolbar
    */
-  get isTruncated(): boolean {
-    return this.content.length > this.maxPreviewLength;
+  protected readonly quillModules = {
+    toolbar: [
+      [{ size: ['small', false, 'large', 'huge'] }], // Font Size
+      ['bold', 'italic', 'underline', 'strike'], // Bold, Italic, Underline, Strikethrough
+      ['link'], // Link
+      [{ list: 'ordered' }, { list: 'bullet' }], // Ordered List, Bullet List
+    ],
+  };
+
+  /**
+   * Quill editor styles for inline editing
+   */
+  protected readonly quillStyles = {
+    minHeight: '150px',
+    maxHeight: '300px',
+    overflowY: 'auto',
+  };
+
+  /**
+   * Get sanitized HTML content for display
+   */
+  get sanitizedContent(): SafeHtml {
+    return this.sanitizer.sanitize(1, this.content) || '';
   }
 
   /**
    * Enters edit mode for the text block content.
-   * Stores the original content and focuses the textarea.
+   * Stores the original content.
    */
   enterEditMode(): void {
-    if (this.isEditing) return;
-    this.isEditing = true;
+    if (this.isEditing()) return;
+    this.isEditing.set(true);
     this.editedContent = this.content;
     this.originalContent = this.content;
-    this.showError = false;
-    // Focus textarea after view update and adjust height
-    setTimeout(() => {
-      if (this.contentTextarea) {
-        const textarea = this.contentTextarea.nativeElement;
-        textarea.focus();
-        textarea.select();
-        // Auto-adjust height based on content
-        textarea.style.height = 'auto';
-        textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, 100), 400)}px`;
-      }
-    }, 0);
+    this.showError.set(false);
   }
 
   /**
@@ -175,17 +223,22 @@ export class InlineTextBlockEditorComponent {
    * Validates that the content is not empty before emitting the change.
    */
   saveContent(): void {
-    if (!this.editedContent.trim()) {
+    // Remove HTML tags to check if there's actual content
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = this.editedContent;
+    const textContent = tempDiv.textContent || tempDiv.innerText || '';
+
+    if (!textContent.trim()) {
       // Validation: content cannot be empty
-      this.showError = true;
+      this.showError.set(true);
       return;
     }
 
-    this.showError = false;
+    this.showError.set(false);
     if (this.editedContent !== this.originalContent) {
       this.contentChanged.emit(this.editedContent);
     }
-    this.isEditing = false;
+    this.isEditing.set(false);
   }
 
   /**
@@ -193,7 +246,15 @@ export class InlineTextBlockEditorComponent {
    */
   cancelEdit(): void {
     this.editedContent = this.originalContent;
-    this.isEditing = false;
-    this.showError = false;
+    this.isEditing.set(false);
+    this.showError.set(false);
+  }
+
+  /**
+   * Prevents drag events from interfering with text selection in the editor.
+   * Stops propagation of mousedown and dragstart events.
+   */
+  preventDrag(event: Event): void {
+    event.stopPropagation();
   }
 }

@@ -1,19 +1,11 @@
-import {
-  Component,
-  Input,
-  Output,
-  EventEmitter,
-  ChangeDetectionStrategy,
-  inject,
-} from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormField, TextBlockMetadata } from '@nodeangularfullstack/shared';
-import { HtmlSanitizerService } from '../../../../../../shared/services/html-sanitizer.service';
 import { InlineTextBlockEditorComponent } from './inline-text-block-editor.component';
 
 /**
  * Text block preview component for form builder canvas.
- * Renders plain text content with inline editing support.
+ * Renders HTML content with inline rich text editing support.
  */
 @Component({
   selector: 'app-text-block-preview',
@@ -21,24 +13,27 @@ import { InlineTextBlockEditorComponent } from './inline-text-block-editor.compo
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, InlineTextBlockEditorComponent],
   template: `
-    <app-inline-text-block-editor
-      [content]="plainTextContent"
-      [fieldId]="field.id"
-      [alignment]="metadata.alignment || 'left'"
-      [backgroundColor]="metadata.backgroundColor"
-      [padding]="metadata.padding || 'medium'"
-      (contentChanged)="onContentChanged($event)"
-      (click)="$event.stopPropagation()"
+    <div
+      (mousedown)="$event.stopPropagation()"
+      (dragstart)="$event.stopPropagation()"
       style="pointer-events: auto;"
-    />
+    >
+      <app-inline-text-block-editor
+        [content]="htmlContent"
+        [fieldId]="field.id"
+        [alignment]="metadata.alignment || 'left'"
+        [backgroundColor]="metadata.backgroundColor"
+        [padding]="metadata.padding || 'medium'"
+        (contentChanged)="onContentChanged($event)"
+        (click)="$event.stopPropagation()"
+      />
+    </div>
   `,
   styles: [],
 })
 export class TextBlockPreviewComponent {
   @Input({ required: true }) field!: FormField;
   @Output() contentChanged = new EventEmitter<string>();
-
-  private readonly htmlSanitizer = inject(HtmlSanitizerService);
 
   /**
    * Get text block metadata with type safety
@@ -56,10 +51,10 @@ export class TextBlockPreviewComponent {
   }
 
   /**
-   * Get plain text content (stripped of HTML tags)
+   * Get HTML content for rendering
    */
-  get plainTextContent(): string {
-    return this.htmlSanitizer.stripHtml(this.metadata.content || '');
+  get htmlContent(): string {
+    return this.metadata.content || '<p>Add your instructions here...</p>';
   }
 
   /**

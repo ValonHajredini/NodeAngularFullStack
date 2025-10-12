@@ -89,6 +89,22 @@
             }
           </div>
         </p-card>
+
+        <!-- Promotional Footer -->
+        <div class="form-footer text-center mt-8 mb-4">
+          <p class="text-xs text-gray-400">
+            This form was created with
+            <a
+              href="/"
+              class="text-gray-500 hover:text-gray-600 underline"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Form Builder
+            </a>
+            — Build your own custom forms in minutes
+          </p>
+        </div>
       </div>
     }
 
@@ -135,6 +151,8 @@
                                     @if (
                                       field.type !== fieldTypes.DIVIDER &&
                                       field.type !== fieldTypes.HEADING &&
+                                      field.type !== fieldTypes.TEXT_BLOCK &&
+                                      field.type !== fieldTypes.IMAGE &&
                                       field.type !== fieldTypes.CHECKBOX &&
                                       field.type !== fieldTypes.TOGGLE &&
                                       field.type !== fieldTypes.IMAGE_GALLERY
@@ -593,6 +611,8 @@
                           @if (
                             field.type !== fieldTypes.DIVIDER &&
                             field.type !== fieldTypes.HEADING &&
+                            field.type !== fieldTypes.TEXT_BLOCK &&
+                            field.type !== fieldTypes.IMAGE &&
                             field.type !== fieldTypes.CHECKBOX &&
                             field.type !== fieldTypes.TOGGLE &&
                             field.type !== fieldTypes.IMAGE_GALLERY
@@ -982,6 +1002,24 @@
             </form>
           </div>
         </p-card>
+
+        <!-- Promotional Footer -->
+        @if (!isPreview) {
+          <div class="form-footer text-center mt-8 mb-4">
+            <p class="text-xs text-gray-400">
+              This form was created with
+              <a
+                href="/"
+                class="text-gray-500 hover:text-gray-600 underline"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Form Builder
+              </a>
+              — Build your own custom forms in minutes
+            </p>
+          </div>
+        }
       </div>
     }
   </div>

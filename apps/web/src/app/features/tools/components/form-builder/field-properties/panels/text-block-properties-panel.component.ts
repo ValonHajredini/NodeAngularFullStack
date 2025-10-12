@@ -19,12 +19,12 @@ import { Select } from 'primeng/select';
 import { ColorPicker } from 'primeng/colorpicker';
 import { SelectButton } from 'primeng/selectbutton';
 import { Checkbox } from 'primeng/checkbox';
-import { MonacoEditorModule } from 'ngx-monaco-editor-v2';
+import { QuillModule } from 'ngx-quill';
 
 /**
  * Properties panel for TEXT_BLOCK field type.
  * Allows configuration of HTML content, alignment, styling, and collapsible behavior.
- * Single editor with natural line breaks for paragraphs.
+ * Rich text editor with formatting toolbar for intuitive content creation.
  */
 @Component({
   selector: 'app-text-block-properties-panel',
@@ -37,7 +37,7 @@ import { MonacoEditorModule } from 'ngx-monaco-editor-v2';
     ColorPicker,
     SelectButton,
     Checkbox,
-    MonacoEditorModule,
+    QuillModule,
   ],
   template: `
     <div [formGroup]="form" class="space-y-4">
@@ -47,15 +47,16 @@ import { MonacoEditorModule } from 'ngx-monaco-editor-v2';
           Content <span class="text-red-500">*</span>
         </label>
         <small class="text-gray-500 text-xs block mb-3">
-          Write HTML content. Press Enter for new lines/paragraphs. Allowed tags: p, h3-h6, strong,
-          em, u, s, ul, ol, li, a, blockquote, br
+          Use the formatting toolbar to style your text. Supports font size, bold, italic,
+          underline, strikethrough, links, and lists.
         </small>
-        <div class="border border-gray-300 rounded">
-          <ngx-monaco-editor
+        <div class="border border-gray-300 rounded quill-editor-wrapper">
+          <quill-editor
             formControlName="content"
-            [options]="htmlEditorOptions"
-            style="height: 200px"
-          ></ngx-monaco-editor>
+            [modules]="quillModules"
+            [styles]="quillStyles"
+            placeholder="Write your text here..."
+          ></quill-editor>
         </div>
         @if (form.get('content')?.invalid && form.get('content')?.touched) {
           <small class="text-red-500 text-xs block mt-1">Content is required</small>
@@ -136,16 +137,26 @@ export class TextBlockPropertiesPanelComponent implements OnInit {
     { label: 'Large', value: 'large' },
   ];
 
-  protected readonly htmlEditorOptions = {
-    language: 'html',
-    minimap: { enabled: false },
-    lineNumbers: 'on',
-    scrollBeyondLastLine: false,
-    theme: 'vs-light',
-    automaticLayout: true,
-    wordWrap: 'on',
-    readOnly: false,
-    domReadOnly: false,
+  /**
+   * Quill editor configuration with toolbar buttons:
+   * Bold, Italic, Underline, Strikethrough, Link, Bullet List, Ordered List, Font Size
+   */
+  protected readonly quillModules = {
+    toolbar: [
+      [{ size: ['small', false, 'large', 'huge'] }], // Font Size
+      ['bold', 'italic', 'underline', 'strike'], // Bold, Italic, Underline, Strikethrough
+      ['link'], // Link
+      [{ list: 'ordered' }, { list: 'bullet' }], // Ordered List, Bullet List
+    ],
+  };
+
+  /**
+   * Quill editor styles to make it look like a large textarea
+   */
+  protected readonly quillStyles = {
+    minHeight: '200px',
+    maxHeight: '400px',
+    overflowY: 'auto',
   };
 
   ngOnInit(): void {
