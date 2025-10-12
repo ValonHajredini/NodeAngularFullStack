@@ -11,9 +11,8 @@ import {
   FormBuilder,
   FormGroup,
   ReactiveFormsModule,
+  FormsModule,
   Validators,
-  AbstractControl,
-  ValidationErrors,
 } from '@angular/forms';
 import { FormField, TextBlockMetadata } from '@nodeangularfullstack/shared';
 import { Select } from 'primeng/select';
@@ -25,32 +24,41 @@ import { MonacoEditorModule } from 'ngx-monaco-editor-v2';
 /**
  * Properties panel for TEXT_BLOCK field type.
  * Allows configuration of HTML content, alignment, styling, and collapsible behavior.
+ * Single editor with natural line breaks for paragraphs.
  */
 @Component({
   selector: 'app-text-block-properties-panel',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, Select, ColorPicker, SelectButton, Checkbox, MonacoEditorModule],
+  imports: [
+    ReactiveFormsModule,
+    FormsModule,
+    Select,
+    ColorPicker,
+    SelectButton,
+    Checkbox,
+    MonacoEditorModule,
+  ],
   template: `
     <div [formGroup]="form" class="space-y-4">
-      <!-- HTML Content Editor -->
+      <!-- Content Editor -->
       <div class="field">
-        <label for="content" class="block text-sm font-medium text-gray-700 mb-1">
+        <label class="block text-sm font-medium text-gray-700 mb-2">
           Content <span class="text-red-500">*</span>
         </label>
+        <small class="text-gray-500 text-xs block mb-3">
+          Write HTML content. Press Enter for new lines/paragraphs. Allowed tags: p, h3-h6, strong,
+          em, u, s, ul, ol, li, a, blockquote, br
+        </small>
         <div class="border border-gray-300 rounded">
           <ngx-monaco-editor
             formControlName="content"
             [options]="htmlEditorOptions"
-            style="height: 300px"
+            style="height: 200px"
           ></ngx-monaco-editor>
         </div>
-        <small class="text-gray-500 text-xs">
-          Write HTML content. Allowed tags: p, h3-h6, strong, em, u, s, ul, ol, li, a, blockquote,
-          br
-        </small>
         @if (form.get('content')?.invalid && form.get('content')?.touched) {
-          <small class="text-red-500 text-xs">Content is required</small>
+          <small class="text-red-500 text-xs block mt-1">Content is required</small>
         }
       </div>
 
@@ -136,15 +144,18 @@ export class TextBlockPropertiesPanelComponent implements OnInit {
     theme: 'vs-light',
     automaticLayout: true,
     wordWrap: 'on',
+    readOnly: false,
+    domReadOnly: false,
   };
 
   ngOnInit(): void {
     const metadata = this.field.metadata as TextBlockMetadata;
 
+    // Initialize form with single content field
     this.form = this.fb.group({
       content: [
-        metadata?.content || '<p>Add your instructions here...</p>',
-        [Validators.required, Validators.maxLength(5000)],
+        metadata?.content || '<p>Write your text here...</p>',
+        [Validators.required, Validators.maxLength(10000)],
       ],
       alignment: [metadata?.alignment || 'left'],
       backgroundColor: [metadata?.backgroundColor || ''],

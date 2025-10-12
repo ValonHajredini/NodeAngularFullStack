@@ -450,29 +450,47 @@
                                         [class.p-4]="$any(field.metadata)?.padding === 'medium'"
                                         [class.p-6]="$any(field.metadata)?.padding === 'large'"
                                       >
-                                        <div
-                                          class="text-block-content prose prose-sm max-w-none"
-                                          [class.line-clamp-6]="
-                                            isTextBlockCollapsed(field.id) &&
-                                            $any(field.metadata)?.collapsible
-                                          "
-                                          [innerHTML]="getSanitizedContent(field)"
-                                        ></div>
-                                        @if (
-                                          $any(field.metadata)?.collapsible &&
-                                          isTextBlockLong(field)
-                                        ) {
-                                          <button
-                                            type="button"
-                                            class="read-more-btn text-blue-600 hover:text-blue-700 mt-2 text-sm font-medium"
-                                            (click)="toggleTextBlockCollapse(field.id)"
-                                          >
-                                            {{
-                                              isTextBlockCollapsed(field.id)
-                                                ? 'Read more ▼'
-                                                : 'Read less ▲'
-                                            }}
-                                          </button>
+                                        <!-- Multi-Paragraph Mode -->
+                                        @if (hasMultipleParagraphs(field)) {
+                                          <div class="space-y-4">
+                                            @for (
+                                              paragraph of getTextBlockParagraphs(field);
+                                              track paragraph.id
+                                            ) {
+                                              <div
+                                                class="text-block-content prose prose-sm max-w-none"
+                                                [innerHTML]="
+                                                  getSanitizedParagraphContent(paragraph.content)
+                                                "
+                                              ></div>
+                                            }
+                                          </div>
+                                        } @else {
+                                          <!-- Legacy Single Content Mode -->
+                                          <div
+                                            class="text-block-content prose prose-sm max-w-none"
+                                            [class.line-clamp-6]="
+                                              isTextBlockCollapsed(field.id) &&
+                                              $any(field.metadata)?.collapsible
+                                            "
+                                            [innerHTML]="getSanitizedContent(field)"
+                                          ></div>
+                                          @if (
+                                            $any(field.metadata)?.collapsible &&
+                                            isTextBlockLong(field)
+                                          ) {
+                                            <button
+                                              type="button"
+                                              class="read-more-btn text-blue-600 hover:text-blue-700 mt-2 text-sm font-medium"
+                                              (click)="toggleTextBlockCollapse(field.id)"
+                                            >
+                                              {{
+                                                isTextBlockCollapsed(field.id)
+                                                  ? 'Read more ▼'
+                                                  : 'Read less ▲'
+                                              }}
+                                            </button>
+                                          }
                                         }
                                       </div>
                                     }
@@ -837,24 +855,40 @@
                               [class.p-4]="$any(field.metadata)?.padding === 'medium'"
                               [class.p-6]="$any(field.metadata)?.padding === 'large'"
                             >
-                              <div
-                                class="text-block-content prose prose-sm max-w-none"
-                                [class.line-clamp-6]="
-                                  isTextBlockCollapsed(field.id) &&
-                                  $any(field.metadata)?.collapsible
-                                "
-                                [innerHTML]="getSanitizedContent(field)"
-                              ></div>
-                              @if ($any(field.metadata)?.collapsible && isTextBlockLong(field)) {
-                                <button
-                                  type="button"
-                                  class="read-more-btn text-blue-600 hover:text-blue-700 mt-2 text-sm font-medium"
-                                  (click)="toggleTextBlockCollapse(field.id)"
-                                >
-                                  {{
-                                    isTextBlockCollapsed(field.id) ? 'Read more ▼' : 'Read less ▲'
-                                  }}
-                                </button>
+                              <!-- Multi-Paragraph Mode -->
+                              @if (hasMultipleParagraphs(field)) {
+                                <div class="space-y-4">
+                                  @for (
+                                    paragraph of getTextBlockParagraphs(field);
+                                    track paragraph.id
+                                  ) {
+                                    <div
+                                      class="text-block-content prose prose-sm max-w-none"
+                                      [innerHTML]="getSanitizedParagraphContent(paragraph.content)"
+                                    ></div>
+                                  }
+                                </div>
+                              } @else {
+                                <!-- Legacy Single Content Mode -->
+                                <div
+                                  class="text-block-content prose prose-sm max-w-none"
+                                  [class.line-clamp-6]="
+                                    isTextBlockCollapsed(field.id) &&
+                                    $any(field.metadata)?.collapsible
+                                  "
+                                  [innerHTML]="getSanitizedContent(field)"
+                                ></div>
+                                @if ($any(field.metadata)?.collapsible && isTextBlockLong(field)) {
+                                  <button
+                                    type="button"
+                                    class="read-more-btn text-blue-600 hover:text-blue-700 mt-2 text-sm font-medium"
+                                    (click)="toggleTextBlockCollapse(field.id)"
+                                  >
+                                    {{
+                                      isTextBlockCollapsed(field.id) ? 'Read more ▼' : 'Read less ▲'
+                                    }}
+                                  </button>
+                                }
                               }
                             </div>
                           }

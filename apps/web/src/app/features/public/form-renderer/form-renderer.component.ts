@@ -788,11 +788,81 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Get sanitized HTML content for TEXT_BLOCK field
+   * Check if TEXT_BLOCK uses multi-paragraph mode
+   */
+  hasMultipleParagraphs(field: FormField): boolean {
+    const metadata = field.metadata as TextBlockMetadata;
+    return !!(metadata?.paragraphs && metadata.paragraphs.length > 0);
+  }
+
+  /**
+   * Get sorted paragraphs for TEXT_BLOCK field
+   */
+  getTextBlockParagraphs(field: FormField) {
+    const metadata = field.metadata as TextBlockMetadata;
+    if (!metadata?.paragraphs) return [];
+    return [...metadata.paragraphs].sort((a, b) => a.order - b.order);
+  }
+
+  /**
+   * Get sanitized HTML content for a single paragraph
+   * Preserves line breaks within the paragraph content
+   */
+  getSanitizedParagraphContent(paragraphContent: string): SafeHtml {
+    // Convert newlines to HTML breaks/paragraphs before sanitizing
+    const htmlContent = this.convertNewlinesToHtml(paragraphContent || '');
+
+    // Sanitize the HTML content
+    const sanitized = this.htmlSanitizer.sanitize(htmlContent);
+
+    return this.domSanitizer.bypassSecurityTrustHtml(sanitized);
+  }
+
+  /**
+   * Convert plain text newlines to HTML paragraph/break tags
+   * Double newlines (\n\n) become paragraph breaks, single newlines (\n) become <br> tags
+   */
+  private convertNewlinesToHtml(content: string): string {
+    if (!content) return '';
+
+    // Split by double newlines to identify paragraphs
+    const paragraphs = content.split(/\n\n+/);
+
+    // Process each paragraph: trim whitespace and convert single newlines to <br>
+    const processedParagraphs = paragraphs
+      .map((para) => {
+        const trimmed = para.trim();
+        if (!trimmed) return '';
+
+        // Convert single newlines to <br> tags within paragraphs
+        const withBreaks = trimmed.replace(/\n/g, '<br>');
+
+        // Wrap in <p> tag if not already wrapped in HTML tags
+        if (!withBreaks.startsWith('<')) {
+          return `<p>${withBreaks}</p>`;
+        }
+
+        return withBreaks;
+      })
+      .filter(Boolean); // Remove empty paragraphs
+
+    return processedParagraphs.join('\n');
+  }
+
+  /**
+   * Get sanitized HTML content for TEXT_BLOCK field (legacy single content)
+   * Preserves line breaks by converting newlines to HTML before sanitizing
    */
   getSanitizedContent(field: FormField): SafeHtml {
     const metadata = field.metadata as TextBlockMetadata;
-    const sanitized = this.htmlSanitizer.sanitize(metadata?.content || '');
+    const rawContent = metadata?.content || '';
+
+    // Convert newlines to HTML breaks/paragraphs before sanitizing
+    const htmlContent = this.convertNewlinesToHtml(rawContent);
+
+    // Sanitize the HTML content
+    const sanitized = this.htmlSanitizer.sanitize(htmlContent);
+
     return this.domSanitizer.bypassSecurityTrustHtml(sanitized);
   }
 

@@ -44,6 +44,8 @@ import {
 import { FormBuilderService } from '../form-builder.service';
 import { ImagePropertiesPanelComponent } from '../field-properties/panels/image-properties-panel.component';
 import { ImageUploadComponent } from '../field-properties/panels/image-upload.component';
+import { HeadingPropertiesPanelComponent } from '../field-properties/panels/heading-properties-panel.component';
+import { TextBlockPropertiesPanelComponent } from '../field-properties/panels/text-block-properties-panel.component';
 import { Subject, takeUntil } from 'rxjs';
 
 /**
@@ -76,6 +78,8 @@ import { Subject, takeUntil } from 'rxjs';
     CdkDropList,
     ImagePropertiesPanelComponent,
     ImageUploadComponent,
+    HeadingPropertiesPanelComponent,
+    TextBlockPropertiesPanelComponent,
   ],
   providers: [MessageService, ConfirmationService],
   template: `
@@ -265,6 +269,30 @@ import { Subject, takeUntil } from 'rxjs';
                         rows="3"
                         placeholder="Enter help text"
                       ></textarea>
+                    </div>
+                  }
+
+                  <!-- Heading Properties (for HEADING field type only) -->
+                  @if (field.type === FormFieldType.HEADING) {
+                    <div class="border-t border-gray-200 pt-4 mt-4">
+                      <h4 class="text-sm font-semibold text-gray-700 mb-3">Heading Properties</h4>
+                      <app-heading-properties-panel
+                        [field]="field"
+                        (fieldChange)="onHeadingFieldChange($event)"
+                      />
+                    </div>
+                  }
+
+                  <!-- Text Block Properties (for TEXT_BLOCK field type only) -->
+                  @if (field.type === FormFieldType.TEXT_BLOCK) {
+                    <div class="border-t border-gray-200 pt-4 mt-4">
+                      <h4 class="text-sm font-semibold text-gray-700 mb-3">
+                        Text Block Properties
+                      </h4>
+                      <app-text-block-properties-panel
+                        [field]="field"
+                        (fieldChange)="onTextBlockFieldChange($event)"
+                      />
                     </div>
                   }
                 </div>
@@ -867,7 +895,11 @@ export class UnifiedFieldEditorModalComponent implements OnInit, OnDestroy {
    */
   isDisplayField(): boolean {
     const fieldType = this.field?.type;
-    return fieldType === FormFieldType.HEADING || fieldType === FormFieldType.IMAGE;
+    return (
+      fieldType === FormFieldType.HEADING ||
+      fieldType === FormFieldType.IMAGE ||
+      fieldType === FormFieldType.TEXT_BLOCK
+    );
   }
 
   /**
@@ -1387,6 +1419,38 @@ export class UnifiedFieldEditorModalComponent implements OnInit, OnDestroy {
    */
   onImageFieldChange(updatedField: FormField): void {
     // Update the field with new metadata from image panel
+    this.field = updatedField;
+    this.isDirty.set(true);
+
+    // Immediately update the field in the service so the canvas preview updates
+    this.formBuilderService.updateFieldProperties(this.field.id, {
+      metadata: updatedField.metadata,
+    });
+  }
+
+  /**
+   * Handle heading field change from heading properties panel.
+   * Updates the field with new metadata from the heading panel.
+   * Immediately saves metadata changes to FormBuilderService so canvas preview updates in real-time.
+   */
+  onHeadingFieldChange(updatedField: FormField): void {
+    // Update the field with new metadata from heading panel
+    this.field = updatedField;
+    this.isDirty.set(true);
+
+    // Immediately update the field in the service so the canvas preview updates
+    this.formBuilderService.updateFieldProperties(this.field.id, {
+      metadata: updatedField.metadata,
+    });
+  }
+
+  /**
+   * Handle text block field change from text block properties panel.
+   * Updates the field with new metadata from the text block panel.
+   * Immediately saves metadata changes to FormBuilderService so canvas preview updates in real-time.
+   */
+  onTextBlockFieldChange(updatedField: FormField): void {
+    // Update the field with new metadata from text block panel
     this.field = updatedField;
     this.isDirty.set(true);
 

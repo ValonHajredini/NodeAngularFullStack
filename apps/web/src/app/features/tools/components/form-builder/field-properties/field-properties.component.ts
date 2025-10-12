@@ -316,6 +316,17 @@ import { ImageGalleryPropertiesPanelComponent } from './panels/image-gallery-pro
                       />
                     }
                   </div>
+
+                  <!-- Heading-Specific Properties (moved from Advanced panel for better visibility) -->
+                  @if (formBuilderService.selectedField()?.type === 'heading') {
+                    <div class="border-t border-gray-200 pt-4 mt-4">
+                      <h4 class="text-sm font-semibold text-gray-700 mb-3">Heading Properties</h4>
+                      <app-heading-properties-panel
+                        [field]="formBuilderService.selectedField()!"
+                        (fieldChange)="onPanelFieldChange($event)"
+                      />
+                    </div>
+                  }
                 </div>
               </p-accordionpanel>
 
@@ -686,10 +697,9 @@ import { ImageGalleryPropertiesPanelComponent } from './panels/image-gallery-pro
                     <div>
                       @switch (formBuilderService.selectedField()?.type) {
                         @case ('heading') {
-                          <app-heading-properties-panel
-                            [field]="formBuilderService.selectedField()!"
-                            (fieldChange)="onPanelFieldChange($event)"
-                          />
+                          <p class="text-sm text-gray-500 italic">
+                            Heading properties are available in the Basic Properties panel above.
+                          </p>
                         }
                         @case ('image') {
                           <app-image-properties-panel

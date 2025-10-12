@@ -200,11 +200,25 @@ export interface ImageMetadata extends BaseFieldMetadata {
 }
 
 /**
+ * Individual paragraph within a text block
+ */
+export interface TextBlockParagraph {
+  /** Unique paragraph identifier */
+  id: string;
+  /** Paragraph HTML content (sanitized) */
+  content: string;
+  /** Order index for rendering */
+  order: number;
+}
+
+/**
  * Text block metadata for TEXT_BLOCK field type
  */
 export interface TextBlockMetadata extends BaseFieldMetadata {
-  /** HTML content (sanitized) */
-  content: string;
+  /** HTML content (sanitized) - legacy single content field for backward compatibility */
+  content?: string;
+  /** Array of paragraphs for multi-paragraph support (new feature) */
+  paragraphs?: TextBlockParagraph[];
   /** Text alignment */
   alignment?: 'left' | 'center' | 'right' | 'justify';
   /** Optional background color (hex format) */
