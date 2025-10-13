@@ -76,7 +76,7 @@ import { trigger, state, style, transition, animate } from '@angular/animations'
         icon="pi pi-table"
         (click)="toggleCollapse()"
         class="floating-toggle-btn"
-        [attr.aria-label]="'Expand layout settings'"
+        [attr.aria-label]="'Expand layout Step Form'"
         severity="primary"
         [rounded]="true"
       ></button>
@@ -93,7 +93,7 @@ import { trigger, state, style, transition, animate } from '@angular/animations'
       >
         <!-- Close button header -->
         <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-          <span class="text-sm font-semibold text-gray-700">Layout Settings</span>
+          <span class="text-sm font-semibold text-gray-700">Layout Step Form</span>
           <button
             pButton
             icon="pi pi-times"
@@ -110,7 +110,7 @@ import { trigger, state, style, transition, animate } from '@angular/animations'
           <p-tabs value="0" styleClass="sidebar-tabs">
             <p-tablist>
               <p-tab value="0">Row Layout</p-tab>
-              <p-tab value="1">Settings</p-tab>
+              <p-tab value="1">Step Form</p-tab>
             </p-tablist>
             <p-tabpanels>
               <!-- Row Layout Tab Panel -->
@@ -210,11 +210,11 @@ import { trigger, state, style, transition, animate } from '@angular/animations'
                 </div>
               </p-tabpanel>
 
-              <!-- Settings Tab Panel -->
+              <!-- Step Form Tab Panel -->
               <p-tabpanel value="1">
                 <div class="py-4 px-4">
-                  <h3 class="text-base font-semibold mb-4">Form Settings</h3>
-                  <p class="text-sm text-gray-600">Form-level settings will be available here.</p>
+                  <h3 class="text-base font-semibold mb-4">Step Form</h3>
+                  <p class="text-sm text-gray-600">Step Form will be available here.</p>
                 </div>
               </p-tabpanel>
             </p-tabpanels>
@@ -256,9 +256,42 @@ import { trigger, state, style, transition, animate } from '@angular/animations'
 
       /* Tab styles */
       ::ng-deep .sidebar-tabs {
+        width: 100%;
+        display: block;
+
+        p-tabs {
+          width: 100%;
+          display: block;
+        }
+
+        .p-tabs {
+          width: 100%;
+          display: block;
+        }
+
         .p-tablist {
           background: #f9fafb;
           border-bottom: 1px solid #e5e7eb;
+          width: 100%;
+          display: flex !important;
+          flex-wrap: nowrap;
+        }
+
+        .p-tab {
+          flex: 1 1 50%;
+          min-width: 0;
+          max-width: 50%;
+          overflow: hidden;
+        }
+
+        .p-tab button {
+          width: 100%;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          justify-content: center;
+          display: flex;
+          align-items: center;
         }
 
         .p-tabpanels {

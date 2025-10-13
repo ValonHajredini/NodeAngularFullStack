@@ -202,12 +202,15 @@ export class FormBuilderService {
 
   /**
    * Resets the form state to default values.
+   * Also resets row layout state to default (disabled).
    */
   resetForm(): void {
     this._currentForm.set(null);
     this._formFields.set([]);
     this._selectedField.set(null);
     this._isDirty.set(false);
+    this._rowLayoutEnabled.set(false);
+    this._rowConfigs.set([]);
   }
 
   /**

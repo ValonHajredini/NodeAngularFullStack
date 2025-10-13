@@ -104,11 +104,17 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
         border-radius: 0.375rem;
         background: white;
         padding: 0;
+        width: 100%;
         user-select: text;
         -webkit-user-select: text;
         -moz-user-select: text;
         -ms-user-select: text;
         cursor: text;
+      }
+
+      .inline-editor-wrapper quill-editor {
+        display: block;
+        width: 100%;
       }
 
       .inline-editor-wrapper * {

@@ -54,3 +54,12 @@ validation, conditional logic, placeholder customization, and advanced input set
 **Epic 17: Dynamic Chart Type Selection for Analytics** Enable users to dynamically select and
 change chart types (bar, line, pie, polar, radar, area, doughnut) for each field in form analytics
 dashboard with persistent preferences.
+
+**Epic 18: Image Gallery Selector** Add IMAGE_GALLERY field type to form builder that allows form
+creators to upload multiple images and enables end-users to select one image from the gallery (radio
+button behavior), storing the selected image key with visual selection feedback.
+
+**Epic 19: Step Form (Multi-Step Wizard)** Add multi-step wizard functionality to the form builder,
+enabling users to create guided, sequential forms that display one step at a time with navigation
+controls, step progress indicators, and per-step validation for improved complex data collection
+workflows.

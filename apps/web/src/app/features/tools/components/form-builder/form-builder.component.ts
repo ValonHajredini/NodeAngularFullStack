@@ -448,9 +448,9 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
     if (formId) {
       this.loadExistingForm(formId);
     } else {
-      // New form: enable row layout with 1 column by default and add a text input field
+      // New form: reset state and enable row layout with 1 column by default (no fields)
+      this.formBuilderService.resetForm();
       this.formBuilderService.enableRowLayout(1);
-      this.addDefaultTextField();
     }
 
     // Setup auto-save interval (30 seconds)
