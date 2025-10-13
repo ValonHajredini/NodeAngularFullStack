@@ -1,0 +1,49 @@
+<p-dialog
+  [(visible)]="visible"
+  [modal]="true"
+  [closable]="true"
+  [dismissableMask]="true"
+  [closeOnEscape]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [blockScroll]="true"
+  [style]="{ width: '90vw', maxWidth: '1200px', height: '90vh' }"
+  header="Form Preview"
+  (onHide)="onClose.emit()"
+>
+  <div class="preview-dialog-content">
+    <!-- Preview mode indicator -->
+    <div class="preview-header">
+      <span class="preview-badge">
+        <i class="pi pi-eye"></i>
+        Preview Mode
+      </span>
+      <p class="preview-hint">
+        This is how your form will appear to visitors. Unsaved changes are included.
+      </p>
+    </div>
+
+    <!-- Embedded FormRendererComponent in preview mode -->
+    <div class="preview-content">
+      @if (formSchema) {
+        <app-form-renderer [formSchema]="formSchema" [previewMode]="true" />
+      } @else {
+        <div class="p-4 text-center text-gray-500 text-sm">
+          <i class="pi pi-inbox text-3xl mb-3 text-gray-300"></i>
+          <p>No form data available for preview</p>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Footer actions -->
+  <ng-template pTemplate="footer">
+    <button
+      pButton
+      label="Close Preview"
+      icon="pi pi-times"
+      (click)="onClose.emit()"
+      class="p-button-outlined"
+    ></button>
+  </ng-template>
+</p-dialog>

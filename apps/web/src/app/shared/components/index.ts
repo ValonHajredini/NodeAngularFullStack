@@ -44,6 +44,10 @@ export {
   type StatusFilterValue,
   type BulkAction,
 } from './search-filter/search-filter.component';
+export {
+  ImageGallerySelectorComponent,
+  type GalleryImage,
+} from './image-gallery-selector/image-gallery-selector.component';
 
 // Welcome Page Components
 export {

@@ -308,6 +308,43 @@ export class PublicFormsController {
             break;
 
           case FormFieldType.CHECKBOX:
+            // Checkbox with options: validate and store as comma-separated string
+            if (field.options && field.options.length > 0) {
+              if (typeof value === 'string' && value.trim() !== '') {
+                // Split comma-separated string and validate each option
+                const selectedValues = value.split(',').map((v) => v.trim());
+                const validValues = field.options.map((opt) =>
+                  String(opt.value)
+                );
+
+                for (const selectedValue of selectedValues) {
+                  if (!validValues.includes(selectedValue)) {
+                    validationErrors[field.fieldName] =
+                      `${field.label} contains invalid selection: ${selectedValue}`;
+                    break;
+                  }
+                }
+
+                if (!validationErrors[field.fieldName]) {
+                  sanitizedValues[field.fieldName] = value; // Store comma-separated string
+                }
+              } else if (
+                value === '' ||
+                value === undefined ||
+                value === null
+              ) {
+                // Empty selection for optional checkbox
+                sanitizedValues[field.fieldName] = '';
+              } else {
+                validationErrors[field.fieldName] =
+                  `${field.label} must be a comma-separated string`;
+              }
+            } else {
+              // Single checkbox (toggle-style): store as boolean
+              sanitizedValues[field.fieldName] = Boolean(value);
+            }
+            break;
+
           case FormFieldType.TOGGLE:
             sanitizedValues[field.fieldName] = Boolean(value);
             break;

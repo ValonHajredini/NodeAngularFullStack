@@ -319,9 +319,67 @@ export const slugToolGuard: CanActivateFn = (route: ActivatedRouteSnapshot, stat
   const toolsService = inject(ToolsService);
   const router = inject(Router);
 
-  const slug = route.paramMap.get('slug');
   const redirectRoute = '/app/dashboard';
   const showError = true;
+
+  // Check if route data specifies to skip slug check and use toolId instead
+  const checkToolBySlug = route.data['checkToolBySlug'] !== false; // Default to true if not specified
+  const toolId = route.data['toolId'] as string | undefined;
+
+  // If checkToolBySlug is false, use the toolId from route data directly
+  if (!checkToolBySlug && toolId) {
+    // Check tool by key/id instead of slug
+    const cachedEnabled = toolsService.isToolEnabled(toolId);
+    if (cachedEnabled && toolsService.hasFreshCache()) {
+      return true;
+    }
+
+    // Verify with API
+    return toolsService.getToolStatus(toolId).pipe(
+      timeout(5000),
+      map((tool) => {
+        if (!tool) {
+          console.warn(`ToolGuard: Tool '${toolId}' not found`);
+          return handleToolUnavailable(router, redirectRoute, toolId, showError, 'Tool not found');
+        }
+
+        if (!tool.active) {
+          console.info(`ToolGuard: Tool '${toolId}' is disabled`);
+          return handleToolUnavailable(
+            router,
+            redirectRoute,
+            toolId,
+            showError,
+            'Tool is currently disabled',
+          );
+        }
+
+        return true;
+      }),
+      catchError((error) => {
+        console.error(`ToolGuard: Failed to check tool '${toolId}':`, error);
+
+        // On API failure, use cached data as fallback
+        if (cachedEnabled) {
+          console.warn(`ToolGuard: Using cached data for tool '${toolId}' due to API failure`);
+          return of(true);
+        }
+
+        return of(
+          handleToolUnavailable(
+            router,
+            redirectRoute,
+            toolId,
+            showError,
+            'Unable to verify tool status',
+          ),
+        );
+      }),
+    );
+  }
+
+  // Original slug-based logic
+  const slug = route.paramMap.get('slug');
 
   if (!slug) {
     console.error('ToolGuard: No slug parameter found in route');

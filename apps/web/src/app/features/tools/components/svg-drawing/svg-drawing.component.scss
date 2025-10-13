@@ -39,21 +39,17 @@
 .canvas-area {
   flex: 1;
   position: relative;
-  overflow: auto;
+  overflow: hidden;
   background: #f3f4f6;
-  padding: 1rem;
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: stretch;
   min-height: 0;
 }
 
 .canvas-area > app-canvas-renderer {
   width: 100%;
-  max-width: 2100px;
-  max-height: 900px;
-  aspect-ratio: 16 / 9;
-  align-self: flex-start;
+  height: 100%;
 }
 
 .right-sidebar {

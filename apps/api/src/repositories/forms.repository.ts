@@ -299,15 +299,30 @@ export class FormsRepository extends BaseRepository<FormMetadata> {
     try {
       let query = `
         SELECT
-          id,
-          user_id as "userId",
-          tenant_id as "tenantId",
-          title,
-          description,
-          status,
-          created_at as "createdAt",
-          updated_at as "updatedAt"
-        FROM forms
+          f.id,
+          f.user_id as "userId",
+          f.tenant_id as "tenantId",
+          f.title,
+          f.description,
+          f.status,
+          f.created_at as "createdAt",
+          f.updated_at as "updatedAt",
+          fs.id as "schema.id",
+          fs.schema_version as "schema.version",
+          fs.schema_json as "schema.schemaJson",
+          fs.is_published as "schema.isPublished",
+          fs.render_token as "schema.renderToken",
+          fs.expires_at as "schema.expiresAt",
+          fs.created_at as "schema.createdAt",
+          fs.updated_at as "schema.updatedAt"
+        FROM forms f
+        LEFT JOIN LATERAL (
+          SELECT *
+          FROM form_schemas
+          WHERE form_id = f.id
+          ORDER BY schema_version DESC
+          LIMIT 1
+        ) fs ON true
         WHERE 1=1
       `;
       const params: any[] = [];
@@ -315,23 +330,55 @@ export class FormsRepository extends BaseRepository<FormMetadata> {
 
       // Filter by user if provided (for non-admin users)
       if (userId) {
-        query += ` AND user_id = $${paramIndex++}`;
+        query += ` AND f.user_id = $${paramIndex++}`;
         params.push(userId);
       }
 
       // Apply tenant filtering if provided
       if (tenantContext) {
-        query += ` AND tenant_id = $${paramIndex++}`;
+        query += ` AND f.tenant_id = $${paramIndex++}`;
         params.push(tenantContext.id);
       }
 
       // Add ordering and pagination
-      query += ' ORDER BY created_at DESC';
+      query += ' ORDER BY f.created_at DESC';
       query += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
       params.push(limit, (page - 1) * limit);
 
       const result = await client.query(query, params);
-      return result.rows as FormMetadata[];
+
+      // Transform the flat result into nested FormMetadata structure
+      return result.rows.map((row: any) => {
+        const form: FormMetadata = {
+          id: row.id,
+          userId: row.userId,
+          tenantId: row.tenantId,
+          title: row.title,
+          description: row.description,
+          status: row.status,
+          createdAt: row.createdAt,
+          updatedAt: row.updatedAt,
+        };
+
+        // Add schema if it exists
+        if (row['schema.id'] && row['schema.schemaJson']) {
+          const schemaJson = row['schema.schemaJson'];
+          form.schema = {
+            id: row['schema.id'],
+            formId: row.id,
+            version: row['schema.version'],
+            fields: schemaJson.fields || [],
+            settings: schemaJson.settings || {},
+            isPublished: row['schema.isPublished'],
+            renderToken: row['schema.renderToken'],
+            expiresAt: row['schema.expiresAt'],
+            createdAt: row['schema.createdAt'],
+            updatedAt: row['schema.updatedAt'],
+          };
+        }
+
+        return form;
+      });
     } catch (error: any) {
       throw new Error(`Failed to find forms: ${error.message}`);
     } finally {

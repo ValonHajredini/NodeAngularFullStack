@@ -144,6 +144,8 @@ export interface ShortLink {
   originalUrl: string;
   /** The complete short URL (computed from base domain + code) */
   shortUrl?: string;
+  /** Public URL of the QR code PNG image stored in DigitalOcean Spaces */
+  qrCodeUrl?: string | null;
   /** Optional expiration timestamp */
   expiresAt?: Date | null;
   /** User who created the short link (nullable) */
@@ -166,6 +168,8 @@ export interface CreateShortLinkRequest {
   originalUrl: string;
   /** Optional expiration date/time */
   expiresAt?: Date | null;
+  /** Optional custom name for the short link (3-30 chars, alphanumeric and hyphens only) */
+  customName?: string;
 }
 
 /**
@@ -194,6 +198,10 @@ export interface CreateShortLinkResponse {
     shortLink: ShortLink;
     /** Full shortened URL with domain */
     shortUrl: string;
+    /** QR code data URL (base64 PNG image) for backwards compatibility */
+    qrCodeDataUrl?: string;
+    /** Public URL of the QR code PNG image stored in DigitalOcean Spaces */
+    qrCodeUrl?: string;
   };
 }
 
@@ -867,6 +875,8 @@ export interface ExportOptions {
   optimizationLevel?: OptimizationLevel;
   /** Padding around shapes in pixels (not used for JSON format) */
   padding?: number;
+  /** Whether to include the background image when exporting visual formats */
+  includeBackground?: boolean;
 }
 
 /**
@@ -949,6 +959,8 @@ export interface BackgroundImageSettings {
   position: { x: number; y: number };
   /** Whether image is locked from manipulation */
   locked: boolean;
+  /** Intrinsic image size in pixels */
+  size?: { width: number; height: number } | null;
 }
 
 /**

@@ -91,10 +91,15 @@ class Server {
     // Body parsing and compression
     this.app.use(compression());
 
-    // Apply JSON parsing to all routes except avatar uploads
+    // Apply JSON parsing to all routes except file uploads
     this.app.use((req, res, next) => {
-      if (req.path === '/api/v1/users/avatar' && req.method === 'POST') {
-        // Skip JSON parsing for avatar uploads
+      // Skip JSON parsing for file upload routes
+      const skipJsonParsing =
+        (req.path === '/api/v1/users/avatar' && req.method === 'POST') ||
+        (req.path.includes('/upload-image') && req.method === 'POST') ||
+        (req.path.includes('/upload-background') && req.method === 'POST');
+
+      if (skipJsonParsing) {
         next();
       } else {
         express.json({ limit: '10mb' })(req, res, next);

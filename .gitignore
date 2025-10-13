@@ -144,3 +144,4 @@ public/uploads/
 # pnpm-lock.yaml
 playwright-report
 test-results
+reports/security

@@ -4,7 +4,12 @@ import { Parser } from 'json2csv';
 import { formsService, ApiError } from '../services/forms.service';
 import { formsRepository } from '../repositories/forms.repository';
 import { formSubmissionsRepository } from '../repositories/form-submissions.repository';
-import { FormStatus, FormSubmission } from '@nodeangularfullstack/shared';
+import { formSchemasRepository } from '../repositories/form-schemas.repository';
+import {
+  FormStatus,
+  FormSubmission,
+  SubmissionFilterOptions,
+} from '@nodeangularfullstack/shared';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { AsyncHandler } from '../utils/async-handler.utils';
 
@@ -52,6 +57,7 @@ export class FormsController {
         title: req.body.title,
         description: req.body.description,
         status: req.body.status || FormStatus.DRAFT,
+        schema: req.body.schema,
       };
 
       // Create form using service
@@ -92,8 +98,10 @@ export class FormsController {
       const page = parseInt(req.query.page as string) || 1;
       const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
 
-      // Admins can see all forms, users see only their own
-      const filterUserId = userRole === 'admin' ? undefined : userId;
+      // In non-tenant mode, users always see only their own forms
+      // In tenant mode, admins can see all forms within their tenant
+      const filterUserId =
+        tenantId && userRole === 'admin' ? undefined : userId;
 
       // Get forms from repository with tenant context
       const tenantContext = tenantId ? { id: tenantId, slug: '' } : undefined;
@@ -142,20 +150,26 @@ export class FormsController {
       const { id } = req.params;
       const userId = req.user?.id;
       const userRole = req.user?.role;
+      const tenantId = req.user?.tenantId;
 
       if (!userId) {
         throw new ApiError('Authentication required', 401, 'UNAUTHORIZED');
       }
 
       // Get form from repository
-      const form = await formsRepository.findFormById(id);
+      const form = await formsService.getFormWithSchema(id);
 
       if (!form) {
         throw new ApiError('Form not found', 404, 'NOT_FOUND');
       }
 
-      // Check ownership (users can only access their own forms, admins can access all)
-      if (form.userId !== userId && userRole !== 'admin') {
+      // In non-tenant mode, users can only access their own forms
+      // In tenant mode, admins can access all forms within their tenant
+      const canAccess =
+        form.userId === userId ||
+        (tenantId && userRole === 'admin' && form.tenantId === tenantId);
+
+      if (!canAccess) {
         throw new ApiError(
           'Insufficient permissions to access this form',
           403,
@@ -214,8 +228,16 @@ export class FormsController {
         throw new ApiError('Form not found', 404, 'NOT_FOUND');
       }
 
-      // Check ownership (users can only update their own forms, admins can update all)
-      if (existingForm.userId !== userId && userRole !== 'admin') {
+      // In non-tenant mode, users can only update their own forms
+      // In tenant mode, admins can update all forms within their tenant
+      const tenantId = req.user?.tenantId;
+      const canUpdate =
+        existingForm.userId === userId ||
+        (tenantId &&
+          userRole === 'admin' &&
+          existingForm.tenantId === tenantId);
+
+      if (!canUpdate) {
         throw new ApiError(
           'Insufficient permissions to update this form',
           403,
@@ -234,8 +256,12 @@ export class FormsController {
         updateData.description = req.body.description;
       if (req.body.status !== undefined) updateData.status = req.body.status;
 
-      // Update form using repository
-      const updatedForm = await formsRepository.update(id, updateData);
+      // Update form using service
+      const updatedForm = await formsService.updateForm(
+        id,
+        updateData,
+        req.body.schema
+      );
 
       res.status(200).json({
         success: true,
@@ -277,8 +303,16 @@ export class FormsController {
         throw new ApiError('Form not found', 404, 'NOT_FOUND');
       }
 
-      // Check ownership (users can only delete their own forms, admins can delete all)
-      if (existingForm.userId !== userId && userRole !== 'admin') {
+      // In non-tenant mode, users can only delete their own forms
+      // In tenant mode, admins can delete all forms within their tenant
+      const tenantId = req.user?.tenantId;
+      const canDelete =
+        existingForm.userId === userId ||
+        (tenantId &&
+          userRole === 'admin' &&
+          existingForm.tenantId === tenantId);
+
+      if (!canDelete) {
         throw new ApiError(
           'Insufficient permissions to delete this form',
           403,
@@ -408,7 +442,14 @@ export class FormsController {
         throw new ApiError('Form not found', 404, 'FORM_NOT_FOUND');
       }
 
-      if (form.userId !== userId && req.user?.role !== 'admin') {
+      // In non-tenant mode, users can only view their own form submissions
+      // In tenant mode, admins can view all submissions within their tenant
+      const tenantId = req.user?.tenantId;
+      const canViewSubmissions =
+        form.userId === userId ||
+        (tenantId && req.user?.role === 'admin' && form.tenantId === tenantId);
+
+      if (!canViewSubmissions) {
         throw new ApiError(
           'You do not have permission to view these submissions',
           403,
@@ -467,16 +508,23 @@ export class FormsController {
   );
 
   /**
-   * Exports form submissions as CSV.
+   * Exports form submissions as CSV with optional filtering.
    * @route GET /api/forms/:id/submissions/export
-   * @param req - Express request object with form ID
+   * @query fields - Comma-separated field names to include
+   * @query dateFrom - Start date filter (ISO format)
+   * @query dateTo - End date filter (ISO format)
+   * @query filterField - Field name to filter by
+   * @query filterValue - Value to match for filter field
+   * @param req - Express request object with form ID and query parameters
    * @param res - Express response object
    * @returns CSV file download
+   * @throws {ApiError} 400 - Invalid field names or date format
    * @throws {ApiError} 401 - Authentication required
    * @throws {ApiError} 403 - User doesn't own this form
-   * @throws {ApiError} 404 - Form not found
+   * @throws {ApiError} 404 - Form not found or no submissions
    * @example
    * GET /api/forms/form-uuid/submissions/export
+   * GET /api/forms/form-uuid/submissions/export?fields=name,email&dateFrom=2024-01-01
    * Authorization: Bearer <token>
    */
   exportSubmissions = AsyncHandler(
@@ -495,7 +543,14 @@ export class FormsController {
         throw new ApiError('Form not found', 404, 'FORM_NOT_FOUND');
       }
 
-      if (form.userId !== userId && req.user?.role !== 'admin') {
+      // In non-tenant mode, users can only export their own form submissions
+      // In tenant mode, admins can export all submissions within their tenant
+      const tenantId = req.user?.tenantId;
+      const canExportSubmissions =
+        form.userId === userId ||
+        (tenantId && req.user?.role === 'admin' && form.tenantId === tenantId);
+
+      if (!canExportSubmissions) {
         throw new ApiError(
           'You do not have permission to export these submissions',
           403,
@@ -503,51 +558,190 @@ export class FormsController {
         );
       }
 
-      // Get all submissions (no pagination for export)
+      // Parse filter options from query parameters
+      const filterOptions: SubmissionFilterOptions = {
+        fields: req.query.fields
+          ? (req.query.fields as string).split(',').map((f) => f.trim())
+          : undefined,
+        dateFrom: req.query.dateFrom
+          ? new Date(req.query.dateFrom as string)
+          : undefined,
+        dateTo: req.query.dateTo
+          ? new Date(req.query.dateTo as string)
+          : undefined,
+        fieldFilters: [],
+      };
+
+      // Add field value filters
+      if (req.query.filterField && req.query.filterValue) {
+        filterOptions.fieldFilters?.push({
+          field: req.query.filterField as string,
+          value: req.query.filterValue as string,
+        });
+      }
+
+      // Validate field names against form schema
+      if (filterOptions.fields && filterOptions.fields.length > 0) {
+        const schemas = await formSchemasRepository.findByFormId(id);
+        if (schemas.length > 0) {
+          const latestSchema = schemas[0]; // Schemas are sorted by version DESC
+          const validFields = latestSchema.fields.map(
+            (f: { fieldName: string }) => f.fieldName
+          );
+          const invalidFields = filterOptions.fields.filter(
+            (f) => !validFields.includes(f)
+          );
+          if (invalidFields.length > 0) {
+            throw new ApiError(
+              `Invalid field names: ${invalidFields.join(', ')}`,
+              400,
+              'INVALID_FIELDS'
+            );
+          }
+        }
+      }
+
+      // Validate dates
+      if (filterOptions.dateFrom && isNaN(filterOptions.dateFrom.getTime())) {
+        throw new ApiError('Invalid dateFrom format', 400, 'INVALID_DATE');
+      }
+      if (filterOptions.dateTo && isNaN(filterOptions.dateTo.getTime())) {
+        throw new ApiError('Invalid dateTo format', 400, 'INVALID_DATE');
+      }
+
+      // Set response headers for CSV download
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="form-submissions-${form.title.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.csv"`
+      );
+      res.setHeader('Transfer-Encoding', 'chunked');
+
+      // Write UTF-8 BOM for Excel compatibility
+      res.write('\ufeff');
+
+      // Stream submissions in batches
+      await this.streamSubmissionsToCSV(id, filterOptions, res);
+    }
+  );
+
+  /**
+   * Streams submissions to CSV in batches to avoid memory overflow.
+   * @param formId - Form ID to export
+   * @param filterOptions - Filter options for submissions
+   * @param res - Express response object
+   * @throws {ApiError} 404 - No submissions found
+   */
+  private async streamSubmissionsToCSV(
+    formId: string,
+    filterOptions: SubmissionFilterOptions,
+    res: Response
+  ): Promise<void> {
+    const batchSize = 1000;
+    let page = 1;
+    let hasMore = true;
+    let isFirstBatch = true;
+    let selectedFields: string[] = []; // Store field list from first batch
+
+    while (hasMore) {
       const { submissions } = await formSubmissionsRepository.findByFormId(
-        id,
-        1,
-        10000 // Maximum submissions to export
+        formId,
+        page,
+        batchSize,
+        filterOptions
       );
 
       if (submissions.length === 0) {
-        throw new ApiError(
-          'No submissions found for this form',
-          404,
-          'NO_SUBMISSIONS'
-        );
+        if (isFirstBatch) {
+          throw new ApiError(
+            'No submissions found for this form',
+            404,
+            'NO_SUBMISSIONS'
+          );
+        }
+        hasMore = false;
+        break;
       }
 
-      // Prepare CSV data
-      const csvData = submissions.map((submission: FormSubmission) => {
-        // Mask IP address
-        const ipParts = submission.submitterIp.split('.');
-        const maskedIp =
-          ipParts.length >= 2
-            ? `${ipParts[0]}.${ipParts[1]}._._`
-            : submission.submitterIp;
+      // Determine CSV columns from first batch and store for consistency
+      if (isFirstBatch) {
+        selectedFields =
+          filterOptions.fields || Object.keys(submissions[0].values);
+        const headers = ['Submitted At', 'Submitter IP', ...selectedFields];
 
-        return {
-          'Submitted At': new Date(submission.submittedAt).toISOString(),
-          'Submitter IP': maskedIp,
-          ...submission.values,
-        };
-      });
+        // Create CSV parser
+        const parser = new Parser({ fields: headers });
 
-      // Generate CSV
-      const parser = new Parser();
-      const csv = parser.parse(csvData);
+        // Prepare CSV data for this batch
+        const csvData = submissions.map((submission: FormSubmission) => {
+          const ipParts = submission.submitterIp.split('.');
+          const maskedIp =
+            ipParts.length >= 2
+              ? `${ipParts[0]}.${ipParts[1]}._._`
+              : submission.submitterIp;
 
-      // Set response headers for file download
-      res.setHeader('Content-Type', 'text/csv');
-      res.setHeader(
-        'Content-Disposition',
-        `attachment; filename="form-submissions-${id}.csv"`
-      );
+          const row: any = {
+            'Submitted At': new Date(submission.submittedAt).toLocaleString(
+              'en-US',
+              { timeZone: 'UTC' }
+            ),
+            'Submitter IP': maskedIp,
+          };
 
-      res.status(200).send(csv);
+          // Add selected field values
+          selectedFields.forEach((field) => {
+            row[field] = submission.values[field] ?? '';
+          });
+
+          return row;
+        });
+
+        // Write headers and first batch
+        const csv = parser.parse(csvData);
+        res.write(csv + '\n');
+        isFirstBatch = false;
+      } else {
+        // For subsequent batches, use stored selectedFields for consistency
+        const csvData = submissions.map((submission: FormSubmission) => {
+          const ipParts = submission.submitterIp.split('.');
+          const maskedIp =
+            ipParts.length >= 2
+              ? `${ipParts[0]}.${ipParts[1]}._._`
+              : submission.submitterIp;
+
+          const row: any = {
+            'Submitted At': new Date(submission.submittedAt).toLocaleString(
+              'en-US',
+              { timeZone: 'UTC' }
+            ),
+            'Submitter IP': maskedIp,
+          };
+
+          // Use stored selectedFields to ensure consistent CSV structure
+          selectedFields.forEach((field) => {
+            row[field] = submission.values[field] ?? '';
+          });
+
+          return row;
+        });
+
+        const parser = new Parser({
+          fields: ['Submitted At', 'Submitter IP', ...selectedFields],
+        });
+        const csv = parser.parse(csvData);
+        // Remove header row from subsequent batches
+        const rows = csv.split('\n').slice(1).join('\n');
+        res.write(rows + '\n');
+      }
+
+      page++;
+      if (submissions.length < batchSize) {
+        hasMore = false;
+      }
     }
-  );
+
+    res.end();
+  }
 }
 
 // Export singleton instance

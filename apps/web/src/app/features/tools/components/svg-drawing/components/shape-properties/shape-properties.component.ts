@@ -44,7 +44,7 @@ export class ShapePropertiesComponent implements OnInit, OnChanges {
   /**
    * Event emitted when shape properties are updated.
    */
-  readonly propertiesChanged = output<{ shapeId: string; updates: Partial<ShapeStyle> }>();
+  readonly propertiesChanged = output<{ shapeId: string; updates: Partial<Shape> }>();
 
   // Local state for form controls
   strokeColor = '#000000';

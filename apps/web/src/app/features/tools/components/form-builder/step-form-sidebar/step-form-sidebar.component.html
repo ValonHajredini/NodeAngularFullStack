@@ -1,0 +1,294 @@
+<div class="step-form-sidebar p-4 flex flex-col gap-4">
+  <!-- Header Section -->
+  <div class="sidebar-header">
+    <h3 class="text-lg font-semibold text-gray-800 mb-2">Step Form Configuration</h3>
+    <p class="text-sm text-gray-600 mb-4">
+      Create multi-step forms with custom step titles and descriptions.
+    </p>
+  </div>
+
+  <!-- Toggle Step Form Mode -->
+  <div class="toggle-section border-b border-gray-200 pb-4">
+    <div class="flex items-center justify-between">
+      <label class="font-medium text-gray-700">Enable Step Form</label>
+      <p-toggleButton
+        [(ngModel)]="stepFormEnabled"
+        (onChange)="onToggleStepForm($event)"
+        onLabel="ON"
+        offLabel="OFF"
+        [style]="{ width: '80px' }"
+      />
+    </div>
+    <p class="text-xs text-gray-500 mt-2">
+      Convert your form into a multi-step wizard with progress indicators.
+    </p>
+  </div>
+
+  <!-- Step List Section (shown only when enabled) -->
+  @if (stepFormEnabled()) {
+    <div class="steps-section flex-1 flex flex-col gap-3">
+      <div class="flex items-center justify-between mb-2">
+        <h4 class="font-medium text-gray-700">Steps ({{ steps().length }}/10)</h4>
+        <p-button
+          label="Add Step"
+          icon="pi pi-plus"
+          [disabled]="!canAddStep()"
+          (onClick)="onAddStep()"
+          size="small"
+          [pTooltip]="addStepTooltip()"
+          tooltipPosition="left"
+        />
+      </div>
+
+      <!-- Draggable Step List -->
+      <div
+        cdkDropList
+        (cdkDropListDropped)="onStepDrop($event)"
+        class="step-list flex flex-col gap-2"
+      >
+        @for (step of steps(); track step.id) {
+          <div
+            cdkDrag
+            class="step-item border border-gray-300 rounded-md p-3 flex items-center gap-3 hover:border-primary-500 transition-colors bg-white"
+          >
+            <!-- Drag Handle -->
+            <div cdkDragHandle class="drag-handle cursor-move" aria-label="Drag to reorder">
+              <i class="pi pi-bars text-gray-400 hover:text-gray-600"></i>
+            </div>
+
+            <!-- Step Badge -->
+            <div
+              class="step-badge flex-shrink-0 w-6 h-6 rounded-full bg-primary-500 text-white text-xs font-semibold flex items-center justify-center"
+            >
+              {{ step.order + 1 }}
+            </div>
+
+            <!-- Step Info -->
+            <div class="step-info flex-1 min-w-0">
+              <div class="step-title font-medium text-gray-800 truncate">
+                {{ step.title }}
+              </div>
+              @if (step.description) {
+                <div class="step-description text-xs text-gray-500 truncate">
+                  {{ step.description }}
+                </div>
+              }
+            </div>
+
+            <!-- Actions -->
+            <div class="step-actions flex items-center gap-2">
+              <button
+                type="button"
+                class="icon-button p-1 rounded hover:bg-gray-100 transition-colors"
+                (click)="onEditStep(step)"
+                aria-label="Edit step"
+                pTooltip="Edit step"
+                tooltipPosition="top"
+              >
+                <i class="pi pi-pencil text-gray-600 text-sm"></i>
+              </button>
+              <button
+                type="button"
+                class="icon-button p-1 rounded hover:bg-red-50 transition-colors"
+                (click)="onDeleteStep(step)"
+                [disabled]="!canDeleteStep()"
+                aria-label="Delete step"
+                [pTooltip]="deleteStepTooltip()"
+                tooltipPosition="top"
+              >
+                <i
+                  class="pi pi-trash text-sm"
+                  [class.text-red-600]="canDeleteStep()"
+                  [class.text-gray-300]="!canDeleteStep()"
+                ></i>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Empty State -->
+      @if (steps().length === 0) {
+        <div class="empty-state text-center py-8 text-gray-500">
+          <i class="pi pi-inbox text-4xl mb-2"></i>
+          <p class="text-sm">No steps yet. Enable step form to get started.</p>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Enable Step Form Confirmation Dialog -->
+  <p-dialog
+    [(visible)]="showEnableDialog"
+    header="Enable Step Form?"
+    [modal]="true"
+    [style]="{ width: '450px' }"
+    [draggable]="false"
+    [resizable]="false"
+  >
+    <ng-template pTemplate="content">
+      <div class="dialog-content">
+        <p class="text-gray-700 mb-3">
+          This will convert your form to step mode. All existing fields will be moved to
+          <strong>Step 1</strong>. You can move them to other steps later.
+        </p>
+        <div class="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-800">
+          <i class="pi pi-info-circle mr-2"></i>
+          You can add up to 10 steps and reorder them via drag-and-drop.
+        </div>
+      </div>
+    </ng-template>
+    <ng-template pTemplate="footer">
+      <p-button
+        label="Cancel"
+        icon="pi pi-times"
+        (onClick)="cancelEnableStepForm()"
+        [text]="true"
+      />
+      <p-button label="Enable" icon="pi pi-check" (onClick)="confirmEnableStepForm()" />
+    </ng-template>
+  </p-dialog>
+
+  <!-- Disable Step Form Confirmation Dialog -->
+  <p-dialog
+    [(visible)]="showDisableDialog"
+    header="Disable Step Form?"
+    [modal]="true"
+    [style]="{ width: '450px' }"
+    [draggable]="false"
+    [resizable]="false"
+  >
+    <ng-template pTemplate="content">
+      <div class="dialog-content">
+        <p class="text-gray-700 mb-3">
+          This will convert your form back to single-page mode. All fields will remain, but step
+          assignments will be removed.
+        </p>
+        <div class="bg-amber-50 border border-amber-200 rounded p-3 text-sm text-amber-800">
+          <i class="pi pi-exclamation-triangle mr-2"></i>
+          This action will remove all step configuration.
+        </div>
+      </div>
+    </ng-template>
+    <ng-template pTemplate="footer">
+      <p-button
+        label="Cancel"
+        icon="pi pi-times"
+        (onClick)="cancelDisableStepForm()"
+        [text]="true"
+      />
+      <p-button
+        label="Disable"
+        icon="pi pi-check"
+        (onClick)="confirmDisableStepForm()"
+        severity="warn"
+      />
+    </ng-template>
+  </p-dialog>
+
+  <!-- Edit Step Dialog -->
+  <p-dialog
+    [(visible)]="showEditDialog"
+    header="Edit Step"
+    [modal]="true"
+    [style]="{ width: '500px' }"
+    [draggable]="false"
+    [resizable]="false"
+  >
+    <ng-template pTemplate="content">
+      <form [formGroup]="stepForm" class="flex flex-col gap-4">
+        <!-- Step Title -->
+        <div class="form-field">
+          <label for="step-title" class="block font-medium text-gray-700 mb-2">
+            Step Title <span class="text-red-500">*</span>
+          </label>
+          <input
+            id="step-title"
+            type="text"
+            pInputText
+            formControlName="title"
+            class="w-full"
+            placeholder="Enter step title"
+            maxlength="100"
+          />
+          @if (
+            stepForm.get('title')?.invalid &&
+            (stepForm.get('title')?.dirty || stepForm.get('title')?.touched)
+          ) {
+            <small class="p-error block mt-1"> Title is required (1-100 characters) </small>
+          }
+          <small class="text-gray-500 block mt-1">
+            {{ stepForm.value.title?.length || 0 }}/100 characters
+          </small>
+        </div>
+
+        <!-- Step Description -->
+        <div class="form-field">
+          <label for="step-description" class="block font-medium text-gray-700 mb-2">
+            Step Description (Optional)
+          </label>
+          <textarea
+            id="step-description"
+            pInputTextarea
+            formControlName="description"
+            class="w-full"
+            placeholder="Add a description for this step"
+            rows="3"
+            maxlength="500"
+          ></textarea>
+          @if (
+            stepForm.get('description')?.invalid &&
+            (stepForm.get('description')?.dirty || stepForm.get('description')?.touched)
+          ) {
+            <small class="p-error block mt-1"> Description must not exceed 500 characters </small>
+          }
+          <small class="text-gray-500 block mt-1">
+            {{ stepForm.value.description?.length || 0 }}/500 characters
+          </small>
+        </div>
+      </form>
+    </ng-template>
+    <ng-template pTemplate="footer">
+      <p-button label="Cancel" icon="pi pi-times" (onClick)="onCancelEdit()" [text]="true" />
+      <p-button
+        label="Save"
+        icon="pi pi-check"
+        (onClick)="onSaveStep()"
+        [disabled]="stepForm.invalid"
+      />
+    </ng-template>
+  </p-dialog>
+
+  <!-- Delete Step Confirmation Dialog -->
+  <p-dialog
+    [(visible)]="showDeleteDialog"
+    header="Delete Step"
+    [modal]="true"
+    [style]="{ width: '450px' }"
+    [draggable]="false"
+    [resizable]="false"
+  >
+    <ng-template pTemplate="content">
+      <div class="dialog-content">
+        <p class="text-gray-700 mb-3">
+          Are you sure you want to delete
+          <strong>{{ deletingStep()?.title }}</strong
+          >?
+        </p>
+        <div class="bg-red-50 border border-red-200 rounded p-3 text-sm text-red-800">
+          <i class="pi pi-exclamation-triangle mr-2"></i>
+          Fields in this step will be moved to the first step. This action cannot be undone.
+        </div>
+      </div>
+    </ng-template>
+    <ng-template pTemplate="footer">
+      <p-button label="Cancel" icon="pi pi-times" (onClick)="cancelDeleteStep()" [text]="true" />
+      <p-button
+        label="Delete"
+        icon="pi pi-trash"
+        (onClick)="confirmDeleteStep()"
+        severity="danger"
+      />
+    </ng-template>
+  </p-dialog>
+</div>

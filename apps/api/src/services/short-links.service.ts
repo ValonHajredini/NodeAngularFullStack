@@ -1,4 +1,5 @@
 import { customAlphabet } from 'nanoid';
+import QRCode from 'qrcode';
 import {
   ShortLinksRepository,
   ShortLinkEntity,
@@ -13,6 +14,7 @@ import {
   NotFoundShortLinkError,
 } from '@nodeangularfullstack/shared';
 import { toolsService } from './tools.service';
+import { storageService } from './storage.service';
 import {
   isValidUrl,
   sanitizeUrl,
@@ -33,6 +35,30 @@ const SHORT_CODE_ALPHABET =
 const generateShortCode = customAlphabet(SHORT_CODE_ALPHABET, 7); // 7 characters for good balance
 
 /**
+ * Reserved words that cannot be used as custom short link names.
+ * These prevent conflicts with system routes and sensitive paths.
+ */
+const RESERVED_WORDS = [
+  'admin',
+  'api',
+  'auth',
+  'health',
+  'static',
+  'public',
+  'assets',
+  'docs',
+  'swagger',
+  'login',
+  'logout',
+  'register',
+  'dashboard',
+  'profile',
+  'settings',
+  'tools',
+  's', // The short link route itself
+];
+
+/**
  * Short links service for managing URL shortening operations.
  * Handles short link creation, resolution, and analytics with proper validation.
  */
@@ -40,10 +66,17 @@ export class ShortLinksService {
   private static readonly MAX_GENERATION_ATTEMPTS = 10;
   private static readonly BASE_URL =
     process.env.BASE_URL || 'http://localhost:3000';
+  private static readonly CUSTOM_NAME_MIN_LENGTH = 3;
+  private static readonly CUSTOM_NAME_MAX_LENGTH = 30;
   private shortLinksRepository: ShortLinksRepository;
+  private toolsServiceInstance: typeof toolsService;
 
-  constructor() {
-    this.shortLinksRepository = new ShortLinksRepository();
+  constructor(
+    repository?: ShortLinksRepository,
+    toolsServiceInstance?: typeof toolsService
+  ) {
+    this.shortLinksRepository = repository || new ShortLinksRepository();
+    this.toolsServiceInstance = toolsServiceInstance || toolsService;
   }
 
   /**
@@ -56,6 +89,7 @@ export class ShortLinksService {
       id: entity.id,
       code: entity.code,
       originalUrl: entity.originalUrl,
+      qrCodeUrl: entity.qrCodeUrl,
       expiresAt: entity.expiresAt,
       createdBy: entity.createdBy,
       clickCount: entity.clickCount,
@@ -120,13 +154,141 @@ export class ShortLinksService {
   }
 
   /**
+   * Validates a custom name for use as a short link code.
+   * @param customName - Custom name to validate
+   * @returns boolean indicating if custom name is valid
+   */
+  private validateCustomNameFormat(customName: string): {
+    valid: boolean;
+    error?: string;
+  } {
+    // Check length
+    if (
+      customName.length < ShortLinksService.CUSTOM_NAME_MIN_LENGTH ||
+      customName.length > ShortLinksService.CUSTOM_NAME_MAX_LENGTH
+    ) {
+      return {
+        valid: false,
+        error: `Custom name must be between ${ShortLinksService.CUSTOM_NAME_MIN_LENGTH} and ${ShortLinksService.CUSTOM_NAME_MAX_LENGTH} characters`,
+      };
+    }
+
+    // Check allowed characters (alphanumeric and hyphens)
+    if (!/^[a-zA-Z0-9-]+$/.test(customName)) {
+      return {
+        valid: false,
+        error: 'Custom name can only contain letters, numbers, and hyphens',
+      };
+    }
+
+    // Check for consecutive hyphens
+    if (/--/.test(customName)) {
+      return {
+        valid: false,
+        error: 'Custom name cannot contain consecutive hyphens',
+      };
+    }
+
+    // Check for leading/trailing hyphens
+    if (customName.startsWith('-') || customName.endsWith('-')) {
+      return {
+        valid: false,
+        error: 'Custom name cannot start or end with a hyphen',
+      };
+    }
+
+    // Check reserved words (case-insensitive)
+    if (RESERVED_WORDS.includes(customName.toLowerCase())) {
+      return {
+        valid: false,
+        error: 'This custom name is reserved and cannot be used',
+      };
+    }
+
+    return { valid: true };
+  }
+
+  /**
+   * Generates a QR code for the given short URL.
+   * @param shortUrl - Full short URL to encode
+   * @returns Promise containing QR code as PNG Buffer
+   */
+  private async generateQRCode(shortUrl: string): Promise<Buffer> {
+    try {
+      // Generate QR code as PNG buffer
+      const qrCodeBuffer = await QRCode.toBuffer(shortUrl, {
+        type: 'png',
+        width: 300,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF',
+        },
+      });
+      return qrCodeBuffer;
+    } catch (error) {
+      console.error('Error generating QR code:', error);
+      throw new Error('Failed to generate QR code');
+    }
+  }
+
+  /**
+   * Uploads QR code image to DigitalOcean Spaces storage.
+   * @param code - Short code for naming the QR code file
+   * @param qrBuffer - PNG buffer containing QR code image
+   * @returns Promise containing public URL of uploaded QR code
+   * @throws {Error} When upload fails
+   */
+  private async uploadQRCodeToStorage(
+    code: string,
+    qrBuffer: Buffer
+  ): Promise<string> {
+    try {
+      const fileName = `qr-codes/qr-${code}.png`;
+      const qrCodeUrl = await storageService.uploadFile(
+        qrBuffer,
+        fileName,
+        'image/png',
+        { generateUniqueFileName: false }
+      );
+      return qrCodeUrl;
+    } catch (error) {
+      console.error('Error uploading QR code to storage:', error);
+      throw new Error('Failed to upload QR code to storage');
+    }
+  }
+
+  /**
+   * Generates QR code as base64 data URL for backwards compatibility.
+   * @param shortUrl - Full short URL to encode
+   * @returns Promise containing QR code data URL (base64 PNG)
+   */
+  private async generateQRCodeDataUrl(shortUrl: string): Promise<string> {
+    try {
+      // Generate QR code as data URL (base64 PNG image)
+      const qrCodeDataUrl = await QRCode.toDataURL(shortUrl, {
+        width: 300,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF',
+        },
+      });
+      return qrCodeDataUrl;
+    } catch (error) {
+      console.error('Error generating QR code data URL:', error);
+      throw new Error('Failed to generate QR code data URL');
+    }
+  }
+
+  /**
    * Checks if the short-link tool is enabled.
    * @returns Promise containing boolean indicating if tool is enabled
    * @throws {Error} When tool status check fails
    */
   private async isToolEnabled(): Promise<boolean> {
     try {
-      const tool = await toolsService.getToolByKey('short-link');
+      const tool = await this.toolsServiceInstance.getToolByKey('short-link');
       return tool?.active ?? false;
     } catch (error) {
       console.error('Error checking short-link tool status:', error);
@@ -143,7 +305,8 @@ export class ShortLinksService {
    * @example
    * const response = await shortLinksService.createShortLink({
    *   originalUrl: 'https://example.com',
-   *   expiresAt: new Date('2025-12-31')
+   *   expiresAt: new Date('2025-12-31'),
+   *   customName: 'my-link'
    * }, 'user-id');
    */
   async createShortLink(
@@ -168,8 +331,32 @@ export class ShortLinksService {
     }
 
     try {
-      // Generate unique short code
-      const code = await this.generateUniqueCode();
+      let code: string;
+
+      // Handle custom name if provided
+      if (request.customName) {
+        const trimmedName = request.customName.trim();
+
+        // Validate custom name format
+        const validation = this.validateCustomNameFormat(trimmedName);
+        if (!validation.valid) {
+          throw new Error(validation.error);
+        }
+
+        // Check if custom name already exists (case-insensitive check)
+        const exists = await this.shortLinksRepository.codeExists(
+          trimmedName.toLowerCase()
+        );
+        if (exists) {
+          throw new Error('This custom name is already taken');
+        }
+
+        // Use custom name as code (preserve case)
+        code = trimmedName.toLowerCase();
+      } else {
+        // Generate unique short code
+        code = await this.generateUniqueCode();
+      }
 
       // Create short link data
       const createData: CreateShortLinkData = {
@@ -186,15 +373,64 @@ export class ShortLinksService {
       // Generate full short URL
       const shortUrl = `${ShortLinksService.BASE_URL}/s/${code}`;
 
+      // Generate QR code and upload to storage
+      let qrCodeUrl: string | undefined;
+      let qrCodeDataUrl: string | undefined;
+
+      try {
+        // Generate QR code as PNG buffer
+        const qrCodeBuffer = await this.generateQRCode(shortUrl);
+
+        // Upload to DigitalOcean Spaces
+        qrCodeUrl = await this.uploadQRCodeToStorage(code, qrCodeBuffer);
+
+        // Update database with QR code URL
+        await this.shortLinksRepository.updateQRCodeUrl(entity.id, qrCodeUrl);
+
+        // Also generate data URL for backwards compatibility
+        qrCodeDataUrl = await this.generateQRCodeDataUrl(shortUrl);
+      } catch (error) {
+        // QR code generation/upload failure should not prevent short link creation
+        console.error(
+          '⚠️ QR code generation or upload failed, but short link created:',
+          error
+        );
+        // Generate fallback data URL only
+        try {
+          qrCodeDataUrl = await this.generateQRCodeDataUrl(shortUrl);
+        } catch (fallbackError) {
+          console.error(
+            '⚠️ Fallback QR code generation also failed:',
+            fallbackError
+          );
+        }
+      }
+
       return {
         success: true,
         data: {
-          shortLink,
+          shortLink: {
+            ...shortLink,
+            qrCodeUrl,
+          },
           shortUrl,
+          qrCodeDataUrl,
+          qrCodeUrl,
         },
       };
     } catch (error) {
-      console.error('Error creating short link:', error);
+      console.error('❌ Error creating short link:');
+      console.error(
+        '  Message:',
+        error instanceof Error ? error.message : 'Unknown error'
+      );
+      console.error('  Stack:', error instanceof Error ? error.stack : 'N/A');
+      console.error('  Request:', {
+        customName: request.customName,
+        url: sanitizedUrl,
+        userId,
+      });
+
       if (error instanceof Error) {
         throw error;
       }
@@ -306,6 +542,7 @@ export class ShortLinksService {
   /**
    * Performs cleanup of expired short links.
    * This is typically called by a scheduled job or maintenance task.
+   * Deletes QR codes from storage before removing database records.
    * @returns Promise containing number of deleted links
    * @throws {Error} When cleanup fails
    * @example
@@ -314,6 +551,28 @@ export class ShortLinksService {
    */
   async cleanupExpiredLinks(): Promise<number> {
     try {
+      // First, find all expired links with QR codes
+      const expiredLinks =
+        await this.shortLinksRepository.findExpiredWithQRCodes();
+
+      // Delete QR codes from storage
+      for (const link of expiredLinks) {
+        if (link.qrCodeUrl) {
+          try {
+            const fileName = `qr-codes/qr-${link.code}.png`;
+            await storageService.deleteFile(fileName);
+            console.log(`✅ Deleted QR code for expired link: ${link.code}`);
+          } catch (error) {
+            // Log but don't fail cleanup if storage deletion fails
+            console.error(
+              `⚠️ Failed to delete QR code for ${link.code} from storage:`,
+              error
+            );
+          }
+        }
+      }
+
+      // Then delete the database records
       return await this.shortLinksRepository.deleteExpired();
     } catch (error) {
       console.error('Error during expired links cleanup:', error);
@@ -392,6 +651,40 @@ export class ShortLinksService {
       /^[a-zA-Z0-9]+$/.test(code) &&
       !/[0oO1lI]/.test(code) // No confusing characters
     );
+  }
+
+  /**
+   * Checks if a custom name is available for use.
+   * @param customName - Custom name to check
+   * @returns Promise containing availability status and validation result
+   */
+  async checkCustomNameAvailability(customName: string): Promise<{
+    available: boolean;
+    valid: boolean;
+    error?: string;
+  }> {
+    const trimmedName = customName.trim();
+
+    // Validate format first
+    const validation = this.validateCustomNameFormat(trimmedName);
+    if (!validation.valid) {
+      return {
+        available: false,
+        valid: false,
+        error: validation.error,
+      };
+    }
+
+    // Check if already exists (case-insensitive)
+    const exists = await this.shortLinksRepository.codeExists(
+      trimmedName.toLowerCase()
+    );
+
+    return {
+      available: !exists,
+      valid: true,
+      error: exists ? 'This custom name is already taken' : undefined,
+    };
   }
 
   /**

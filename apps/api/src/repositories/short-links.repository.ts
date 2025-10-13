@@ -10,6 +10,7 @@ export interface ShortLinkEntity {
   id: string;
   code: string;
   originalUrl: string;
+  qrCodeUrl?: string | null;
   expiresAt?: Date | null;
   createdBy?: string | null;
   clickCount: number;
@@ -109,6 +110,7 @@ export class ShortLinksRepository extends BaseRepository<ShortLinkEntity> {
           id,
           code,
           original_url as "originalUrl",
+          qr_code_url as "qrCodeUrl",
           expires_at as "expiresAt",
           created_by as "createdBy",
           click_count as "clickCount",
@@ -147,6 +149,7 @@ export class ShortLinksRepository extends BaseRepository<ShortLinkEntity> {
           id,
           code,
           original_url as "originalUrl",
+          qr_code_url as "qrCodeUrl",
           expires_at as "expiresAt",
           created_by as "createdBy",
           click_count as "clickCount",
@@ -192,6 +195,7 @@ export class ShortLinksRepository extends BaseRepository<ShortLinkEntity> {
           id,
           code,
           original_url as "originalUrl",
+          qr_code_url as "qrCodeUrl",
           expires_at as "expiresAt",
           created_by as "createdBy",
           click_count as "clickCount",
@@ -237,6 +241,63 @@ export class ShortLinksRepository extends BaseRepository<ShortLinkEntity> {
     } catch (error) {
       console.error(`Error checking if code exists ${code}:`, error);
       throw new Error('Failed to check code existence in database');
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Updates the QR code URL for a short link.
+   * @param id - Short link ID
+   * @param qrCodeUrl - Public URL of the QR code image
+   * @returns Promise resolving when update is complete
+   * @throws {Error} When database query fails
+   * @example
+   * await shortLinksRepository.updateQRCodeUrl('link-id', 'https://cdn.example.com/qr-abc123.png');
+   */
+  async updateQRCodeUrl(id: string, qrCodeUrl: string): Promise<void> {
+    const client = await this.pool.connect();
+
+    try {
+      const query = `
+        UPDATE short_links
+        SET qr_code_url = $1, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+      `;
+
+      await client.query(query, [qrCodeUrl, id]);
+    } catch (error) {
+      console.error(`Error updating QR code URL for short link ${id}:`, error);
+      throw new Error('Failed to update QR code URL in database');
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Retrieves expired short links with their QR code URLs for cleanup.
+   * @returns Promise containing array of expired short links with QR code URLs
+   * @throws {Error} When database query fails
+   */
+  async findExpiredWithQRCodes(): Promise<
+    Array<{ code: string; qrCodeUrl: string | null }>
+  > {
+    const client = await this.pool.connect();
+
+    try {
+      const query = `
+        SELECT code, qr_code_url as "qrCodeUrl"
+        FROM short_links
+        WHERE expires_at IS NOT NULL
+          AND expires_at <= CURRENT_TIMESTAMP
+          AND qr_code_url IS NOT NULL
+      `;
+
+      const result = await client.query(query);
+      return result.rows;
+    } catch (error) {
+      console.error('Error finding expired short links with QR codes:', error);
+      throw new Error('Failed to find expired short links with QR codes');
     } finally {
       client.release();
     }
@@ -321,6 +382,7 @@ export class ShortLinksRepository extends BaseRepository<ShortLinkEntity> {
           id,
           code,
           original_url as "originalUrl",
+          qr_code_url as "qrCodeUrl",
           expires_at as "expiresAt",
           created_by as "createdBy",
           click_count as "clickCount",

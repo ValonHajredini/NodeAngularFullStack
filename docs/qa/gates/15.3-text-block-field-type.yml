@@ -1,0 +1,303 @@
+schema: 1
+story: '15.3'
+story_title: 'Add TEXT_BLOCK Field Type for Explanatory Content'
+gate: CONCERNS
+status_reason: 'Security-critical HTML sanitization implemented correctly with comprehensive XSS tests, but TEXT_BLOCK component integration tests missing. Strong foundation with DOMPurify, but test gaps create regression risk.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2025-10-10T12:00:00Z'
+
+top_issues:
+  - severity: medium
+    category: testing
+    description: 'No unit tests for TextBlockPreviewComponent rendering and metadata handling'
+    impact: 'Preview truncation, padding classes, background colors, and alignment unvalidated - potential for UI regressions during refactoring'
+    refs:
+      - 'apps/web/src/app/features/tools/components/form-builder/form-canvas/field-preview-renderer/text-block-preview.component.ts'
+    suggested_owner: dev
+
+  - severity: medium
+    category: testing
+    description: 'FormRendererComponent TEXT_BLOCK rendering and collapse/expand logic not explicitly tested'
+    impact: 'Public form text block display, "Read more" functionality, word counting, and sanitization integration unvalidated'
+    refs:
+      - 'apps/web/src/app/features/public/form-renderer/form-renderer.component.ts:642-665'
+    suggested_owner: dev
+
+  - severity: medium
+    category: testing
+    description: 'Field properties panel TEXT_BLOCK configuration not tested (alignment, padding, collapsible)'
+    impact: 'User property changes may not save correctly or may break on edge cases'
+    refs:
+      - 'apps/web/src/app/features/tools/components/form-builder/field-properties/field-properties.component.ts'
+    suggested_owner: dev
+
+  - severity: low
+    category: testing
+    description: 'FormBuilderService TEXT_BLOCK field creation not explicitly tested'
+    impact: 'Default metadata values and field initialization unvalidated'
+    refs:
+      - 'apps/web/src/app/features/tools/components/form-builder/form-builder.service.ts'
+    suggested_owner: dev
+
+  - severity: low
+    category: testing
+    description: 'No integration test for TEXT_BLOCK in published form workflow (create → save → publish → render → submit)'
+    impact: 'End-to-end workflow unvalidated - data exclusion from submissions not explicitly tested'
+    refs:
+      - 'apps/api/tests/integration/forms-publish.test.ts'
+    suggested_owner: dev
+
+  - severity: low
+    category: documentation
+    description: 'TextBlockMetadata JSDoc missing usage examples for collapsible and collapsed properties'
+    impact: 'Developers may misunderstand when to use collapsible vs collapsed flags'
+    refs:
+      - 'packages/shared/src/types/forms.types.ts:192-207'
+    suggested_owner: dev
+
+waiver: { active: false }
+
+quality_score: 70
+expires: '2025-10-24T12:00:00Z'
+
+evidence:
+  tests_reviewed: 1
+  risks_identified: 6
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12]
+    ac_gaps: [8, 13, 14, 15, 16, 17, 18]
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: |
+      EXCELLENT security implementation. DOMPurify configured with strict whitelist (p, h3-h6, strong, em, u, s, ul, ol, li, a, blockquote, br).
+      Comprehensive XSS test suite covers 11 attack vectors: script tags, event handlers, javascript: URLs, iframes, objects, img onerror, style tags, SVG onload, base64 encoded scripts.
+      Sanitization applied at TWO layers: FormBuilderService save AND FormRendererComponent render (defense in depth).
+      Links forced to target="_blank" rel="noopener noreferrer" (prevents tab-nabbing).
+      Character limit enforcement (5000) prevents abuse.
+      No H1-H2 allowed (accessibility/hierarchy compliance).
+      CRITICAL: html-sanitizer.service.spec.ts has 27 passing security tests including multi-vector attack test.
+  performance:
+    status: PASS
+    notes: |
+      Text truncation for preview (150 chars) prevents DOM bloat in builder canvas.
+      Word counting (countWords) uses efficient regex split.
+      Collapsible content with "Read more" for >500 words prevents excessive page height.
+      DOMPurify is fast (runs in microseconds for typical content).
+      No observed performance issues with long text blocks (<5000 chars).
+      Plain text preview uses stripHtml() for instant rendering without HTML parsing overhead.
+  reliability:
+    status: CONCERNS
+    notes: |
+      Good: Default metadata values prevent undefined errors. Empty content handling (returns '' for null/undefined).
+      Good: Collapse state tracked in Set (O(1) lookup, no memory leak).
+      CONCERN: No error handling for DOMPurify failures (edge case but possible with malformed HTML).
+      CONCERN: No validation for backgroundColor (could accept invalid hex values like "notacolor").
+      CONCERN: No bounds checking for padding enum (could accept invalid values).
+      Tests missing for these edge cases - runtime errors possible.
+  maintainability:
+    status: PASS
+    notes: |
+      Excellent code organization. HtmlSanitizerService is single-responsibility (sanitize, strip, truncate, count).
+      TextBlockPreviewComponent is small (83 lines), focused, well-commented.
+      Consistent pattern with HEADING and IMAGE field types (same architecture).
+      TypeScript strict mode catches type errors at compile time.
+      JSDoc comments present for all public methods.
+      Code is self-documenting (clear variable names, small functions).
+      Separation of concerns: sanitizer service is reusable across components.
+  accessibility:
+    status: PASS
+    notes: |
+      Heading hierarchy enforced (H3-H6 only, no H1-H2 to avoid page structure conflicts).
+      Links have rel="noopener noreferrer" (security + accessibility).
+      "Read more" button is keyboard accessible (native button element, not div).
+      Text alignment options support WCAG (left/center/right/justify all valid).
+      No ARIA required (semantic HTML used throughout).
+      Screen readers will announce HTML content correctly (DOMPurify preserves semantic tags).
+      Collapsible content has implicit aria-expanded behavior (native button).
+
+recommendations:
+  immediate:
+    - action: 'Add unit tests for TextBlockPreviewComponent (rendering, truncation, metadata classes)'
+      refs: ['apps/web/src/app/features/tools/components/form-builder/form-canvas/field-preview-renderer/text-block-preview.component.ts']
+      priority: P1
+
+    - action: 'Add unit tests for FormRendererComponent TEXT_BLOCK methods (getSanitizedContent, isTextBlockLong, toggleTextBlockCollapse)'
+      refs: ['apps/web/src/app/features/public/form-renderer/form-renderer.component.ts']
+      priority: P1
+
+    - action: 'Add integration test for TEXT_BLOCK in published form workflow (verify data exclusion from submissions)'
+      refs: ['apps/api/tests/integration/forms-publish.test.ts']
+      priority: P1
+
+    - action: 'Add validation for backgroundColor hex format in field properties panel'
+      refs: ['apps/web/src/app/features/tools/components/form-builder/field-properties/field-properties.component.ts']
+      priority: P2
+
+  future:
+    - action: 'Add JSDoc usage examples for collapsible and collapsed properties in TextBlockMetadata'
+      refs: ['packages/shared/src/types/forms.types.ts']
+      priority: P3
+
+    - action: 'Add error handling for DOMPurify edge cases (malformed HTML recovery)'
+      refs: ['apps/web/src/app/shared/services/html-sanitizer.service.ts']
+      priority: P3
+
+    - action: 'Add E2E test for complete TEXT_BLOCK workflow (drag → configure → save → publish → render → verify sanitization)'
+      refs: ['tests/e2e/']
+      priority: P3
+
+    - action: 'Consider character counter UI in field properties panel (show 4523/5000 characters used)'
+      refs: ['apps/web/src/app/features/tools/components/form-builder/field-properties/field-properties.component.ts']
+      priority: P4
+
+    - action: 'Add preview of "Read more" behavior in field properties modal'
+      refs: ['apps/web/src/app/features/tools/components/form-builder/field-properties/field-properties.component.ts']
+      priority: P4
+
+test_architecture_notes: |
+  STRONG: HtmlSanitizerService has exemplary security test coverage (27 tests including 11 XSS attack vectors).
+  Pattern established for future field types: comprehensive unit tests for shared services, component tests for UI rendering.
+
+  GAP: No component-level tests for TEXT_BLOCK integration. This follows same pattern as HEADING (15.1) and IMAGE (15.2) which also lack component tests.
+  Recommendation: Create TEXT_BLOCK test suite as template for future field types. Include:
+    - Component rendering (TextBlockPreviewComponent)
+    - User interaction (field properties panel)
+    - Public rendering (FormRendererComponent)
+    - End-to-end workflow (integration test)
+
+  Test pyramid observation: Service layer well-tested (base), component layer untested (middle), E2E missing (top).
+  Action: Address inverted pyramid before adding more field types.
+
+code_quality_highlights:
+  - 'DOMPurify integration is textbook example of XSS prevention - strict whitelist, double sanitization, security attributes forced on links'
+  - 'HtmlSanitizerService is highly reusable - stripHtml, truncate, countWords, isContentLong methods serve multiple use cases'
+  - 'TextBlockPreviewComponent uses OnPush change detection for performance (no unnecessary re-renders)'
+  - 'Consistent with existing HEADING and IMAGE patterns - developers can learn from similar code'
+  - 'TypeScript strict mode + interfaces prevent runtime type errors'
+  - 'Separation of concerns: sanitization service, preview component, renderer component all decoupled'
+
+code_quality_improvements_needed:
+  - 'Add backgroundColor validation (hex format regex or PrimeNG ColorPicker validation)'
+  - 'Add bounds checking for padding enum (TypeScript union type validates at compile time, but runtime safety adds defense)'
+  - 'Consider extracting TEXT_BLOCK constants (MAX_PREVIEW_LENGTH=150, WORD_LIMIT=500, CHAR_LIMIT=5000) to shared config'
+  - 'FormRendererComponent collapsedTextBlocks Set should be cleared on component destroy (potential memory leak if user navigates away)'
+
+requirements_traceability:
+  AC1_type_definition:
+    status: COVERED
+    evidence: 'FormFieldType.TEXT_BLOCK enum added (forms.types.ts:41), TextBlockMetadata interface defined (lines 194-207)'
+    tests: 'Shared package builds successfully (TypeScript compile-time validation)'
+
+  AC2_field_palette:
+    status: COVERED
+    evidence: 'TEXT_BLOCK button added to field palette (field-palette.component.ts)'
+    tests: 'MISSING - no unit test for palette button click/drag'
+
+  AC3_field_creation:
+    status: COVERED
+    evidence: 'FormBuilderService creates TEXT_BLOCK with defaults (form-builder.service.ts), default content: "<p>Add your instructions here...</p>"'
+    tests: 'MISSING - no unit test for TEXT_BLOCK field creation'
+
+  AC4_form_canvas_preview:
+    status: COVERED
+    evidence: 'TextBlockPreviewComponent renders truncated preview (text-block-preview.component.ts:70-80), shows "Click to edit" if truncated'
+    tests: 'MISSING - no unit test for preview rendering or truncation logic'
+
+  AC5_field_properties_modal:
+    status: COVERED
+    evidence: 'Field properties panel has TEXT_BLOCK configuration section (field-properties.component.ts), includes alignment, bgColor, padding, collapsible options'
+    tests: 'MISSING - no unit test for properties panel TEXT_BLOCK form'
+
+  AC6_html_sanitization:
+    status: COVERED
+    evidence: 'HtmlSanitizerService implements DOMPurify with strict whitelist (html-sanitizer.service.ts:24-64), sanitizes on save AND render'
+    tests: 'EXCELLENT - 27 unit tests including 11 XSS attack vectors (html-sanitizer.service.spec.ts)'
+
+  AC7_public_form_renderer:
+    status: COVERED
+    evidence: 'FormRendererComponent renders TEXT_BLOCK with sanitized HTML (form-renderer.component.html:415-454), includes "Read more" button for long content'
+    tests: 'MISSING - no unit test for TEXT_BLOCK rendering or collapse logic'
+
+  AC8_data_exclusion:
+    status: COVERED_BUT_UNTESTED
+    evidence: 'FormRendererComponent buildFormGroup skips TEXT_BLOCK fields (isInputField check), TEXT_BLOCK excluded from form submission'
+    tests: 'MISSING - no integration test verifying TEXT_BLOCK excluded from submission payload'
+
+  AC9_row_layout:
+    status: COVERED
+    evidence: 'TEXT_BLOCK works in row-based layout (field-preview-renderer.component.ts:59 excludes TEXT_BLOCK from inline label), respects position property'
+    tests: 'MISSING - no test for TEXT_BLOCK in row layout'
+
+  AC10_backward_compatibility:
+    status: COVERED
+    evidence: 'Existing forms continue working (FormFieldType enum is additive), shared package versioning unchanged'
+    tests: 'NO BREAKING CHANGES - TypeScript interface additions are non-breaking'
+
+  AC11_pattern_adherence:
+    status: COVERED
+    evidence: 'TEXT_BLOCK follows same pattern as HEADING (15.1) and IMAGE (15.2) - separate preview component, metadata interface, field properties panel section'
+    tests: 'Architectural consistency validated by code review'
+
+  AC12_state_persistence:
+    status: COVERED
+    evidence: 'TEXT_BLOCK saved to database via form schema (JSONB field), HTML content persists without corruption'
+    tests: 'MISSING - no integration test for round-trip persistence (save → load → verify content)'
+
+  AC13_unit_tests:
+    status: PARTIAL
+    evidence: 'HtmlSanitizerService has 27 unit tests. Component tests MISSING.'
+    tests: 'SECURITY TESTS EXCELLENT. Component tests MISSING.'
+
+  AC14_security_tests:
+    status: COVERED
+    evidence: 'XSS prevention tested with 11 attack vectors (html-sanitizer.service.spec.ts:187-226)'
+    tests: 'PASS - comprehensive security test suite validates XSS prevention'
+
+  AC15_styling_ux:
+    status: COVERED
+    evidence: 'Preview shows truncated content clearly (text-block-preview.component.ts), properties modal user-friendly (alignment buttons, color picker, padding dropdown)'
+    tests: 'UNTESTED - UI/UX requires manual testing or E2E tests'
+
+  AC16_accessibility:
+    status: COVERED
+    evidence: 'Heading hierarchy preserved (H3-H6 only), links have noopener noreferrer, "Read more" button keyboard accessible'
+    tests: 'UNTESTED - accessibility requires manual testing or automated audit (Axe, Lighthouse)'
+
+  AC17_performance:
+    status: COVERED
+    evidence: 'HTML sanitization fast (DOMPurify optimized), truncation prevents DOM bloat, collapsible content for long blocks'
+    tests: 'UNTESTED - performance requires benchmarking or load tests'
+
+  AC18_documentation:
+    status: COVERED
+    evidence: 'JSDoc comments added to HtmlSanitizerService methods, FormFieldType enum updated with TEXT_BLOCK documentation'
+    tests: 'Code review validates documentation presence. Could improve with usage examples.'
+
+summary: |
+  Story 15.3 delivers a security-conscious TEXT_BLOCK field type with excellent XSS prevention.
+
+  STRENGTHS:
+  - DOMPurify integration is exemplary (strict whitelist, comprehensive tests)
+  - Defense-in-depth: sanitization at save AND render layers
+  - 27 unit tests for HtmlSanitizerService including 11 XSS attack vectors
+  - Consistent architecture with HEADING (15.1) and IMAGE (15.2)
+  - Accessibility compliant (heading hierarchy, link security attributes)
+  - Performance optimized (truncation, collapsible content)
+
+  WEAKNESSES:
+  - Component-level tests missing (TextBlockPreviewComponent, FormRendererComponent TEXT_BLOCK logic)
+  - Integration test missing (TEXT_BLOCK excluded from submissions)
+  - Edge case validation missing (backgroundColor hex format, padding enum bounds)
+  - No E2E test for complete workflow
+
+  GATE DECISION: CONCERNS
+  Rationale: Security foundation is EXCELLENT (DOMPurify + comprehensive tests). However, component integration tests are missing, creating regression risk during future refactoring. This mirrors the pattern from 15.2 (CONCERNS) and 15.1 (likely similar gaps). Before production deployment, add component tests to validate UI rendering and user interaction.
+
+  RECOMMENDATION: Add 3 immediate tests (P1 priority):
+  1. TextBlockPreviewComponent unit tests (rendering, metadata, truncation)
+  2. FormRendererComponent TEXT_BLOCK unit tests (sanitization integration, collapse logic)
+  3. Integration test (verify TEXT_BLOCK excluded from form submissions)
+
+  After these tests pass, gate can be upgraded to PASS.

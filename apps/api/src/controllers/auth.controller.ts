@@ -658,6 +658,67 @@ export class AuthController {
       next(error);
     }
   };
+
+  /**
+   * Unlocks a user account that has been locked due to failed login attempts.
+   * Development-only endpoint for testing purposes.
+   * @route POST /api/v1/auth/dev/unlock-account
+   * @param req - Express request object with email in body
+   * @param res - Express response object
+   * @param next - Express next function
+   * @returns HTTP response confirming account unlock
+   * @example
+   * POST /api/v1/auth/dev/unlock-account
+   * {
+   *   "email": "admin@example.com"
+   * }
+   */
+  unlockAccount = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      // Only available in development environment
+      if (process.env.NODE_ENV !== 'development') {
+        res.status(404).json({
+          error: 'Not Found',
+          message: 'Account unlock is only available in development mode',
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      const { email } = req.body;
+      if (!email) {
+        res.status(400).json({
+          error: 'Bad Request',
+          message: 'Email is required',
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      // Get lockout status before unlocking
+      const statusBefore = AccountLockoutMiddleware.getLockoutStatus(email);
+
+      // Unlock the account
+      AccountLockoutMiddleware.unlockAccount(email);
+
+      res.status(200).json({
+        message: 'Account unlocked successfully',
+        data: {
+          email,
+          wasLocked: statusBefore.isLocked,
+          previousAttempts: Math.max(0, 5 - statusBefore.attemptsRemaining),
+          lockedUntil: statusBefore.lockedUntil,
+        },
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      next(error);
+    }
+  };
 }
 
 // Export singleton instance

@@ -636,6 +636,11 @@ describe('SvgDrawingService', () => {
       service.addShape(polygonShape);
     });
 
+    afterEach(() => {
+      service.setBackgroundImage(null);
+      service.resetImageTransform();
+    });
+
     it('should calculate bounds for shapes with padding', () => {
       const bounds = service.calculateBounds(service.shapes(), 20);
 
@@ -662,6 +667,8 @@ describe('SvgDrawingService', () => {
         height: 600,
         optimizationLevel: 'none' as const,
         padding: 20,
+        format: 'svg' as const,
+        includeBackground: true,
       };
 
       const svg = service.exportToSVG(exportOptions);
@@ -681,6 +688,8 @@ describe('SvgDrawingService', () => {
         height: 600,
         optimizationLevel: 'none' as const,
         padding: 20,
+        format: 'svg' as const,
+        includeBackground: true,
       };
 
       const svg = service.exportToSVG(exportOptions);
@@ -698,11 +707,54 @@ describe('SvgDrawingService', () => {
         height: 600,
         optimizationLevel: 'none' as const,
         padding: 20,
+        format: 'svg' as const,
+        includeBackground: true,
       };
 
       const svg = service.exportToSVG(exportOptions);
       expect(svg).toContain('<polygon');
       expect(svg).toContain('points=');
+    });
+
+    it('should include background image when requested', () => {
+      const dataUrl =
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAAC0lEQVR42mP8/x8AAwMCAO+X2NwAAAAASUVORK5CYII=';
+      service.setBackgroundImage(dataUrl);
+      service.setImageScale(1);
+      service.setImagePosition(0, 0);
+
+      const exportOptions = {
+        filename: 'test.svg',
+        width: 800,
+        height: 600,
+        optimizationLevel: 'none' as const,
+        padding: 20,
+        format: 'svg' as const,
+        includeBackground: true,
+      };
+
+      const svg = service.exportToSVG(exportOptions);
+      expect(svg).toContain('<image');
+      expect(svg).toContain(dataUrl);
+    });
+
+    it('should omit background image when includeBackground is false', () => {
+      const dataUrl =
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAAC0lEQVR42mP8/x8AAwMCAO+X2NwAAAAASUVORK5CYII=';
+      service.setBackgroundImage(dataUrl);
+
+      const exportOptions = {
+        filename: 'test.svg',
+        width: 800,
+        height: 600,
+        optimizationLevel: 'none' as const,
+        padding: 20,
+        format: 'svg' as const,
+        includeBackground: false,
+      };
+
+      const svg = service.exportToSVG(exportOptions);
+      expect(svg).not.toContain('<image');
     });
 
     it('should apply basic optimization', () => {
@@ -712,6 +764,8 @@ describe('SvgDrawingService', () => {
         height: 600,
         optimizationLevel: 'basic' as const,
         padding: 20,
+        format: 'svg' as const,
+        includeBackground: true,
       };
 
       const svg = service.exportToSVG(exportOptions);
@@ -726,6 +780,8 @@ describe('SvgDrawingService', () => {
         height: 600,
         optimizationLevel: 'aggressive' as const,
         padding: 20,
+        format: 'svg' as const,
+        includeBackground: true,
       };
 
       const svg = service.exportToSVG(exportOptions);

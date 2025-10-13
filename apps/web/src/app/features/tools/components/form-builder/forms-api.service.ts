@@ -5,6 +5,7 @@ import { ApiClientService } from '@core/api/api-client.service';
 import {
   FormMetadata,
   FormSchema,
+  FormSubmission,
   ApiResponse,
   PaginatedResponse,
 } from '@nodeangularfullstack/shared';
@@ -160,6 +161,28 @@ export class FormsApiService {
   }
 
   /**
+   * Uploads a background image for forms.
+   * @param file - Image file to upload
+   * @returns Observable containing the uploaded image URL
+   * @throws {HttpErrorResponse} When upload fails
+   * @example
+   * formsApiService.uploadBackgroundImage(imageFile)
+   *   .subscribe(response => console.log('Image URL:', response.url));
+   */
+  uploadBackgroundImage(file: File): Observable<{ url: string; fileName: string; size: number; mimeType: string }> {
+    const formData = new FormData();
+    formData.append('backgroundImage', file);
+
+    return this.apiClient.post<ApiResponse<{ url: string; fileName: string; size: number; mimeType: string }>>(
+      '/forms/upload-background',
+      formData
+    ).pipe(
+      map((response) => response.data!),
+      catchError((error) => throwError(() => error))
+    );
+  }
+
+  /**
    * Converts date strings to Date objects for proper typing.
    * @param form - Form metadata with string dates
    * @returns Form metadata with Date objects
@@ -174,6 +197,64 @@ export class FormsApiService {
   }
 
   /**
+   * Retrieves submissions for a specific form.
+   * @param formId - Form ID to get submissions for
+   * @param page - Page number (1-indexed)
+   * @param limit - Number of items per page
+   * @returns Observable containing paginated submissions
+   * @throws {HttpErrorResponse} When retrieval fails or access denied
+   * @example
+   * formsApiService.getSubmissions('form-123', 1, 50)
+   *   .subscribe(response => console.log('Submissions:', response.data));
+   */
+  getSubmissions(
+    formId: string,
+    page = 1,
+    limit = 50,
+  ): Observable<PaginatedResponse<FormSubmission>> {
+    return this.apiClient
+      .get<PaginatedResponse<FormSubmission>>(`/forms/${formId}/submissions`, {
+        params: {
+          page: page.toString(),
+          limit: limit.toString(),
+        },
+      })
+      .pipe(
+        map((response) => ({
+          ...response,
+          data: response.data?.map((submission) => this.convertSubmissionDates(submission)) || [],
+        })),
+        catchError((error) => throwError(() => error)),
+      );
+  }
+
+  /**
+   * Exports form submissions as CSV with optional filtering.
+   * @param formId - Form ID to export submissions for
+   * @param params - Export parameters (fields, dateFrom, dateTo, filterField, filterValue)
+   * @returns Observable containing CSV file as Blob
+   * @throws {HttpErrorResponse} When export fails or access denied
+   * @example
+   * formsApiService.exportSubmissions('form-123', {
+   *   fields: 'name,email',
+   *   dateFrom: '2024-01-01',
+   *   dateTo: '2024-12-31'
+   * }).subscribe(blob => {
+   *   const url = window.URL.createObjectURL(blob);
+   *   const a = document.createElement('a');
+   *   a.href = url;
+   *   a.download = 'submissions.csv';
+   *   a.click();
+   * });
+   */
+  exportSubmissions(formId: string, params?: Record<string, string>): Observable<Blob> {
+    return this.apiClient.get(`/forms/${formId}/submissions/export`, {
+      params,
+      responseType: 'blob',
+    });
+  }
+
+  /**
    * Converts schema date strings to Date objects.
    * @param schema - Form schema with string dates
    * @returns Form schema with Date objects
@@ -184,6 +265,18 @@ export class FormsApiService {
       createdAt: new Date(schema.createdAt),
       updatedAt: new Date(schema.updatedAt),
       expiresAt: schema.expiresAt ? new Date(schema.expiresAt) : undefined,
+    };
+  }
+
+  /**
+   * Converts submission date strings to Date objects.
+   * @param submission - Form submission with string dates
+   * @returns Form submission with Date objects
+   */
+  private convertSubmissionDates(submission: FormSubmission): FormSubmission {
+    return {
+      ...submission,
+      submittedAt: new Date(submission.submittedAt),
     };
   }
 }

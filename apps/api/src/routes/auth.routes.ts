@@ -250,11 +250,7 @@ router.post(
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get(
-  '/profile',
-  AuthMiddleware.authenticate,
-  authController.getProfile
-);
+router.get('/profile', AuthMiddleware.authenticate, authController.getProfile);
 
 /**
  * @swagger
@@ -480,6 +476,61 @@ router.get(
 
 /**
  * @swagger
+ * /api/v1/auth/dev/unlock-account:
+ *   post:
+ *     summary: Unlock a user account (Development only)
+ *     description: Unlocks a user account that has been locked due to failed login attempts. Only available in development mode.
+ *     tags: [Authentication, Development]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Email address of the account to unlock
+ *           example:
+ *             email: "admin@example.com"
+ *     responses:
+ *       200:
+ *         description: Account unlocked successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Account unlocked successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     email:
+ *                       type: string
+ *                     wasLocked:
+ *                       type: boolean
+ *                     previousAttempts:
+ *                       type: number
+ *       404:
+ *         description: Not available in production mode
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.post(
+  '/dev/unlock-account',
+  ValidationMiddleware.validateContentType(['application/json']),
+  authController.unlockAccount
+);
+
+/**
+ * @swagger
  * /api/v1/auth/me:
  *   get:
  *     summary: Get token information
@@ -513,11 +564,7 @@ router.get(
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get(
-  '/me',
-  AuthMiddleware.authenticate,
-  authController.me
-);
+router.get('/me', AuthMiddleware.authenticate, authController.me);
 
 // Apply authentication event logging to all auth routes
 router.use(AuthMiddleware.logAuthEvents);

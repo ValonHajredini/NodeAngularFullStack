@@ -47,6 +47,7 @@
     "feedback:dashboard": "node scripts/feedback-collector.js dashboard",
     "onboarding:setup": "npm run metrics:init && npm run feedback:init && node examples/tutorials/first-feature/validation.js",
     "onboarding:help": "echo 'Visit examples/tutorials/first-feature/README.md to get started!'",
+    "dev:unlock-accounts": "./scripts/unlock-account.sh",
     "prepare": "husky",
     "bmad:refresh": "bmad-method install -f -i codex",
     "bmad:list": "bmad-method list:agents",

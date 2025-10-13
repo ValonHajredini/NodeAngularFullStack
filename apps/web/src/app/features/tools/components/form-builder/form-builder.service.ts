@@ -1,10 +1,16 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, effect } from '@angular/core';
+import { Subject } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
 import {
   FormMetadata,
   FormField,
   FormSchema,
   FormFieldType,
   FormStatus,
+  RowLayoutConfig,
+  FieldPosition,
+  FormStep,
+  StepFormConfig,
 } from '@nodeangularfullstack/shared';
 
 /**
@@ -21,11 +27,36 @@ export class FormBuilderService {
   private readonly _selectedField = signal<FormField | null>(null);
   private readonly _isDirty = signal<boolean>(false);
 
+  // Row layout state signals
+  private readonly _rowLayoutEnabled = signal<boolean>(false);
+  private readonly _rowConfigs = signal<RowLayoutConfig[]>([]);
+
+  // Step form state signals
+  private readonly _stepFormEnabled = signal<boolean>(false);
+  private readonly _steps = signal<FormStep[]>([]);
+  private readonly _activeStepId = signal<string | null>(null);
+
+  // Property change subjects for real-time preview updates (Story 16.5)
+  private readonly propertyChangeSubject = new Subject<{
+    fieldId: string;
+    updates: Partial<FormField>;
+  }>();
+  private readonly debouncedPropertyUpdates$ = this.propertyChangeSubject.pipe(debounceTime(300));
+
   // Public readonly signals
   readonly currentForm = this._currentForm.asReadonly();
-  readonly formFields = this._formFields.asReadonly();
+  readonly formFields = computed(() => this._formFields().filter((field) => !field.parentGroupId));
   readonly selectedField = this._selectedField.asReadonly();
   readonly isDirty = this._isDirty.asReadonly();
+
+  // Row layout public signals
+  readonly rowLayoutEnabled = this._rowLayoutEnabled.asReadonly();
+  readonly rowConfigs = this._rowConfigs.asReadonly();
+
+  // Step form public signals
+  readonly stepFormEnabled = this._stepFormEnabled.asReadonly();
+  readonly steps = this._steps.asReadonly();
+  readonly activeStepId = this._activeStepId.asReadonly();
 
   // Computed signals
   readonly hasFields = computed(() => this._formFields().length > 0);
@@ -37,6 +68,98 @@ export class FormBuilderService {
   readonly isPublished = computed(() => {
     const form = this._currentForm();
     return form?.status === FormStatus.PUBLISHED;
+  });
+  readonly currentFormId = computed(() => this._currentForm()?.id || null);
+
+  // Step form computed signals
+  readonly canAddStep = computed(() => this._steps().length < 10);
+  readonly canDeleteStep = computed(() => this._steps().length > 1);
+  readonly activeStep = computed(() => this._steps().find((s) => s.id === this._activeStepId()));
+  readonly activeStepOrder = computed(() => this.activeStep()?.order ?? 0);
+
+  constructor() {
+    // Subscribe to debounced property updates
+    this.debouncedPropertyUpdates$.subscribe(({ fieldId, updates }) => {
+      this.applyFieldUpdateWithoutMarkingDirty(fieldId, updates);
+    });
+  }
+
+  /**
+   * Computed signal that groups fields by row.
+   * Returns null if row layout is disabled (use global column layout instead).
+   * Returns Map<rowId, FormField[]> when row layout is enabled.
+   */
+  readonly fieldsByRow = computed(() => {
+    if (!this._rowLayoutEnabled()) {
+      return null; // Use global column layout
+    }
+
+    const fields = this._formFields();
+    const rows = this._rowConfigs();
+
+    // Initialize map with all rows
+    const groupedFields = new Map<string, FormField[]>();
+    rows.forEach((row) => groupedFields.set(row.rowId, []));
+
+    // Group fields by rowId
+    fields.forEach((field) => {
+      if (field.position?.rowId) {
+        const rowFields = groupedFields.get(field.position.rowId) || [];
+        rowFields.push(field);
+        groupedFields.set(field.position.rowId, rowFields);
+      } else {
+        // Orphaned field - assign to first row
+        if (rows.length > 0) {
+          const firstRow = rows[0];
+          const rowFields = groupedFields.get(firstRow.rowId) || [];
+          rowFields.push(field);
+          groupedFields.set(firstRow.rowId, rowFields);
+        }
+      }
+    });
+
+    return groupedFields;
+  });
+
+  /**
+   * Computed signal: Fields grouped by row-column with sorting by orderInColumn.
+   * Returns Map<rowId, Map<columnIndex, FormField[]>>
+   * Fields within each column are sorted by orderInColumn (ascending).
+   */
+  readonly fieldsByRowColumn = computed(() => {
+    const fields = this._formFields();
+    const grouped = new Map<string, Map<number, FormField[]>>();
+
+    fields.forEach((field) => {
+      if (!field.position) return;
+
+      const { rowId, columnIndex, orderInColumn = 0 } = field.position;
+
+      if (!grouped.has(rowId)) {
+        grouped.set(rowId, new Map());
+      }
+
+      const rowMap = grouped.get(rowId)!;
+      if (!rowMap.has(columnIndex)) {
+        rowMap.set(columnIndex, []);
+      }
+
+      const columnFields = rowMap.get(columnIndex)!;
+      columnFields.push(field);
+    });
+
+    // Sort fields within each column by orderInColumn
+    grouped.forEach((rowMap) => {
+      rowMap.forEach((columnFields) => {
+        columnFields.sort((a, b) => {
+          const orderA = a.position?.orderInColumn ?? 0;
+          const orderB = b.position?.orderInColumn ?? 0;
+          return orderA - orderB;
+        });
+      });
+    });
+
+    return grouped;
   });
 
   /**
@@ -66,6 +189,7 @@ export class FormBuilderService {
 
   /**
    * Removes a field by its ID.
+   * Clears position metadata when removing.
    * @param fieldId - The ID of the field to remove
    */
   removeField(fieldId: string): void {
@@ -96,12 +220,18 @@ export class FormBuilderService {
 
   /**
    * Resets the form state to default values.
+   * Also resets row layout and step form state to default (disabled).
    */
   resetForm(): void {
     this._currentForm.set(null);
     this._formFields.set([]);
     this._selectedField.set(null);
     this._isDirty.set(false);
+    this._rowLayoutEnabled.set(false);
+    this._rowConfigs.set([]);
+    this._stepFormEnabled.set(false);
+    this._steps.set([]);
+    this._activeStepId.set(null);
   }
 
   /**
@@ -115,6 +245,14 @@ export class FormBuilderService {
    * Marks the form as saved (no unsaved changes).
    */
   markClean(): void {
+    this._isDirty.set(false);
+  }
+
+  /**
+   * Marks the form as pristine (same as markClean).
+   * Alias for consistency with Angular forms terminology.
+   */
+  markPristine(): void {
     this._isDirty.set(false);
   }
 
@@ -137,22 +275,33 @@ export class FormBuilderService {
   /**
    * Adds a new field from a field type.
    * Creates a FormField with default values and a unique ID.
+   * Auto-assigns to first available row-column if row layout is enabled.
    * @param type - The field type to add
+   * @param atIndex - Optional index to insert the field at (defaults to end)
    */
-  addFieldFromType(type: FormFieldType): void {
-    const fields = this._formFields();
-    const newField: FormField = {
-      id: crypto.randomUUID(),
-      type,
-      label: 'Untitled Field',
-      fieldName: this.generateUniqueFieldName(type),
-      placeholder: '',
-      helpText: '',
-      required: false,
-      order: fields.length,
-      validation: {},
-    };
-    this.addField(newField);
+  addFieldFromType(type: FormFieldType, atIndex?: number): FormField {
+    const newField = this.createField(type);
+
+    // Auto-assign position if row layout is enabled
+    if (this._rowLayoutEnabled() && this._rowConfigs().length > 0) {
+      const firstRow = this._rowConfigs()[0];
+      newField.position = { rowId: firstRow.rowId, columnIndex: 0 };
+    }
+
+    this._formFields.update((currentFields) => {
+      const updated = [...currentFields];
+      if (atIndex !== undefined && atIndex >= 0 && atIndex <= updated.length) {
+        updated.splice(atIndex, 0, newField);
+      } else {
+        updated.push(newField);
+      }
+      return this.recalculateOrder(updated);
+    });
+
+    this.markDirty();
+
+    const createdField = this._formFields().find((field) => field.id === newField.id);
+    return createdField ?? newField;
   }
 
   /**
@@ -165,7 +314,12 @@ export class FormBuilderService {
       const updated = [...fields];
       const [movedField] = updated.splice(previousIndex, 1);
       updated.splice(currentIndex, 0, movedField);
-      return updated;
+
+      // Update order property for all fields to match array index
+      return updated.map((field, index) => ({
+        ...field,
+        order: index,
+      }));
     });
     this.markDirty();
   }
@@ -201,8 +355,226 @@ export class FormBuilderService {
       .toLowerCase();
   }
 
+  private createField(type: FormFieldType): FormField {
+    const fields = this._formFields();
+    const baseField = {
+      id: crypto.randomUUID(),
+      type,
+      label:
+        type === FormFieldType.HEADING
+          ? 'Untitled Heading'
+          : type === FormFieldType.IMAGE
+            ? 'Image'
+            : type === FormFieldType.TEXT_BLOCK
+              ? 'Text Block'
+              : type === FormFieldType.IMAGE_GALLERY
+                ? 'Image Gallery'
+                : 'Untitled Field',
+      fieldName: this.generateUniqueFieldName(type),
+      placeholder: '',
+      helpText: '',
+      required:
+        type === FormFieldType.HEADING ||
+        type === FormFieldType.IMAGE ||
+        type === FormFieldType.TEXT_BLOCK
+          ? false
+          : false, // Display-only fields are never required
+      order: fields.length,
+      validation: {},
+    };
+
+    // Add HEADING-specific metadata
+    if (type === FormFieldType.HEADING) {
+      return {
+        ...baseField,
+        metadata: {
+          headingLevel: 'h2',
+          alignment: 'left',
+          fontWeight: 'bold',
+        },
+      };
+    }
+
+    // Add IMAGE-specific metadata
+    if (type === FormFieldType.IMAGE) {
+      return {
+        ...baseField,
+        metadata: {
+          altText: 'Image',
+          alignment: 'center',
+          width: '100%',
+          height: 'auto',
+          objectFit: 'contain',
+        },
+      };
+    }
+
+    // Add TEXT_BLOCK-specific metadata
+    if (type === FormFieldType.TEXT_BLOCK) {
+      return {
+        ...baseField,
+        metadata: {
+          content: '<p>Add your instructions here...</p>',
+          alignment: 'left',
+          padding: 'medium',
+          collapsible: false,
+          collapsed: false,
+        },
+      };
+    }
+
+    // Add IMAGE_GALLERY-specific metadata (Story 18.2)
+    if (type === FormFieldType.IMAGE_GALLERY) {
+      return {
+        ...baseField,
+        metadata: {
+          images: [],
+          columns: 4,
+          aspectRatio: 'square',
+          maxImages: 10,
+        },
+      };
+    }
+
+    return baseField;
+  }
+
+  private recalculateOrder(fields: FormField[]): FormField[] {
+    return fields.map((field, index) => ({
+      ...field,
+      order: index,
+    }));
+  }
+
+  private calculateInsertIndex(
+    fields: FormField[],
+    parentGroupId: string | undefined,
+    targetIndex?: number,
+  ): number {
+    if (!parentGroupId) {
+      const topLevelFields = fields.filter((field) => !field.parentGroupId);
+      if (targetIndex === undefined || targetIndex >= topLevelFields.length) {
+        return fields.length;
+      }
+      const targetField = topLevelFields[targetIndex];
+      if (!targetField) {
+        return fields.length;
+      }
+      return fields.findIndex((field) => field.id === targetField.id);
+    }
+
+    const parentIndex = fields.findIndex((field) => field.id === parentGroupId);
+    if (parentIndex === -1) {
+      return fields.length;
+    }
+
+    const childFields = fields.filter((field) => field.parentGroupId === parentGroupId);
+
+    if (childFields.length === 0) {
+      return parentIndex + 1;
+    }
+
+    if (targetIndex === undefined || targetIndex >= childFields.length) {
+      const lastChild = childFields[childFields.length - 1];
+      const lastChildIndex = fields.findIndex((field) => field.id === lastChild.id);
+      return lastChildIndex + 1;
+    }
+
+    const targetChild = childFields[targetIndex];
+    if (!targetChild) {
+      const lastChild = childFields[childFields.length - 1];
+      const lastChildIndex = fields.findIndex((field) => field.id === lastChild.id);
+      return lastChildIndex + 1;
+    }
+
+    return fields.findIndex((field) => field.id === targetChild.id);
+  }
+
+  /**
+   * Updates a single property of a field by its ID.
+   * @param fieldId - The ID of the field to update
+   * @param property - The property name to update
+   * @param value - The new value for the property
+   */
+  updateFieldProperty(fieldId: string, property: keyof FormField, value: any): void {
+    this._formFields.update((fields) => {
+      const index = fields.findIndex((f) => f.id === fieldId);
+      if (index === -1) return fields;
+      const updated = [...fields];
+      updated[index] = { ...updated[index], [property]: value };
+      return updated;
+    });
+    this.markDirty();
+  }
+
+  /**
+   * Updates multiple properties of a field by its ID.
+   * @param fieldId - The ID of the field to update
+   * @param updates - Partial field object with properties to update
+   */
+  updateFieldProperties(fieldId: string, updates: Partial<FormField>): void {
+    this._formFields.update((fields) => {
+      const index = fields.findIndex((f) => f.id === fieldId);
+      if (index === -1) return fields;
+      const updated = [...fields];
+      updated[index] = { ...updated[index], ...updates };
+      return updated;
+    });
+    this.markDirty();
+  }
+
+  /**
+   * Updates field property instantly for real-time canvas preview (Story 16.5).
+   * Use for simple properties like label, placeholder, required.
+   * Does NOT mark form as dirty (preview-only update).
+   * @param fieldId - The ID of the field to update
+   * @param updates - Partial field updates
+   */
+  updateFieldPropertyInstant(fieldId: string, updates: Partial<FormField>): void {
+    this.applyFieldUpdateWithoutMarkingDirty(fieldId, updates);
+    // Update selected field signal to trigger re-render
+    const updatedField = this._formFields().find((f) => f.id === fieldId);
+    if (updatedField && this._selectedField()?.id === fieldId) {
+      this._selectedField.set(updatedField);
+    }
+  }
+
+  /**
+   * Updates field property with debounce (300ms) for real-time canvas preview (Story 16.5).
+   * Use for expensive updates like custom CSS.
+   * Does NOT mark form as dirty (preview-only update).
+   * @param fieldId - The ID of the field to update
+   * @param updates - Partial field updates
+   */
+  updateFieldPropertyDebounced(fieldId: string, updates: Partial<FormField>): void {
+    this.propertyChangeSubject.next({ fieldId, updates });
+  }
+
+  /**
+   * Applies field updates to form schema signal WITHOUT marking form as dirty.
+   * Used for real-time preview updates (Story 16.5).
+   * @private
+   * @param fieldId - The ID of the field to update
+   * @param updates - Partial field updates
+   */
+  private applyFieldUpdateWithoutMarkingDirty(fieldId: string, updates: Partial<FormField>): void {
+    this._formFields.update((fields) => {
+      const index = fields.findIndex((f) => f.id === fieldId);
+      if (index === -1) return fields;
+      const updated = [...fields];
+      updated[index] = { ...updated[index], ...updates };
+      return updated;
+    });
+    // Update selected field signal to trigger re-render
+    const updatedField = this._formFields().find((f) => f.id === fieldId);
+    if (updatedField && this._selectedField()?.id === fieldId) {
+      this._selectedField.set(updatedField);
+    }
+  }
+
   /**
    * Loads a form from metadata and populates all signals.
+   * Restores row layout and step form configuration if present in schema.
    * Marks the form as clean after loading.
    * @param form - The form metadata to load
    */
@@ -216,6 +588,31 @@ export class FormBuilderService {
       this._formFields.set([]);
     }
 
+    // Restore row layout configuration if present
+    if (form.schema?.settings?.rowLayout?.enabled) {
+      this._rowLayoutEnabled.set(true);
+      this._rowConfigs.set(form.schema.settings.rowLayout.rows || []);
+    } else {
+      // Reset row layout state for forms without row layout
+      this._rowLayoutEnabled.set(false);
+      this._rowConfigs.set([]);
+    }
+
+    // Restore step form configuration if present
+    if (form.schema?.settings?.stepForm?.enabled) {
+      this._stepFormEnabled.set(true);
+      this._steps.set(form.schema.settings.stepForm.steps || []);
+      // Set active step to first step by default
+      if (form.schema.settings.stepForm.steps?.length > 0) {
+        this._activeStepId.set(form.schema.settings.stepForm.steps[0].id);
+      }
+    } else {
+      // Reset step form state for forms without step configuration
+      this._stepFormEnabled.set(false);
+      this._steps.set([]);
+      this._activeStepId.set(null);
+    }
+
     // Clear selection
     this._selectedField.set(null);
 
@@ -224,7 +621,346 @@ export class FormBuilderService {
   }
 
   /**
+   * Assigns a field to a parent group container.
+   * Sets the parentGroupId on the field to enable group nesting.
+   * @param fieldId - The ID of the field to assign
+   * @param parentGroupId - The ID of the parent group (null to remove from group)
+   */
+  assignFieldToGroup(fieldId: string, parentGroupId: string | null, targetIndex?: number): void {
+    this._formFields.update((fields) => {
+      const index = fields.findIndex((f) => f.id === fieldId);
+      if (index === -1) {
+        return fields;
+      }
+
+      const updated = [...fields];
+      const [removedField] = updated.splice(index, 1);
+      const reassigned: FormField = {
+        ...removedField,
+        parentGroupId: parentGroupId ?? undefined,
+      };
+
+      const insertIndex = this.calculateInsertIndex(updated, reassigned.parentGroupId, targetIndex);
+
+      updated.splice(insertIndex, 0, reassigned);
+      return this.recalculateOrder(updated);
+    });
+    this.markDirty();
+  }
+
+  /**
+   * Gets all child fields that belong to a specific group.
+   * Returns only direct children (not nested grandchildren).
+   * @param groupId - The ID of the group
+   * @returns Array of fields that have this group as their parent
+   */
+  getChildFields(groupId: string): FormField[] {
+    return this._formFields()
+      .filter((field) => field.parentGroupId === groupId)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  }
+
+  /**
+   * Moves a field between groups or to/from top-level.
+   * Updates the field's parentGroupId to the new parent.
+   * @param fieldId - The ID of the field to move
+   * @param newParentId - The ID of the new parent group (null for top-level)
+   */
+  moveFieldBetweenGroups(fieldId: string, newParentId: string | null): void {
+    this.assignFieldToGroup(fieldId, newParentId);
+  }
+
+  /**
+   * Gets all fields including nested children (for saving to database).
+   * Returns the complete flattened array of all fields.
+   * @returns Array of all fields regardless of parent relationships
+   */
+  getAllFields(): FormField[] {
+    return this._formFields();
+  }
+
+  /**
+   * Enable row-based layout mode.
+   * Creates an initial row if none exist.
+   * @param defaultColumns - Number of columns for the initial row (default: 1)
+   */
+  enableRowLayout(defaultColumns: 1 | 2 | 3 | 4 = 1): void {
+    this._rowLayoutEnabled.set(true);
+    // Create initial row if none exist
+    if (this._rowConfigs().length === 0) {
+      this.addRow(defaultColumns);
+    }
+    this.markDirty();
+  }
+
+  /**
+   * Disable row-based layout mode.
+   * Clears all row configurations and removes position metadata from fields.
+   */
+  disableRowLayout(): void {
+    this._rowLayoutEnabled.set(false);
+    this._rowConfigs.set([]);
+    // Clear position metadata from fields
+    this._formFields.update((fields) => fields.map((f) => ({ ...f, position: undefined })));
+    this.markDirty();
+  }
+
+  /**
+   * Add new row with specified column count.
+   * Assigns stepId when step mode is enabled.
+   * @param columnCount - Number of columns in the row (1-4)
+   * @returns Row ID of the created row
+   */
+  addRow(columnCount: 1 | 2 | 3 | 4 = 2): string {
+    const rowId = `row_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+    const order = this._rowConfigs().length;
+    const stepId = this._stepFormEnabled() ? this._activeStepId() || undefined : undefined;
+
+    this._rowConfigs.update((rows) => [...rows, { rowId, columnCount, order, stepId }]);
+    this.markDirty();
+
+    return rowId;
+  }
+
+  /**
+   * Remove row and reassign orphaned fields.
+   * Fields in the removed row are moved to the first available row.
+   * @param rowId - ID of the row to remove
+   */
+  removeRow(rowId: string): void {
+    this._rowConfigs.update((rows) => rows.filter((r) => r.rowId !== rowId));
+
+    // Reassign orphaned fields to first available row
+    const firstRow = this._rowConfigs()[0];
+    if (firstRow) {
+      this._formFields.update((fields) =>
+        fields.map((field) => {
+          if (field.position?.rowId === rowId) {
+            return { ...field, position: { rowId: firstRow.rowId, columnIndex: 0 } };
+          }
+          return field;
+        }),
+      );
+    } else {
+      // No rows left, clear all positions
+      this._formFields.update((fields) => fields.map((f) => ({ ...f, position: undefined })));
+    }
+    this.markDirty();
+  }
+
+  /**
+   * Update column count for a row.
+   * Fields that exceed the new column count are moved to the last column.
+   * @param rowId - ID of the row to update
+   * @param columnCount - New column count (0-4)
+   */
+  updateRowColumns(rowId: string, columnCount: 0 | 1 | 2 | 3 | 4): void {
+    this._rowConfigs.update((rows) =>
+      rows.map((row) => (row.rowId === rowId ? { ...row, columnCount } : row)),
+    );
+
+    // Reassign fields that exceed new column count
+    this._formFields.update((fields) =>
+      fields.map((field) => {
+        if (field.position?.rowId === rowId && field.position.columnIndex >= columnCount) {
+          return { ...field, position: { rowId, columnIndex: Math.max(0, columnCount - 1) } };
+        }
+        return field;
+      }),
+    );
+    this.markDirty();
+  }
+
+  /**
+   * Get all fields in a specific column, sorted by orderInColumn.
+   * @param rowId - Row identifier
+   * @param columnIndex - Column index within row (0-3)
+   * @returns Array of fields in the column, sorted by orderInColumn
+   */
+  getFieldsInColumn(rowId: string, columnIndex: number): FormField[] {
+    const grouped = this.fieldsByRowColumn();
+    const rowMap = grouped.get(rowId);
+    if (!rowMap) return [];
+    return rowMap.get(columnIndex) || [];
+  }
+
+  /**
+   * Set field position within row-column layout.
+   * If orderInColumn is not provided, defaults to 0 for backward compatibility.
+   * When moving field to new column, recalculates orderInColumn for both old and new columns.
+   * @param fieldId - ID of the field to position
+   * @param position - Position within row-column layout
+   */
+  setFieldPosition(fieldId: string, position: FieldPosition): void {
+    const targetPosition: FieldPosition = {
+      ...position,
+      orderInColumn: position.orderInColumn ?? 0,
+    };
+
+    // Get current field position
+    const field = this._formFields().find((f) => f.id === fieldId);
+    const oldPosition = field?.position;
+
+    this._formFields.update((fields) =>
+      fields.map((f) => {
+        if (f.id === fieldId) {
+          return { ...f, position: targetPosition };
+        }
+
+        // If field moved from one column to another, recalculate orderInColumn in old column
+        if (
+          oldPosition &&
+          f.position?.rowId === oldPosition.rowId &&
+          f.position?.columnIndex === oldPosition.columnIndex &&
+          f.id !== fieldId
+        ) {
+          const oldOrder = oldPosition.orderInColumn ?? 0;
+          const currentOrder = f.position.orderInColumn ?? 0;
+
+          if (currentOrder > oldOrder) {
+            // Shift fields up to fill gap
+            return {
+              ...f,
+              position: {
+                ...f.position,
+                orderInColumn: currentOrder - 1,
+              },
+            };
+          }
+        }
+
+        // Shift fields in target column to make room
+        if (
+          f.position?.rowId === targetPosition.rowId &&
+          f.position?.columnIndex === targetPosition.columnIndex &&
+          f.id !== fieldId
+        ) {
+          const currentOrder = f.position.orderInColumn ?? 0;
+
+          if (currentOrder >= targetPosition.orderInColumn!) {
+            // Shift fields down to make room
+            return {
+              ...f,
+              position: {
+                ...f.position,
+                orderInColumn: currentOrder + 1,
+              },
+            };
+          }
+        }
+
+        return f;
+      }),
+    );
+
+    this.markDirty();
+  }
+
+  /**
+   * Reorder field within its current column.
+   * Updates the field's orderInColumn and shifts other fields to maintain sequential order.
+   * @param fieldId - ID of the field to reorder
+   * @param newOrderInColumn - New order index within column (0-based)
+   */
+  reorderFieldInColumn(fieldId: string, newOrderInColumn: number): void {
+    const field = this._formFields().find((f) => f.id === fieldId);
+    if (!field?.position) return;
+
+    const { rowId, columnIndex } = field.position;
+    const oldOrderInColumn = field.position.orderInColumn ?? 0;
+
+    // Update target field's orderInColumn
+    this._formFields.update((fields) =>
+      fields.map((f) => {
+        if (f.id === fieldId) {
+          return {
+            ...f,
+            position: {
+              ...f.position!,
+              orderInColumn: newOrderInColumn,
+            },
+          };
+        }
+
+        // Shift other fields in same column to maintain sequential order
+        if (
+          f.position?.rowId === rowId &&
+          f.position?.columnIndex === columnIndex &&
+          f.id !== fieldId
+        ) {
+          const currentOrder = f.position.orderInColumn ?? 0;
+          let newOrder = currentOrder;
+
+          if (newOrderInColumn < oldOrderInColumn) {
+            // Moving field up - shift fields down
+            if (currentOrder >= newOrderInColumn && currentOrder < oldOrderInColumn) {
+              newOrder = currentOrder + 1;
+            }
+          } else {
+            // Moving field down - shift fields up
+            if (currentOrder > oldOrderInColumn && currentOrder <= newOrderInColumn) {
+              newOrder = currentOrder - 1;
+            }
+          }
+
+          return {
+            ...f,
+            position: {
+              ...f.position,
+              orderInColumn: newOrder,
+            },
+          };
+        }
+
+        return f;
+      }),
+    );
+
+    this.markDirty();
+  }
+
+  /**
+   * Get current row layout configuration.
+   * @returns Array of row configurations
+   */
+  getRowLayout(): RowLayoutConfig[] {
+    return this._rowConfigs();
+  }
+
+  /**
+   * Migrate global column layout to row-based layout.
+   * Creates rows based on existing global column setting and distributes fields.
+   * @param globalColumns - Number of columns in the global layout (1-3)
+   */
+  migrateToRowLayout(globalColumns: 1 | 2 | 3): void {
+    this.enableRowLayout();
+
+    const fields = this._formFields();
+    const rowCount = Math.ceil(fields.length / globalColumns);
+
+    // Create rows
+    const rowIds: string[] = [];
+    for (let i = 0; i < rowCount; i++) {
+      const rowId = this.addRow(globalColumns);
+      rowIds.push(rowId);
+    }
+
+    // Assign fields to rows
+    this._formFields.update((fields) =>
+      fields.map((field, index) => {
+        const rowIndex = Math.floor(index / globalColumns);
+        const columnIndex = index % globalColumns;
+        return {
+          ...field,
+          position: { rowId: rowIds[rowIndex], columnIndex },
+        };
+      }),
+    );
+  }
+
+  /**
    * Exports the current form data for saving.
+   * Includes row layout and step form configuration if enabled.
    * @param formSettings - Form settings from the settings dialog
    * @returns Complete form data ready for API submission
    */
@@ -258,6 +994,20 @@ export class FormBuilderService {
           redirectUrl: formSettings.redirectUrl || undefined,
           allowMultipleSubmissions: formSettings.allowMultipleSubmissions,
         },
+        // Include row layout configuration if enabled
+        rowLayout: this._rowLayoutEnabled()
+          ? {
+              enabled: true,
+              rows: this._rowConfigs(),
+            }
+          : undefined,
+        // Include step form configuration if enabled
+        stepForm: this._stepFormEnabled()
+          ? {
+              enabled: true,
+              steps: this._steps(),
+            }
+          : undefined,
       },
     };
 
@@ -267,5 +1017,167 @@ export class FormBuilderService {
       description: formSettings.description || undefined,
       schema: schema as FormSchema,
     };
+  }
+
+  /**
+   * Enable step form mode.
+   * Creates a default first step and migrates all existing fields to that step.
+   */
+  enableStepForm(): void {
+    const defaultStep: FormStep = {
+      id: crypto.randomUUID(),
+      title: 'Step 1',
+      description: '',
+      order: 0,
+    };
+
+    this._steps.set([defaultStep]);
+    this._stepFormEnabled.set(true);
+    this._activeStepId.set(defaultStep.id);
+
+    // Migrate all existing fields to the first step
+    this.migrateFieldsToStep(defaultStep.id);
+
+    this.markDirty();
+  }
+
+  /**
+   * Disable step form mode.
+   * Clears all step assignments from fields and resets step state.
+   */
+  disableStepForm(): void {
+    this._stepFormEnabled.set(false);
+    this._steps.set([]);
+    this._activeStepId.set(null);
+
+    // Clear step assignments from fields
+    this._formFields.update((fields) =>
+      fields.map((field) => {
+        if (field.position) {
+          const { stepId, ...restPosition } = field.position;
+          return { ...field, position: restPosition as FieldPosition };
+        }
+        return field;
+      }),
+    );
+
+    this.markDirty();
+  }
+
+  /**
+   * Add a new step to the form.
+   * @param step - The step to add
+   */
+  addStep(step: FormStep): void {
+    this._steps.update((steps) => [...steps, step]);
+    this._activeStepId.set(step.id);
+    this.markDirty();
+  }
+
+  /**
+   * Remove a step and reassign its fields.
+   * Fields in the removed step are moved to the first available step.
+   * @param stepId - ID of the step to remove
+   */
+  removeStep(stepId: string): void {
+    // Don't allow removing the last step
+    if (this._steps().length <= 1) {
+      return;
+    }
+
+    // Remove the step
+    this._steps.update((steps) => steps.filter((s) => s.id !== stepId));
+
+    // Reassign fields from removed step to first step
+    const firstStep = this._steps()[0];
+    if (firstStep) {
+      this._formFields.update((fields) =>
+        fields.map((field) => {
+          if (field.position?.stepId === stepId) {
+            return {
+              ...field,
+              position: {
+                ...field.position,
+                stepId: firstStep.id,
+              },
+            };
+          }
+          return field;
+        }),
+      );
+    }
+
+    // Update active step if we removed the active one
+    if (this._activeStepId() === stepId && firstStep) {
+      this._activeStepId.set(firstStep.id);
+    }
+
+    // Reorder remaining steps
+    this._steps.update((steps) => steps.map((step, index) => ({ ...step, order: index })));
+
+    this.markDirty();
+  }
+
+  /**
+   * Update a step's properties.
+   * @param stepId - ID of the step to update
+   * @param updates - Partial step object with properties to update
+   */
+  updateStep(stepId: string, updates: Partial<FormStep>): void {
+    this._steps.update((steps) =>
+      steps.map((step) => (step.id === stepId ? { ...step, ...updates } : step)),
+    );
+    this.markDirty();
+  }
+
+  /**
+   * Reorder steps after drag-and-drop.
+   * Updates the order property of all steps based on array position.
+   * @param newOrder - The new array of steps in desired order
+   */
+  reorderSteps(newOrder: FormStep[]): void {
+    const reordered = newOrder.map((step, index) => ({ ...step, order: index }));
+    this._steps.set(reordered);
+    this.markDirty();
+  }
+
+  /**
+   * Get a step by its ID.
+   * @param stepId - ID of the step to retrieve
+   * @returns The step or undefined if not found
+   */
+  getStepById(stepId: string): FormStep | undefined {
+    return this._steps().find((s) => s.id === stepId);
+  }
+
+  /**
+   * Set the active step for canvas navigation.
+   * Updates the active step signal to trigger canvas updates.
+   * @param stepId - ID of the step to activate
+   */
+  setActiveStep(stepId: string): void {
+    const step = this._steps().find((s) => s.id === stepId);
+    if (!step) {
+      console.error('Invalid step ID:', stepId);
+      return;
+    }
+    this._activeStepId.set(stepId);
+  }
+
+  /**
+   * Migrate all fields to a specific step.
+   * Used when enabling step mode to assign all existing fields to the first step.
+   * @private
+   * @param stepId - ID of the step to assign fields to
+   */
+  private migrateFieldsToStep(stepId: string): void {
+    this._formFields.update((fields) =>
+      fields.map((field) => ({
+        ...field,
+        position: field.position
+          ? { ...field.position, stepId }
+          : { rowId: '', columnIndex: 0, stepId },
+      })),
+    );
   }
 }

@@ -11,6 +11,10 @@
 /* PrimeIcons */
 @import 'primeicons/primeicons.css';
 
+/* Quill Editor Styles */
+@import 'quill/dist/quill.core.css';
+@import 'quill/dist/quill.snow.css';
+
 /* Enhanced Global Styles with Theme Variables */
 html {
   scroll-behavior: smooth;
@@ -565,4 +569,111 @@ body {
   align-items: center !important;
   gap: 0.5rem !important;
   min-height: 2.5rem !important;
+}
+
+/* ==========================================================================
+   Quill Rich Text Editor Styles
+   ========================================================================== */
+
+/* Quill editor container */
+::ng-deep .quill-editor-wrapper {
+  .ql-container {
+    min-height: 200px;
+    max-height: 400px;
+    overflow-y: auto;
+    font-family: var(--font-family-sans);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .ql-editor {
+    min-height: 200px;
+    max-height: 400px;
+    padding: 12px;
+  }
+
+  /* Toolbar styling */
+  .ql-toolbar {
+    background-color: var(--color-gray-50);
+    border: 1px solid var(--color-border);
+    border-bottom: none;
+    border-radius: var(--border-radius-base) var(--border-radius-base) 0 0;
+    padding: 8px;
+  }
+
+  .ql-container {
+    border: 1px solid var(--color-border);
+    border-radius: 0 0 var(--border-radius-base) var(--border-radius-base);
+  }
+
+  /* Toolbar button styling */
+  .ql-toolbar button {
+    width: 28px;
+    height: 28px;
+    padding: 4px;
+    margin-right: 4px;
+    border-radius: var(--border-radius-base);
+    transition: var(--transition-colors);
+
+    &:hover {
+      background-color: var(--color-gray-100);
+    }
+
+    &.ql-active {
+      background-color: var(--color-primary-100);
+      color: var(--color-primary-600);
+    }
+  }
+
+  /* Placeholder styling */
+  .ql-editor.ql-blank::before {
+    color: var(--color-text-muted);
+    font-style: italic;
+  }
+
+  /* Focus state */
+  .ql-container.ql-snow {
+    &:focus-within {
+      border-color: var(--color-primary-500);
+      box-shadow: 0 0 0 1px var(--color-primary-500);
+    }
+  }
+}
+
+/* ==========================================================================
+   Text Block Content - Overflow and Word Wrapping
+   ========================================================================== */
+
+/* Apply overflow and word-wrapping to text block containers and content */
+.text-block-field,
+.text-block-display,
+.text-block-content {
+  overflow: hidden;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Text block field - start content from left edge */
+.text-block-field {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* Specific prose content styling */
+.text-block-content.prose {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Ensure all child elements respect container width */
+.text-block-content.prose * {
+  max-width: 100%;
+}
+
+/* Word breaking for common elements */
+.text-block-content.prose p,
+.text-block-content.prose li,
+.text-block-content.prose div {
+  overflow-wrap: break-word;
+  word-break: break-word;
 }

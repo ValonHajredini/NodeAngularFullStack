@@ -81,6 +81,7 @@ export class SvgDrawingService {
   private readonly _imageScale = signal<number>(1);
   private readonly _imagePosition = signal<{ x: number; y: number }>({ x: 0, y: 0 });
   private readonly _imageLocked = signal<boolean>(false);
+  private readonly _imageSize = signal<{ width: number; height: number } | null>(null);
 
   // Canvas zoom state
   private readonly _canvasZoom = signal<number>(1);
@@ -126,6 +127,7 @@ export class SvgDrawingService {
   readonly imageScale = this._imageScale.asReadonly();
   readonly imagePosition = this._imagePosition.asReadonly();
   readonly imageLocked = this._imageLocked.asReadonly();
+  readonly imageSize = this._imageSize.asReadonly();
 
   // Canvas zoom public signals
   readonly canvasZoom = this._canvasZoom.asReadonly();
@@ -215,6 +217,10 @@ export class SvgDrawingService {
         this._imageScale.set(stored.backgroundImage.scale ?? 1);
         this._imagePosition.set(stored.backgroundImage.position ?? { x: 0, y: 0 });
         this._imageLocked.set(stored.backgroundImage.locked ?? false);
+        this.refreshBackgroundImageSize(
+          stored.backgroundImage.data || null,
+          stored.backgroundImage.size ?? undefined,
+        );
       }
 
       // Restore canvas zoom settings if available
@@ -248,6 +254,7 @@ export class SvgDrawingService {
       this._imageScale.set(1);
       this._imagePosition.set({ x: 0, y: 0 });
       this._imageLocked.set(false);
+      this._imageSize.set(null);
       this._canvasZoom.set(1);
       this._canvasOffset.set({ x: 0, y: 0 });
       console.log('SvgDrawingService initialized with defaults');
@@ -339,6 +346,33 @@ export class SvgDrawingService {
       this.selectGroup(shapeId);
     } else {
       this._selectedShapeIds.set([shapeId]);
+    }
+
+    // Sync style controls with the selected shape
+    this.syncStyleControlsWithShape(shape);
+  }
+
+  /**
+   * Syncs the style controls (color, width, rotation, etc.) with the given shape.
+   * @param shape - Shape to sync controls with
+   */
+  private syncStyleControlsWithShape(shape: Shape): void {
+    if (shape.color) {
+      this._strokeColor.set(shape.color);
+    }
+    if (shape.strokeWidth !== undefined) {
+      this._strokeWidth.set(shape.strokeWidth);
+    }
+    if (shape.fillColor) {
+      this._fillColor.set(shape.fillColor);
+      this._fillEnabled.set(true);
+    } else {
+      this._fillEnabled.set(false);
+    }
+    if (shape.rotation !== undefined) {
+      this._rotation.set(shape.rotation);
+    } else {
+      this._rotation.set(0);
     }
   }
 
@@ -904,7 +938,7 @@ export class SvgDrawingService {
    * @param shapeId - ID of the shape to update
    * @param updates - Partial shape properties to update
    */
-  updateShapeProperties(shapeId: string, updates: Partial<ShapeStyle>): void {
+  updateShapeProperties(shapeId: string, updates: Partial<Shape>): void {
     const shape = this._shapes().find((s) => s.id === shapeId);
     if (!shape) return;
 
@@ -1681,6 +1715,25 @@ export class SvgDrawingService {
     // Create SVG with fixed viewBox dimensions
     let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">`;
 
+    // Optionally include background image before drawing shapes
+    const includeBackground = options.includeBackground !== false;
+    const backgroundData = this._backgroundImage();
+    if (includeBackground && backgroundData) {
+      const position = this._imagePosition();
+      const opacity = this._imageOpacity();
+      const scale = this._imageScale();
+      const size = this._imageSize();
+
+      const baseWidth = size?.width ?? width;
+      const baseHeight = size?.height ?? height;
+      const scaledWidth = baseWidth * scale;
+      const scaledHeight = baseHeight * scale;
+
+      svg += `<g opacity="${opacity}">`;
+      svg += `<image href="${backgroundData}" x="${position.x.toFixed(2)}" y="${position.y.toFixed(2)}" width="${scaledWidth.toFixed(2)}" height="${scaledHeight.toFixed(2)}" preserveAspectRatio="none"/>`;
+      svg += `</g>`;
+    }
+
     // No coordinate offset needed - shapes use their absolute positions
     shapes.forEach((shape) => {
       svg += this.shapeToSVGElement(shape, 0, 0);
@@ -1860,6 +1913,7 @@ export class SvgDrawingService {
               scale: this._imageScale(),
               position: this._imagePosition(),
               locked: this._imageLocked(),
+              size: this._imageSize(),
             }
           : undefined,
         canvas: {
@@ -1962,8 +2016,13 @@ export class SvgDrawingService {
         this._imageScale.set(template.backgroundImage.scale);
         this._imagePosition.set(template.backgroundImage.position);
         this._imageLocked.set(template.backgroundImage.locked);
+        this.refreshBackgroundImageSize(
+          template.backgroundImage.data,
+          template.backgroundImage.size ?? undefined,
+        );
       } else {
         this._backgroundImage.set(null);
+        this._imageSize.set(null);
       }
 
       // Restore canvas state
@@ -2054,6 +2113,7 @@ export class SvgDrawingService {
             scale: this._imageScale(),
             position: this._imagePosition(),
             locked: this._imageLocked(),
+            size: this._imageSize(),
           }
         : undefined,
       canvas: {
@@ -2122,6 +2182,7 @@ export class SvgDrawingService {
             scale: this._imageScale(),
             position: this._imagePosition(),
             locked: this._imageLocked(),
+            size: this._imageSize(),
           }
         : undefined,
       canvas: {
@@ -2188,8 +2249,13 @@ export class SvgDrawingService {
           this._imageScale.set(template.backgroundImage.scale);
           this._imagePosition.set(template.backgroundImage.position);
           this._imageLocked.set(template.backgroundImage.locked);
+          this.refreshBackgroundImageSize(
+            template.backgroundImage.data,
+            template.backgroundImage.size ?? undefined,
+          );
         } else {
           this._backgroundImage.set(null);
+          this._imageSize.set(null);
         }
 
         // Restore canvas state
@@ -2914,6 +2980,7 @@ export class SvgDrawingService {
    */
   setBackgroundImage(imageData: string | null): void {
     this._backgroundImage.set(imageData);
+    this.refreshBackgroundImageSize(imageData);
   }
 
   /**
@@ -2966,6 +3033,46 @@ export class SvgDrawingService {
    */
   setImageLocked(locked: boolean): void {
     this._imageLocked.set(locked);
+  }
+
+  /**
+   * Updates internal image size metadata by either using the provided size or
+   * measuring the image asynchronously when size is unknown.
+   * @param imageData - Base64 data for the background image
+   * @param size - Optional precomputed size to avoid re-measuring
+   */
+  private refreshBackgroundImageSize(
+    imageData: string | null,
+    size?: { width: number; height: number } | null,
+  ): void {
+    if (size) {
+      this._imageSize.set(size);
+      return;
+    }
+
+    if (!imageData) {
+      this._imageSize.set(null);
+      return;
+    }
+
+    if (typeof Image === 'undefined') {
+      // SSR/environment without DOM - fall back to unknown size
+      this._imageSize.set(null);
+      return;
+    }
+
+    try {
+      const img = new Image();
+      img.onload = () => {
+        this._imageSize.set({ width: img.naturalWidth, height: img.naturalHeight });
+      };
+      img.onerror = () => {
+        this._imageSize.set(null);
+      };
+      img.src = imageData;
+    } catch {
+      this._imageSize.set(null);
+    }
   }
 
   // ===== Canvas Zoom Methods =====

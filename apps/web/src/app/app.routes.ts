@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, adminGuard, userGuard, roleGuard } from './core/guards/auth.guard';
+import { authGuard, userGuard, roleGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   // Debug route for testing
@@ -17,6 +17,15 @@ export const routes: Routes = [
     path: 'welcome',
     loadComponent: () =>
       import('./features/landing/landing.component').then((m) => m.LandingComponent),
+  },
+
+  // Public form preview (no authentication required)
+  {
+    path: 'forms/preview/:previewId',
+    loadComponent: () =>
+      import('./features/public/form-renderer/form-renderer.component').then(
+        (m) => m.FormRendererComponent,
+      ),
   },
 
   // Public form renderer (no authentication required)

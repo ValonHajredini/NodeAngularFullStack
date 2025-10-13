@@ -1,14 +1,21 @@
 import { Router } from 'express';
 import { formsController } from '../controllers/forms.controller';
+import { FormsUploadController } from '../controllers/forms-upload.controller';
 import { AuthMiddleware } from '../middleware/auth.middleware';
 import { RateLimitMiddleware } from '../middleware/rate-limit.middleware';
+import { sanitizeFormHTML } from '../middleware/sanitize-html.middleware';
+import { cssSanitizerMiddleware } from '../middleware/css-sanitizer.middleware';
 import {
   createFormValidator,
   updateFormValidator,
   formIdValidator,
   validateFormSchema,
+  validateStepFormConfiguration,
   xssProtection,
 } from '../validators/forms.validator';
+
+// Initialize upload controller
+const formsUploadController = new FormsUploadController();
 
 /**
  * Forms routes configuration.
@@ -93,8 +100,11 @@ router.post(
   '/',
   AuthMiddleware.authenticate,
   xssProtection,
+  sanitizeFormHTML, // Sanitize custom background HTML before validation
+  cssSanitizerMiddleware, // Validate custom field CSS (Story 16.2)
   createFormValidator,
   validateFormSchema,
+  validateStepFormConfiguration, // Validate step form configuration (Story 19.1)
   formsController.createForm
 );
 
@@ -167,6 +177,294 @@ router.post(
  *               $ref: '#/components/schemas/Error'
  */
 router.get('/', AuthMiddleware.authenticate, formsController.getForms);
+
+/**
+ * @swagger
+ * /api/forms/{id}/publish:
+ *   post:
+ *     summary: Publish a form
+ *     description: Publish a form with JWT render token (owner or admin only)
+ *     tags: [Forms]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Form ID (UUID)
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [expiresInDays]
+ *             properties:
+ *               expiresInDays:
+ *                 type: number
+ *                 minimum: 1
+ *                 maximum: 365
+ *                 default: 30
+ *                 description: Number of days until token expires
+ *           example:
+ *             expiresInDays: 30
+ *     responses:
+ *       200:
+ *         description: Form published successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Form published successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     form:
+ *                       $ref: '#/components/schemas/FormMetadata'
+ *                     schema:
+ *                       $ref: '#/components/schemas/FormSchema'
+ *                     renderUrl:
+ *                       type: string
+ *                       example: "/forms/render/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *       400:
+ *         description: Validation error or schema validation failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Insufficient permissions to publish this form
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Form not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       429:
+ *         description: Rate limit exceeded (10 publishes per hour)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.post(
+  '/:id/publish',
+  AuthMiddleware.authenticate,
+  RateLimitMiddleware.publishRateLimit(),
+  formIdValidator,
+  formsController.publishForm
+);
+
+/**
+ * @swagger
+ * /api/forms/{id}/unpublish:
+ *   post:
+ *     summary: Unpublish a form
+ *     description: Unpublish a form and invalidate render token (owner or admin only)
+ *     tags: [Forms]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Form ID (UUID)
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *     responses:
+ *       200:
+ *         description: Form unpublished successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Form unpublished successfully"
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Insufficient permissions to unpublish this form
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Form not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.post(
+  '/:id/unpublish',
+  AuthMiddleware.authenticate,
+  formIdValidator,
+  formsController.unpublishForm
+);
+
+/**
+ * @swagger
+ * /api/forms/upload-background:
+ *   post:
+ *     summary: Upload a background image for forms
+ *     description: Upload an image file to DigitalOcean Spaces for use as form background
+ *     tags: [Forms]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [backgroundImage]
+ *             properties:
+ *               backgroundImage:
+ *                 type: string
+ *                 format: binary
+ *                 description: Image file (JPEG, PNG, GIF, WebP, SVG) - max 5MB
+ *     responses:
+ *       200:
+ *         description: Image uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     url:
+ *                       type: string
+ *                       description: Public CDN URL of uploaded image
+ *                     fileName:
+ *                       type: string
+ *                     size:
+ *                       type: number
+ *                     mimeType:
+ *                       type: string
+ *       400:
+ *         description: No file provided or invalid file type
+ *       401:
+ *         description: Authentication required
+ *       500:
+ *         description: Upload failed
+ */
+router.post(
+  '/upload-background',
+  AuthMiddleware.authenticate,
+  formsUploadController.uploadMiddleware,
+  formsUploadController.uploadBackgroundImage
+);
+
+/**
+ * @swagger
+ * /api/forms/{formId}/upload-image:
+ *   post:
+ *     summary: Upload an image for a form field
+ *     description: Upload an image file to DigitalOcean Spaces for use in IMAGE field type
+ *     tags: [Forms]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: formId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Form ID (UUID)
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [image]
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: Image file (JPEG, PNG, GIF, WebP) - max 5MB
+ *     responses:
+ *       200:
+ *         description: Image uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     imageUrl:
+ *                       type: string
+ *                       description: Public CDN URL of uploaded image
+ *                     fileName:
+ *                       type: string
+ *                     size:
+ *                       type: number
+ *                     mimeType:
+ *                       type: string
+ *       400:
+ *         description: No file provided, invalid file type, or file too large
+ *       401:
+ *         description: Authentication required
+ *       500:
+ *         description: Upload failed
+ */
+router.post(
+  '/:formId/upload-image',
+  AuthMiddleware.authenticate,
+  formsUploadController.uploadFieldImageMiddleware,
+  formsUploadController.uploadFormImage
+);
 
 /**
  * @swagger
@@ -334,8 +632,11 @@ router.put(
   AuthMiddleware.authenticate,
   formIdValidator,
   xssProtection,
+  sanitizeFormHTML, // Sanitize custom background HTML before validation
+  cssSanitizerMiddleware, // Validate custom field CSS (Story 16.2)
   updateFormValidator,
   validateFormSchema,
+  validateStepFormConfiguration, // Validate step form configuration (Story 19.1)
   formsController.updateForm
 );
 
@@ -390,167 +691,6 @@ router.delete(
   AuthMiddleware.authenticate,
   formIdValidator,
   formsController.deleteForm
-);
-
-/**
- * @swagger
- * /api/forms/{id}/publish:
- *   post:
- *     summary: Publish a form
- *     description: Publish a form with JWT render token (owner or admin only)
- *     tags: [Forms]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Form ID (UUID)
- *         example: "123e4567-e89b-12d3-a456-426614174000"
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [expiresInDays]
- *             properties:
- *               expiresInDays:
- *                 type: number
- *                 minimum: 1
- *                 maximum: 365
- *                 default: 30
- *                 description: Number of days until token expires
- *           example:
- *             expiresInDays: 30
- *     responses:
- *       200:
- *         description: Form published successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "Form published successfully"
- *                 data:
- *                   type: object
- *                   properties:
- *                     form:
- *                       $ref: '#/components/schemas/FormMetadata'
- *                     schema:
- *                       $ref: '#/components/schemas/FormSchema'
- *                     renderUrl:
- *                       type: string
- *                       example: "/forms/render/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
- *                 timestamp:
- *                   type: string
- *                   format: date-time
- *       400:
- *         description: Validation error or schema validation failed
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ValidationError'
- *       401:
- *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       403:
- *         description: Insufficient permissions to publish this form
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       404:
- *         description: Form not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       429:
- *         description: Rate limit exceeded (10 publishes per hour)
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-router.post(
-  '/:id/publish',
-  AuthMiddleware.authenticate,
-  RateLimitMiddleware.publishRateLimit(),
-  formIdValidator,
-  formsController.publishForm
-);
-
-/**
- * @swagger
- * /api/forms/{id}/unpublish:
- *   post:
- *     summary: Unpublish a form
- *     description: Unpublish a form and invalidate render token (owner or admin only)
- *     tags: [Forms]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Form ID (UUID)
- *         example: "123e4567-e89b-12d3-a456-426614174000"
- *     responses:
- *       200:
- *         description: Form unpublished successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "Form unpublished successfully"
- *                 timestamp:
- *                   type: string
- *                   format: date-time
- *       401:
- *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       403:
- *         description: Insufficient permissions to unpublish this form
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       404:
- *         description: Form not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-router.post(
-  '/:id/unpublish',
-  AuthMiddleware.authenticate,
-  formIdValidator,
-  formsController.unpublishForm
 );
 
 /**

@@ -31,6 +31,60 @@ export enum FormFieldType {
   TOGGLE = 'toggle',
   /** Visual divider (non-input) */
   DIVIDER = 'divider',
+  /** Group container for organizing related fields */
+  GROUP = 'group',
+  /** Heading/title for form sections (non-input, display only) */
+  HEADING = 'heading',
+  /** Image display field (non-input, display only) */
+  IMAGE = 'image',
+  /** Text block for instructions/explanations (non-input, display only) */
+  TEXT_BLOCK = 'text_block',
+  /** Image gallery selector (input field for selecting one image from gallery) */
+  IMAGE_GALLERY = 'image_gallery',
+}
+
+/**
+ * Field type categories for distinguishing input vs display elements
+ */
+export const FIELD_TYPE_CATEGORIES = {
+  /** Input fields that collect user data */
+  INPUT_FIELDS: [
+    FormFieldType.TEXT,
+    FormFieldType.EMAIL,
+    FormFieldType.NUMBER,
+    FormFieldType.SELECT,
+    FormFieldType.TEXTAREA,
+    FormFieldType.FILE,
+    FormFieldType.CHECKBOX,
+    FormFieldType.RADIO,
+    FormFieldType.DATE,
+    FormFieldType.DATETIME,
+    FormFieldType.TOGGLE,
+    FormFieldType.IMAGE_GALLERY,
+  ] as const,
+
+  /** Display elements that don't collect data (visual/organizational) */
+  DISPLAY_ELEMENTS: [
+    FormFieldType.HEADING,
+    FormFieldType.IMAGE,
+    FormFieldType.TEXT_BLOCK,
+    FormFieldType.DIVIDER,
+    FormFieldType.GROUP,
+  ] as const,
+} as const;
+
+/**
+ * Check if a field type is an input field that collects data
+ */
+export function isInputField(fieldType: FormFieldType): boolean {
+  return FIELD_TYPE_CATEGORIES.INPUT_FIELDS.includes(fieldType as any);
+}
+
+/**
+ * Check if a field type is a display element (non-input)
+ */
+export function isDisplayElement(fieldType: FormFieldType): boolean {
+  return FIELD_TYPE_CATEGORIES.DISPLAY_ELEMENTS.includes(fieldType as any);
 }
 
 /**
@@ -78,6 +132,185 @@ export interface FormFieldOption {
 }
 
 /**
+ * Base metadata interface with common properties for all field types
+ */
+export interface BaseFieldMetadata {
+  /** Custom CSS styling applied to field container (max 5000 characters) */
+  customStyle?: string;
+}
+
+/**
+ * Group-specific metadata for GROUP field type
+ */
+export interface GroupMetadata extends BaseFieldMetadata {
+  /** Group title/heading */
+  groupTitle?: string;
+  /** Border style for group container */
+  groupBorderStyle?: 'solid' | 'dashed' | 'none';
+  /** Whether group is collapsible */
+  groupCollapsible?: boolean;
+  /** Background color (hex format) */
+  groupBackgroundColor?: string;
+}
+
+/**
+ * Heading-specific metadata for HEADING field type
+ */
+export interface HeadingMetadata extends BaseFieldMetadata {
+  /** HTML heading level (h1-h6) */
+  headingLevel: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
+  /** Text alignment */
+  alignment: 'left' | 'center' | 'right';
+  /** Text color (hex format) */
+  color?: string;
+  /** Font weight */
+  fontWeight?: 'normal' | 'bold';
+}
+
+/**
+ * Image-specific metadata for IMAGE field type
+ */
+export interface ImageMetadata extends BaseFieldMetadata {
+  /** S3/DO Spaces image URL */
+  imageUrl?: string;
+  /** Alt text for accessibility (required) */
+  altText: string;
+  /** Image width (px, %, or CSS value) */
+  width?: number | string;
+  /** Image height (px, auto, or CSS value) */
+  height?: number | string;
+  /**
+   * Image horizontal alignment within its container
+   * - 'left': Align image to left edge
+   * - 'center': Center image horizontally (default)
+   * - 'right': Align image to right edge
+   * - 'full': Stretch image to full container width
+   */
+  alignment?: 'left' | 'center' | 'right' | 'full';
+  /** Optional caption text displayed below image for additional context */
+  caption?: string;
+  /**
+   * CSS object-fit property controlling how image scales within dimensions
+   * - 'contain': Fit entire image within bounds, maintain aspect ratio (default)
+   * - 'cover': Fill entire bounds, crop if needed, maintain aspect ratio
+   * - 'fill': Stretch to fill bounds, may distort aspect ratio
+   * - 'none': Display image at original size, may overflow/underflow
+   */
+  objectFit?: 'contain' | 'cover' | 'fill' | 'none';
+}
+
+/**
+ * Individual paragraph within a text block
+ */
+export interface TextBlockParagraph {
+  /** Unique paragraph identifier */
+  id: string;
+  /** Paragraph HTML content (sanitized) */
+  content: string;
+  /** Order index for rendering */
+  order: number;
+}
+
+/**
+ * Text block metadata for TEXT_BLOCK field type
+ */
+export interface TextBlockMetadata extends BaseFieldMetadata {
+  /** HTML content (sanitized) - legacy single content field for backward compatibility */
+  content?: string;
+  /** Array of paragraphs for multi-paragraph support (new feature) */
+  paragraphs?: TextBlockParagraph[];
+  /** Text alignment */
+  alignment?: 'left' | 'center' | 'right' | 'justify';
+  /** Optional background color (hex format) */
+  backgroundColor?: string;
+  /** Padding size */
+  padding?: 'none' | 'small' | 'medium' | 'large';
+  /** Show "Read more" for long content */
+  collapsible?: boolean;
+  /** Initial collapsed state */
+  collapsed?: boolean;
+}
+
+/**
+ * Image gallery metadata for IMAGE_GALLERY field type
+ * Stores array of images for single-selection gallery
+ */
+export interface ImageGalleryMetadata extends BaseFieldMetadata {
+  /** Array of gallery images (2-10 images recommended) */
+  images: { key: string; url: string; alt: string }[];
+  /** Number of grid columns (2-4) - Default: 4 */
+  columns?: 2 | 3 | 4;
+  /** Image aspect ratio - Default: 'square' */
+  aspectRatio?: 'square' | '16:9' | 'auto';
+  /** Maximum number of images allowed - Default: 10 */
+  maxImages?: number;
+}
+
+/**
+ * Row layout configuration for multi-column form rows
+ */
+export interface RowLayoutConfig {
+  /** Unique row identifier */
+  rowId: string;
+  /** Number of columns in this row (0 = full-width, 1-4 = columns) */
+  columnCount: 0 | 1 | 2 | 3 | 4;
+  /** Row order index for rendering */
+  order: number;
+  /**
+   * Optional step identifier for multi-step forms
+   * When provided, associates row with a specific form step
+   * If undefined, row belongs to single-page form or all steps
+   */
+  stepId?: string;
+}
+
+/**
+ * Field position within row-column layout
+ */
+export interface FieldPosition {
+  /** Row identifier this field belongs to */
+  rowId: string;
+  /** Column index within row (0-3 for columns 1-4) */
+  columnIndex: number;
+  /**
+   * Order index within column for vertical stacking (0-based)
+   * Optional for backward compatibility - defaults to 0 if undefined
+   * Fields with lower orderInColumn render above fields with higher orderInColumn
+   */
+  orderInColumn?: number;
+  /**
+   * Optional step identifier for multi-step forms
+   * When provided, associates field with a specific form step
+   * If undefined, field belongs to single-page form or all steps
+   */
+  stepId?: string;
+}
+
+/**
+ * Single step in a multi-step form wizard
+ */
+export interface FormStep {
+  /** Unique step identifier (UUID v4) */
+  id: string;
+  /** Step title displayed to users (1-100 characters) */
+  title: string;
+  /** Optional step description for additional context (max 500 characters) */
+  description?: string;
+  /** Zero-based sequential order index for step progression */
+  order: number;
+}
+
+/**
+ * Step form configuration for multi-step form wizards
+ */
+export interface StepFormConfig {
+  /** Whether step-based form mode is active */
+  enabled: boolean;
+  /** Array of form steps (2-10 steps when enabled) */
+  steps: FormStep[];
+}
+
+/**
  * Individual form field definition
  */
 export interface FormField {
@@ -105,6 +338,17 @@ export interface FormField {
   conditional?: FormFieldConditional;
   /** Order index for rendering */
   order: number;
+  /** Parent group ID for nested fields */
+  parentGroupId?: string;
+  /** Additional metadata for special field types (e.g., GROUP, HEADING, IMAGE, TEXT_BLOCK, IMAGE_GALLERY) */
+  metadata?:
+    | GroupMetadata
+    | HeadingMetadata
+    | ImageMetadata
+    | TextBlockMetadata
+    | ImageGalleryMetadata;
+  /** Position within row-column layout (optional, for row-based layouts) */
+  position?: FieldPosition;
 }
 
 /**
@@ -136,6 +380,33 @@ export interface FormSubmissionConfig {
 }
 
 /**
+ * Background settings configuration for forms.
+ */
+export type FormBackgroundType = 'none' | 'image' | 'custom';
+
+/**
+ * Background appearance configuration for rendered forms.
+ */
+export interface FormBackgroundSettings {
+  /** Background display type */
+  type: FormBackgroundType;
+  /** Background image URL or data URI */
+  imageUrl?: string;
+  /** Background image sizing behavior */
+  imagePosition?: 'cover' | 'contain' | 'repeat';
+  /** Background image opacity percentage (0-100) */
+  imageOpacity?: number;
+  /** Background image vertical alignment */
+  imageAlignment?: 'top' | 'center' | 'bottom';
+  /** Background image blur amount in pixels */
+  imageBlur?: number;
+  /** Custom HTML content for background (sanitized server-side) */
+  customHtml?: string;
+  /** Custom CSS for background (validated server-side) */
+  customCss?: string;
+}
+
+/**
  * Form settings
  */
 export interface FormSettings {
@@ -143,6 +414,17 @@ export interface FormSettings {
   layout: FormLayout;
   /** Submission behavior */
   submission: FormSubmissionConfig;
+  /** Optional background configuration */
+  background?: FormBackgroundSettings;
+  /** Row-based layout configuration (optional) */
+  rowLayout?: {
+    /** Whether row-based layout is enabled */
+    enabled: boolean;
+    /** Row configurations */
+    rows: RowLayoutConfig[];
+  };
+  /** Optional step form configuration for multi-step wizard forms */
+  stepForm?: StepFormConfig;
 }
 
 /**
@@ -223,4 +505,112 @@ export interface FormSubmission {
   userId?: string;
   /** Additional metadata */
   metadata?: Record<string, unknown>;
+}
+
+/**
+ * Numeric field statistics
+ */
+export interface NumericStatistics {
+  /** Average/mean value */
+  mean: number;
+  /** Median value */
+  median: number;
+  /** Minimum value */
+  min: number;
+  /** Maximum value */
+  max: number;
+  /** Standard deviation */
+  stdDev: number;
+  /** Number of valid data points */
+  count: number;
+}
+
+/**
+ * Choice field distribution data
+ */
+export interface ChoiceDistribution {
+  /** Option label */
+  label: string;
+  /** Option value */
+  value: string | number;
+  /** Number of times this option was selected */
+  count: number;
+  /** Percentage of total selections */
+  percentage: number;
+}
+
+/**
+ * Time series data point
+ */
+export interface TimeSeriesData {
+  /** Time period label (formatted date) */
+  label: string;
+  /** Count/value for this time period */
+  count: number;
+}
+
+/**
+ * Field-specific statistics data
+ */
+export interface FieldStatistics {
+  /** The form field */
+  field: FormField;
+  /** Type of visualization */
+  type: 'numeric' | 'choice' | 'timeseries' | 'text' | 'toggle' | 'none';
+  /** Statistics data (type depends on visualization type) */
+  data: NumericStatistics | ChoiceDistribution[] | TimeSeriesData[] | null;
+  /** Selected or default chart type for this field */
+  chartType: ChartType;
+}
+
+/**
+ * Filter options for form submission queries and exports
+ */
+export interface SubmissionFilterOptions {
+  /** Array of field names to include in export (if undefined, includes all fields) */
+  fields?: string[];
+  /** Start date for filtering submissions (inclusive) */
+  dateFrom?: Date;
+  /** End date for filtering submissions (inclusive) */
+  dateTo?: Date;
+  /** Array of field value filters (AND logic - all must match) */
+  fieldFilters?: { field: string; value: any }[];
+}
+
+/**
+ * CSS validation result for custom field styling
+ */
+export interface CSSValidationResult {
+  /** Whether the CSS is valid */
+  valid: boolean;
+  /** Array of warning messages (non-blocking) */
+  warnings: string[];
+  /** Array of error messages (blocking) */
+  errors: string[];
+}
+
+/**
+ * Supported chart types for analytics visualization
+ */
+export type ChartType =
+  | 'bar'
+  | 'line'
+  | 'pie'
+  | 'polar'
+  | 'radar'
+  | 'area'
+  | 'doughnut'
+  | 'horizontal-bar'
+  | 'stat';
+
+/**
+ * Chart type option for UI selection
+ */
+export interface ChartTypeOption {
+  /** Chart type value */
+  value: ChartType;
+  /** Display label */
+  label: string;
+  /** PrimeNG icon class */
+  icon: string;
 }

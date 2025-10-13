@@ -72,6 +72,11 @@ describe('FormsService', () => {
 
     // Set default environment variable
     process.env.FORM_RENDER_TOKEN_SECRET = 'test-secret-key';
+
+    mockFormSchemasRepo.createSchema = jest.fn().mockResolvedValue(mockSchema);
+    mockFormSchemasRepo.findByFormId = jest
+      .fn()
+      .mockResolvedValue([mockSchema]);
   });
 
   afterEach(() => {
@@ -88,7 +93,7 @@ describe('FormsService', () => {
         description: 'Test description',
       });
 
-      expect(result).toEqual(mockForm);
+      expect(result).toEqual({ ...mockForm, schema: undefined });
       expect(mockFormsRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: 'user-123',
@@ -109,7 +114,7 @@ describe('FormsService', () => {
         title: 'Test Form',
       });
 
-      expect(result).toEqual(formWithoutTenant);
+      expect(result).toEqual({ ...formWithoutTenant, schema: undefined });
       expect(mockFormsRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: 'user-123',

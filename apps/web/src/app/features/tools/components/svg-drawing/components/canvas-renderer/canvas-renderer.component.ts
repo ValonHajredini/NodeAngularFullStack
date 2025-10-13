@@ -903,7 +903,11 @@ import { SvgSymbolLibraryService } from '../../services/svg-symbol-library.servi
 
       svg {
         background: transparent;
-        position: relative;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
         z-index: 10;
       }
 
@@ -2064,13 +2068,25 @@ export class CanvasRendererComponent implements OnInit, OnDestroy {
     }
 
     const svg = canvas.nativeElement;
-    const rect = svg.getBoundingClientRect();
+    const svgPoint = svg.createSVGPoint();
+    svgPoint.x = event.clientX;
+    svgPoint.y = event.clientY;
 
-    // Get screen coordinates
+    const ctm = svg.getScreenCTM();
+    if (ctm) {
+      try {
+        const inverted = ctm.inverse();
+        const transformed = svgPoint.matrixTransform(inverted);
+        return { x: transformed.x, y: transformed.y };
+      } catch (error) {
+        // Fall through to bounding client rect fallback when inversion fails
+      }
+    }
+
+    // Fallback for environments without a valid CTM (e.g., SSR or legacy browsers)
+    const rect = svg.getBoundingClientRect();
     const screenX = event.clientX - rect.left;
     const screenY = event.clientY - rect.top;
-
-    // Convert to canvas coordinates accounting for zoom
     const zoom = this.drawingService.canvasZoom();
     const offset = this.drawingService.canvasOffset();
 

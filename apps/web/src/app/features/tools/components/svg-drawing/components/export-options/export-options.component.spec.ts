@@ -26,6 +26,7 @@ describe('ExportOptionsComponent', () => {
     expect(component.exportOptions.height).toBe(600);
     expect(component.exportOptions.optimizationLevel).toBe('basic');
     expect(component.exportOptions.padding).toBe(20);
+    expect(component.exportOptions.includeBackground).toBeTrue();
   });
 
   it('should validate export options', () => {
@@ -61,13 +62,15 @@ describe('ExportOptionsComponent', () => {
       height: 768,
       optimizationLevel: 'aggressive',
       padding: 10,
+      format: 'svg',
+      includeBackground: true,
     };
 
     component.onExport();
   });
 
   it('should emit cancel event', (done) => {
-    component.cancel.subscribe(() => {
+    component.closeDialog.subscribe(() => {
       done();
     });
 
@@ -81,6 +84,8 @@ describe('ExportOptionsComponent', () => {
       height: 768,
       optimizationLevel: 'aggressive',
       padding: 10,
+      format: 'svg',
+      includeBackground: false,
     };
 
     component.reset();
@@ -90,6 +95,7 @@ describe('ExportOptionsComponent', () => {
     expect(component.exportOptions.height).toBe(600);
     expect(component.exportOptions.optimizationLevel).toBe('basic');
     expect(component.exportOptions.padding).toBe(20);
+    expect(component.exportOptions.includeBackground).toBeTrue();
   });
 
   it('should have three optimization levels', () => {

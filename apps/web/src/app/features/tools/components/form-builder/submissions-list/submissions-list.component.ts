@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '@env/environment';
 
 // PrimeNG Imports
 import { TableModule } from 'primeng/table';
@@ -59,7 +60,7 @@ export class SubmissionsListComponent implements OnInit, OnDestroy {
     this.error = null;
 
     this.http
-      .get<any>(`/api/forms/${this.formId}/submissions`, {
+      .get<any>(`${environment.apiUrl}/forms/${this.formId}/submissions`, {
         params: { page: page.toString(), limit: this.rows.toString() },
       })
       .pipe(takeUntil(this.destroy$))
@@ -90,7 +91,7 @@ export class SubmissionsListComponent implements OnInit, OnDestroy {
    * Exports submissions as CSV
    */
   exportCSV(): void {
-    window.location.href = `/api/forms/${this.formId}/submissions/export`;
+    window.location.href = `${environment.apiUrl}/forms/${this.formId}/submissions/export`;
   }
 
   /**

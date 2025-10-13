@@ -1,0 +1,192 @@
+schema: 1
+story: '13.4'
+story_title: 'Enhanced Drag-Drop with Row-Column Zones - Brownfield Addition'
+gate: FAIL
+status_reason: 'CRITICAL PRODUCTION BLOCKERS: (1) Palette fields cannot be dropped into row layout due to missing cdkDropListGroup connection, (2) FormRendererComponent has NO row layout implementation - all forms display as single column. Feature is non-functional for end users. Both issues would have been caught by E2E tests.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2025-10-09T00:00:00Z'
+
+top_issues:
+  - severity: high
+    category: functionality
+    description: 'BLOCKER: Cannot add new fields from palette to row layout - missing cdkDropListGroup connection'
+    refs:
+      - 'apps/web/src/app/features/tools/components/form-builder/form-canvas/form-canvas.component.ts:111'
+    suggested_owner: dev
+    remediation: 'Add palette-drop-list to cdkDropListGroup or configure cdkDropListConnectedTo to include palette in row layout mode'
+    production_blocking: true
+
+  - severity: high
+    category: functionality
+    description: 'BLOCKER: Row layout not rendered in FormRendererComponent - all forms show single column regardless of row configuration'
+    refs:
+      - 'apps/web/src/app/features/public/form-renderer/form-renderer.component.html:113-114'
+      - 'apps/web/src/app/features/public/form-renderer/form-renderer.component.ts'
+    suggested_owner: dev
+    remediation: 'Implement row-based rendering logic in FormRendererComponent to respect FormField.position (rowId + columnIndex)'
+    production_blocking: true
+
+  - severity: high
+    category: testing
+    description: 'E2E tests never executed - both production blockers would have been immediately caught'
+    refs:
+      - 'docs/stories/13.4-story-row-layout-3-dragdrop.md:636-728'
+    suggested_owner: dev
+    remediation: 'Execute Playwright E2E tests before marking story complete - unit tests insufficient for UI features'
+    production_blocking: true
+
+  - severity: medium
+    category: testing
+    description: 'Test suite execution blocked by unrelated compilation errors'
+    refs:
+      - 'apps/web/src/app/layouts/main-layout/main-layout.component.spec.ts'
+    suggested_owner: dev
+    remediation: 'Fix main-layout.component.spec.ts compilation errors to unblock test execution'
+
+  - severity: low
+    category: technical_debt
+    description: 'showErrorToast() uses console.error instead of MessageService (TODO comment present)'
+    refs:
+      - 'apps/web/src/app/features/tools/components/form-builder/form-canvas/form-canvas.component.ts:1205'
+    suggested_owner: dev
+    remediation: 'Integrate MessageService for proper toast notifications when error occurs'
+
+  - severity: low
+    category: maintainability
+    description: 'FormCanvasComponent exceeds recommended size limit (1,210 lines vs 500-line guideline)'
+    refs:
+      - 'apps/web/src/app/features/tools/components/form-builder/form-canvas/form-canvas.component.ts'
+    suggested_owner: dev
+    remediation: 'Consider extracting row layout logic to separate component for better maintainability'
+
+waiver:
+  active: false
+
+quality_score: 30
+expires: '2025-10-23T00:00:00Z'
+
+evidence:
+  tests_reviewed: 17
+  risks_identified: 3
+  trace:
+    ac_covered: [1, 2, 9, 10, 11, 13, 14]
+    ac_gaps: [3, 4, 5, 6, 7, 8, 12]
+  production_issues_found:
+    - issue: 'Cannot drag fields from palette to row layout'
+      severity: high
+      ac_affected: [3, 4]
+    - issue: 'Row layout not rendered in preview/published forms'
+      severity: high
+      ac_affected: [6, 7]
+  qa_refactoring:
+    - file: 'apps/web/src/app/features/tools/components/form-builder/form-canvas/form-canvas.component.ts'
+      change: 'Replaced any types with proper CDK types (CdkDrag, CdkDropList)'
+      impact: 'Improved type safety and compile-time error detection'
+    - file: 'apps/web/src/app/features/tools/components/form-builder/form-canvas/form-canvas.component.spec.ts'
+      change: 'Added type casts to test mocks for compatibility with new types'
+      impact: 'Tests remain valid while maintaining type safety in component'
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'No security vulnerabilities identified in implemented code. Uses existing sanitization utilities, no XSS risks, no authentication changes.'
+  performance:
+    status: PASS
+    notes: 'OnPush change detection, O(n) field lookup acceptable for typical form sizes, signals used for reactive updates, no new dependencies.'
+  reliability:
+    status: FAIL
+    notes: 'Feature is non-functional: palette drop broken, renderer missing implementation. Error handling inadequate (console.error). Production blocker.'
+  maintainability:
+    status: CONCERNS
+    notes: 'Component size (1,210 lines) exceeds guideline. Incomplete implementation makes maintainability assessment difficult.'
+  functionality:
+    status: FAIL
+    notes: 'Core functionality broken: cannot add fields to row layout, rendering completely missing in preview/published forms.'
+
+recommendations:
+  immediate:
+    - action: 'FIX BLOCKER #1: Connect palette to row layout drop zones via cdkDropListGroup'
+      priority: CRITICAL
+      refs:
+        - 'apps/web/src/app/features/tools/components/form-builder/form-canvas/form-canvas.component.ts:111'
+        - 'apps/web/src/app/features/tools/components/form-builder/field-palette/field-palette.component.ts:33'
+      rationale: 'Feature is unusable - users cannot add fields when row layout enabled. Breaks core form builder functionality.'
+
+    - action: 'FIX BLOCKER #2: Implement row layout rendering in FormRendererComponent'
+      priority: CRITICAL
+      refs:
+        - 'apps/web/src/app/features/public/form-renderer/form-renderer.component.html:113-114'
+        - 'apps/web/src/app/features/public/form-renderer/form-renderer.component.ts'
+      rationale: 'All forms show single column in preview/published mode. Users cannot see the layout they designed. Production blocker.'
+
+    - action: 'Execute E2E tests before marking story complete'
+      priority: CRITICAL
+      refs:
+        - 'docs/stories/13.4-story-row-layout-3-dragdrop.md:636-728'
+      rationale: 'Both production blockers would have been caught by E2E tests. Unit tests insufficient for UI interaction features.'
+
+    - action: 'Fix main-layout.component.spec.ts compilation errors to unblock test suite'
+      priority: HIGH
+      refs:
+        - 'apps/web/src/app/layouts/main-layout/main-layout.component.spec.ts'
+      rationale: 'Blocks all Angular test execution, preventing continuous integration validation'
+
+  future:
+    - action: 'Replace console.error with MessageService in showErrorToast()'
+      priority: MEDIUM
+      refs:
+        - 'apps/web/src/app/features/tools/components/form-builder/form-canvas/form-canvas.component.ts:1205'
+      rationale: 'Improves user experience with proper visual feedback, aligns with PrimeNG patterns'
+
+    - action: 'Consider component decomposition for FormCanvasComponent'
+      priority: LOW
+      refs:
+        - 'apps/web/src/app/features/tools/components/form-builder/form-canvas/form-canvas.component.ts'
+      rationale: 'Improves long-term maintainability as feature grows, easier testing and debugging'
+
+    - action: 'Add E2E visual regression tests for drag-drop feedback styles'
+      priority: LOW
+      refs:
+        - 'docs/stories/13.4-story-row-layout-3-dragdrop.md:87-93'
+      rationale: 'Validates visual feedback (green/red borders) works correctly across browsers'
+
+risk_profile:
+  implementation_complexity: MEDIUM
+  integration_risk: HIGH
+  regression_risk: HIGH
+  production_readiness: NOT_READY
+
+notes: |
+  CRITICAL GATE FAILURE - Production Blockers Identified:
+
+  Initial Review (CONCERNS):
+  - Unit tests passed, code quality acceptable
+  - Type safety issues fixed during QA review
+  - E2E tests never executed (concerning but not blocking)
+
+  Post-User Testing (FAIL - GATE STATUS CHANGED):
+  User reported TWO CRITICAL production blockers:
+
+  BLOCKER #1: Cannot add fields from palette to row layout
+  - Root cause: Missing cdkDropListGroup connection between palette and row drop zones
+  - Impact: Form builder completely unusable when row layout enabled
+  - AC #3, #4 FAILED
+
+  BLOCKER #2: Row layout not rendered in preview/published forms
+  - Root cause: FormRendererComponent has NO row layout implementation
+  - Impact: All forms display as single column regardless of configuration
+  - AC #6, #7 FAILED
+
+  Why Blockers Weren't Caught:
+  - Unit tests passed but only tested isolated methods
+  - E2E tests written but NEVER EXECUTED (claimed complete but no evidence)
+  - No manual QA performed before marking "Ready for Review"
+  - No integration testing between FormCanvasComponent and FormRendererComponent
+
+  Quality Score Revised: 80 → 30 (production blockers discovered)
+
+  QA Recommendation - REVISED:
+  - Gate status: FAIL (changed from CONCERNS after user testing)
+  - Feature must be fixed before deployment - non-functional in production
+  - E2E testing is MANDATORY for UI features - this proves why
+  - Story must return to development for blocker fixes

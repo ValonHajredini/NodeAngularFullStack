@@ -9,6 +9,10 @@ This is a modern full-stack TypeScript monorepo with Angular 20+ frontend and Ex
 The project uses npm workspaces for monorepo management and includes shared types, local PostgreSQL
 setup, and comprehensive testing.
 
+**Key Feature**: Visual form builder with drag-and-drop interface, row-based multi-column layouts,
+real-time analytics, data visualization (bar/line/pie charts), and WCAG AA accessibility. Forms are
+shareable via short links with QR codes.
+
 ## Development Commands
 
 ### Essential Development Commands
@@ -26,13 +30,20 @@ setup, and comprehensive testing.
 - `npm run test:web` - Frontend tests only
 - `npm run test:e2e` - Run Playwright E2E tests
 - `npm run test:e2e:ui` - Playwright E2E with UI mode
-- Backend specific: `npm run test:unit`, `npm run test:integration`, `npm run test:security`
+
+**Backend-Specific Test Commands:**
+
+- `npm --workspace=apps/api run test:unit` - Unit tests only
+- `npm --workspace=apps/api run test:integration` - Integration tests only
+- `npm --workspace=apps/api run test:security` - Security tests
+- `npm --workspace=apps/api run test:coverage` - Generate coverage reports
 
 **Running Single Tests:**
 
 - Backend: `npm --workspace=apps/api run test -- --testPathPattern="filename.test.ts"`
 - Frontend: `npm --workspace=apps/web run test -- --include="**/component-name.spec.ts"`
-- Add `--watch=false` or `--passWithNoTests` flags as needed
+- Add `--watch=false`, `--passWithNoTests`, or `--silent` flags as needed
+- Use `--maxWorkers=1` flag for tests that require sequential execution or have resource constraints
 
 ### Build and Quality Commands
 
@@ -60,6 +71,13 @@ setup, and comprehensive testing.
 
 - `cp .env.development .env.local` - Create local environment file
 - `ENV_FILE=.env.local ./start-dev.sh` - Use custom environment file
+
+### Quality and Security Commands
+
+- `npm run quality:check` - Run lint + typecheck + format check
+- `npm run security:audit` - Run security audit script
+- `npm run format` - Format all code with Prettier
+- `npm run format:check` - Check formatting without making changes
 
 ## Architecture Overview
 
@@ -214,9 +232,95 @@ packages/
 - State management with NgRx Signals
 - Proxy configuration automatically routes API calls to backend
 
+### Form Builder Development
+
+- Form schemas stored in `forms`, `form_schemas`, `form_submissions` tables
+- Short links with QR codes stored in `short_links` table
+- Frontend form builder components in `apps/web/src/app/features/tools/components/form-builder/`
+- Backend form APIs in `apps/api/src/controllers/forms.controller.ts` and
+  `apps/api/src/services/forms.service.ts`
+- Public form rendering at `/public/form/:shortCode` route
+- HTML sanitization middleware applied to all form submissions (uses DOMPurify)
+- Custom CSS validation for background styles
+- **Row-based layout system**: Enable/disable row layout mode, configure 1-4 columns per row,
+  flexible multi-column forms
+  - Row layout configuration stored in `FormSettings.rowLayout` (optional property)
+  - Field positions tracked via `FormField.position` (rowId + columnIndex + orderInColumn)
+  - Migration helper converts global column layout to row-based layout
+  - FormBuilderService provides row management methods: `enableRowLayout()`, `addRow()`,
+    `removeRow()`, `updateRowColumns()`, `setFieldPosition()`
+  - RowLayoutSidebarComponent provides UI for row configuration
+  - **Multi-field column support**:
+    - Multiple fields can be stacked vertically within a single column
+    - Field order within column tracked via `FieldPosition.orderInColumn` property (0-based index)
+    - FormBuilderService provides methods: `getFieldsInColumn()`, `reorderFieldInColumn()`,
+      `fieldsByRowColumn()` computed signal
+    - Fields render vertically stacked with 12px spacing between fields
+    - Drag-drop calculates `orderInColumn` based on drop position within column
+    - Moving field to new column recalculates `orderInColumn` for both old and new columns
+    - Backward compatible: forms without `orderInColumn` default to 0 (single field per column
+      behavior)
+  - **Drag-and-drop behavior**:
+    - FormCanvasComponent renders row-based layout with column drop zones when row layout enabled
+    - Each column displays as drop zone with visual boundaries (dashed border for empty, solid for
+      occupied)
+    - Empty columns show "Drop field here" placeholder with inbox icon
+    - Drag field type from palette to create new field in specific row-column position
+    - Drag existing field to move to new row-column position or reorder within same column
+    - Drop validation: allows drops into any column (no more "occupied" restriction)
+    - Visual feedback: green border on valid drop targets during drag
+    - Backward compatibility: global column layout (1-3 columns) works when row layout disabled
+    - Uses Angular CDK Drag-Drop with `cdkDropListGroup` at parent level (FormBuilderComponent) to
+      connect palette with all drop zones
+    - Custom drop predicate (`canDropIntoColumn`) always returns true for multi-field column support
+    - **IMPORTANT**: Do NOT add nested `cdkDropListGroup` within FormCanvasComponent row layout
+      section - this breaks palette-to-canvas drag-drop by overriding parent group
+  - **Public form row layout rendering**:
+    - FormRendererComponent detects `formSchema.settings.rowLayout.enabled` to determine layout mode
+    - **Row layout mode** (when `enabled === true`):
+      - Renders rows → columns → fields matching builder design exactly
+      - Each row uses CSS Grid with `grid-template-columns: repeat(columnCount, 1fr)`
+      - Fields within columns sorted by `position.orderInColumn` (ascending)
+      - Multiple fields per column render vertically stacked with 12px spacing
+    - **Global layout mode** (when `enabled === false` or undefined):
+      - Falls back to global column layout for backward compatibility
+      - Uses `settings.columnLayout` (1-3 columns) for grid configuration
+      - Fields sorted by `field.order` property (no row/column structure)
+    - **Responsive behavior**:
+      - Desktop (≥ 768px): Rows render with horizontal columns as designed (2-4 columns
+        side-by-side)
+      - Mobile (< 768px): Columns stack vertically via CSS Grid media query
+        (`@media (max-width: 767px)`)
+      - Column order preserved on mobile (column 0 → column 1 → column 2 → ...)
+      - Fields within columns maintain vertical order (`orderInColumn`)
+      - No horizontal scrolling on mobile devices
+    - **Backward compatibility**:
+      - Forms created before Epic 14 (no `rowLayout` property) render with global layout mode
+      - No breaking changes to existing published forms
+      - Graceful degradation when `rowLayout` undefined or disabled
+    - **Implementation details**:
+      - Template uses `@if (isRowLayoutEnabled())` to choose rendering path
+      - Field rendering logic shared between row and global layout modes (no duplication)
+      - Reactive form group integration unchanged (all fields added regardless of position)
+  - **Preview Mode (Story 14.3)**:
+    - **Preview button** in FormBuilderComponent toolbar opens modal dialog with form preview
+    - **Preview dialog** (PreviewDialogComponent) embeds FormRendererComponent in preview mode
+    - **In-memory preview**: Uses current builder state (includes unsaved changes), no API fetch
+    - **Preview mode flag**: FormRendererComponent accepts `@Input() previewMode` to disable
+      submission
+    - **Form submission disabled** in preview mode (prevents POST to backend)
+    - **Close preview** returns to builder without saving or navigating away
+    - **Usage**: Click "Preview" button → see exact public form rendering → close to continue
+      editing
+    - **Benefits**: Test layout/styling before publishing, iterate without publishing, verify
+      responsive behavior
+    - **Location**: FormBuilderComponent toolbar (between Settings and Save buttons)
+      - Form submission logic unchanged (POST to `/api/public/forms/:shortCode/submit`)
+      - HTML sanitization middleware still applied server-side (DOMPurify)
+
 ### Prerequisites
 
-- Node.js 20+ with npm
+- Node.js 18+ with npm (engines specified in package.json)
 - PostgreSQL 14+ (recommended: `brew install postgresql@14`)
 - pgWeb CLI (optional: `brew install pgweb`)
 - Angular CLI (installed automatically if missing)
@@ -239,15 +343,29 @@ packages/
 
 ## Utility Scripts
 
-The `scripts/` directory contains utility scripts for:
+The `scripts/` directory contains utility scripts accessible via npm commands:
 
-- Security auditing (`security-audit.js`)
-- Metrics collection (`metrics-collector.js`)
-- Feedback collection (`feedback-collector.js`)
-- Environment validation (`validate-environment.js`)
-- Database management (`pgweb-*.sh`)
+**Security:**
 
-Run these scripts with appropriate npm commands as defined in the root package.json.
+- `npm run security:audit` - Run comprehensive security audit
+
+**Metrics:**
+
+- `npm run metrics:init` - Initialize metrics collection
+- `npm run metrics:dashboard` - View metrics dashboard
+- `npm run metrics:export` - Export metrics data
+
+**Feedback:**
+
+- `npm run feedback:init` - Initialize feedback collection
+- `npm run feedback:collect` - Collect structured feedback
+- `npm run feedback:quick` - Quick feedback submission
+- `npm run feedback:dashboard` - View feedback dashboard
+
+**Onboarding:**
+
+- `npm run onboarding:setup` - Initialize metrics, feedback, and validation
+- `npm run onboarding:help` - Display onboarding instructions
 
 # important-instruction-reminders
 

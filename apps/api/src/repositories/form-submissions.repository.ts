@@ -1,5 +1,8 @@
 import { Pool } from 'pg';
-import { FormSubmission } from '@nodeangularfullstack/shared';
+import {
+  FormSubmission,
+  SubmissionFilterOptions,
+} from '@nodeangularfullstack/shared';
 import { databaseService } from '../services/database.service';
 
 /**
@@ -131,36 +134,107 @@ export class FormSubmissionsRepository {
   }
 
   /**
-   * Finds all submissions for a form (across all schema versions) with pagination.
+   * Finds all submissions for a form (across all schema versions) with pagination and optional filtering.
    * @param formId - Form ID to find submissions for
    * @param page - Page number (1-indexed)
    * @param limit - Number of items per page
+   * @param filterOptions - Optional filtering criteria (date range, field filters)
    * @returns Promise containing array of submissions and total count
    * @throws {Error} When database query fails
    * @example
+   * // Basic pagination
    * const { submissions, total } = await formSubmissionsRepository.findByFormId('form-uuid', 1, 10);
+   *
+   * // With filtering
+   * const { submissions, total } = await formSubmissionsRepository.findByFormId('form-uuid', 1, 10, {
+   *   dateFrom: new Date('2024-01-01'),
+   *   dateTo: new Date('2024-12-31'),
+   *   fieldFilters: [{ field: 'status', value: 'approved' }]
+   * });
    */
   async findByFormId(
     formId: string,
     page = 1,
-    limit = 10
+    limit = 10,
+    filterOptions?: SubmissionFilterOptions
   ): Promise<{ submissions: FormSubmission[]; total: number }> {
     const client = await this.pool.connect();
 
     try {
       const offset = (page - 1) * limit;
 
-      // Get total count
+      // Validate field names against schema if field filters are provided
+      if (
+        filterOptions?.fieldFilters &&
+        filterOptions.fieldFilters.length > 0
+      ) {
+        // Get form schema to validate field names
+        const schemaQuery = `
+          SELECT fsch.fields
+          FROM form_schemas fsch
+          WHERE fsch.form_id = $1
+          ORDER BY fsch.version DESC
+          LIMIT 1
+        `;
+        const schemaResult = await client.query(schemaQuery, [formId]);
+
+        if (schemaResult.rows.length === 0) {
+          throw new Error('Form schema not found');
+        }
+
+        const validFieldNames = schemaResult.rows[0].fields.map(
+          (f: any) => f.fieldName
+        );
+
+        // Validate each filter field name
+        for (const filter of filterOptions.fieldFilters) {
+          if (!validFieldNames.includes(filter.field)) {
+            throw new Error(`Invalid field name: ${filter.field}`);
+          }
+        }
+      }
+
+      // Build WHERE clause with filters
+      const params: any[] = [formId];
+      let paramIndex = 2;
+      let whereClause = 'WHERE fsch.form_id = $1';
+
+      // Apply date filters
+      if (filterOptions?.dateFrom) {
+        whereClause += ` AND fs.submitted_at >= $${paramIndex}`;
+        params.push(filterOptions.dateFrom);
+        paramIndex++;
+      }
+
+      if (filterOptions?.dateTo) {
+        whereClause += ` AND fs.submitted_at <= $${paramIndex}`;
+        params.push(filterOptions.dateTo);
+        paramIndex++;
+      }
+
+      // Apply field value filters (field names already validated above)
+      if (
+        filterOptions?.fieldFilters &&
+        filterOptions.fieldFilters.length > 0
+      ) {
+        filterOptions.fieldFilters.forEach((filter) => {
+          whereClause += ` AND fs.values_json->>'${filter.field}' = $${paramIndex}`;
+          params.push(filter.value);
+          paramIndex++;
+        });
+      }
+
+      // Get total count with filters
       const countQuery = `
         SELECT COUNT(*) as count
         FROM form_submissions fs
         INNER JOIN form_schemas fsch ON fs.form_schema_id = fsch.id
-        WHERE fsch.form_id = $1
+        ${whereClause}
       `;
-      const countResult = await client.query(countQuery, [formId]);
+      const countResult = await client.query(countQuery, params);
       const total = parseInt(countResult.rows[0].count, 10);
 
-      // Get paginated submissions
+      // Get paginated submissions with filters
       const query = `
         SELECT
           fs.id,
@@ -172,12 +246,13 @@ export class FormSubmissionsRepository {
           fs.metadata
         FROM form_submissions fs
         INNER JOIN form_schemas fsch ON fs.form_schema_id = fsch.id
-        WHERE fsch.form_id = $1
+        ${whereClause}
         ORDER BY fs.submitted_at DESC
-        LIMIT $2 OFFSET $3
+        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
       `;
 
-      const result = await client.query(query, [formId, limit, offset]);
+      params.push(limit, offset);
+      const result = await client.query(query, params);
       const submissions = result.rows.map((row) => ({
         ...row,
         values: row.values,
@@ -241,10 +316,10 @@ export class FormSubmissionsRepository {
         SELECT COUNT(*) as count
         FROM form_submissions
         WHERE submitter_ip = $1
-          AND submitted_at > NOW() - INTERVAL '${hoursAgo} hours'
+          AND submitted_at > NOW() - $2 * INTERVAL '1 hour'
       `;
 
-      const result = await client.query(query, [submitterIp]);
+      const result = await client.query(query, [submitterIp, hoursAgo]);
       return parseInt(result.rows[0].count, 10);
     } catch (error: any) {
       throw new Error(`Failed to count submissions by IP: ${error.message}`);

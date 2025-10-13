@@ -3,6 +3,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { FormSchema, FormSettings } from '@nodeangularfullstack/shared';
+import { environment } from '@env/environment';
 
 /**
  * API response structure for form schema retrieval
@@ -41,6 +42,8 @@ export enum FormRenderErrorType {
   NETWORK_ERROR = 'NETWORK_ERROR',
   VALIDATION_ERROR = 'VALIDATION_ERROR',
   SUBMISSION_ERROR = 'SUBMISSION_ERROR',
+  FORM_NOT_FOUND = 'FORM_NOT_FOUND',
+  PARSE_ERROR = 'PARSE_ERROR',
 }
 
 /**
@@ -65,8 +68,8 @@ export class FormRenderError extends Error {
   providedIn: 'root',
 })
 export class FormRendererService {
-  private readonly renderApiUrl = '/api/public/forms/render';
-  private readonly submitApiUrl = '/api/public/forms/submit';
+  private readonly renderApiUrl = `${environment.apiUrl}/public/forms/render`;
+  private readonly submitApiUrl = `${environment.apiUrl}/public/forms/submit`;
 
   constructor(private http: HttpClient) {}
 
@@ -82,9 +85,15 @@ export class FormRendererService {
    * });
    */
   getFormSchema(token: string): Observable<{ schema: FormSchema; settings: FormSettings }> {
-    return this.http.get<FormSchemaResponse>(`${this.renderApiUrl}/${token}`).pipe(
-      map((response) => response.data),
+    const url = `${this.renderApiUrl}/${token}`;
+    console.log('FormRendererService: Fetching form schema from:', url);
+    return this.http.get<FormSchemaResponse>(url).pipe(
+      map((response) => {
+        console.log('FormRendererService: Successfully received schema:', response);
+        return response.data;
+      }),
       catchError((error: HttpErrorResponse) => {
+        console.error('FormRendererService: Error fetching schema:', error);
         return throwError(() => this.handleError(error));
       }),
     );

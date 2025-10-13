@@ -1397,6 +1397,654 @@ const swaggerSpec = {
         },
       },
     },
+    '/tools/short-links': {
+      post: {
+        summary: 'Create a new short link',
+        description:
+          'Create a new short link with optional custom name and expiration',
+        tags: ['Tools - Short Links'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['originalUrl'],
+                properties: {
+                  originalUrl: {
+                    type: 'string',
+                    format: 'uri',
+                    description: 'The original URL to shorten',
+                    example: 'https://example.com/very/long/url/path',
+                  },
+                  customName: {
+                    type: 'string',
+                    minLength: 3,
+                    maxLength: 30,
+                    pattern: '^[a-zA-Z0-9-]+$',
+                    description:
+                      'Optional custom name (alphanumeric and hyphens only)',
+                    example: 'my-custom-link',
+                  },
+                  expiresAt: {
+                    type: 'string',
+                    format: 'date-time',
+                    description: 'Optional expiration date',
+                    example: '2025-12-31T23:59:59.000Z',
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Short link created successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        shortLink: {
+                          type: 'object',
+                          properties: {
+                            id: { type: 'string', format: 'uuid' },
+                            code: { type: 'string', example: 'abc123' },
+                            originalUrl: { type: 'string', format: 'uri' },
+                            customName: { type: 'string', nullable: true },
+                            expiresAt: {
+                              type: 'string',
+                              format: 'date-time',
+                              nullable: true,
+                            },
+                            clickCount: { type: 'integer', example: 0 },
+                            createdAt: { type: 'string', format: 'date-time' },
+                            updatedAt: { type: 'string', format: 'date-time' },
+                          },
+                        },
+                        shortUrl: {
+                          type: 'string',
+                          format: 'uri',
+                          example: 'http://localhost:3000/s/abc123',
+                        },
+                      },
+                    },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'Invalid request data',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+      get: {
+        summary: 'Get user short links',
+        description: 'Retrieve short links created by the authenticated user',
+        tags: ['Tools - Short Links'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'query',
+            name: 'limit',
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+            description: 'Maximum number of results',
+          },
+          {
+            in: 'query',
+            name: 'offset',
+            schema: { type: 'integer', minimum: 0, default: 0 },
+            description: 'Number of results to skip',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Short links retrieved successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        shortLinks: {
+                          type: 'array',
+                          items: {
+                            type: 'object',
+                            properties: {
+                              id: { type: 'string', format: 'uuid' },
+                              code: { type: 'string' },
+                              originalUrl: { type: 'string', format: 'uri' },
+                              customName: { type: 'string', nullable: true },
+                              expiresAt: {
+                                type: 'string',
+                                format: 'date-time',
+                                nullable: true,
+                              },
+                              clickCount: { type: 'integer' },
+                              createdAt: {
+                                type: 'string',
+                                format: 'date-time',
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/tools/short-links/check-availability/{customName}': {
+      get: {
+        summary: 'Check custom name availability',
+        description: 'Check if a custom name is available for use',
+        tags: ['Tools - Short Links'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'customName',
+            required: true,
+            schema: { type: 'string', minLength: 3, maxLength: 30 },
+            description: 'Custom name to check',
+            example: 'my-custom-link',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Availability check completed',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        available: { type: 'boolean', example: true },
+                        valid: { type: 'boolean', example: true },
+                        error: { type: 'string', nullable: true },
+                      },
+                    },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/tools/short-links/{code}': {
+      get: {
+        summary: 'Resolve short link',
+        description: 'Resolve a short code to get original URL information',
+        tags: ['Tools - Short Links'],
+        parameters: [
+          {
+            in: 'path',
+            name: 'code',
+            required: true,
+            schema: { type: 'string', minLength: 6, maxLength: 8 },
+            description: 'Short code to resolve',
+            example: 'abc123',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Short link resolved successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        shortLink: { type: 'object' },
+                        originalUrl: { type: 'string', format: 'uri' },
+                      },
+                    },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '404': {
+            description: 'Short link not found',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '410': {
+            description: 'Short link has expired',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/tools/short-links/preview': {
+      post: {
+        summary: 'Preview URL',
+        description: 'Preview URL information without creating a short link',
+        tags: ['Tools - Short Links'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['url'],
+                properties: {
+                  url: {
+                    type: 'string',
+                    format: 'uri',
+                    description: 'URL to preview',
+                    example: 'https://example.com',
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'URL preview generated successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        valid: { type: 'boolean', example: true },
+                        sanitizedUrl: { type: 'string', format: 'uri' },
+                        domain: { type: 'string', example: 'example.com' },
+                        isSecure: { type: 'boolean', example: true },
+                      },
+                    },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/tools': {
+      get: {
+        summary: 'Get public tools',
+        description:
+          'Retrieve list of enabled tools for feature gating (no authentication required)',
+        tags: ['Tools - Public'],
+        responses: {
+          '200': {
+            description: 'Public tools retrieved successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          key: { type: 'string', example: 'short-links' },
+                          name: { type: 'string', example: 'Short Links' },
+                          description: { type: 'string' },
+                          slug: { type: 'string', example: 'short-links' },
+                          enabled: { type: 'boolean', example: true },
+                        },
+                      },
+                    },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/tools/{key}': {
+      get: {
+        summary: 'Get tool status',
+        description:
+          'Check if a specific tool is enabled (no authentication required)',
+        tags: ['Tools - Public'],
+        parameters: [
+          {
+            in: 'path',
+            name: 'key',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Tool key (kebab-case)',
+            example: 'short-links',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Tool status retrieved successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        key: { type: 'string', example: 'short-links' },
+                        enabled: { type: 'boolean', example: true },
+                        name: { type: 'string', example: 'Short Links' },
+                      },
+                    },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '404': {
+            description: 'Tool not found or disabled',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/tools/slug/{slug}': {
+      get: {
+        summary: 'Get tool by slug',
+        description:
+          'Get tool information by slug for dynamic routing (no authentication required)',
+        tags: ['Tools - Public'],
+        parameters: [
+          {
+            in: 'path',
+            name: 'slug',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Tool slug (URL-friendly identifier)',
+            example: 'short-links',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Tool information retrieved successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        key: { type: 'string' },
+                        name: { type: 'string' },
+                        slug: { type: 'string' },
+                        description: { type: 'string' },
+                        enabled: { type: 'boolean' },
+                      },
+                    },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '404': {
+            description: 'Tool not found or disabled',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/admin/tools': {
+      get: {
+        summary: 'Get all tools (admin)',
+        description: 'Retrieve all tools in the registry (super admin only)',
+        tags: ['Tools - Admin'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Tools retrieved successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          key: { type: 'string' },
+                          name: { type: 'string' },
+                          description: { type: 'string' },
+                          slug: { type: 'string' },
+                          enabled: { type: 'boolean' },
+                          createdAt: { type: 'string', format: 'date-time' },
+                          updatedAt: { type: 'string', format: 'date-time' },
+                        },
+                      },
+                    },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '403': {
+            description: 'Super admin access required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+      post: {
+        summary: 'Create a new tool',
+        description: 'Create a new tool in the registry (super admin only)',
+        tags: ['Tools - Admin'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['key', 'name', 'slug'],
+                properties: {
+                  key: {
+                    type: 'string',
+                    pattern: '^[a-z0-9-]+$',
+                    description: 'Unique tool key (kebab-case)',
+                    example: 'short-links',
+                  },
+                  name: {
+                    type: 'string',
+                    description: 'Tool display name',
+                    example: 'Short Links',
+                  },
+                  description: {
+                    type: 'string',
+                    description: 'Tool description',
+                    example: 'Create and manage short URLs',
+                  },
+                  slug: {
+                    type: 'string',
+                    pattern: '^[a-z0-9-]+$',
+                    description: 'URL-friendly slug',
+                    example: 'short-links',
+                  },
+                  enabled: {
+                    type: 'boolean',
+                    default: true,
+                    description: 'Whether the tool is enabled',
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Tool created successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { type: 'object' },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'Invalid request data',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '403': {
+            description: 'Super admin access required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/admin/tools/{key}': {
+      patch: {
+        summary: 'Update tool status',
+        description: 'Enable or disable a tool (super admin only)',
+        tags: ['Tools - Admin'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'key',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Tool key',
+            example: 'short-links',
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['enabled'],
+                properties: {
+                  enabled: {
+                    type: 'boolean',
+                    description: 'Enable or disable the tool',
+                    example: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Tool updated successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    data: { type: 'object' },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '403': {
+            description: 'Super admin access required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '404': {
+            description: 'Tool not found',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+    },
     '/users/{id}': {
       get: {
         summary: 'Get user by ID',

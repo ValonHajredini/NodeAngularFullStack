@@ -1,8 +1,4 @@
-.tools-list-container {
-  padding: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
-}
+/* Container styles are now handled in the template with Tailwind classes */
 
 :host ::ng-deep .p-card {
   height: 100%;
