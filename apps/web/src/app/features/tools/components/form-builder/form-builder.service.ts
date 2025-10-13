@@ -1035,6 +1035,14 @@ export class FormBuilderService {
     this._stepFormEnabled.set(true);
     this._activeStepId.set(defaultStep.id);
 
+    // Assign existing rows to the new default step
+    this._rowConfigs.update((rows) =>
+      rows.map((row) => ({
+        ...row,
+        stepId: defaultStep.id,
+      })),
+    );
+
     // Migrate all existing fields to the first step
     this.migrateFieldsToStep(defaultStep.id);
 
@@ -1049,6 +1057,14 @@ export class FormBuilderService {
     this._stepFormEnabled.set(false);
     this._steps.set([]);
     this._activeStepId.set(null);
+
+    // Clear step assignments from rows
+    this._rowConfigs.update((rows) =>
+      rows.map((row) => ({
+        ...row,
+        stepId: undefined,
+      })),
+    );
 
     // Clear step assignments from fields
     this._formFields.update((fields) =>
@@ -1085,12 +1101,18 @@ export class FormBuilderService {
       return;
     }
 
-    // Remove the step
-    this._steps.update((steps) => steps.filter((s) => s.id !== stepId));
+    const remainingSteps = this._steps().filter((step) => step.id !== stepId);
+    if (remainingSteps.length === this._steps().length) {
+      return;
+    }
 
-    // Reassign fields from removed step to first step
-    const firstStep = this._steps()[0];
+    const normalizedSteps = remainingSteps.map((step, index) => ({ ...step, order: index }));
+    this._steps.set(normalizedSteps);
+
+    const firstStep = normalizedSteps[0];
+
     if (firstStep) {
+      // Reassign fields from removed step to first step
       this._formFields.update((fields) =>
         fields.map((field) => {
           if (field.position?.stepId === stepId) {
@@ -1105,15 +1127,24 @@ export class FormBuilderService {
           return field;
         }),
       );
-    }
 
-    // Update active step if we removed the active one
-    if (this._activeStepId() === stepId && firstStep) {
-      this._activeStepId.set(firstStep.id);
-    }
+      // Reassign rows from removed step to first step
+      this._rowConfigs.update((rows) =>
+        rows.map((row) =>
+          row.stepId === stepId
+            ? {
+                ...row,
+                stepId: firstStep.id,
+              }
+            : row,
+        ),
+      );
 
-    // Reorder remaining steps
-    this._steps.update((steps) => steps.map((step, index) => ({ ...step, order: index })));
+      // Update active step if we removed the active one
+      if (this._activeStepId() === stepId) {
+        this._activeStepId.set(firstStep.id);
+      }
+    }
 
     this.markDirty();
   }

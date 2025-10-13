@@ -5,6 +5,8 @@ import {
   inject,
   OnInit,
   OnDestroy,
+  EventEmitter,
+  Output,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -12,7 +14,6 @@ import { ButtonModule } from 'primeng/button';
 import { ToggleSwitch } from 'primeng/toggleswitch';
 import { ConfirmationService } from 'primeng/api';
 import { ConfirmDialog } from 'primeng/confirmdialog';
-import { Tabs, TabList, Tab, TabPanels, TabPanel } from 'primeng/tabs';
 import { FormBuilderService } from '../form-builder.service';
 import { trigger, state, style, transition, animate } from '@angular/animations';
 
@@ -34,18 +35,7 @@ import { trigger, state, style, transition, animate } from '@angular/animations'
   selector: 'app-row-layout-sidebar',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    CommonModule,
-    FormsModule,
-    ButtonModule,
-    ToggleSwitch,
-    ConfirmDialog,
-    Tabs,
-    TabList,
-    Tab,
-    TabPanels,
-    TabPanel,
-  ],
+  imports: [CommonModule, FormsModule, ButtonModule, ToggleSwitch, ConfirmDialog],
   providers: [ConfirmationService],
   animations: [
     trigger('slideInOut', [
@@ -105,120 +95,159 @@ import { trigger, state, style, transition, animate } from '@angular/animations'
           ></button>
         </div>
 
-        <div class="sidebar-content overflow-auto h-[calc(100%-56px)]">
-          <!-- Tabbed interface -->
-          <p-tabs value="0" styleClass="sidebar-tabs">
-            <p-tablist>
-              <p-tab value="0">Row Layout</p-tab>
-              <p-tab value="1">Step Form</p-tab>
-            </p-tablist>
-            <p-tabpanels>
-              <!-- Row Layout Tab Panel -->
-              <p-tabpanel value="0">
-                <div>
-                  <!-- Header with enable/disable toggle -->
-                  <div class="flex items-center justify-between mb-4 px-2 pt-4">
-                    <h3 class="text-base font-semibold">Row Layout</h3>
-                    <p-toggleSwitch
-                      [(ngModel)]="rowLayoutEnabled"
-                      (onChange)="onToggleRowLayout($event)"
-                      [attr.aria-label]="
-                        rowLayoutEnabled ? 'Disable row-based layout' : 'Enable row-based layout'
-                      "
-                    ></p-toggleSwitch>
-                  </div>
+        <div class="sidebar-content overflow-auto h-[calc(100%-56px)] space-y-6">
+          <section class="section-block border-b border-gray-200 px-4 pt-5 pb-4">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="section-eyebrow">Layout</p>
+                <h3 class="text-lg font-semibold text-gray-800">Row Layout</h3>
+                <p class="text-sm text-gray-500 mt-1">
+                  Organize fields into responsive rows and columns. Toggle row layout to unlock
+                  advanced positioning.
+                </p>
+              </div>
+              <p-toggleSwitch
+                [(ngModel)]="rowLayoutEnabled"
+                (onChange)="onToggleRowLayout($event)"
+                [attr.aria-label]="
+                  rowLayoutEnabled ? 'Disable row-based layout' : 'Enable row-based layout'
+                "
+              ></p-toggleSwitch>
+            </div>
+          </section>
 
-                  @if (formBuilderService.rowLayoutEnabled()) {
-                    <!-- Row list with column configuration -->
-                    <div class="row-list space-y-3 mb-4 px-2">
-                      @for (row of formBuilderService.rowConfigs(); track row.rowId) {
-                        <div class="row-item p-3 border border-gray-200 rounded bg-gray-50">
-                          <!-- Row header with column count and delete button -->
-                          <div class="flex items-center justify-between mb-3">
-                            <span class="font-medium text-sm">
-                              Row {{ row.order + 1 }}
-                              <span class="text-gray-500 font-normal"
-                                >| {{ row.columnCount }}
-                                {{ row.columnCount === 1 ? 'column' : 'columns' }}</span
-                              >
-                            </span>
-                            <button
-                              pButton
-                              icon="pi pi-trash"
-                              severity="danger"
-                              size="small"
-                              [outlined]="true"
-                              (click)="onRemoveRow(row.rowId)"
-                              [attr.aria-label]="'Remove row ' + (row.order + 1)"
-                            ></button>
-                          </div>
+          @if (formBuilderService.rowLayoutEnabled()) {
+            <section class="section-block px-4 pb-6">
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                  Active Rows
+                </h4>
+                <span class="text-xs text-gray-500">
+                  {{ formBuilderService.rowConfigs().length }}
+                  {{ formBuilderService.rowConfigs().length === 1 ? 'row' : 'rows' }}
+                </span>
+              </div>
 
-                          <!-- Column count selector -->
-                          <div class="flex gap-1">
-                            @for (count of [1, 2, 3, 4]; track count) {
-                              <button
-                                pButton
-                                [label]="count.toString()"
-                                size="small"
-                                [outlined]="row.columnCount !== count"
-                                [severity]="row.columnCount === count ? 'primary' : 'secondary'"
-                                (click)="onUpdateColumns(row.rowId, $any(count))"
-                                [attr.aria-label]="count + ' columns'"
-                                [attr.aria-pressed]="row.columnCount === count"
-                                class="flex-1"
-                              ></button>
-                            }
-                          </div>
-                        </div>
-                      }
-                    </div>
-
-                    <!-- Add row button -->
-                    <div class="px-2 pb-4">
+              <div class="row-list space-y-3">
+                @for (row of formBuilderService.rowConfigs(); track row.rowId) {
+                  <div class="row-item rounded-lg border border-gray-200 bg-white p-3 shadow-xs">
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                      <div>
+                        <p class="text-sm font-semibold text-gray-800">Row {{ row.order + 1 }}</p>
+                        <p class="text-xs text-gray-500">
+                          {{ row.columnCount }}
+                          {{ row.columnCount === 1 ? 'column' : 'columns' }}
+                        </p>
+                      </div>
                       <button
                         pButton
-                        label="Add Row"
-                        icon="pi pi-plus"
+                        icon="pi pi-trash"
+                        severity="danger"
                         size="small"
-                        (click)="onAddRow()"
-                        class="w-full"
-                        severity="secondary"
                         [outlined]="true"
+                        (click)="onRemoveRow(row.rowId)"
+                        [attr.aria-label]="'Remove row ' + (row.order + 1)"
                       ></button>
                     </div>
-                  } @else {
-                    <!-- Migration UI when row layout is disabled -->
-                    <div class="text-center py-6 px-4">
-                      <i class="pi pi-th-large text-4xl text-gray-400 mb-3 block"></i>
-                      <p class="text-sm text-gray-600 mb-4">
-                        Row layout is disabled. Enable to configure columns per row for more
-                        flexible form layouts.
-                      </p>
-                      @if (formBuilderService.hasFields()) {
+
+                    <div class="flex gap-2">
+                      @for (count of [1, 2, 3, 4]; track count) {
                         <button
                           pButton
-                          label="Convert to Row Layout"
-                          icon="pi pi-arrow-right"
+                          [label]="count.toString()"
                           size="small"
-                          (click)="onMigrateToRowLayout()"
-                          severity="info"
-                          [outlined]="true"
+                          [outlined]="row.columnCount !== count"
+                          [severity]="row.columnCount === count ? 'primary' : 'secondary'"
+                          (click)="onUpdateColumns(row.rowId, $any(count))"
+                          [attr.aria-label]="count + ' columns'"
+                          [attr.aria-pressed]="row.columnCount === count"
+                          class="flex-1"
                         ></button>
                       }
                     </div>
-                  }
-                </div>
-              </p-tabpanel>
+                  </div>
+                }
+              </div>
 
-              <!-- Step Form Tab Panel -->
-              <p-tabpanel value="1">
-                <div class="py-4 px-4">
-                  <h3 class="text-base font-semibold mb-4">Step Form</h3>
-                  <p class="text-sm text-gray-600">Step Form will be available here.</p>
-                </div>
-              </p-tabpanel>
-            </p-tabpanels>
-          </p-tabs>
+              <button
+                pButton
+                label="Add Row"
+                icon="pi pi-plus"
+                size="small"
+                (click)="onAddRow()"
+                class="w-full mt-4"
+                severity="secondary"
+                [outlined]="true"
+              ></button>
+            </section>
+          } @else {
+            <section class="section-block px-4 pb-6">
+              <div class="text-center py-6 px-4 border border-dashed border-gray-300 rounded-lg">
+                <i class="pi pi-th-large text-4xl text-gray-400 mb-3 block"></i>
+                <p class="text-sm text-gray-600 mb-4">
+                  Row layout is currently disabled. Enable it to arrange your fields with flexible
+                  multi-column rows.
+                </p>
+                @if (formBuilderService.hasFields()) {
+                  <button
+                    pButton
+                    label="Convert Existing Layout"
+                    icon="pi pi-arrow-right"
+                    size="small"
+                    (click)="onMigrateToRowLayout()"
+                    severity="info"
+                    [outlined]="true"
+                  ></button>
+                }
+              </div>
+            </section>
+          }
+
+          <section class="section-block border-t border-gray-200 px-4 py-5">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h3 class="text-base font-semibold text-gray-800 flex items-center gap-2">
+                  <i class="pi pi-sitemap text-gray-500"></i>
+                  Step Form Overview
+                </h3>
+                <p class="text-sm text-gray-500 mt-1">
+                  Break long forms into smaller steps to improve completion rates.
+                </p>
+                <span
+                  class="status-chip mt-3"
+                  [class.status-enabled]="stepFormEnabled()"
+                  [class.status-disabled]="!stepFormEnabled()"
+                >
+                  {{ stepFormEnabled() ? 'Step Form Enabled' : 'Step Form Disabled' }}
+                </span>
+              </div>
+              <button
+                pButton
+                label="Manage Steps"
+                icon="pi pi-external-link"
+                size="small"
+                (click)="onOpenStepForm()"
+                severity="primary"
+                [outlined]="true"
+              ></button>
+            </div>
+
+            @if (stepFormEnabled()) {
+              <ul class="mt-4 space-y-2 text-sm text-gray-600">
+                @for (step of steps(); track step.id) {
+                  <li class="flex items-center gap-2">
+                    <span class="step-chip">{{ step.order + 1 }}</span>
+                    <span class="truncate">{{ step.title }}</span>
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="mt-4 text-sm text-gray-500">
+                Multi-step mode is off. Switch to the Step Form tab to enable it and configure your
+                steps.
+              </p>
+            }
+          </section>
         </div>
       </div>
     }
@@ -251,57 +280,62 @@ import { trigger, state, style, transition, animate } from '@angular/animations'
       }
 
       .row-item:hover {
-        background-color: #e5e7eb;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
       }
 
-      /* Tab styles */
-      ::ng-deep .sidebar-tabs {
-        width: 100%;
-        display: block;
+      .section-block {
+        background: transparent;
+      }
 
-        p-tabs {
-          width: 100%;
-          display: block;
-        }
+      .section-eyebrow {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #6b7280;
+        margin-bottom: 0.25rem;
+        font-weight: 600;
+      }
 
-        .p-tabs {
-          width: 100%;
-          display: block;
-        }
+      .status-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        border-radius: 999px;
+        padding: 0.25rem 0.75rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border: 1px solid transparent;
+      }
 
-        .p-tablist {
-          background: #f9fafb;
-          border-bottom: 1px solid #e5e7eb;
-          width: 100%;
-          display: flex !important;
-          flex-wrap: nowrap;
-        }
+      .status-enabled {
+        background: rgba(34, 197, 94, 0.12);
+        color: #15803d;
+        border-color: rgba(34, 197, 94, 0.4);
+      }
 
-        .p-tab {
-          flex: 1 1 50%;
-          min-width: 0;
-          max-width: 50%;
-          overflow: hidden;
-        }
+      .status-disabled {
+        background: rgba(148, 163, 184, 0.15);
+        color: #475569;
+        border-color: rgba(148, 163, 184, 0.45);
+      }
 
-        .p-tab button {
-          width: 100%;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          justify-content: center;
-          display: flex;
-          align-items: center;
-        }
+      .step-chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 999px;
+        background: #2563eb;
+        color: #fff;
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
 
-        .p-tabpanels {
-          padding: 0;
-          background: transparent;
-        }
-
-        .p-tabpanel {
-          background: transparent;
-        }
+      .shadow-xs {
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
       }
     `,
   ],
@@ -315,6 +349,8 @@ export class RowLayoutSidebarComponent implements OnInit, OnDestroy {
   private readonly INACTIVITY_TIMEOUT = 30000; // 30 seconds
   private readonly HOVER_GRACE_PERIOD = 5000; // 5 seconds
 
+  @Output() openStepForm = new EventEmitter<void>();
+
   /**
    * Signal tracking the collapsed state of the sidebar.
    */
@@ -324,6 +360,12 @@ export class RowLayoutSidebarComponent implements OnInit, OnDestroy {
    * Local state for row layout toggle (two-way binding with InputSwitch).
    */
   rowLayoutEnabled = false;
+
+  /**
+   * Expose step form state for quick status preview.
+   */
+  protected readonly stepFormEnabled = this.formBuilderService.stepFormEnabled;
+  protected readonly steps = this.formBuilderService.steps;
 
   /**
    * Lifecycle hook that initializes the component.
@@ -392,6 +434,14 @@ export class RowLayoutSidebarComponent implements OnInit, OnDestroy {
    */
   onAddRow(): void {
     this.formBuilderService.addRow(2);
+  }
+
+  /**
+   * Emits event to open Step Form tab in parent container.
+   */
+  onOpenStepForm(): void {
+    this.openStepForm.emit();
+    this.startInactivityTimer(); // keep sidebar active when jumping tabs
   }
 
   /**

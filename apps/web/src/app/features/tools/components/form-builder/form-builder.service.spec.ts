@@ -1417,6 +1417,18 @@ describe('FormBuilderService', () => {
         expect(fields[0].position?.stepId).toBe(service.steps()[0].id);
       });
 
+      it('should assign existing rows to the default step', () => {
+        service.enableRowLayout();
+        const rowConfigurationsBefore = service.getRowLayout();
+        expect(rowConfigurationsBefore.length).toBeGreaterThan(0);
+        expect(rowConfigurationsBefore[0].stepId).toBeUndefined();
+
+        service.enableStepForm();
+
+        const rows = service.getRowLayout();
+        expect(rows[0].stepId).toBe(service.steps()[0].id);
+      });
+
       it('should set active step to first step', () => {
         service.enableStepForm();
 
@@ -1461,6 +1473,18 @@ describe('FormBuilderService', () => {
         const fields = service.getAllFields();
         expect(fields[0].position?.stepId).toBeUndefined();
         expect(fields[0].position?.rowId).toBe('row-1');
+      });
+
+      it('should clear step assignments from rows when disabled', () => {
+        service.enableRowLayout();
+        service.enableStepForm();
+        const rowsBeforeDisable = service.getRowLayout();
+        expect(rowsBeforeDisable[0].stepId).toBe(service.steps()[0].id);
+
+        service.disableStepForm();
+
+        const rows = service.getRowLayout();
+        expect(rows[0].stepId).toBeUndefined();
       });
 
       it('should mark form as dirty', () => {
@@ -1538,6 +1562,9 @@ describe('FormBuilderService', () => {
         };
         service.addStep(step2);
 
+        // Create a row for step 2
+        service.addRow(2);
+
         const field: FormField = {
           id: 'field-1',
           type: FormFieldType.TEXT,
@@ -1554,6 +1581,29 @@ describe('FormBuilderService', () => {
         expect(service.steps().length).toBe(1);
         const fields = service.getAllFields();
         expect(fields[0].position?.stepId).toBe(service.steps()[0].id);
+      });
+
+      it('should reassign rows from removed step to first step', () => {
+        service.enableStepForm();
+        const step2 = {
+          id: 'step-2',
+          title: 'Step 2',
+          description: '',
+          order: 1,
+        };
+        service.addStep(step2);
+
+        // Row created while step 2 active should belong to step 2
+        const newRowId = service.addRow(2);
+        let rows = service.getRowLayout();
+        const step2Row = rows.find((row) => row.rowId === newRowId);
+        expect(step2Row?.stepId).toBe('step-2');
+
+        service.removeStep('step-2');
+
+        rows = service.getRowLayout();
+        const reassignedRow = rows.find((row) => row.rowId === newRowId);
+        expect(reassignedRow?.stepId).toBe(service.steps()[0].id);
       });
 
       it('should reorder remaining steps', () => {

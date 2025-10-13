@@ -1,0 +1,45 @@
+<!-- Desktop: Horizontal Stepper (hidden on mobile) -->
+<div class="hidden md:flex step-progress-desktop">
+  @for (step of steps; track step.id; let i = $index) {
+    <div
+      class="step-item"
+      [class.active]="i === currentStepIndex"
+      [class.completed]="validatedSteps.has(i)"
+      [class.clickable]="isStepClickable(i)"
+      (click)="onStepClick(i)"
+      [attr.aria-current]="i === currentStepIndex ? 'step' : null"
+    >
+      <div class="step-circle">
+        @if (validatedSteps.has(i)) {
+          <i class="pi pi-check text-white"></i>
+        } @else {
+          <span class="step-number">{{ i + 1 }}</span>
+        }
+      </div>
+      <div class="step-label">
+        <div class="step-title">{{ step.title }}</div>
+        @if (step.description) {
+          <div class="step-description">{{ step.description }}</div>
+        }
+      </div>
+    </div>
+
+    @if (i < steps.length - 1) {
+      <div class="step-connector" [class.completed]="validatedSteps.has(i)"></div>
+    }
+  }
+</div>
+
+<!-- Mobile: Progress Bar (hidden on desktop) -->
+<div class="block md:hidden step-progress-mobile">
+  <div class="progress-text">
+    <span class="text-gray-600">Step {{ currentStepIndex + 1 }} of {{ totalSteps }}:</span>
+    <strong class="text-primary-700">{{ steps[currentStepIndex]?.title }}</strong>
+  </div>
+  <p-progressBar [value]="progressPercentage" [showValue]="false" styleClass="mt-2"></p-progressBar>
+</div>
+
+<!-- Screen reader announcements -->
+<div aria-live="polite" aria-atomic="true" class="sr-only">
+  Step {{ currentStepIndex + 1 }} of {{ totalSteps }}: {{ steps[currentStepIndex]?.title }}
+</div>

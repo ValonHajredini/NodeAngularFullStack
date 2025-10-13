@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { of, throwError, Subject } from 'rxjs';
+import { MessageService } from 'primeng/api';
 import { FormRendererComponent } from './form-renderer.component';
 import { FormRendererService, FormRenderError, FormRenderErrorType } from './form-renderer.service';
 import { FormFieldType, FormSchema, FormSettings } from '@nodeangularfullstack/shared';
@@ -1436,7 +1437,16 @@ describe('FormRendererComponent', () => {
     it('should load schema from API when previewMode is false', () => {
       spyOn(formRendererService, 'getFormSchema').and.returnValue(
         of({
-          schema: { fields: [], settings: {} as any },
+          schema: {
+            id: 'test-schema',
+            formId: 'test-form',
+            version: 1,
+            isPublished: true,
+            fields: [],
+            settings: {},
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          } as any,
           settings: {} as any,
         }),
       );
@@ -1744,8 +1754,8 @@ describe('FormRendererComponent', () => {
               required: false,
               order: 1,
               metadata: {
-                level: 'h3',
-                text: 'Section Title',
+                headingLevel: 'h3',
+                alignment: 'left',
               },
             },
             {
@@ -1788,7 +1798,7 @@ describe('FormRendererComponent', () => {
               metadata: {
                 imageUrl: 'https://example.com/logo.png',
                 altText: 'Company Logo',
-                size: 'medium',
+                width: 'medium',
               },
             },
             {
@@ -1828,7 +1838,7 @@ describe('FormRendererComponent', () => {
               fieldName: 'heading-title',
               required: false,
               order: 1,
-              metadata: { level: 'h2', text: 'Registration Form' },
+              metadata: { headingLevel: 'h2', alignment: 'left' },
             },
             {
               id: 'text-block-1',
@@ -1895,6 +1905,788 @@ describe('FormRendererComponent', () => {
 
         // FormGroup should only have 2 controls
         expect(Object.keys(newComponent.formGroup?.controls || {}).length).toBe(2);
+      });
+    });
+  });
+
+  describe('Step Form Rendering and Navigation (Story 19.4)', () => {
+    let stepFormSchema: FormSchema;
+
+    beforeEach(() => {
+      stepFormSchema = {
+        ...mockSchema,
+        fields: [
+          {
+            id: 'field-1',
+            type: FormFieldType.TEXT,
+            label: 'Full Name',
+            fieldName: 'full-name',
+            required: true,
+            order: 1,
+            position: { rowId: 'row-1', columnIndex: 0, orderInColumn: 0, stepId: 'step-1' },
+          },
+          {
+            id: 'field-2',
+            type: FormFieldType.EMAIL,
+            label: 'Email',
+            fieldName: 'email',
+            required: true,
+            order: 2,
+            position: { rowId: 'row-1', columnIndex: 1, orderInColumn: 0, stepId: 'step-1' },
+          },
+          {
+            id: 'field-3',
+            type: FormFieldType.TEXT,
+            label: 'Address',
+            fieldName: 'address',
+            required: true,
+            order: 3,
+            position: { rowId: 'row-2', columnIndex: 0, orderInColumn: 0, stepId: 'step-2' },
+          },
+          {
+            id: 'field-4',
+            type: FormFieldType.NUMBER,
+            label: 'Phone',
+            fieldName: 'phone',
+            required: false,
+            order: 4,
+            position: { rowId: 'row-2', columnIndex: 1, orderInColumn: 0, stepId: 'step-2' },
+          },
+          {
+            id: 'field-5',
+            type: FormFieldType.TEXTAREA,
+            label: 'Comments',
+            fieldName: 'comments',
+            required: false,
+            order: 5,
+            position: { rowId: 'row-3', columnIndex: 0, orderInColumn: 0, stepId: 'step-3' },
+          },
+        ],
+        settings: {
+          ...mockSettings,
+          stepForm: {
+            enabled: true,
+            steps: [
+              { id: 'step-1', title: 'Personal Info', description: 'Enter your details', order: 0 },
+              { id: 'step-2', title: 'Contact', description: 'Your contact info', order: 1 },
+              { id: 'step-3', title: 'Review', order: 2 },
+            ],
+          },
+        },
+      };
+    });
+
+    describe('Step Mode Detection', () => {
+      it('should detect step form mode when stepForm.enabled is true', () => {
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: stepFormSchema, settings: stepFormSchema.settings as FormSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        expect((newComponent as any).isStepFormEnabled()).toBe(true);
+        expect((newComponent as any).steps().length).toBe(3);
+      });
+
+      it('should not enable step form mode when stepForm.enabled is false', () => {
+        const nonStepSchema = {
+          ...stepFormSchema,
+          settings: {
+            ...stepFormSchema.settings,
+            stepForm: { enabled: false, steps: [] },
+          },
+        };
+
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: nonStepSchema, settings: nonStepSchema.settings as FormSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        expect((newComponent as any).isStepFormEnabled()).toBe(false);
+      });
+
+      it('should not enable step form mode when stepForm is undefined', () => {
+        const nonStepSchema = {
+          ...stepFormSchema,
+          settings: {
+            ...stepFormSchema.settings,
+            stepForm: undefined,
+          },
+        };
+
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: nonStepSchema, settings: nonStepSchema.settings as FormSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        expect((newComponent as any).isStepFormEnabled()).toBe(false);
+      });
+    });
+
+    describe('Initial Step Rendering', () => {
+      it('should render first step initially (currentStepIndex = 0)', () => {
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: stepFormSchema, settings: stepFormSchema.settings as FormSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        expect(newComponent.currentStepIndex()).toBe(0);
+        expect(newComponent.currentStep()?.id).toBe('step-1');
+        expect(newComponent.currentStep()?.title).toBe('Personal Info');
+      });
+
+      it('should mark first step as active', () => {
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: stepFormSchema, settings: stepFormSchema.settings as FormSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        expect(newComponent.isFirstStep()).toBe(true);
+        expect(newComponent.isLastStep()).toBe(false);
+      });
+    });
+
+    describe('Field Filtering by Current Step', () => {
+      it('should show only fields belonging to current step', () => {
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: stepFormSchema, settings: stepFormSchema.settings as FormSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        const currentStepFields = (newComponent as any).currentStepFields();
+        expect(currentStepFields.length).toBe(2); // step-1 has 2 fields
+        expect(currentStepFields[0].fieldName).toBe('full-name');
+        expect(currentStepFields[1].fieldName).toBe('email');
+      });
+
+      it('should update visible fields when navigating to next step', () => {
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: stepFormSchema, settings: stepFormSchema.settings as FormSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        // Fill step 1 fields
+        newComponent.formGroup?.patchValue({
+          'full-name': 'John Doe',
+          email: 'john@example.com',
+        });
+
+        newComponent.goToNextStep();
+        newFixture.detectChanges();
+
+        const step2Fields = (newComponent as any).currentStepFields();
+        expect(step2Fields.length).toBe(2); // step-2 has 2 fields
+        expect(step2Fields[0].fieldName).toBe('address');
+        expect(step2Fields[1].fieldName).toBe('phone');
+      });
+
+      it('should show all fields when step form mode is disabled', () => {
+        const nonStepSchema = {
+          ...stepFormSchema,
+          settings: {
+            ...stepFormSchema.settings,
+            stepForm: { enabled: false, steps: [] },
+          },
+        };
+
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: nonStepSchema, settings: nonStepSchema.settings as FormSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        const allFields = (newComponent as any).currentStepFields();
+        expect(allFields.length).toBe(stepFormSchema.fields.length);
+      });
+
+      it('should limit global layout fields to the active step when row layout is disabled', () => {
+        const schemaWithoutRowLayout = {
+          ...stepFormSchema,
+          settings: {
+            ...stepFormSchema.settings,
+            rowLayout: undefined,
+          },
+        };
+
+        formRendererService.getFormSchema.and.returnValue(
+          of({
+            schema: schemaWithoutRowLayout,
+            settings: schemaWithoutRowLayout.settings as FormSettings,
+          }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        const step1Fields = newComponent.getFieldsWithoutPosition();
+        expect(step1Fields.length).toBe(2);
+        expect(step1Fields.every((field) => field.position?.stepId === 'step-1')).toBeTrue();
+
+        newComponent.formGroup?.patchValue({
+          'full-name': 'Jane Doe',
+          email: 'jane@example.com',
+        });
+        newComponent.goToNextStep();
+        newFixture.detectChanges();
+
+        const step2Fields = newComponent.getFieldsWithoutPosition();
+        expect(step2Fields.length).toBe(2);
+        expect(step2Fields.every((field) => field.position?.stepId === 'step-2')).toBeTrue();
+      });
+
+      it('should filter row configurations and column fields by the active step', () => {
+        const schemaWithRowLayout = {
+          ...stepFormSchema,
+          settings: {
+            ...stepFormSchema.settings,
+            rowLayout: {
+              enabled: true,
+              rows: [
+                { rowId: 'row-1', columnCount: 2, order: 0, stepId: 'step-1' },
+                { rowId: 'row-2', columnCount: 2, order: 1, stepId: 'step-2' },
+                { rowId: 'row-3', columnCount: 1, order: 2, stepId: 'step-3' },
+              ],
+            },
+          },
+        };
+
+        formRendererService.getFormSchema.and.returnValue(
+          of({
+            schema: schemaWithRowLayout,
+            settings: schemaWithRowLayout.settings as FormSettings,
+          }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        const step1Rows = newComponent.getRowConfigs();
+        expect(step1Rows.length).toBe(1);
+        expect(step1Rows[0].rowId).toBe('row-1');
+
+        const step1ColumnFields = newComponent.getFieldsInColumn('row-1', 0);
+        expect(step1ColumnFields.length).toBe(1);
+        expect(step1ColumnFields[0].position?.stepId).toBe('step-1');
+
+        newComponent.formGroup?.patchValue({
+          'full-name': 'Jane Doe',
+          email: 'jane@example.com',
+        });
+        newComponent.goToNextStep();
+        newFixture.detectChanges();
+
+        const step2Rows = newComponent.getRowConfigs();
+        expect(step2Rows.length).toBe(1);
+        expect(step2Rows[0].rowId).toBe('row-2');
+
+        const step2ColumnFields = newComponent.getFieldsInColumn('row-2', 1);
+        expect(step2ColumnFields.length).toBe(1);
+        expect(step2ColumnFields[0].position?.stepId).toBe('step-2');
+      });
+    });
+
+    describe('Navigation - Next/Previous', () => {
+      it('should navigate to next step when validation passes', () => {
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: stepFormSchema, settings: stepFormSchema.settings as FormSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        // Fill required fields in step 1
+        newComponent.formGroup?.patchValue({
+          'full-name': 'John Doe',
+          email: 'john@example.com',
+        });
+
+        newComponent.goToNextStep();
+        newFixture.detectChanges();
+
+        expect(newComponent.currentStepIndex()).toBe(1);
+        expect(newComponent.currentStep()?.id).toBe('step-2');
+      });
+
+      it('should not navigate to next step when validation fails', () => {
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: stepFormSchema, settings: stepFormSchema.settings as FormSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        // Do NOT fill required fields
+        newComponent.goToNextStep();
+        newFixture.detectChanges();
+
+        // Should remain on step 1
+        expect(newComponent.currentStepIndex()).toBe(0);
+      });
+
+      it('should navigate to previous step without validation', () => {
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: stepFormSchema, settings: stepFormSchema.settings as FormSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        // Go to step 2 first
+        newComponent.formGroup?.patchValue({
+          'full-name': 'John Doe',
+          email: 'john@example.com',
+        });
+        newComponent.goToNextStep();
+        expect(newComponent.currentStepIndex()).toBe(1);
+
+        // Now go back to step 1
+        newComponent.goToPreviousStep();
+        newFixture.detectChanges();
+
+        expect(newComponent.currentStepIndex()).toBe(0);
+      });
+
+      it('should not navigate before first step', () => {
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: stepFormSchema, settings: stepFormSchema.settings as FormSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        expect(newComponent.currentStepIndex()).toBe(0);
+
+        newComponent.goToPreviousStep();
+        newFixture.detectChanges();
+
+        // Should remain at step 0
+        expect(newComponent.currentStepIndex()).toBe(0);
+      });
+
+      it('should not navigate past last step with goToNextStep', () => {
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: stepFormSchema, settings: stepFormSchema.settings as FormSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        // Navigate to last step
+        newComponent.formGroup?.patchValue({
+          'full-name': 'John Doe',
+          email: 'john@example.com',
+          address: '123 Main St',
+        });
+        newComponent.goToNextStep(); // to step 2
+        newComponent.goToNextStep(); // to step 3
+        expect(newComponent.currentStepIndex()).toBe(2);
+        expect(newComponent.isLastStep()).toBe(true);
+
+        // Try to go beyond last step
+        newComponent.goToNextStep();
+        newFixture.detectChanges();
+
+        // Should remain at step 2
+        expect(newComponent.currentStepIndex()).toBe(2);
+      });
+    });
+
+    describe('Step-Level Validation', () => {
+      it('should validate only current step fields before allowing navigation', () => {
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: stepFormSchema, settings: stepFormSchema.settings as FormSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        // Fill only name (not email) in step 1
+        newComponent.formGroup?.patchValue({
+          'full-name': 'John Doe',
+        });
+
+        const isValid = newComponent.validateCurrentStep();
+        expect(isValid).toBe(false);
+
+        // Add email
+        newComponent.formGroup?.patchValue({
+          email: 'john@example.com',
+        });
+
+        const isValidNow = newComponent.validateCurrentStep();
+        expect(isValidNow).toBe(true);
+      });
+
+      it('should mark step fields as touched during validation', () => {
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: stepFormSchema, settings: stepFormSchema.settings as FormSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        const nameControl = newComponent.formGroup?.get('full-name');
+        const emailControl = newComponent.formGroup?.get('email');
+
+        expect(nameControl?.touched).toBe(false);
+        expect(emailControl?.touched).toBe(false);
+
+        newComponent.validateCurrentStep();
+
+        expect(nameControl?.touched).toBe(true);
+        expect(emailControl?.touched).toBe(true);
+      });
+
+      it('should show error message when validation fails', () => {
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: stepFormSchema, settings: stepFormSchema.settings as FormSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        const messageService = TestBed.inject(MessageService);
+        spyOn(messageService, 'add');
+
+        newFixture.detectChanges();
+
+        newComponent.validateCurrentStep();
+
+        expect(messageService.add).toHaveBeenCalledWith({
+          severity: 'error',
+          summary: 'Validation Error',
+          detail: 'Please fix the errors before continuing to the next step.',
+          life: 5000,
+        });
+      });
+
+      it('should mark step as validated after successful next navigation', () => {
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: stepFormSchema, settings: stepFormSchema.settings as FormSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        expect(newComponent.stepValidationStates().has(0)).toBe(false);
+
+        // Fill and navigate
+        newComponent.formGroup?.patchValue({
+          'full-name': 'John Doe',
+          email: 'john@example.com',
+        });
+        newComponent.goToNextStep();
+
+        expect(newComponent.stepValidationStates().has(0)).toBe(true);
+      });
+    });
+
+    describe('Submit Button Visibility', () => {
+      it('should show Next button when not on last step', () => {
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: stepFormSchema, settings: stepFormSchema.settings as FormSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        expect(newComponent.isLastStep()).toBe(false);
+      });
+
+      it('should show Submit button only on last step', () => {
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: stepFormSchema, settings: stepFormSchema.settings as FormSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        // Navigate to last step
+        newComponent.formGroup?.patchValue({
+          'full-name': 'John Doe',
+          email: 'john@example.com',
+          address: '123 Main St',
+        });
+        newComponent.goToNextStep(); // to step 2
+        newComponent.goToNextStep(); // to step 3
+
+        expect(newComponent.isLastStep()).toBe(true);
+      });
+
+      it('should disable Previous button on first step', () => {
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: stepFormSchema, settings: stepFormSchema.settings as FormSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        expect(newComponent.isFirstStep()).toBe(true);
+      });
+    });
+
+    describe('Form Values Maintained During Navigation', () => {
+      it('should preserve all form values when navigating between steps', () => {
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: stepFormSchema, settings: stepFormSchema.settings as FormSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        // Fill step 1
+        newComponent.formGroup?.patchValue({
+          'full-name': 'John Doe',
+          email: 'john@example.com',
+        });
+
+        // Navigate to step 2
+        newComponent.goToNextStep();
+        newFixture.detectChanges();
+
+        // Fill step 2
+        newComponent.formGroup?.patchValue({
+          address: '123 Main St',
+          phone: 1234567890,
+        });
+
+        // Go back to step 1
+        newComponent.goToPreviousStep();
+        newFixture.detectChanges();
+
+        // Values should be preserved
+        expect(newComponent.formGroup?.get('full-name')?.value).toBe('John Doe');
+        expect(newComponent.formGroup?.get('email')?.value).toBe('john@example.com');
+
+        // Go forward to step 2 again
+        newComponent.goToNextStep();
+        expect(newComponent.formGroup?.get('address')?.value).toBe('123 Main St');
+        expect(newComponent.formGroup?.get('phone')?.value).toBe(1234567890);
+      });
+
+      it('should include all fields from all steps in FormGroup', () => {
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: stepFormSchema, settings: stepFormSchema.settings as FormSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        // All fields should exist in form group regardless of current step
+        expect(newComponent.formGroup?.get('full-name')).toBeTruthy();
+        expect(newComponent.formGroup?.get('email')).toBeTruthy();
+        expect(newComponent.formGroup?.get('address')).toBeTruthy();
+        expect(newComponent.formGroup?.get('phone')).toBeTruthy();
+        expect(newComponent.formGroup?.get('comments')).toBeTruthy();
+      });
+    });
+
+    describe('Form Submission with Step Forms', () => {
+      it('should validate all steps before allowing submission', () => {
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: stepFormSchema, settings: stepFormSchema.settings as FormSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        const messageService = TestBed.inject(MessageService);
+        spyOn(messageService, 'add');
+
+        newFixture.detectChanges();
+
+        // Navigate to last step without filling required fields
+        newComponent.goToNextStep(); // Should fail, stay at step 1
+        expect(newComponent.currentStepIndex()).toBe(0);
+
+        // Fill step 1
+        newComponent.formGroup?.patchValue({
+          'full-name': 'John Doe',
+          email: 'john@example.com',
+        });
+        newComponent.goToNextStep(); // to step 2
+
+        // Navigate to step 3 without filling step 2 required fields
+        newComponent.goToNextStep(); // Should fail
+        expect(newComponent.currentStepIndex()).toBe(1);
+
+        // Fill step 2
+        newComponent.formGroup?.patchValue({
+          address: '123 Main St',
+        });
+        newComponent.goToNextStep(); // to step 3
+        expect(newComponent.currentStepIndex()).toBe(2);
+
+        // Now try to submit - should validate all previous steps
+        spyOn(formRendererService, 'submitForm').and.returnValue(
+          of({ submissionId: 'test-id', message: 'Success' }),
+        );
+
+        newComponent.onSubmit();
+
+        // Should allow submission since all required fields are filled
+        expect(formRendererService.submitForm).toHaveBeenCalled();
+      });
+
+      it('should show validation error when submitting with incomplete steps', () => {
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: stepFormSchema, settings: stepFormSchema.settings as FormSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        const messageService = TestBed.inject(MessageService);
+        spyOn(messageService, 'add');
+
+        newFixture.detectChanges();
+
+        // Manually set to last step without validation
+        (newComponent as any)._currentStepIndex.set(2);
+
+        // Try to submit
+        newComponent.onSubmit();
+
+        expect(messageService.add).toHaveBeenCalledWith({
+          severity: 'error',
+          summary: 'Validation Error',
+          detail: 'Please complete all steps before submitting.',
+          life: 5000,
+        });
+      });
+    });
+
+    describe('Keyboard Navigation', () => {
+      it('should navigate to next step with Ctrl+ArrowRight', () => {
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: stepFormSchema, settings: stepFormSchema.settings as FormSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        // Fill required fields
+        newComponent.formGroup?.patchValue({
+          'full-name': 'John Doe',
+          email: 'john@example.com',
+        });
+
+        const event = new KeyboardEvent('keydown', { ctrlKey: true, key: 'ArrowRight' });
+        spyOn(event, 'preventDefault');
+
+        newComponent.handleKeyboardNavigation(event);
+
+        expect(event.preventDefault).toHaveBeenCalled();
+        expect(newComponent.currentStepIndex()).toBe(1);
+      });
+
+      it('should navigate to previous step with Ctrl+ArrowLeft', () => {
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: stepFormSchema, settings: stepFormSchema.settings as FormSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        // Navigate to step 2 first
+        newComponent.formGroup?.patchValue({
+          'full-name': 'John Doe',
+          email: 'john@example.com',
+        });
+        newComponent.goToNextStep();
+        expect(newComponent.currentStepIndex()).toBe(1);
+
+        const event = new KeyboardEvent('keydown', { ctrlKey: true, key: 'ArrowLeft' });
+        spyOn(event, 'preventDefault');
+
+        newComponent.handleKeyboardNavigation(event);
+
+        expect(event.preventDefault).toHaveBeenCalled();
+        expect(newComponent.currentStepIndex()).toBe(0);
+      });
+
+      it('should not trigger keyboard navigation when typing in input fields', () => {
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: stepFormSchema, settings: stepFormSchema.settings as FormSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        const mockInput = document.createElement('input');
+        const event = new KeyboardEvent('keydown', {
+          ctrlKey: true,
+          key: 'ArrowRight',
+        });
+        Object.defineProperty(event, 'target', { value: mockInput, writable: false });
+
+        newComponent.handleKeyboardNavigation(event);
+
+        // Should remain on step 0
+        expect(newComponent.currentStepIndex()).toBe(0);
+      });
+
+      it('should not trigger keyboard navigation in step form mode when disabled', () => {
+        const nonStepSchema = {
+          ...stepFormSchema,
+          settings: {
+            ...stepFormSchema.settings,
+            stepForm: { enabled: false, steps: [] },
+          },
+        };
+
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: nonStepSchema, settings: nonStepSchema.settings as FormSettings }),
+        );
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+        newFixture.detectChanges();
+
+        const event = new KeyboardEvent('keydown', { ctrlKey: true, key: 'ArrowRight' });
+        spyOn(event, 'preventDefault');
+
+        newComponent.handleKeyboardNavigation(event);
+
+        // preventDefault should not be called
+        expect(event.preventDefault).not.toHaveBeenCalled();
       });
     });
   });

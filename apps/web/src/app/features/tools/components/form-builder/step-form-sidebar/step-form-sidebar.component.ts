@@ -1,4 +1,12 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  inject,
+  signal,
+  computed,
+  effect,
+  ChangeDetectorRef,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
@@ -42,12 +50,16 @@ export class StepFormSidebarComponent {
   private readonly formBuilderService = inject(FormBuilderService);
   private readonly messageService = inject(MessageService);
   private readonly fb = inject(FormBuilder);
+  private readonly changeDetectorRef = inject(ChangeDetectorRef);
 
   // Expose service signals
   protected readonly steps = this.formBuilderService.steps;
   protected readonly stepFormEnabled = this.formBuilderService.stepFormEnabled;
   protected readonly canAddStep = this.formBuilderService.canAddStep;
   protected readonly canDeleteStep = this.formBuilderService.canDeleteStep;
+
+  // Local toggle state (kept in sync with signal-based state)
+  protected stepFormToggleValue = false;
 
   // Dialog states
   protected showEnableDialog = signal(false);
@@ -74,6 +86,12 @@ export class StepFormSidebarComponent {
     this.canDeleteStep() ? 'Delete step' : 'Cannot delete last step',
   );
 
+  // Keep toggle state aligned with signal value
+  private readonly syncToggleEffect = effect(() => {
+    this.stepFormToggleValue = this.stepFormEnabled();
+    this.changeDetectorRef.markForCheck();
+  });
+
   /**
    * Handle toggle switch click for enabling step form mode.
    * Shows confirmation dialog before enabling.
@@ -86,6 +104,10 @@ export class StepFormSidebarComponent {
       // Show confirmation before disabling
       this.showDisableDialog.set(true);
     }
+
+    // Revert toggle UI to current state until confirmation resolves
+    this.stepFormToggleValue = this.stepFormEnabled();
+    this.changeDetectorRef.markForCheck();
   }
 
   /**

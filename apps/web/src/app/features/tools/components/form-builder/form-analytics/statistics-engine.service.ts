@@ -4,6 +4,11 @@ import {
   ChoiceDistribution,
   TimeSeriesData,
   FormFieldOption,
+  StepFormAnalytics,
+  StepCompletionStats,
+  FormSubmission,
+  FormSchema,
+  StepNavigationEvent,
 } from '@nodeangularfullstack/shared';
 
 /**
@@ -251,5 +256,130 @@ export class StatisticsEngineService {
     d.setUTCDate(d.getUTCDate() + 4 - dayNum);
     const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
     return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  }
+
+  /**
+   * Calculates step completion rates and drop-off statistics for multi-step forms.
+   * Analyzes step navigation events from form submissions to determine user behavior
+   * patterns across form steps.
+   *
+   * @param submissions - Array of form submissions with step event metadata
+   * @param formSchema - Form schema containing step configuration
+   * @returns Step analytics including completion rates, drop-offs, and funnel data
+   *
+   * @example
+   * ```typescript
+   * const analytics = statisticsService.calculateStepAnalytics(submissions, schema);
+   * console.log(`Overall completion: ${analytics.overallCompletionRate}%`);
+   * console.log(`Step 1 drop-off: ${analytics.stepStats[0].dropOffRate}%`);
+   * ```
+   *
+   * @throws {Error} If form schema is invalid or missing step configuration
+   *
+   * @see StepFormAnalytics
+   * @see StepCompletionStats
+   */
+  calculateStepAnalytics(submissions: FormSubmission[], formSchema: FormSchema): StepFormAnalytics {
+    // Return default analytics if step form is not enabled
+    if (!formSchema.settings.stepForm?.enabled) {
+      return {
+        isStepForm: false,
+        totalSteps: 0,
+        overallCompletionRate: 0,
+        totalSubmissions: submissions.length,
+        stepStats: [],
+        funnelData: [],
+      };
+    }
+
+    const steps = formSchema.settings.stepForm.steps;
+    const stepStatsMap = new Map<string, StepCompletionStats>();
+
+    // Initialize stats for each step
+    steps.forEach((step) => {
+      stepStatsMap.set(step.id, {
+        stepId: step.id,
+        stepTitle: step.title,
+        stepOrder: step.order,
+        totalStarted: 0,
+        totalCompleted: 0,
+        completionRate: 0,
+        dropOffCount: 0,
+        dropOffRate: 0,
+      });
+    });
+
+    // Track unique step views per submission to avoid double-counting
+    const submissionStepViews = new Map<string, Set<string>>();
+
+    // Process each submission's step events
+    submissions.forEach((submission) => {
+      const stepEvents = (submission.metadata?.stepEvents as StepNavigationEvent[]) || [];
+
+      // Track which steps were viewed in this submission
+      const viewedSteps = new Set<string>();
+
+      stepEvents.forEach((event) => {
+        const stats = stepStatsMap.get(event.stepId);
+        if (!stats) return;
+
+        // Count 'view' action only once per step per submission
+        if (event.action === 'view' && !viewedSteps.has(event.stepId)) {
+          stats.totalStarted++;
+          viewedSteps.add(event.stepId);
+        }
+
+        // Count 'next' or 'submit' actions as completion
+        if (event.action === 'next' || event.action === 'submit') {
+          stats.totalCompleted++;
+        }
+      });
+
+      // Store viewed steps for this submission
+      submissionStepViews.set(submission.id, viewedSteps);
+    });
+
+    // Calculate completion and drop-off rates
+    stepStatsMap.forEach((stats) => {
+      if (stats.totalStarted > 0) {
+        stats.completionRate = Number(
+          ((stats.totalCompleted / stats.totalStarted) * 100).toFixed(1),
+        );
+        stats.dropOffCount = stats.totalStarted - stats.totalCompleted;
+        stats.dropOffRate = Number(((stats.dropOffCount / stats.totalStarted) * 100).toFixed(1));
+      }
+    });
+
+    // Calculate overall completion rate (users who completed all steps)
+    const completedAllSteps = submissions.filter((submission) => {
+      const stepEvents = (submission.metadata?.stepEvents as StepNavigationEvent[]) || [];
+      const submitEvents = stepEvents.filter((e) => e.action === 'submit');
+      return submitEvents.length > 0;
+    }).length;
+
+    const overallCompletionRate =
+      submissions.length > 0
+        ? Number(((completedAllSteps / submissions.length) * 100).toFixed(1))
+        : 0;
+
+    // Generate sorted step stats array
+    const stepStatsArray = Array.from(stepStatsMap.values()).sort(
+      (a, b) => a.stepOrder - b.stepOrder,
+    );
+
+    // Generate funnel data for visualization
+    const funnelData = stepStatsArray.map((stats) => ({
+      step: `Step ${stats.stepOrder + 1}: ${stats.stepTitle}`,
+      count: stats.totalStarted,
+    }));
+
+    return {
+      isStepForm: true,
+      totalSteps: steps.length,
+      overallCompletionRate,
+      totalSubmissions: submissions.length,
+      stepStats: stepStatsArray,
+      funnelData,
+    };
   }
 }

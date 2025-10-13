@@ -103,6 +103,7 @@ export class FormRendererService {
    * Submits form data using a JWT render token.
    * @param token - JWT token for form access
    * @param values - Form field values to submit
+   * @param metadata - Optional submission metadata (e.g., step navigation events for analytics)
    * @returns Observable with submission result
    * @throws {FormRenderError} Various error types based on failure reason
    * @example
@@ -114,8 +115,14 @@ export class FormRendererService {
   submitForm(
     token: string,
     values: Record<string, unknown>,
+    metadata?: Record<string, unknown>,
   ): Observable<{ submissionId: string; message?: string }> {
-    return this.http.post<FormSubmissionResponse>(`${this.submitApiUrl}/${token}`, { values }).pipe(
+    const payload: any = { values };
+    if (metadata) {
+      payload.metadata = metadata;
+    }
+
+    return this.http.post<FormSubmissionResponse>(`${this.submitApiUrl}/${token}`, payload).pipe(
       map((response) => response.data),
       catchError((error: HttpErrorResponse) => {
         return throwError(() => this.handleSubmitError(error));

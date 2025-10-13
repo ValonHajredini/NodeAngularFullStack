@@ -261,7 +261,9 @@ import { trigger, transition, style, animate } from '@angular/animations';
           <!-- Tab Content -->
           <div class="sidebar-content">
             @if (activeSidebarTab() === 0) {
-              <app-row-layout-sidebar></app-row-layout-sidebar>
+              <app-row-layout-sidebar
+                (openStepForm)="activeSidebarTab.set(1)"
+              ></app-row-layout-sidebar>
             }
             @if (activeSidebarTab() === 1) {
               <app-step-form-sidebar></app-step-form-sidebar>
