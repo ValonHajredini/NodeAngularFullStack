@@ -24,6 +24,7 @@ import { UnifiedFieldEditorModalComponent } from './unified-field-editor-modal/u
 import { FormSettingsComponent, FormSettings } from './form-settings/form-settings.component';
 import { PublishDialogComponent } from './publish-dialog/publish-dialog.component';
 import { RowLayoutSidebarComponent } from './row-layout-sidebar/row-layout-sidebar.component';
+import { StepFormSidebarComponent } from './step-form-sidebar/step-form-sidebar.component';
 import { PreviewDialogComponent } from './preview-dialog/preview-dialog.component';
 import { Dialog } from 'primeng/dialog';
 import { FormSchema } from '@nodeangularfullstack/shared';
@@ -52,6 +53,7 @@ import { trigger, transition, style, animate } from '@angular/animations';
     FormSettingsComponent,
     PublishDialogComponent,
     RowLayoutSidebarComponent,
+    StepFormSidebarComponent,
     PreviewDialogComponent,
     Dialog,
   ],
@@ -222,9 +224,49 @@ import { trigger, transition, style, animate } from '@angular/animations';
           </div>
         </div>
 
-        <!-- Right sidebar: Row Layout (sticky) -->
-        <div class="flex-shrink-0 sticky-sidebar">
-          <app-row-layout-sidebar></app-row-layout-sidebar>
+        <!-- Right sidebar: Row Layout / Step Form (sticky, tabbed) -->
+        <div class="flex-shrink-0 sticky-sidebar bg-white border-l border-gray-200">
+          <!-- Tab Navigation -->
+          <div class="border-b border-gray-200 bg-gray-50">
+            <nav class="flex" aria-label="Sidebar tabs">
+              <button
+                type="button"
+                (click)="activeSidebarTab.set(0)"
+                class="flex-1 py-3 px-4 text-center text-sm font-medium transition-colors"
+                [class.border-b-2]="activeSidebarTab() === 0"
+                [class.border-blue-500]="activeSidebarTab() === 0"
+                [class.text-blue-600]="activeSidebarTab() === 0"
+                [class.text-gray-600]="activeSidebarTab() !== 0"
+                [class.hover:text-blue-600]="activeSidebarTab() !== 0"
+              >
+                <i class="pi pi-th-large mr-2"></i>
+                Row Layout
+              </button>
+              <button
+                type="button"
+                (click)="activeSidebarTab.set(1)"
+                class="flex-1 py-3 px-4 text-center text-sm font-medium transition-colors"
+                [class.border-b-2]="activeSidebarTab() === 1"
+                [class.border-blue-500]="activeSidebarTab() === 1"
+                [class.text-blue-600]="activeSidebarTab() === 1"
+                [class.text-gray-600]="activeSidebarTab() !== 1"
+                [class.hover:text-blue-600]="activeSidebarTab() !== 1"
+              >
+                <i class="pi pi-list mr-2"></i>
+                Step Form
+              </button>
+            </nav>
+          </div>
+
+          <!-- Tab Content -->
+          <div class="sidebar-content">
+            @if (activeSidebarTab() === 0) {
+              <app-row-layout-sidebar></app-row-layout-sidebar>
+            }
+            @if (activeSidebarTab() === 1) {
+              <app-step-form-sidebar></app-step-form-sidebar>
+            }
+          </div>
         </div>
       </div>
 
@@ -438,6 +480,9 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
   // Preview state (Story 14.3)
   readonly previewDialogVisible = signal<boolean>(false);
   readonly previewFormSchema = signal<FormSchema | null>(null);
+
+  // Sidebar tab state (Story 19.2)
+  readonly activeSidebarTab = signal<number>(0); // 0 = Row Layout, 1 = Step Form
 
   private fieldCounter = 0;
   private autoSaveInterval?: number;

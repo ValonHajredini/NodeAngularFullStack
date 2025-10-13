@@ -9,6 +9,8 @@ import {
   FormStatus,
   RowLayoutConfig,
   FieldPosition,
+  FormStep,
+  StepFormConfig,
 } from '@nodeangularfullstack/shared';
 
 /**
@@ -29,6 +31,11 @@ export class FormBuilderService {
   private readonly _rowLayoutEnabled = signal<boolean>(false);
   private readonly _rowConfigs = signal<RowLayoutConfig[]>([]);
 
+  // Step form state signals
+  private readonly _stepFormEnabled = signal<boolean>(false);
+  private readonly _steps = signal<FormStep[]>([]);
+  private readonly _activeStepId = signal<string | null>(null);
+
   // Property change subjects for real-time preview updates (Story 16.5)
   private readonly propertyChangeSubject = new Subject<{
     fieldId: string;
@@ -46,6 +53,11 @@ export class FormBuilderService {
   readonly rowLayoutEnabled = this._rowLayoutEnabled.asReadonly();
   readonly rowConfigs = this._rowConfigs.asReadonly();
 
+  // Step form public signals
+  readonly stepFormEnabled = this._stepFormEnabled.asReadonly();
+  readonly steps = this._steps.asReadonly();
+  readonly activeStepId = this._activeStepId.asReadonly();
+
   // Computed signals
   readonly hasFields = computed(() => this._formFields().length > 0);
   readonly selectedFieldIndex = computed(() => {
@@ -58,6 +70,12 @@ export class FormBuilderService {
     return form?.status === FormStatus.PUBLISHED;
   });
   readonly currentFormId = computed(() => this._currentForm()?.id || null);
+
+  // Step form computed signals
+  readonly canAddStep = computed(() => this._steps().length < 10);
+  readonly canDeleteStep = computed(() => this._steps().length > 1);
+  readonly activeStep = computed(() => this._steps().find((s) => s.id === this._activeStepId()));
+  readonly activeStepOrder = computed(() => this.activeStep()?.order ?? 0);
 
   constructor() {
     // Subscribe to debounced property updates
@@ -202,7 +220,7 @@ export class FormBuilderService {
 
   /**
    * Resets the form state to default values.
-   * Also resets row layout state to default (disabled).
+   * Also resets row layout and step form state to default (disabled).
    */
   resetForm(): void {
     this._currentForm.set(null);
@@ -211,6 +229,9 @@ export class FormBuilderService {
     this._isDirty.set(false);
     this._rowLayoutEnabled.set(false);
     this._rowConfigs.set([]);
+    this._stepFormEnabled.set(false);
+    this._steps.set([]);
+    this._activeStepId.set(null);
   }
 
   /**
@@ -553,7 +574,7 @@ export class FormBuilderService {
 
   /**
    * Loads a form from metadata and populates all signals.
-   * Restores row layout configuration if present in schema.
+   * Restores row layout and step form configuration if present in schema.
    * Marks the form as clean after loading.
    * @param form - The form metadata to load
    */
@@ -575,6 +596,21 @@ export class FormBuilderService {
       // Reset row layout state for forms without row layout
       this._rowLayoutEnabled.set(false);
       this._rowConfigs.set([]);
+    }
+
+    // Restore step form configuration if present
+    if (form.schema?.settings?.stepForm?.enabled) {
+      this._stepFormEnabled.set(true);
+      this._steps.set(form.schema.settings.stepForm.steps || []);
+      // Set active step to first step by default
+      if (form.schema.settings.stepForm.steps?.length > 0) {
+        this._activeStepId.set(form.schema.settings.stepForm.steps[0].id);
+      }
+    } else {
+      // Reset step form state for forms without step configuration
+      this._stepFormEnabled.set(false);
+      this._steps.set([]);
+      this._activeStepId.set(null);
     }
 
     // Clear selection
@@ -671,14 +707,16 @@ export class FormBuilderService {
 
   /**
    * Add new row with specified column count.
+   * Assigns stepId when step mode is enabled.
    * @param columnCount - Number of columns in the row (1-4)
    * @returns Row ID of the created row
    */
   addRow(columnCount: 1 | 2 | 3 | 4 = 2): string {
     const rowId = `row_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     const order = this._rowConfigs().length;
+    const stepId = this._stepFormEnabled() ? this._activeStepId() || undefined : undefined;
 
-    this._rowConfigs.update((rows) => [...rows, { rowId, columnCount, order }]);
+    this._rowConfigs.update((rows) => [...rows, { rowId, columnCount, order, stepId }]);
     this.markDirty();
 
     return rowId;
@@ -922,7 +960,7 @@ export class FormBuilderService {
 
   /**
    * Exports the current form data for saving.
-   * Includes row layout configuration if enabled.
+   * Includes row layout and step form configuration if enabled.
    * @param formSettings - Form settings from the settings dialog
    * @returns Complete form data ready for API submission
    */
@@ -963,6 +1001,13 @@ export class FormBuilderService {
               rows: this._rowConfigs(),
             }
           : undefined,
+        // Include step form configuration if enabled
+        stepForm: this._stepFormEnabled()
+          ? {
+              enabled: true,
+              steps: this._steps(),
+            }
+          : undefined,
       },
     };
 
@@ -972,5 +1017,167 @@ export class FormBuilderService {
       description: formSettings.description || undefined,
       schema: schema as FormSchema,
     };
+  }
+
+  /**
+   * Enable step form mode.
+   * Creates a default first step and migrates all existing fields to that step.
+   */
+  enableStepForm(): void {
+    const defaultStep: FormStep = {
+      id: crypto.randomUUID(),
+      title: 'Step 1',
+      description: '',
+      order: 0,
+    };
+
+    this._steps.set([defaultStep]);
+    this._stepFormEnabled.set(true);
+    this._activeStepId.set(defaultStep.id);
+
+    // Migrate all existing fields to the first step
+    this.migrateFieldsToStep(defaultStep.id);
+
+    this.markDirty();
+  }
+
+  /**
+   * Disable step form mode.
+   * Clears all step assignments from fields and resets step state.
+   */
+  disableStepForm(): void {
+    this._stepFormEnabled.set(false);
+    this._steps.set([]);
+    this._activeStepId.set(null);
+
+    // Clear step assignments from fields
+    this._formFields.update((fields) =>
+      fields.map((field) => {
+        if (field.position) {
+          const { stepId, ...restPosition } = field.position;
+          return { ...field, position: restPosition as FieldPosition };
+        }
+        return field;
+      }),
+    );
+
+    this.markDirty();
+  }
+
+  /**
+   * Add a new step to the form.
+   * @param step - The step to add
+   */
+  addStep(step: FormStep): void {
+    this._steps.update((steps) => [...steps, step]);
+    this._activeStepId.set(step.id);
+    this.markDirty();
+  }
+
+  /**
+   * Remove a step and reassign its fields.
+   * Fields in the removed step are moved to the first available step.
+   * @param stepId - ID of the step to remove
+   */
+  removeStep(stepId: string): void {
+    // Don't allow removing the last step
+    if (this._steps().length <= 1) {
+      return;
+    }
+
+    // Remove the step
+    this._steps.update((steps) => steps.filter((s) => s.id !== stepId));
+
+    // Reassign fields from removed step to first step
+    const firstStep = this._steps()[0];
+    if (firstStep) {
+      this._formFields.update((fields) =>
+        fields.map((field) => {
+          if (field.position?.stepId === stepId) {
+            return {
+              ...field,
+              position: {
+                ...field.position,
+                stepId: firstStep.id,
+              },
+            };
+          }
+          return field;
+        }),
+      );
+    }
+
+    // Update active step if we removed the active one
+    if (this._activeStepId() === stepId && firstStep) {
+      this._activeStepId.set(firstStep.id);
+    }
+
+    // Reorder remaining steps
+    this._steps.update((steps) => steps.map((step, index) => ({ ...step, order: index })));
+
+    this.markDirty();
+  }
+
+  /**
+   * Update a step's properties.
+   * @param stepId - ID of the step to update
+   * @param updates - Partial step object with properties to update
+   */
+  updateStep(stepId: string, updates: Partial<FormStep>): void {
+    this._steps.update((steps) =>
+      steps.map((step) => (step.id === stepId ? { ...step, ...updates } : step)),
+    );
+    this.markDirty();
+  }
+
+  /**
+   * Reorder steps after drag-and-drop.
+   * Updates the order property of all steps based on array position.
+   * @param newOrder - The new array of steps in desired order
+   */
+  reorderSteps(newOrder: FormStep[]): void {
+    const reordered = newOrder.map((step, index) => ({ ...step, order: index }));
+    this._steps.set(reordered);
+    this.markDirty();
+  }
+
+  /**
+   * Get a step by its ID.
+   * @param stepId - ID of the step to retrieve
+   * @returns The step or undefined if not found
+   */
+  getStepById(stepId: string): FormStep | undefined {
+    return this._steps().find((s) => s.id === stepId);
+  }
+
+  /**
+   * Set the active step for canvas navigation.
+   * Updates the active step signal to trigger canvas updates.
+   * @param stepId - ID of the step to activate
+   */
+  setActiveStep(stepId: string): void {
+    const step = this._steps().find((s) => s.id === stepId);
+    if (!step) {
+      console.error('Invalid step ID:', stepId);
+      return;
+    }
+    this._activeStepId.set(stepId);
+  }
+
+  /**
+   * Migrate all fields to a specific step.
+   * Used when enabling step mode to assign all existing fields to the first step.
+   * @private
+   * @param stepId - ID of the step to assign fields to
+   */
+  private migrateFieldsToStep(stepId: string): void {
+    this._formFields.update((fields) =>
+      fields.map((field) => ({
+        ...field,
+        position: field.position
+          ? { ...field.position, stepId }
+          : { rowId: '', columnIndex: 0, stepId },
+      })),
+    );
   }
 }

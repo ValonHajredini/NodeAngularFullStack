@@ -10,6 +10,7 @@ import {
   updateFormValidator,
   formIdValidator,
   validateFormSchema,
+  validateStepFormConfiguration,
   xssProtection,
 } from '../validators/forms.validator';
 
@@ -103,6 +104,7 @@ router.post(
   cssSanitizerMiddleware, // Validate custom field CSS (Story 16.2)
   createFormValidator,
   validateFormSchema,
+  validateStepFormConfiguration, // Validate step form configuration (Story 19.1)
   formsController.createForm
 );
 
@@ -634,6 +636,7 @@ router.put(
   cssSanitizerMiddleware, // Validate custom field CSS (Story 16.2)
   updateFormValidator,
   validateFormSchema,
+  validateStepFormConfiguration, // Validate step form configuration (Story 19.1)
   formsController.updateForm
 );
 

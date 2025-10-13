@@ -282,10 +282,110 @@ export class FormsService {
       }
     }
 
+    // Step form validation (Story 19.1)
+    if (this.isStepFormEnabled(schema)) {
+      this.validateStepFormConfiguration(schema, errors);
+    }
+
     return {
       valid: errors.length === 0,
       errors,
     };
+  }
+
+  /**
+   * Checks if step form mode is enabled for a given schema.
+   * @param schema - Form schema to check
+   * @returns True if step form is enabled, false otherwise
+   * @example
+   * if (formsService.isStepFormEnabled(schema)) {
+   *   console.log('This is a multi-step form');
+   * }
+   */
+  isStepFormEnabled(schema: FormSchema): boolean {
+    return schema.settings?.stepForm?.enabled === true;
+  }
+
+  /**
+   * Validates step form configuration.
+   * Checks step count, step properties, and field-step references.
+   * @param schema - Form schema with step configuration
+   * @param errors - Array to collect validation errors
+   * @throws Does not throw - adds errors to the errors array
+   * @example
+   * const errors: string[] = [];
+   * formsService.validateStepFormConfiguration(schema, errors);
+   * if (errors.length > 0) {
+   *   console.log('Step validation errors:', errors);
+   * }
+   */
+  validateStepFormConfiguration(schema: FormSchema, errors: string[]): void {
+    const stepFormConfig = schema.settings?.stepForm;
+
+    // Should not reach here if stepForm is undefined (checked by isStepFormEnabled)
+    if (!stepFormConfig || !stepFormConfig.steps) {
+      errors.push('Step form configuration is missing or invalid');
+      return;
+    }
+
+    const steps = stepFormConfig.steps;
+
+    // Validate step count (2-10 when enabled)
+    if (steps.length < 2 || steps.length > 10) {
+      errors.push(
+        `Step form must have between 2 and 10 steps. Found: ${steps.length} steps`
+      );
+    }
+
+    // Collect step IDs for field reference validation
+    const stepIds = new Set<string>();
+
+    // Validate each step
+    steps.forEach((step, index) => {
+      // Validate step has required properties
+      if (!step.id) {
+        errors.push(`Step at index ${index} is missing required 'id' property`);
+      } else {
+        stepIds.add(step.id);
+      }
+
+      if (!step.title || step.title.trim().length === 0) {
+        errors.push(
+          `Step '${step.id || index}' is missing required 'title' property or title is empty`
+        );
+      }
+
+      if (step.title && (step.title.length < 1 || step.title.length > 100)) {
+        errors.push(
+          `Step '${step.id || index}' title must be between 1 and 100 characters`
+        );
+      }
+
+      if (step.description !== undefined && step.description.length > 500) {
+        errors.push(
+          `Step '${step.id || index}' description exceeds 500 characters`
+        );
+      }
+
+      if (step.order === undefined || step.order < 0) {
+        errors.push(
+          `Step '${step.id || index}' has invalid order (must be non-negative)`
+        );
+      }
+    });
+
+    // Validate field position.stepId references
+    if (schema.fields && schema.fields.length > 0) {
+      schema.fields.forEach((field) => {
+        if (field.position?.stepId) {
+          if (!stepIds.has(field.position.stepId)) {
+            errors.push(
+              `Field '${field.fieldName || field.id}' references non-existent step ID: ${field.position.stepId}`
+            );
+          }
+        }
+      });
+    }
   }
 
   /**
@@ -525,6 +625,11 @@ export class FormsService {
     // Preserve row layout configuration if present
     if (settings?.rowLayout) {
       result.rowLayout = settings.rowLayout;
+    }
+
+    // Preserve step form configuration if present (Story 19.1)
+    if (settings?.stepForm) {
+      result.stepForm = settings.stepForm;
     }
 
     return result;

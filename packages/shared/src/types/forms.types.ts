@@ -256,6 +256,12 @@ export interface RowLayoutConfig {
   columnCount: 0 | 1 | 2 | 3 | 4;
   /** Row order index for rendering */
   order: number;
+  /**
+   * Optional step identifier for multi-step forms
+   * When provided, associates row with a specific form step
+   * If undefined, row belongs to single-page form or all steps
+   */
+  stepId?: string;
 }
 
 /**
@@ -272,6 +278,36 @@ export interface FieldPosition {
    * Fields with lower orderInColumn render above fields with higher orderInColumn
    */
   orderInColumn?: number;
+  /**
+   * Optional step identifier for multi-step forms
+   * When provided, associates field with a specific form step
+   * If undefined, field belongs to single-page form or all steps
+   */
+  stepId?: string;
+}
+
+/**
+ * Single step in a multi-step form wizard
+ */
+export interface FormStep {
+  /** Unique step identifier (UUID v4) */
+  id: string;
+  /** Step title displayed to users (1-100 characters) */
+  title: string;
+  /** Optional step description for additional context (max 500 characters) */
+  description?: string;
+  /** Zero-based sequential order index for step progression */
+  order: number;
+}
+
+/**
+ * Step form configuration for multi-step form wizards
+ */
+export interface StepFormConfig {
+  /** Whether step-based form mode is active */
+  enabled: boolean;
+  /** Array of form steps (2-10 steps when enabled) */
+  steps: FormStep[];
 }
 
 /**
@@ -387,6 +423,8 @@ export interface FormSettings {
     /** Row configurations */
     rows: RowLayoutConfig[];
   };
+  /** Optional step form configuration for multi-step wizard forms */
+  stepForm?: StepFormConfig;
 }
 
 /**

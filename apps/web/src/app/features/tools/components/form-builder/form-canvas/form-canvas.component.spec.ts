@@ -453,4 +453,227 @@ describe('FormCanvasComponent', () => {
       expect(fieldWrapper).toBeTruthy();
     });
   });
+
+  describe('Step Navigation', () => {
+    beforeEach(() => {
+      // Enable step form mode and add steps
+      formBuilderService.enableStepForm();
+      formBuilderService.addStep({
+        id: 'step-2',
+        title: 'Step 2',
+        description: 'Second step',
+        order: 1,
+      });
+      fixture.detectChanges();
+    });
+
+    it('should display step tabs when step mode enabled', () => {
+      const compiled = fixture.nativeElement as HTMLElement;
+      const stepTabs = compiled.querySelectorAll('.step-tab');
+
+      expect(stepTabs.length).toBe(2);
+      expect(stepTabs[0].textContent).toContain('Step 1');
+      expect(stepTabs[1].textContent).toContain('Step 2');
+    });
+
+    it('should highlight active step tab', () => {
+      const compiled = fixture.nativeElement as HTMLElement;
+      const stepTabs = compiled.querySelectorAll('.step-tab');
+
+      // First step should be active initially
+      expect(stepTabs[0].classList.contains('active')).toBe(true);
+      expect(stepTabs[1].classList.contains('active')).toBe(false);
+    });
+
+    it('should switch active step on tab click', () => {
+      const step2Id = formBuilderService.steps()[1].id;
+
+      component.onStepTabClick(step2Id);
+      fixture.detectChanges();
+
+      expect(formBuilderService.activeStepId()).toBe(step2Id);
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const stepTabs = compiled.querySelectorAll('.step-tab');
+      expect(stepTabs[0].classList.contains('active')).toBe(false);
+      expect(stepTabs[1].classList.contains('active')).toBe(true);
+    });
+
+    it('should filter fields by active step', () => {
+      const step1Id = formBuilderService.steps()[0].id;
+      const step2Id = formBuilderService.steps()[1].id;
+
+      // Add field to step 1
+      const field1 = {
+        id: 'field-1',
+        type: FormFieldType.TEXT,
+        fieldName: 'field1',
+        label: 'Field 1',
+        required: false,
+        order: 0,
+        placeholder: '',
+        helpText: '',
+        position: { stepId: step1Id, rowId: 'row-1', columnIndex: 0 },
+      };
+
+      // Add field to step 2
+      const field2 = {
+        id: 'field-2',
+        type: FormFieldType.EMAIL,
+        fieldName: 'field2',
+        label: 'Field 2',
+        required: false,
+        order: 1,
+        placeholder: '',
+        helpText: '',
+        position: { stepId: step2Id, rowId: 'row-1', columnIndex: 0 },
+      };
+
+      formBuilderService.addField(field1);
+      formBuilderService.addField(field2);
+      fixture.detectChanges();
+
+      // Step 1 should show only field1
+      const visibleFields1 = component.visibleFields();
+      expect(visibleFields1.length).toBe(1);
+      expect(visibleFields1[0].id).toBe('field-1');
+
+      // Switch to step 2
+      component.onStepTabClick(step2Id);
+      fixture.detectChanges();
+
+      // Step 2 should show only field2
+      const visibleFields2 = component.visibleFields();
+      expect(visibleFields2.length).toBe(1);
+      expect(visibleFields2[0].id).toBe('field-2');
+    });
+
+    it('should show empty placeholder when step has no fields', () => {
+      // Step 1 has no fields initially
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const emptyState = compiled.querySelector('.empty-step-state');
+
+      expect(emptyState).toBeTruthy();
+      expect(emptyState?.textContent).toContain('No fields in this step yet');
+    });
+
+    it('should assign stepId when dropping field from palette', () => {
+      formBuilderService.enableRowLayout();
+      const rows = formBuilderService.rowConfigs();
+      const rowId = rows[0].rowId;
+      const activeStepId = formBuilderService.activeStepId();
+
+      const mockEvent = {
+        container: { data: { rowId, columnIndex: 0 } },
+        item: { data: { type: FormFieldType.TEXT, icon: 'pi-pencil', label: 'Text' } },
+      };
+
+      component.onFieldDroppedInRow(mockEvent as any);
+      fixture.detectChanges();
+
+      const fields = formBuilderService.getAllFields();
+      const newField = fields.find((f) => f.type === FormFieldType.TEXT);
+
+      expect(newField).toBeTruthy();
+      expect(newField?.position?.stepId).toBe(activeStepId);
+    });
+
+    it('should prevent dragging fields between steps', () => {
+      const step1Id = formBuilderService.steps()[0].id;
+      const step2Id = formBuilderService.steps()[1].id;
+
+      // Add field to step 1
+      const field = {
+        id: 'field-1',
+        type: FormFieldType.TEXT,
+        fieldName: 'field1',
+        label: 'Field 1',
+        required: false,
+        order: 0,
+        placeholder: '',
+        helpText: '',
+        position: { stepId: step1Id, rowId: 'row-1', columnIndex: 0 },
+      };
+      formBuilderService.addField(field);
+
+      // Switch to step 2
+      component.onStepTabClick(step2Id);
+      fixture.detectChanges();
+
+      // Try to drop field from step 1 into step 2
+      const mockEvent = {
+        container: { data: { rowId: 'row-1', columnIndex: 1 } },
+        item: { data: field },
+      };
+
+      spyOn(console, 'error');
+      component.onFieldDroppedInRow(mockEvent as any);
+
+      // Field should remain in step 1
+      expect(field.position?.stepId).toBe(step1Id);
+      expect(console.error).toHaveBeenCalledWith(
+        jasmine.stringContaining('Cannot move fields between steps'),
+      );
+    });
+
+    it('should show only active step rows in row layout sidebar', () => {
+      formBuilderService.enableRowLayout();
+      const step1Id = formBuilderService.steps()[0].id;
+      const step2Id = formBuilderService.steps()[1].id;
+
+      // Enable row layout creates a row with stepId automatically assigned to active step (step 1)
+      const rows = formBuilderService.rowConfigs();
+      const step1RowId = rows[0].rowId;
+
+      // Switch to step 2 and add a new row (will auto-assign stepId to step 2)
+      formBuilderService.setActiveStep(step2Id);
+      const step2RowId = formBuilderService.addRow(3);
+      fixture.detectChanges();
+
+      // Verify step 2 has 1 row
+      const visibleRows2 = component.visibleRows();
+      expect(visibleRows2.length).toBe(1);
+      expect(visibleRows2[0].rowId).toBe(step2RowId);
+      expect(visibleRows2[0].stepId).toBe(step2Id);
+
+      // Switch to step 1
+      component.onStepTabClick(step1Id);
+      fixture.detectChanges();
+
+      // Verify step 1 has 1 row
+      const visibleRows1 = component.visibleRows();
+      expect(visibleRows1.length).toBe(1);
+      expect(visibleRows1[0].rowId).toBe(step1RowId);
+      expect(visibleRows1[0].stepId).toBe(step1Id);
+    });
+
+    it('should delete field from correct step', () => {
+      const step1Id = formBuilderService.steps()[0].id;
+
+      // Add field to step 1
+      const field = {
+        id: 'field-1',
+        type: FormFieldType.TEXT,
+        fieldName: 'field1',
+        label: 'Field 1',
+        required: false,
+        order: 0,
+        placeholder: '',
+        helpText: '',
+        position: { stepId: step1Id, rowId: 'row-1', columnIndex: 0 },
+      };
+      formBuilderService.addField(field);
+      fixture.detectChanges();
+
+      expect(formBuilderService.formFields().length).toBe(1);
+
+      // Delete field
+      formBuilderService.removeField('field-1');
+      fixture.detectChanges();
+
+      expect(formBuilderService.formFields().length).toBe(0);
+    });
+  });
 });

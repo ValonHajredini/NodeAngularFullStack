@@ -1385,4 +1385,547 @@ describe('FormBuilderService', () => {
       });
     });
   });
+
+  describe('Step Form Management', () => {
+    describe('enableStepForm()', () => {
+      it('should enable step form and create default first step', () => {
+        expect(service.stepFormEnabled()).toBe(false);
+
+        service.enableStepForm();
+
+        expect(service.stepFormEnabled()).toBe(true);
+        expect(service.steps().length).toBe(1);
+        expect(service.steps()[0].title).toBe('Step 1');
+        expect(service.steps()[0].order).toBe(0);
+      });
+
+      it('should migrate all existing fields to first step', () => {
+        const field: FormField = {
+          id: 'field-1',
+          type: FormFieldType.TEXT,
+          label: 'Test',
+          fieldName: 'test',
+          required: false,
+          order: 0,
+        };
+        service.setFormFields([field]);
+
+        service.enableStepForm();
+
+        const fields = service.getAllFields();
+        expect(fields[0].position?.stepId).toBeTruthy();
+        expect(fields[0].position?.stepId).toBe(service.steps()[0].id);
+      });
+
+      it('should set active step to first step', () => {
+        service.enableStepForm();
+
+        expect(service.activeStepId()).toBe(service.steps()[0].id);
+      });
+
+      it('should mark form as dirty', () => {
+        service.markClean();
+        service.enableStepForm();
+
+        expect(service.isDirty()).toBe(true);
+      });
+    });
+
+    describe('disableStepForm()', () => {
+      it('should disable step form and clear steps', () => {
+        service.enableStepForm();
+        expect(service.stepFormEnabled()).toBe(true);
+
+        service.disableStepForm();
+
+        expect(service.stepFormEnabled()).toBe(false);
+        expect(service.steps().length).toBe(0);
+        expect(service.activeStepId()).toBeNull();
+      });
+
+      it('should clear step assignments from fields', () => {
+        service.enableStepForm();
+        const field: FormField = {
+          id: 'field-1',
+          type: FormFieldType.TEXT,
+          label: 'Test',
+          fieldName: 'test',
+          required: false,
+          order: 0,
+          position: { rowId: 'row-1', columnIndex: 0, stepId: 'step-1' },
+        };
+        service.setFormFields([field]);
+
+        service.disableStepForm();
+
+        const fields = service.getAllFields();
+        expect(fields[0].position?.stepId).toBeUndefined();
+        expect(fields[0].position?.rowId).toBe('row-1');
+      });
+
+      it('should mark form as dirty', () => {
+        service.enableStepForm();
+        service.markClean();
+
+        service.disableStepForm();
+
+        expect(service.isDirty()).toBe(true);
+      });
+    });
+
+    describe('addStep()', () => {
+      it('should add step to array', () => {
+        service.enableStepForm();
+        const newStep = {
+          id: 'step-2',
+          title: 'Step 2',
+          description: 'Second step',
+          order: 1,
+        };
+
+        service.addStep(newStep);
+
+        expect(service.steps().length).toBe(2);
+        expect(service.steps()[1]).toEqual(newStep);
+      });
+
+      it('should set new step as active', () => {
+        service.enableStepForm();
+        const newStep = {
+          id: 'step-2',
+          title: 'Step 2',
+          description: '',
+          order: 1,
+        };
+
+        service.addStep(newStep);
+
+        expect(service.activeStepId()).toBe('step-2');
+      });
+
+      it('should mark form as dirty', () => {
+        service.enableStepForm();
+        service.markClean();
+
+        service.addStep({
+          id: 'step-2',
+          title: 'Step 2',
+          description: '',
+          order: 1,
+        });
+
+        expect(service.isDirty()).toBe(true);
+      });
+    });
+
+    describe('removeStep()', () => {
+      it('should not allow removing the last step', () => {
+        service.enableStepForm();
+        const stepId = service.steps()[0].id;
+
+        service.removeStep(stepId);
+
+        expect(service.steps().length).toBe(1);
+      });
+
+      it('should remove step and reassign fields to first step', () => {
+        service.enableStepForm();
+        const step2 = {
+          id: 'step-2',
+          title: 'Step 2',
+          description: '',
+          order: 1,
+        };
+        service.addStep(step2);
+
+        const field: FormField = {
+          id: 'field-1',
+          type: FormFieldType.TEXT,
+          label: 'Test',
+          fieldName: 'test',
+          required: false,
+          order: 0,
+          position: { rowId: 'row-1', columnIndex: 0, stepId: 'step-2' },
+        };
+        service.setFormFields([field]);
+
+        service.removeStep('step-2');
+
+        expect(service.steps().length).toBe(1);
+        const fields = service.getAllFields();
+        expect(fields[0].position?.stepId).toBe(service.steps()[0].id);
+      });
+
+      it('should reorder remaining steps', () => {
+        service.enableStepForm();
+        service.addStep({ id: 'step-2', title: 'Step 2', description: '', order: 1 });
+        service.addStep({ id: 'step-3', title: 'Step 3', description: '', order: 2 });
+
+        service.removeStep('step-2');
+
+        expect(service.steps().length).toBe(2);
+        expect(service.steps()[0].order).toBe(0);
+        expect(service.steps()[1].order).toBe(1);
+      });
+
+      it('should update active step if removed step was active', () => {
+        service.enableStepForm();
+        service.addStep({ id: 'step-2', title: 'Step 2', description: '', order: 1 });
+
+        service.removeStep('step-2');
+
+        expect(service.activeStepId()).toBe(service.steps()[0].id);
+      });
+    });
+
+    describe('updateStep()', () => {
+      it('should update step properties', () => {
+        service.enableStepForm();
+        const stepId = service.steps()[0].id;
+
+        service.updateStep(stepId, {
+          title: 'Updated Title',
+          description: 'Updated Description',
+        });
+
+        expect(service.steps()[0].title).toBe('Updated Title');
+        expect(service.steps()[0].description).toBe('Updated Description');
+      });
+
+      it('should mark form as dirty', () => {
+        service.enableStepForm();
+        service.markClean();
+        const stepId = service.steps()[0].id;
+
+        service.updateStep(stepId, { title: 'New Title' });
+
+        expect(service.isDirty()).toBe(true);
+      });
+    });
+
+    describe('reorderSteps()', () => {
+      it('should update step order indices', () => {
+        service.enableStepForm();
+        service.addStep({ id: 'step-2', title: 'Step 2', description: '', order: 1 });
+        service.addStep({ id: 'step-3', title: 'Step 3', description: '', order: 2 });
+
+        const steps = service.steps();
+        const reordered = [steps[2], steps[0], steps[1]];
+
+        service.reorderSteps(reordered);
+
+        const newOrder = service.steps();
+        expect(newOrder[0].order).toBe(0);
+        expect(newOrder[1].order).toBe(1);
+        expect(newOrder[2].order).toBe(2);
+        expect(newOrder[0].id).toBe('step-3');
+      });
+
+      it('should mark form as dirty', () => {
+        service.enableStepForm();
+        service.addStep({ id: 'step-2', title: 'Step 2', description: '', order: 1 });
+        service.markClean();
+
+        const steps = service.steps();
+        service.reorderSteps([steps[1], steps[0]]);
+
+        expect(service.isDirty()).toBe(true);
+      });
+    });
+
+    describe('getStepById()', () => {
+      it('should return step when ID exists', () => {
+        service.enableStepForm();
+        const stepId = service.steps()[0].id;
+
+        const step = service.getStepById(stepId);
+
+        expect(step).toBeTruthy();
+        expect(step?.id).toBe(stepId);
+      });
+
+      it('should return undefined when ID does not exist', () => {
+        service.enableStepForm();
+
+        const step = service.getStepById('non-existent-id');
+
+        expect(step).toBeUndefined();
+      });
+    });
+
+    describe('Computed Signals', () => {
+      it('canAddStep should return true when less than 10 steps', () => {
+        service.enableStepForm();
+
+        expect(service.canAddStep()).toBe(true);
+      });
+
+      it('canAddStep should return false when 10 or more steps', () => {
+        service.enableStepForm();
+        for (let i = 1; i < 10; i++) {
+          service.addStep({
+            id: `step-${i + 1}`,
+            title: `Step ${i + 1}`,
+            description: '',
+            order: i,
+          });
+        }
+
+        expect(service.steps().length).toBe(10);
+        expect(service.canAddStep()).toBe(false);
+      });
+
+      it('canDeleteStep should return false when only 1 step', () => {
+        service.enableStepForm();
+
+        expect(service.canDeleteStep()).toBe(false);
+      });
+
+      it('canDeleteStep should return true when more than 1 step', () => {
+        service.enableStepForm();
+        service.addStep({ id: 'step-2', title: 'Step 2', description: '', order: 1 });
+
+        expect(service.canDeleteStep()).toBe(true);
+      });
+
+      it('activeStep should return correct step', () => {
+        service.enableStepForm();
+        const stepId = service.steps()[0].id;
+
+        const activeStep = service.activeStep();
+
+        expect(activeStep).toBeTruthy();
+        expect(activeStep?.id).toBe(stepId);
+      });
+    });
+
+    describe('Schema Serialization', () => {
+      it('should include step form in exported data when enabled', () => {
+        service.enableStepForm();
+        service.addStep({ id: 'step-2', title: 'Step 2', description: '', order: 1 });
+
+        const formData = service.exportFormData({
+          title: 'Test Form',
+          description: 'Test',
+          columnLayout: 2,
+          fieldSpacing: 'normal',
+          successMessage: 'Success',
+          redirectUrl: '',
+          allowMultipleSubmissions: false,
+        });
+
+        expect(formData.schema?.settings?.stepForm).toBeTruthy();
+        expect(formData.schema?.settings?.stepForm?.enabled).toBe(true);
+        expect(formData.schema?.settings?.stepForm?.steps.length).toBe(2);
+      });
+
+      it('should not include step form when disabled', () => {
+        const formData = service.exportFormData({
+          title: 'Test Form',
+          description: 'Test',
+          columnLayout: 2,
+          fieldSpacing: 'normal',
+          successMessage: 'Success',
+          redirectUrl: '',
+          allowMultipleSubmissions: false,
+        });
+
+        expect(formData.schema?.settings?.stepForm).toBeUndefined();
+      });
+    });
+
+    describe('Schema Deserialization', () => {
+      it('should restore step form from schema when loading form', () => {
+        const formMetadata: FormMetadata = {
+          id: 'form-1',
+          userId: 'user-1',
+          title: 'Test Form',
+          status: FormStatus.DRAFT,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          schema: {
+            id: 'schema-1',
+            formId: 'form-1',
+            version: 1,
+            fields: [],
+            settings: {
+              layout: { columns: 2, spacing: 'medium' },
+              submission: {
+                showSuccessMessage: true,
+                successMessage: 'Thank you',
+                allowMultipleSubmissions: false,
+              },
+              stepForm: {
+                enabled: true,
+                steps: [
+                  { id: 'step-1', title: 'Step 1', description: 'First', order: 0 },
+                  { id: 'step-2', title: 'Step 2', description: 'Second', order: 1 },
+                ],
+              },
+            },
+            isPublished: false,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        };
+
+        service.loadForm(formMetadata);
+
+        expect(service.stepFormEnabled()).toBe(true);
+        expect(service.steps().length).toBe(2);
+        expect(service.steps()[0].title).toBe('Step 1');
+        expect(service.steps()[1].title).toBe('Step 2');
+        expect(service.activeStepId()).toBe('step-1');
+      });
+
+      it('should reset step form for forms without step configuration', () => {
+        service.enableStepForm();
+        expect(service.stepFormEnabled()).toBe(true);
+
+        const formMetadata: FormMetadata = {
+          id: 'form-1',
+          userId: 'user-1',
+          title: 'Test Form',
+          status: FormStatus.DRAFT,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          schema: {
+            id: 'schema-1',
+            formId: 'form-1',
+            version: 1,
+            fields: [],
+            settings: {
+              layout: { columns: 2, spacing: 'medium' },
+              submission: {
+                showSuccessMessage: true,
+                successMessage: 'Thank you',
+                allowMultipleSubmissions: false,
+              },
+            },
+            isPublished: false,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        };
+
+        service.loadForm(formMetadata);
+
+        expect(service.stepFormEnabled()).toBe(false);
+        expect(service.steps().length).toBe(0);
+        expect(service.activeStepId()).toBeNull();
+      });
+    });
+  });
+
+  describe('Step Navigation', () => {
+    beforeEach(() => {
+      service.enableStepForm();
+      service.addStep({ id: 'step-2', title: 'Step 2', description: '', order: 1 });
+    });
+
+    it('setActiveStep() should update activeStepId signal', () => {
+      const step2Id = service.steps()[1].id;
+
+      service.setActiveStep(step2Id);
+
+      expect(service.activeStepId()).toBe(step2Id);
+    });
+
+    it('setActiveStep() with invalid ID should log error and not update', () => {
+      const originalActiveId = service.activeStepId();
+      spyOn(console, 'error');
+
+      service.setActiveStep('non-existent-step-id');
+
+      expect(console.error).toHaveBeenCalledWith('Invalid step ID:', 'non-existent-step-id');
+      expect(service.activeStepId()).toBe(originalActiveId);
+    });
+
+    it('activeStep computed should return correct step', () => {
+      const step1 = service.steps()[0];
+      const step2 = service.steps()[1];
+
+      // Initially on step 1
+      expect(service.activeStep()).toEqual(step1);
+
+      // Switch to step 2
+      service.setActiveStep(step2.id);
+      expect(service.activeStep()).toEqual(step2);
+    });
+
+    it('activeStepOrder computed should return correct order', () => {
+      const step1 = service.steps()[0];
+      const step2 = service.steps()[1];
+
+      // Initially on step 1 (order 0)
+      expect(service.activeStepOrder()).toBe(0);
+
+      // Switch to step 2 (order 1)
+      service.setActiveStep(step2.id);
+      expect(service.activeStepOrder()).toBe(1);
+    });
+
+    it('enableStepForm() should set first step as active', () => {
+      // Reset and re-enable
+      service.disableStepForm();
+      expect(service.activeStepId()).toBeNull();
+
+      service.enableStepForm();
+
+      const firstStepId = service.steps()[0].id;
+      expect(service.activeStepId()).toBe(firstStepId);
+      expect(service.activeStepOrder()).toBe(0);
+    });
+
+    it('should filter fields by active step correctly', () => {
+      const step1Id = service.steps()[0].id;
+      const step2Id = service.steps()[1].id;
+
+      // Add fields to different steps
+      const field1: FormField = {
+        id: 'field-1',
+        type: FormFieldType.TEXT,
+        label: 'Field 1',
+        fieldName: 'field1',
+        required: false,
+        order: 0,
+        position: { stepId: step1Id, rowId: 'row-1', columnIndex: 0 },
+      };
+
+      const field2: FormField = {
+        id: 'field-2',
+        type: FormFieldType.EMAIL,
+        label: 'Field 2',
+        fieldName: 'field2',
+        required: false,
+        order: 1,
+        position: { stepId: step2Id, rowId: 'row-1', columnIndex: 0 },
+      };
+
+      const field3: FormField = {
+        id: 'field-3',
+        type: FormFieldType.NUMBER,
+        label: 'Field 3',
+        fieldName: 'field3',
+        required: false,
+        order: 2,
+        position: { stepId: step1Id, rowId: 'row-1', columnIndex: 1 },
+      };
+
+      service.setFormFields([field1, field2, field3]);
+
+      // Step 1 should show 2 fields
+      service.setActiveStep(step1Id);
+      const step1Fields = service.formFields().filter((f) => f.position?.stepId === step1Id);
+      expect(step1Fields.length).toBe(2);
+      expect(step1Fields.map((f) => f.id)).toContain('field-1');
+      expect(step1Fields.map((f) => f.id)).toContain('field-3');
+
+      // Step 2 should show 1 field
+      service.setActiveStep(step2Id);
+      const step2Fields = service.formFields().filter((f) => f.position?.stepId === step2Id);
+      expect(step2Fields.length).toBe(1);
+      expect(step2Fields[0].id).toBe('field-2');
+    });
+  });
 });

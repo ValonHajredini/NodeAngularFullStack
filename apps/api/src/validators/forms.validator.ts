@@ -454,6 +454,221 @@ export const validateFormSchema = (
 };
 
 /**
+ * Custom middleware to validate step form configuration.
+ * Validates step count, uniqueness, order, and field-step references.
+ */
+export const validateStepFormConfiguration = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  const schema = req.body.schema;
+
+  // Skip validation if no schema or stepForm config
+  if (!schema?.settings?.stepForm) {
+    next();
+    return;
+  }
+
+  const stepFormConfig = schema.settings.stepForm;
+  const errors: string[] = [];
+
+  // Only validate if step form is enabled
+  if (stepFormConfig.enabled === false) {
+    next();
+    return;
+  }
+
+  // Validate stepForm.enabled is boolean
+  if (typeof stepFormConfig.enabled !== 'boolean') {
+    errors.push('stepForm.enabled must be a boolean');
+  }
+
+  // Validate steps array exists
+  if (!stepFormConfig.steps || !Array.isArray(stepFormConfig.steps)) {
+    errors.push('stepForm.steps must be an array');
+    res.status(400).json({
+      success: false,
+      error: {
+        code: 'STEP_VALIDATION_ERROR',
+        message: 'Step form validation failed',
+        details: errors,
+      },
+      timestamp: new Date().toISOString(),
+    });
+    return;
+  }
+
+  const steps = stepFormConfig.steps;
+
+  // Validate step count (2-10 steps when enabled)
+  if (stepFormConfig.enabled && (steps.length < 2 || steps.length > 10)) {
+    errors.push(
+      `Step count must be between 2 and 10 when enabled. Found: ${steps.length} steps`
+    );
+  }
+
+  // Track step IDs and order indices for uniqueness validation
+  const stepIds = new Set<string>();
+  const orderIndices = new Set<number>();
+  const duplicateIds = new Set<string>();
+  const duplicateOrders = new Set<number>();
+
+  // UUID v4 regex pattern
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+  steps.forEach(
+    (
+      step: {
+        id?: string;
+        title?: string;
+        description?: string;
+        order?: number;
+      },
+      index: number
+    ) => {
+      // Validate step ID
+      if (!step.id) {
+        errors.push(`Step at index ${index} is missing required 'id' property`);
+      } else {
+        // Check UUID v4 format
+        if (!uuidRegex.test(step.id)) {
+          errors.push(
+            `Step '${step.id}' has invalid UUID v4 format at index ${index}`
+          );
+        }
+
+        // Check for duplicate step IDs
+        if (stepIds.has(step.id)) {
+          duplicateIds.add(step.id);
+        } else {
+          stepIds.add(step.id);
+        }
+      }
+
+      // Validate step title
+      if (!step.title) {
+        errors.push(
+          `Step '${step.id || index}' is missing required 'title' property`
+        );
+      } else if (typeof step.title !== 'string') {
+        errors.push(`Step '${step.id || index}' title must be a string`);
+      } else if (step.title.trim().length === 0) {
+        errors.push(`Step '${step.id || index}' title cannot be empty`);
+      } else if (step.title.length < 1 || step.title.length > 100) {
+        errors.push(
+          `Step '${step.id || index}' title must be between 1 and 100 characters. Found: ${step.title.length} characters`
+        );
+      }
+
+      // Validate optional description
+      if (step.description !== undefined) {
+        if (typeof step.description !== 'string') {
+          errors.push(
+            `Step '${step.id || index}' description must be a string`
+          );
+        } else if (step.description.length > 500) {
+          errors.push(
+            `Step '${step.id || index}' description must not exceed 500 characters. Found: ${step.description.length} characters`
+          );
+        }
+      }
+
+      // Validate step order
+      if (step.order === undefined) {
+        errors.push(
+          `Step '${step.id || index}' is missing required 'order' property`
+        );
+      } else if (typeof step.order !== 'number') {
+        errors.push(`Step '${step.id || index}' order must be a number`);
+      } else if (!Number.isInteger(step.order)) {
+        errors.push(`Step '${step.id || index}' order must be an integer`);
+      } else if (step.order < 0) {
+        errors.push(
+          `Step '${step.id || index}' order must be non-negative (0-based)`
+        );
+      } else {
+        // Check for duplicate order indices
+        if (orderIndices.has(step.order)) {
+          duplicateOrders.add(step.order);
+        } else {
+          orderIndices.add(step.order);
+        }
+      }
+    }
+  );
+
+  // Report duplicate step IDs
+  if (duplicateIds.size > 0) {
+    duplicateIds.forEach((id) => {
+      errors.push(`Duplicate step ID found: ${id}`);
+    });
+  }
+
+  // Report duplicate order indices
+  if (duplicateOrders.size > 0) {
+    duplicateOrders.forEach((order) => {
+      errors.push(`Duplicate step order index found: ${order}`);
+    });
+  }
+
+  // Validate step order is sequential (0, 1, 2, ...)
+  if (stepFormConfig.enabled && errors.length === 0) {
+    const sortedOrders = Array.from(orderIndices).sort((a, b) => a - b);
+    const expectedOrders = Array.from({ length: steps.length }, (_, i) => i);
+
+    const isSequential =
+      sortedOrders.length === expectedOrders.length &&
+      sortedOrders.every((order, i) => order === expectedOrders[i]);
+
+    if (!isSequential) {
+      errors.push(
+        `Step order indices must be sequential starting from 0. Expected: [${expectedOrders.join(', ')}], Found: [${sortedOrders.join(', ')}]`
+      );
+    }
+  }
+
+  // Validate field position.stepId references (if fields exist)
+  if (schema.fields && Array.isArray(schema.fields) && stepIds.size > 0) {
+    schema.fields.forEach(
+      (
+        field: {
+          id?: string;
+          fieldName?: string;
+          position?: { stepId?: string };
+        },
+        index: number
+      ) => {
+        if (field.position?.stepId) {
+          if (!stepIds.has(field.position.stepId)) {
+            errors.push(
+              `Field '${field.fieldName || field.id || index}' references non-existent step ID: ${field.position.stepId}`
+            );
+          }
+        }
+      }
+    );
+  }
+
+  // Return errors if any found
+  if (errors.length > 0) {
+    res.status(400).json({
+      success: false,
+      error: {
+        code: 'STEP_VALIDATION_ERROR',
+        message: 'Step form validation failed',
+        details: errors,
+      },
+      timestamp: new Date().toISOString(),
+    });
+    return;
+  }
+
+  next();
+};
+
+/**
  * XSS protection middleware for form inputs.
  * Additional layer of protection against XSS attacks in title, description, and field labels.
  */

@@ -388,6 +388,7 @@ export class RowLayoutSidebarComponent implements OnInit, OnDestroy {
 
   /**
    * Adds a new row with default 2-column layout.
+   * Service automatically assigns stepId when step mode is enabled.
    */
   onAddRow(): void {
     this.formBuilderService.addRow(2);
