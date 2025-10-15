@@ -25,6 +25,53 @@ const swaggerSpec = {
       description: 'Production server',
     },
   ],
+  tags: [
+    {
+      name: 'Authentication',
+      description: 'User authentication and authorization endpoints',
+    },
+    {
+      name: 'Users',
+      description: 'User management and profile operations',
+    },
+    {
+      name: 'Forms',
+      description: 'Form creation, management, and submission handling',
+    },
+    {
+      name: 'API Tokens',
+      description: 'API token management for external integrations',
+    },
+    {
+      name: 'Themes',
+      description: 'Form theme management and customization',
+    },
+    {
+      name: 'Public Forms',
+      description:
+        'Public form rendering and submission (no authentication required)',
+    },
+    {
+      name: 'Health',
+      description: 'System health and status monitoring',
+    },
+    {
+      name: 'Tools - Short Links',
+      description: 'Short link generation and management tools',
+    },
+    {
+      name: 'Tools - Drawing Canvas',
+      description: 'Drawing project management and canvas tools',
+    },
+    {
+      name: 'Tools - Public',
+      description: 'Public tools and utilities',
+    },
+    {
+      name: 'Tools - Admin',
+      description: 'Administrative tools and system management',
+    },
+  ],
   paths: {
     '/health': {
       get: {
@@ -2045,6 +2092,1904 @@ const swaggerSpec = {
         },
       },
     },
+    '/forms': {
+      post: {
+        summary: 'Create a new form',
+        description:
+          'Create a new form with optional schema (authenticated users only)',
+        tags: ['Forms'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['title'],
+                properties: {
+                  title: {
+                    type: 'string',
+                    maxLength: 200,
+                    description: 'Form title',
+                  },
+                  description: {
+                    type: 'string',
+                    maxLength: 2000,
+                    description: 'Form description',
+                  },
+                  status: {
+                    type: 'string',
+                    enum: ['draft', 'published'],
+                    default: 'draft',
+                    description: 'Form status',
+                  },
+                  schema: {
+                    type: 'object',
+                    description: 'Optional form schema',
+                    properties: {
+                      fields: {
+                        type: 'array',
+                        description: 'Array of form fields',
+                      },
+                    },
+                  },
+                },
+              },
+              example: {
+                title: 'Contact Form',
+                description: 'Customer feedback form',
+                status: 'draft',
+              },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Form created successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Form created successfully',
+                    },
+                    data: { $ref: '#/components/schemas/FormMetadata' },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'Validation error',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ValidationError' },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+      get: {
+        summary: 'Get paginated list of forms',
+        description:
+          'Get paginated list of forms (users see their own forms, admins see all)',
+        tags: ['Forms'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'query',
+            name: 'page',
+            schema: { type: 'integer', minimum: 1, default: 1 },
+            description: 'Page number for pagination',
+          },
+          {
+            in: 'query',
+            name: 'limit',
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+            description: 'Number of items per page',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Forms retrieved successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Forms retrieved successfully',
+                    },
+                    data: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/FormMetadata' },
+                    },
+                    pagination: {
+                      type: 'object',
+                      properties: {
+                        page: { type: 'integer', example: 1 },
+                        limit: { type: 'integer', example: 20 },
+                        total: { type: 'integer', example: 50 },
+                        totalPages: { type: 'integer', example: 3 },
+                      },
+                    },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/forms/{id}/publish': {
+      post: {
+        summary: 'Publish a form',
+        description:
+          'Publish a form with JWT render token (owner or admin only)',
+        tags: ['Forms'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'id',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Form ID (UUID)',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['expiresInDays'],
+                properties: {
+                  expiresInDays: {
+                    type: 'number',
+                    minimum: 1,
+                    maximum: 365,
+                    default: 30,
+                    description: 'Number of days until token expires',
+                  },
+                },
+              },
+              example: {
+                expiresInDays: 30,
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Form published successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Form published successfully',
+                    },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        form: { $ref: '#/components/schemas/FormMetadata' },
+                        schema: { $ref: '#/components/schemas/FormSchema' },
+                        renderUrl: {
+                          type: 'string',
+                          example:
+                            '/forms/render/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+                        },
+                      },
+                    },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'Validation error or schema validation failed',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ValidationError' },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '403': {
+            description: 'Insufficient permissions to publish this form',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '404': {
+            description: 'Form not found',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '429': {
+            description: 'Rate limit exceeded (10 publishes per hour)',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/forms/{id}/unpublish': {
+      post: {
+        summary: 'Unpublish a form',
+        description:
+          'Unpublish a form and invalidate render token (owner or admin only)',
+        tags: ['Forms'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'id',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Form ID (UUID)',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Form unpublished successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Form unpublished successfully',
+                    },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '403': {
+            description: 'Insufficient permissions to unpublish this form',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '404': {
+            description: 'Form not found',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/forms/upload-background': {
+      post: {
+        summary: 'Upload a background image for forms',
+        description:
+          'Upload an image file to DigitalOcean Spaces for use as form background',
+        tags: ['Forms'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['backgroundImage'],
+                properties: {
+                  backgroundImage: {
+                    type: 'string',
+                    format: 'binary',
+                    description:
+                      'Image file (JPEG, PNG, GIF, WebP, SVG) - max 5MB',
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Image uploaded successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    message: { type: 'string' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        url: {
+                          type: 'string',
+                          description: 'Public CDN URL of uploaded image',
+                        },
+                        fileName: { type: 'string' },
+                        size: { type: 'number' },
+                        mimeType: { type: 'string' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'No file provided or invalid file type',
+          },
+          '401': {
+            description: 'Authentication required',
+          },
+          '500': {
+            description: 'Upload failed',
+          },
+        },
+      },
+    },
+    '/forms/{formId}/upload-image': {
+      post: {
+        summary: 'Upload an image for a form field',
+        description:
+          'Upload an image file to DigitalOcean Spaces for use in IMAGE field type',
+        tags: ['Forms'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'formId',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Form ID (UUID)',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['image'],
+                properties: {
+                  image: {
+                    type: 'string',
+                    format: 'binary',
+                    description: 'Image file (JPEG, PNG, GIF, WebP) - max 5MB',
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Image uploaded successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean' },
+                    message: { type: 'string' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        imageUrl: {
+                          type: 'string',
+                          description: 'Public CDN URL of uploaded image',
+                        },
+                        fileName: { type: 'string' },
+                        size: { type: 'number' },
+                        mimeType: { type: 'string' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '400': {
+            description:
+              'No file provided, invalid file type, or file too large',
+          },
+          '401': {
+            description: 'Authentication required',
+          },
+          '500': {
+            description: 'Upload failed',
+          },
+        },
+      },
+    },
+    '/forms/{id}': {
+      get: {
+        summary: 'Get form by ID',
+        description:
+          'Get form by ID with ownership validation (users can only access their own forms, admins can access all)',
+        tags: ['Forms'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'id',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Form ID (UUID)',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Form retrieved successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Form retrieved successfully',
+                    },
+                    data: { $ref: '#/components/schemas/FormMetadata' },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'Invalid form ID format',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ValidationError' },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '403': {
+            description: 'Insufficient permissions to access this form',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '404': {
+            description: 'Form not found',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+      put: {
+        summary: 'Update form',
+        description: 'Update form (owner or admin only)',
+        tags: ['Forms'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'id',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Form ID (UUID)',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  title: {
+                    type: 'string',
+                    maxLength: 200,
+                    description: 'Form title',
+                  },
+                  description: {
+                    type: 'string',
+                    maxLength: 2000,
+                    description: 'Form description',
+                  },
+                  status: {
+                    type: 'string',
+                    enum: ['draft', 'published'],
+                    description: 'Form status',
+                  },
+                  schema: {
+                    type: 'object',
+                    description: 'Optional form schema',
+                    properties: {
+                      fields: {
+                        type: 'array',
+                        description: 'Array of form fields',
+                      },
+                    },
+                  },
+                },
+              },
+              example: {
+                title: 'Updated Contact Form',
+                description: 'Updated description',
+                status: 'draft',
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Form updated successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Form updated successfully',
+                    },
+                    data: { $ref: '#/components/schemas/FormMetadata' },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'Validation error',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ValidationError' },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '403': {
+            description: 'Insufficient permissions to update this form',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '404': {
+            description: 'Form not found',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+      delete: {
+        summary: 'Delete form',
+        description: 'Delete form (owner or admin only)',
+        tags: ['Forms'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'id',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Form ID (UUID)',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+        ],
+        responses: {
+          '204': {
+            description: 'Form deleted successfully (no content)',
+          },
+          '400': {
+            description: 'Invalid form ID format',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ValidationError' },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '403': {
+            description: 'Insufficient permissions to delete this form',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '404': {
+            description: 'Form not found',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/forms/{id}/submissions': {
+      get: {
+        summary: 'Get form submissions',
+        description:
+          'Get paginated submissions for a form (owner or admin only, with masked IPs and truncated values)',
+        tags: ['Forms'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'id',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Form ID (UUID)',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+          {
+            in: 'query',
+            name: 'page',
+            schema: { type: 'integer', minimum: 1, default: 1 },
+            description: 'Page number for pagination',
+          },
+          {
+            in: 'query',
+            name: 'limit',
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+            description: 'Number of items per page',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Submissions retrieved successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Submissions retrieved successfully',
+                    },
+                    data: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/FormSubmission' },
+                    },
+                    pagination: {
+                      type: 'object',
+                      properties: {
+                        page: { type: 'integer', example: 1 },
+                        limit: { type: 'integer', example: 10 },
+                        total: { type: 'integer', example: 25 },
+                        totalPages: { type: 'integer', example: 3 },
+                      },
+                    },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+          },
+          '403': {
+            description: 'Insufficient permissions to view submissions',
+          },
+          '404': {
+            description: 'Form not found',
+          },
+        },
+      },
+    },
+    '/forms/{id}/submissions/export': {
+      get: {
+        summary: 'Export form submissions as CSV',
+        description:
+          'Export all form submissions to CSV file (owner or admin only)',
+        tags: ['Forms'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'id',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Form ID (UUID)',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'CSV file download',
+            content: {
+              'text/csv': {
+                schema: {
+                  type: 'string',
+                  example:
+                    'Submitted At,Submitter IP,Name,Email,Message\n2025-01-04T14:30:00Z,192.168._._,John Doe,john@example.com,Hello world',
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+          },
+          '403': {
+            description: 'Insufficient permissions to export submissions',
+          },
+          '404': {
+            description: 'Form not found or no submissions found',
+          },
+        },
+      },
+    },
+    '/themes': {
+      get: {
+        summary: 'List all active themes',
+        description:
+          'Get all active themes sorted by usage count in descending order',
+        tags: ['Themes'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'List of themes sorted by usage count',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Themes retrieved successfully',
+                    },
+                    data: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/FormTheme' },
+                    },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+      post: {
+        summary: 'Create new theme',
+        description: 'Create a new theme (admin only)',
+        tags: ['Themes'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name', 'thumbnailUrl', 'themeConfig'],
+                properties: {
+                  name: {
+                    type: 'string',
+                    minLength: 3,
+                    maxLength: 100,
+                    description: 'Theme display name',
+                    example: 'Modern Blue',
+                  },
+                  description: {
+                    type: 'string',
+                    maxLength: 500,
+                    description: 'Optional theme description',
+                    example: 'Clean modern theme with blue accents',
+                  },
+                  thumbnailUrl: {
+                    type: 'string',
+                    format: 'uri',
+                    maxLength: 500,
+                    description: 'Thumbnail image URL',
+                    example: 'https://spaces.example.com/theme-thumb.jpg',
+                  },
+                  themeConfig: {
+                    type: 'object',
+                    required: ['desktop'],
+                    properties: {
+                      desktop: { $ref: '#/components/schemas/ThemeProperties' },
+                      mobile: {
+                        allOf: [
+                          { $ref: '#/components/schemas/ThemeProperties' },
+                          {
+                            type: 'object',
+                            description:
+                              'All properties are optional for mobile',
+                          },
+                        ],
+                      },
+                    },
+                  },
+                },
+              },
+              example: {
+                name: 'Modern Blue',
+                description: 'Clean modern theme with blue accents',
+                thumbnailUrl: 'https://spaces.example.com/theme-thumb.jpg',
+                themeConfig: {
+                  desktop: {
+                    primaryColor: '#007bff',
+                    secondaryColor: '#6c757d',
+                    backgroundColor: '#ffffff',
+                    textColorPrimary: '#212529',
+                    textColorSecondary: '#6c757d',
+                    fontFamilyHeading: 'Roboto',
+                    fontFamilyBody: 'Open Sans',
+                    fieldBorderRadius: '8px',
+                    fieldSpacing: '16px',
+                    containerBackground: '#f8f9fa',
+                    containerOpacity: 0.95,
+                    containerPosition: 'center',
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Theme created successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Theme created successfully',
+                    },
+                    data: { $ref: '#/components/schemas/FormTheme' },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'Validation error',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ValidationError' },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '403': {
+            description: 'Admin access required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/themes/{id}': {
+      get: {
+        summary: 'Get theme by ID',
+        description: 'Get a single theme by its ID',
+        tags: ['Themes'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'id',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Theme ID (UUID)',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Theme retrieved successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Theme retrieved successfully',
+                    },
+                    data: { $ref: '#/components/schemas/FormTheme' },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '404': {
+            description: 'Theme not found',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+      put: {
+        summary: 'Update existing theme',
+        description: 'Update an existing theme (admin only)',
+        tags: ['Themes'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'id',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Theme ID (UUID)',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  name: {
+                    type: 'string',
+                    minLength: 3,
+                    maxLength: 100,
+                    description: 'Theme display name',
+                  },
+                  description: {
+                    type: 'string',
+                    maxLength: 500,
+                    description: 'Optional theme description',
+                  },
+                  thumbnailUrl: {
+                    type: 'string',
+                    format: 'uri',
+                    maxLength: 500,
+                    description: 'Thumbnail image URL',
+                  },
+                  themeConfig: {
+                    type: 'object',
+                    properties: {
+                      desktop: { $ref: '#/components/schemas/ThemeProperties' },
+                      mobile: {
+                        allOf: [
+                          { $ref: '#/components/schemas/ThemeProperties' },
+                          {
+                            type: 'object',
+                            description:
+                              'All properties are optional for mobile',
+                          },
+                        ],
+                      },
+                    },
+                  },
+                },
+              },
+              example: {
+                name: 'Updated Theme Name',
+                description: 'Updated description',
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Theme updated successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Theme updated successfully',
+                    },
+                    data: { $ref: '#/components/schemas/FormTheme' },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'Validation error',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ValidationError' },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '403': {
+            description: 'Admin access required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '404': {
+            description: 'Theme not found',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+      delete: {
+        summary: 'Delete theme (soft delete)',
+        description:
+          'Soft delete a theme by setting is_active to false (admin only)',
+        tags: ['Themes'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'id',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Theme ID (UUID)',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Theme deleted successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Theme deleted successfully',
+                    },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '403': {
+            description: 'Admin access required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '404': {
+            description: 'Theme not found',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/themes/{id}/apply': {
+      post: {
+        summary: 'Track theme application',
+        description: "Increment the usage count for a theme when it's applied",
+        tags: ['Themes'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'id',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Theme ID (UUID)',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Theme application tracked successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Theme application tracked successfully',
+                    },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        usageCount: { type: 'integer', example: 1235 },
+                      },
+                    },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '404': {
+            description: 'Theme not found',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/public/forms/render/{token}': {
+      get: {
+        summary: 'Get form schema for public rendering',
+        description:
+          'Validates JWT token and returns form schema for public access (no authentication required)',
+        tags: ['Public Forms'],
+        parameters: [
+          {
+            in: 'path',
+            name: 'token',
+            required: true,
+            schema: { type: 'string' },
+            description: 'JWT render token for the form',
+            example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Form schema retrieved successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Form schema retrieved successfully',
+                    },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        schema: { $ref: '#/components/schemas/FormSchema' },
+                        settings: {
+                          type: 'object',
+                          description: 'Form settings for rendering',
+                        },
+                      },
+                    },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '404': {
+            description: 'Form not found or invalid token',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: false },
+                    message: { type: 'string', example: 'Form not found' },
+                  },
+                },
+              },
+            },
+          },
+          '410': {
+            description: 'Token has expired',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: false },
+                    message: {
+                      type: 'string',
+                      example: 'This form has expired',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '429': {
+            description: 'Rate limit exceeded (10 requests per minute per IP)',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: false },
+                    message: {
+                      type: 'string',
+                      example: 'Too many requests, please try again later',
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/public/forms/submit/{token}': {
+      post: {
+        summary: 'Submit form data',
+        description:
+          'Validates and stores form submission data (no authentication required, rate limited)',
+        tags: ['Public Forms'],
+        parameters: [
+          {
+            in: 'path',
+            name: 'token',
+            required: true,
+            schema: { type: 'string' },
+            description: 'JWT render token for the form',
+            example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  values: {
+                    type: 'object',
+                    description: 'Form field values (key-value pairs)',
+                    example: {
+                      name: 'John Doe',
+                      email: 'john@example.com',
+                      message: 'Hello world',
+                    },
+                  },
+                  captchaToken: {
+                    type: 'string',
+                    description:
+                      'Optional CAPTCHA token (required after 3 submissions)',
+                    example: '03AGdBq25...',
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Form submitted successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Form submitted successfully',
+                    },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        submissionId: {
+                          type: 'string',
+                          format: 'uuid',
+                          example: '123e4567-e89b-12d3-a456-426614174000',
+                        },
+                        redirectUrl: {
+                          type: 'string',
+                          nullable: true,
+                          example: 'https://example.com/thank-you',
+                        },
+                        successMessage: {
+                          type: 'string',
+                          example: 'Thank you for your submission!',
+                        },
+                      },
+                    },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'Validation errors',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: false },
+                    message: { type: 'string', example: 'Validation failed' },
+                    errors: {
+                      type: 'object',
+                      example: {
+                        email: 'Email is required',
+                        name: 'Name must be at least 2 characters',
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '404': {
+            description: 'Form not found or invalid token',
+          },
+          '410': {
+            description: 'Token has expired',
+          },
+          '429': {
+            description: 'Rate limit exceeded (10 submissions per hour per IP)',
+          },
+        },
+      },
+    },
+    '/drawing-projects': {
+      get: {
+        summary: 'Retrieve all projects for the authenticated user',
+        description:
+          'Get all drawing projects for the authenticated user with optional filtering',
+        tags: ['Tools - Drawing Canvas'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'query',
+            name: 'activeOnly',
+            schema: { type: 'boolean' },
+            description: 'Optional boolean to filter active projects only',
+            example: true,
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Projects list retrieved successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Projects retrieved successfully',
+                    },
+                    data: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/DrawingProject' },
+                    },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '500': {
+            description: 'Internal server error',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+      post: {
+        summary: 'Create a new drawing project',
+        description:
+          'Create a new drawing project with template data and optional thumbnail',
+        tags: ['Tools - Drawing Canvas'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name', 'templateData'],
+                properties: {
+                  name: {
+                    type: 'string',
+                    minLength: 1,
+                    maxLength: 255,
+                    description: 'Project name',
+                    example: 'My Drawing Project',
+                  },
+                  description: {
+                    type: 'string',
+                    description: 'Optional project description',
+                    example: 'A creative drawing project',
+                  },
+                  templateData: {
+                    type: 'object',
+                    required: ['version', 'shapes'],
+                    properties: {
+                      version: {
+                        type: 'string',
+                        description: 'Template version',
+                        example: '1.0.0',
+                      },
+                      shapes: {
+                        type: 'array',
+                        description: 'Array of drawing shapes',
+                        items: { type: 'object' },
+                      },
+                    },
+                  },
+                  thumbnail: {
+                    type: 'string',
+                    description: 'Optional base64 encoded thumbnail image',
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Project created successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Project created successfully',
+                    },
+                    data: { $ref: '#/components/schemas/DrawingProject' },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'Invalid request data',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ValidationError' },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '500': {
+            description: 'Internal server error',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/drawing-projects/{id}': {
+      get: {
+        summary: 'Retrieve a single project by ID',
+        description: 'Get a specific drawing project by ID (owner only)',
+        tags: ['Tools - Drawing Canvas'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'id',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Project UUID',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Project data retrieved successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Project retrieved successfully',
+                    },
+                    data: { $ref: '#/components/schemas/DrawingProject' },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '403': {
+            description: 'Unauthorized access',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '404': {
+            description: 'Project not found',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '500': {
+            description: 'Internal server error',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+      put: {
+        summary: 'Update an existing drawing project',
+        description: 'Update a drawing project (owner only)',
+        tags: ['Tools - Drawing Canvas'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'id',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Project UUID',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  name: {
+                    type: 'string',
+                    minLength: 1,
+                    maxLength: 255,
+                    description: 'Project name',
+                    example: 'Updated Project Name',
+                  },
+                  description: {
+                    type: 'string',
+                    description: 'Optional project description',
+                    example: 'Updated description',
+                  },
+                  templateData: {
+                    type: 'object',
+                    properties: {
+                      version: { type: 'string' },
+                      shapes: { type: 'array', items: { type: 'object' } },
+                    },
+                  },
+                  thumbnail: {
+                    type: 'string',
+                    description: 'Optional base64 encoded thumbnail image',
+                  },
+                  isActive: {
+                    type: 'boolean',
+                    description: 'Whether the project is active',
+                    example: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Project updated successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Project updated successfully',
+                    },
+                    data: { $ref: '#/components/schemas/DrawingProject' },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '400': {
+            description: 'Invalid request data',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ValidationError' },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '403': {
+            description: 'Unauthorized access',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '404': {
+            description: 'Project not found',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '500': {
+            description: 'Internal server error',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+      delete: {
+        summary: 'Delete a drawing project',
+        description: 'Delete a drawing project (owner only)',
+        tags: ['Tools - Drawing Canvas'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: 'path',
+            name: 'id',
+            required: true,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Project UUID',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Project deleted successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: {
+                      type: 'string',
+                      example: 'Project deleted successfully',
+                    },
+                    timestamp: { type: 'string', format: 'date-time' },
+                  },
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Authentication required',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '403': {
+            description: 'Unauthorized access',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '404': {
+            description: 'Project not found',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '500': {
+            description: 'Internal server error',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+    },
     '/users/{id}': {
       get: {
         summary: 'Get user by ID',
@@ -3047,6 +4992,216 @@ const swaggerSpec = {
             nullable: true,
             description: 'Background image positioning',
             example: 'cover',
+          },
+        },
+      },
+      FormMetadata: {
+        type: 'object',
+        required: [
+          'id',
+          'title',
+          'status',
+          'createdBy',
+          'createdAt',
+          'updatedAt',
+        ],
+        properties: {
+          id: {
+            type: 'string',
+            format: 'uuid',
+            description: 'Unique identifier (UUID v4)',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+          title: {
+            type: 'string',
+            maxLength: 200,
+            description: 'Form title',
+            example: 'Contact Form',
+          },
+          description: {
+            type: 'string',
+            maxLength: 2000,
+            nullable: true,
+            description: 'Form description',
+            example: 'Customer feedback form',
+          },
+          status: {
+            type: 'string',
+            enum: ['draft', 'published'],
+            description: 'Form status',
+            example: 'draft',
+          },
+          schema: {
+            type: 'object',
+            nullable: true,
+            description: 'Form schema with fields and configuration',
+          },
+          settings: {
+            type: 'object',
+            nullable: true,
+            description:
+              'Form settings including theme and layout configuration',
+          },
+          submissionCount: {
+            type: 'integer',
+            minimum: 0,
+            description: 'Number of form submissions',
+            example: 25,
+          },
+          createdBy: {
+            type: 'string',
+            format: 'uuid',
+            description: 'User ID who created the form',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time',
+            description: 'Form creation timestamp',
+            example: '2024-01-15T10:00:00.000Z',
+          },
+          updatedAt: {
+            type: 'string',
+            format: 'date-time',
+            description: 'Last modification timestamp',
+            example: '2024-01-15T10:00:00.000Z',
+          },
+        },
+      },
+      FormSchema: {
+        type: 'object',
+        properties: {
+          fields: {
+            type: 'array',
+            description: 'Array of form fields',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                type: { type: 'string' },
+                label: { type: 'string' },
+                required: { type: 'boolean' },
+                placeholder: { type: 'string' },
+                options: { type: 'array' },
+                validation: { type: 'object' },
+                position: { type: 'object' },
+              },
+            },
+          },
+          settings: {
+            type: 'object',
+            description: 'Form settings including theme and layout',
+            properties: {
+              theme: { type: 'object' },
+              layout: { type: 'object' },
+              rowLayout: { type: 'object' },
+            },
+          },
+        },
+      },
+      FormSubmission: {
+        type: 'object',
+        required: ['id', 'formId', 'values', 'submittedAt'],
+        properties: {
+          id: {
+            type: 'string',
+            format: 'uuid',
+            description: 'Unique submission identifier',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+          formId: {
+            type: 'string',
+            format: 'uuid',
+            description: 'Form ID this submission belongs to',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+          values: {
+            type: 'object',
+            description: 'Form field values (key-value pairs)',
+            example: {
+              name: 'John Doe',
+              email: 'john@example.com',
+              message: 'Hello world',
+            },
+          },
+          submitterIp: {
+            type: 'string',
+            description: 'Masked IP address of submitter',
+            example: '192.168._._',
+          },
+          submittedAt: {
+            type: 'string',
+            format: 'date-time',
+            description: 'Submission timestamp',
+            example: '2024-01-15T10:30:00.000Z',
+          },
+        },
+      },
+      DrawingProject: {
+        type: 'object',
+        required: [
+          'id',
+          'name',
+          'templateData',
+          'createdBy',
+          'createdAt',
+          'updatedAt',
+        ],
+        properties: {
+          id: {
+            type: 'string',
+            format: 'uuid',
+            description: 'Unique identifier (UUID v4)',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+          name: {
+            type: 'string',
+            maxLength: 255,
+            description: 'Project name',
+            example: 'My Drawing Project',
+          },
+          description: {
+            type: 'string',
+            nullable: true,
+            description: 'Project description',
+            example: 'A creative drawing project',
+          },
+          templateData: {
+            type: 'object',
+            description: 'Drawing template data with shapes and configuration',
+            properties: {
+              version: { type: 'string' },
+              shapes: { type: 'array' },
+            },
+          },
+          thumbnail: {
+            type: 'string',
+            nullable: true,
+            description: 'Base64 encoded thumbnail image',
+          },
+          isActive: {
+            type: 'boolean',
+            default: true,
+            description: 'Whether the project is active',
+            example: true,
+          },
+          createdBy: {
+            type: 'string',
+            format: 'uuid',
+            description: 'User ID who created the project',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time',
+            description: 'Project creation timestamp',
+            example: '2024-01-15T10:00:00.000Z',
+          },
+          updatedAt: {
+            type: 'string',
+            format: 'date-time',
+            description: 'Last modification timestamp',
+            example: '2024-01-15T10:00:00.000Z',
           },
         },
       },
