@@ -8,6 +8,7 @@ import {
 } from '@nodeangularfullstack/shared';
 import { formsRepository } from '../repositories/forms.repository';
 import { formSchemasRepository } from '../repositories/form-schemas.repository';
+import { themesRepository } from '../repositories/themes.repository';
 
 /**
  * API Error class for form-related errors.
@@ -45,7 +46,8 @@ export interface SchemaValidationResult {
 export class FormsService {
   constructor(
     private readonly formsRepo = formsRepository,
-    private readonly formSchemasRepo = formSchemasRepository
+    private readonly formSchemasRepo = formSchemasRepository,
+    private readonly themesRepo = themesRepository
   ) {}
 
   /**
@@ -72,6 +74,11 @@ export class FormsService {
       // Validate required fields
       if (!formData.title) {
         throw new ApiError('Form title is required', 400, 'VALIDATION_ERROR');
+      }
+
+      // Validate theme ID if provided
+      if (formData.schema?.themeId) {
+        await this.validateThemeId(formData.schema.themeId);
       }
 
       // Prepare form data with user and tenant context
@@ -389,6 +396,29 @@ export class FormsService {
   }
 
   /**
+   * Validates a theme ID and ensures the theme exists and is active.
+   * @param themeId - Theme ID to validate
+   * @returns Promise containing validation result
+   * @throws {ApiError} 400 - When theme is invalid, not found, or inactive
+   * @example
+   * await formsService.validateThemeId('theme-uuid');
+   */
+  async validateThemeId(themeId: string): Promise<void> {
+    if (!themeId) {
+      return; // null/undefined themeId is allowed
+    }
+
+    const theme = await this.themesRepo.findById(themeId);
+    if (!theme) {
+      throw new ApiError('Theme not found or inactive', 400, 'INVALID_THEME');
+    }
+
+    if (!theme.isActive) {
+      throw new ApiError('Theme is not active', 400, 'INVALID_THEME');
+    }
+  }
+
+  /**
    * Generates a JWT render token for public form access.
    * @param formSchemaId - Form schema ID to embed in token
    * @param expiresAt - Token expiration date
@@ -497,6 +527,11 @@ export class FormsService {
     schemaData?: Partial<FormSchema>
   ): Promise<FormMetadata> {
     try {
+      // Validate theme ID if provided in schema data
+      if (schemaData?.themeId !== undefined) {
+        await this.validateThemeId(schemaData.themeId);
+      }
+
       const hasMetadataChanges =
         updateData.title !== undefined ||
         updateData.description !== undefined ||
@@ -542,7 +577,7 @@ export class FormsService {
   }
 
   /**
-   * Retrieves a form with the latest schema attached.
+   * Retrieves a form with the latest schema attached and embedded theme data.
    */
   async getFormWithSchema(id: string): Promise<FormMetadata | null> {
     const form = await this.formsRepo.findFormById(id);
@@ -552,6 +587,17 @@ export class FormsService {
 
     const schemas = await this.formSchemasRepo.findByFormId(id);
     const latestSchema = schemas[0];
+
+    // If schema has themeId, fetch the schema with embedded theme
+    if (latestSchema?.themeId) {
+      const schemaWithTheme = await this.formSchemasRepo.findById(
+        latestSchema.id
+      );
+      return {
+        ...form,
+        schema: schemaWithTheme || undefined,
+      };
+    }
 
     return {
       ...form,
@@ -575,6 +621,7 @@ export class FormsService {
     );
 
     const fields = schemaData.fields ?? currentSchema?.fields ?? [];
+    const themeId = schemaData.themeId ?? currentSchema?.themeId;
 
     return this.formSchemasRepo.createSchema(formId, {
       formId,
@@ -584,6 +631,7 @@ export class FormsService {
       isPublished: false,
       renderToken: undefined,
       expiresAt: undefined,
+      themeId,
     });
   }
 

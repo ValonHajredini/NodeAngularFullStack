@@ -1,4 +1,4 @@
-import { Injectable, signal, computed, effect } from '@angular/core';
+import { Injectable, signal, computed, effect, inject } from '@angular/core';
 import { Subject } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
 import {
@@ -11,7 +11,10 @@ import {
   FieldPosition,
   FormStep,
   StepFormConfig,
+  FormTheme,
 } from '@nodeangularfullstack/shared';
+import { ThemesApiService } from './themes-api.service';
+import { ThemePreviewService } from './theme-preview.service';
 
 /**
  * Form Builder service for managing form state.
@@ -36,6 +39,11 @@ export class FormBuilderService {
   private readonly _steps = signal<FormStep[]>([]);
   private readonly _activeStepId = signal<string | null>(null);
 
+  // Theme state signals
+  private readonly _currentTheme = signal<FormTheme | null>(null);
+  private readonly _availableThemes = signal<FormTheme[]>([]);
+  private readonly _isThemeLoading = signal<boolean>(false);
+
   // Property change subjects for real-time preview updates (Story 16.5)
   private readonly propertyChangeSubject = new Subject<{
     fieldId: string;
@@ -58,6 +66,11 @@ export class FormBuilderService {
   readonly steps = this._steps.asReadonly();
   readonly activeStepId = this._activeStepId.asReadonly();
 
+  // Theme public signals
+  readonly currentTheme = this._currentTheme.asReadonly();
+  readonly availableThemes = this._availableThemes.asReadonly();
+  readonly isThemeLoading = this._isThemeLoading.asReadonly();
+
   // Computed signals
   readonly hasFields = computed(() => this._formFields().length > 0);
   readonly selectedFieldIndex = computed(() => {
@@ -76,6 +89,9 @@ export class FormBuilderService {
   readonly canDeleteStep = computed(() => this._steps().length > 1);
   readonly activeStep = computed(() => this._steps().find((s) => s.id === this._activeStepId()));
   readonly activeStepOrder = computed(() => this.activeStep()?.order ?? 0);
+
+  private readonly themesApi = inject(ThemesApiService);
+  private readonly themePreviewService = inject(ThemePreviewService);
 
   constructor() {
     // Subscribe to debounced property updates
@@ -616,6 +632,11 @@ export class FormBuilderService {
     // Clear selection
     this._selectedField.set(null);
 
+    // Load theme if form has themeId
+    if (form.schema?.settings?.themeId) {
+      this.loadTheme(form.schema.settings.themeId);
+    }
+
     // Mark as clean since we just loaded
     this._isDirty.set(false);
   }
@@ -1008,6 +1029,8 @@ export class FormBuilderService {
               steps: this._steps(),
             }
           : undefined,
+        // Include theme ID if a theme is applied
+        themeId: this._currentForm()?.schema?.settings?.themeId,
       },
     };
 
@@ -1284,5 +1307,94 @@ export class FormBuilderService {
     this.markDirty();
 
     return rowId;
+  }
+
+  /**
+   * Applies a theme to the current form.
+   * Updates the form's themeId, applies CSS, and tracks theme application via API.
+   * @param themeId - The ID of the theme to apply
+   */
+  applyTheme(themeId: string): void {
+    const theme = this._availableThemes().find((t) => t.id === themeId);
+    if (!theme) {
+      console.warn(`Theme ${themeId} not found in available themes`);
+      return;
+    }
+
+    // Update current form settings
+    const currentForm = this._currentForm();
+    if (currentForm) {
+      if (!currentForm.schema) {
+        currentForm.schema = {
+          id: '',
+          formId: currentForm.id,
+          version: 1,
+          fields: [],
+          settings: {
+            layout: { columns: 1, spacing: 'medium' },
+            submission: {
+              showSuccessMessage: true,
+              successMessage: 'Thank you for your submission!',
+              allowMultipleSubmissions: false,
+            },
+          },
+          isPublished: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+      }
+      currentForm.schema.settings.themeId = themeId;
+      this._currentTheme.set(theme);
+      this.markDirty(); // AC: 7
+    }
+
+    // Apply theme CSS to preview
+    this.themePreviewService.applyThemeCss(theme);
+
+    // Track theme application via API
+    this.themesApi.applyTheme(themeId).subscribe({
+      next: (response) => console.log('Theme usage tracked:', response.data?.usageCount),
+      error: (err) => console.error('Failed to track theme usage:', err),
+    });
+  }
+
+  /**
+   * Loads a theme when editing an existing form.
+   * Fetches theme from API and applies it to the form.
+   * @param themeId - The ID of the theme to load
+   */
+  loadTheme(themeId: string): void {
+    if (!themeId) return;
+
+    this._isThemeLoading.set(true);
+    this.themesApi.getThemes().subscribe({
+      next: (response) => {
+        const theme = response.data?.find((t) => t.id === themeId);
+        if (theme) {
+          this._currentTheme.set(theme);
+          this.themePreviewService.applyThemeCss(theme);
+        }
+        this._isThemeLoading.set(false);
+      },
+      error: (err) => {
+        console.error('Failed to load theme:', err);
+        this._isThemeLoading.set(false);
+      },
+    });
+  }
+
+  /**
+   * Clears the current theme and resets theme state.
+   * Removes theme CSS variables and clears themeId from form settings.
+   */
+  clearTheme(): void {
+    this._currentTheme.set(null);
+    this.themePreviewService.clearThemeCss();
+
+    const currentForm = this._currentForm();
+    if (currentForm?.schema?.settings) {
+      currentForm.schema.settings.themeId = undefined;
+      this.markDirty();
+    }
   }
 }

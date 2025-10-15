@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   inject,
   signal,
+  computed,
   OnInit,
   OnDestroy,
 } from '@angular/core';
@@ -26,8 +27,9 @@ import { PublishDialogComponent } from './publish-dialog/publish-dialog.componen
 import { RowLayoutSidebarComponent } from './row-layout-sidebar/row-layout-sidebar.component';
 import { StepFormSidebarComponent } from './step-form-sidebar/step-form-sidebar.component';
 import { PreviewDialogComponent } from './preview-dialog/preview-dialog.component';
+import { ThemeDropdownComponent } from './theme-dropdown/theme-dropdown.component';
 import { Dialog } from 'primeng/dialog';
-import { FormSchema } from '@nodeangularfullstack/shared';
+import { FormSchema, FormTheme } from '@nodeangularfullstack/shared';
 import { trigger, transition, style, animate } from '@angular/animations';
 
 /**
@@ -55,6 +57,7 @@ import { trigger, transition, style, animate } from '@angular/animations';
     RowLayoutSidebarComponent,
     StepFormSidebarComponent,
     PreviewDialogComponent,
+    ThemeDropdownComponent,
     Dialog,
   ],
   providers: [MessageService, ConfirmationService],
@@ -82,7 +85,7 @@ import { trigger, transition, style, animate } from '@angular/animations';
           <a [routerLink]="['/app/tools']" class="hover:text-blue-600 transition-colors"> Tools </a>
           <i class="pi pi-angle-right mx-2 text-gray-400"></i>
           <a
-            (click)="navigateToFormsList()"
+            (click)="openFormsDialog()"
             class="hover:text-blue-600 transition-colors cursor-pointer"
           >
             Form Builder
@@ -111,18 +114,14 @@ import { trigger, transition, style, animate } from '@angular/animations';
           ></button>
           <i class="pi pi-file-edit text-2xl text-blue-600"></i>
           <h2 class="text-xl font-semibold text-gray-900">Form Builder</h2>
-          <button
-            pButton
-            label="My Forms"
-            icon="pi pi-list"
-            severity="secondary"
-            size="small"
-            (click)="openFormsDialog()"
-            class="ml-4"
-          ></button>
         </div>
 
         <div class="flex items-center gap-2">
+          <app-theme-dropdown
+            [currentThemeId]="formBuilderService.currentForm()?.schema?.themeId"
+            (themeSelected)="onThemeSelected($event)"
+          />
+
           @if (formBuilderService.isPublished()) {
             <span
               class="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full flex items-center gap-1"
@@ -537,6 +536,11 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
   // Sidebar collapse state
   readonly sidebarCollapsed = signal<boolean>(false);
   private readonly SIDEBAR_STORAGE_KEY = 'formBuilder.sidebarCollapsed';
+
+  // Theme-related computed signals (delegate to FormBuilderService)
+  readonly isThemeLoading = computed(() => this.formBuilderService.isThemeLoading());
+  readonly availableThemes = computed(() => this.formBuilderService.availableThemes());
+  readonly currentTheme = computed(() => this.formBuilderService.currentTheme());
 
   private fieldCounter = 0;
   private autoSaveInterval?: number;
@@ -1010,6 +1014,21 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
         next.delete(formId);
       }
       return next;
+    });
+  }
+
+  /**
+   * Handles theme selection from the theme dropdown.
+   * Applies the selected theme to the current form.
+   * @param theme - Selected theme
+   */
+  onThemeSelected(theme: FormTheme): void {
+    this.formBuilderService.applyTheme(theme.id);
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Theme Applied',
+      detail: `"${theme.name}" theme applied to form`,
+      life: 2000,
     });
   }
 

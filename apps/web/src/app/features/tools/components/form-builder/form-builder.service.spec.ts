@@ -1978,4 +1978,325 @@ describe('FormBuilderService', () => {
       expect(step2Fields[0].id).toBe('field-2');
     });
   });
+
+  describe('Theme Management', () => {
+    let mockThemesApiService: jasmine.SpyObj<any>;
+    let mockThemePreviewService: jasmine.SpyObj<any>;
+
+    beforeEach(() => {
+      // Create spies for the injected services
+      mockThemesApiService = jasmine.createSpyObj('ThemesApiService', ['getThemes', 'applyTheme']);
+      mockThemePreviewService = jasmine.createSpyObj('ThemePreviewService', [
+        'applyThemeCss',
+        'clearThemeCss',
+      ]);
+
+      // Replace the injected services with spies
+      (service as any).themesApi = mockThemesApiService;
+      (service as any).themePreviewService = mockThemePreviewService;
+    });
+
+    describe('applyTheme', () => {
+      it('should apply theme and mark form dirty', () => {
+        const mockTheme = {
+          id: 'theme-1',
+          name: 'Neon Theme',
+          description: 'A bright neon theme',
+          thumbnailUrl: 'https://example.com/thumb.jpg',
+          themeConfig: {
+            desktop: {
+              primaryColor: '#FF5733',
+              secondaryColor: '#33FF57',
+              backgroundColor: '#FFFFFF',
+              textColorPrimary: '#000000',
+              textColorSecondary: '#666666',
+              fontFamilyHeading: 'Arial, sans-serif',
+              fontFamilyBody: 'Helvetica, sans-serif',
+              fieldBorderRadius: '8px',
+              fieldSpacing: '12px',
+              containerBackground: '#F5F5F5',
+              containerOpacity: 0.9,
+              containerPosition: 'center' as const,
+            },
+          },
+          usageCount: 0,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        // Set up available themes
+        (service as any)._availableThemes.set([mockTheme]);
+
+        // Set up current form
+        const mockForm: FormMetadata = {
+          id: 'form-1',
+          userId: 'user-1',
+          title: 'Test Form',
+          status: FormStatus.DRAFT,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        service.setCurrentForm(mockForm);
+
+        // Mock API response
+        mockThemesApiService.applyTheme.and.returnValue({
+          subscribe: (callback: any) => {
+            callback.next({ data: { usageCount: 10 } });
+          },
+        });
+
+        // Apply theme
+        service.applyTheme('theme-1');
+
+        // Verify theme was applied
+        expect(service.currentTheme()).toEqual(mockTheme);
+        expect(service.isDirty()).toBe(true);
+        expect(mockThemePreviewService.applyThemeCss).toHaveBeenCalledWith(mockTheme);
+        expect(mockThemesApiService.applyTheme).toHaveBeenCalledWith('theme-1');
+
+        // Verify form schema was updated
+        const currentForm = service.currentForm();
+        expect(currentForm?.schema?.settings?.themeId).toBe('theme-1');
+      });
+
+      it('should warn when theme not found in available themes', () => {
+        spyOn(console, 'warn');
+
+        // Set up available themes (empty)
+        (service as any)._availableThemes.set([]);
+
+        // Set up current form
+        const mockForm: FormMetadata = {
+          id: 'form-1',
+          userId: 'user-1',
+          title: 'Test Form',
+          status: FormStatus.DRAFT,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        service.setCurrentForm(mockForm);
+
+        // Apply non-existent theme
+        service.applyTheme('non-existent-theme');
+
+        // Verify warning was logged
+        expect(console.warn).toHaveBeenCalledWith(
+          'Theme non-existent-theme not found in available themes',
+        );
+        expect(service.currentTheme()).toBeNull();
+        expect(service.isDirty()).toBe(false);
+        expect(mockThemePreviewService.applyThemeCss).not.toHaveBeenCalled();
+      });
+
+      it('should create schema if it does not exist', () => {
+        const mockTheme = {
+          id: 'theme-1',
+          name: 'Test Theme',
+          description: 'A test theme',
+          thumbnailUrl: 'https://example.com/thumb.jpg',
+          themeConfig: {
+            desktop: {
+              primaryColor: '#FF5733',
+              secondaryColor: '#33FF57',
+              backgroundColor: '#FFFFFF',
+              textColorPrimary: '#000000',
+              textColorSecondary: '#666666',
+              fontFamilyHeading: 'Arial, sans-serif',
+              fontFamilyBody: 'Helvetica, sans-serif',
+              fieldBorderRadius: '8px',
+              fieldSpacing: '12px',
+              containerBackground: '#F5F5F5',
+              containerOpacity: 0.9,
+              containerPosition: 'center' as const,
+            },
+          },
+          usageCount: 0,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        // Set up available themes
+        (service as any)._availableThemes.set([mockTheme]);
+
+        // Set up current form without schema
+        const mockForm: FormMetadata = {
+          id: 'form-1',
+          userId: 'user-1',
+          title: 'Test Form',
+          status: FormStatus.DRAFT,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        service.setCurrentForm(mockForm);
+
+        // Mock API response
+        mockThemesApiService.applyTheme.and.returnValue({
+          subscribe: (callback: any) => {
+            callback.next({ data: { usageCount: 10 } });
+          },
+        });
+
+        // Apply theme
+        service.applyTheme('theme-1');
+
+        // Verify schema was created
+        const currentForm = service.currentForm();
+        expect(currentForm?.schema).toBeDefined();
+        expect(currentForm?.schema?.settings?.themeId).toBe('theme-1');
+      });
+    });
+
+    describe('loadTheme', () => {
+      it('should load theme from API and apply it', () => {
+        const mockTheme = {
+          id: 'theme-1',
+          name: 'Test Theme',
+          description: 'A test theme',
+          thumbnailUrl: 'https://example.com/thumb.jpg',
+          themeConfig: {
+            desktop: {
+              primaryColor: '#FF5733',
+              secondaryColor: '#33FF57',
+              backgroundColor: '#FFFFFF',
+              textColorPrimary: '#000000',
+              textColorSecondary: '#666666',
+              fontFamilyHeading: 'Arial, sans-serif',
+              fontFamilyBody: 'Helvetica, sans-serif',
+              fieldBorderRadius: '8px',
+              fieldSpacing: '12px',
+              containerBackground: '#F5F5F5',
+              containerOpacity: 0.9,
+              containerPosition: 'center' as const,
+            },
+          },
+          usageCount: 0,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        // Mock API response
+        mockThemesApiService.getThemes.and.returnValue({
+          subscribe: (callback: any) => {
+            callback.next({ data: [mockTheme] });
+          },
+        });
+
+        // Load theme
+        service.loadTheme('theme-1');
+
+        // Verify theme was loaded and applied
+        expect(service.currentTheme()).toEqual(mockTheme);
+        expect(service.isThemeLoading()).toBe(false);
+        expect(mockThemePreviewService.applyThemeCss).toHaveBeenCalledWith(mockTheme);
+        expect(mockThemesApiService.getThemes).toHaveBeenCalled();
+      });
+
+      it('should handle API error when loading theme', () => {
+        spyOn(console, 'error');
+
+        // Mock API error
+        mockThemesApiService.getThemes.and.returnValue({
+          subscribe: (callback: any) => {
+            callback.error(new Error('API Error'));
+          },
+        });
+
+        // Load theme
+        service.loadTheme('theme-1');
+
+        // Verify error handling
+        expect(console.error).toHaveBeenCalledWith('Failed to load theme:', jasmine.any(Error));
+        expect(service.isThemeLoading()).toBe(false);
+        expect(service.currentTheme()).toBeNull();
+        expect(mockThemePreviewService.applyThemeCss).not.toHaveBeenCalled();
+      });
+
+      it('should not load theme if themeId is empty', () => {
+        // Load empty theme
+        service.loadTheme('');
+
+        // Verify no API call was made
+        expect(mockThemesApiService.getThemes).not.toHaveBeenCalled();
+        expect(service.isThemeLoading()).toBe(false);
+      });
+    });
+
+    describe('clearTheme', () => {
+      it('should clear theme and reset state', () => {
+        const mockTheme = {
+          id: 'theme-1',
+          name: 'Test Theme',
+          description: 'A test theme',
+          thumbnailUrl: 'https://example.com/thumb.jpg',
+          themeConfig: {
+            desktop: {
+              primaryColor: '#FF5733',
+              secondaryColor: '#33FF57',
+              backgroundColor: '#FFFFFF',
+              textColorPrimary: '#000000',
+              textColorSecondary: '#666666',
+              fontFamilyHeading: 'Arial, sans-serif',
+              fontFamilyBody: 'Helvetica, sans-serif',
+              fieldBorderRadius: '8px',
+              fieldSpacing: '12px',
+              containerBackground: '#F5F5F5',
+              containerOpacity: 0.9,
+              containerPosition: 'center' as const,
+            },
+          },
+          usageCount: 0,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        // Set up current theme
+        (service as any)._currentTheme.set(mockTheme);
+
+        // Set up current form with theme
+        const mockForm: FormMetadata = {
+          id: 'form-1',
+          userId: 'user-1',
+          title: 'Test Form',
+          status: FormStatus.DRAFT,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          schema: {
+            id: 'schema-1',
+            formId: 'form-1',
+            version: 1,
+            fields: [],
+            settings: {
+              layout: { columns: 1, spacing: 'medium' },
+              submission: {
+                showSuccessMessage: true,
+                successMessage: 'Thank you!',
+                allowMultipleSubmissions: false,
+              },
+              themeId: 'theme-1',
+            },
+            isPublished: false,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        };
+        service.setCurrentForm(mockForm);
+
+        // Clear theme
+        service.clearTheme();
+
+        // Verify theme was cleared
+        expect(service.currentTheme()).toBeNull();
+        expect(service.isDirty()).toBe(true);
+        expect(mockThemePreviewService.clearThemeCss).toHaveBeenCalled();
+
+        // Verify form schema was updated
+        const currentForm = service.currentForm();
+        expect(currentForm?.schema?.settings?.themeId).toBeUndefined();
+      });
+    });
+  });
 });

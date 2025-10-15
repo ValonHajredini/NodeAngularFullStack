@@ -5042,6 +5042,13 @@ const swaggerSpec = {
             description:
               'Form settings including theme and layout configuration',
           },
+          themeId: {
+            type: 'string',
+            format: 'uuid',
+            nullable: true,
+            description: 'Theme ID for form styling',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
           submissionCount: {
             type: 'integer',
             minimum: 0,
@@ -5071,6 +5078,23 @@ const swaggerSpec = {
       FormSchema: {
         type: 'object',
         properties: {
+          id: {
+            type: 'string',
+            format: 'uuid',
+            description: 'Schema ID',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+          formId: {
+            type: 'string',
+            format: 'uuid',
+            description: 'Form ID this schema belongs to',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+          version: {
+            type: 'integer',
+            description: 'Schema version number',
+            example: 1,
+          },
           fields: {
             type: 'array',
             description: 'Array of form fields',
@@ -5096,6 +5120,59 @@ const swaggerSpec = {
               layout: { type: 'object' },
               rowLayout: { type: 'object' },
             },
+          },
+          themeId: {
+            type: 'string',
+            format: 'uuid',
+            nullable: true,
+            description: 'Theme ID for form styling',
+            example: '123e4567-e89b-12d3-a456-426614174000',
+          },
+          theme: {
+            type: 'object',
+            nullable: true,
+            description: 'Embedded theme object when fetched from API',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              name: { type: 'string' },
+              description: { type: 'string' },
+              thumbnailUrl: { type: 'string' },
+              themeConfig: { type: 'object' },
+              usageCount: { type: 'integer' },
+              isActive: { type: 'boolean' },
+              createdAt: { type: 'string', format: 'date-time' },
+              updatedAt: { type: 'string', format: 'date-time' },
+            },
+          },
+          isPublished: {
+            type: 'boolean',
+            description: 'Whether this schema version is published',
+            example: false,
+          },
+          renderToken: {
+            type: 'string',
+            nullable: true,
+            description: 'JWT token for public form rendering',
+            example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+          },
+          expiresAt: {
+            type: 'string',
+            format: 'date-time',
+            nullable: true,
+            description: 'Token expiration timestamp',
+            example: '2024-02-15T10:00:00.000Z',
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time',
+            description: 'Schema creation timestamp',
+            example: '2024-01-15T10:00:00.000Z',
+          },
+          updatedAt: {
+            type: 'string',
+            format: 'date-time',
+            description: 'Last modification timestamp',
+            example: '2024-01-15T10:00:00.000Z',
           },
         },
       },

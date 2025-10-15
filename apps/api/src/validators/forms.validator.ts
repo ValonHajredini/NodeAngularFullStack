@@ -32,6 +32,11 @@ export const createFormValidator = [
     .isIn([FormStatus.DRAFT, FormStatus.PUBLISHED])
     .withMessage('Status must be either draft or published'),
 
+  body('themeId')
+    .optional()
+    .isUUID()
+    .withMessage('Theme ID must be a valid UUID'),
+
   body('schema')
     .optional()
     .isObject()
@@ -41,6 +46,11 @@ export const createFormValidator = [
     .optional()
     .isArray()
     .withMessage('Schema fields must be an array'),
+
+  body('schema.themeId')
+    .optional()
+    .isUUID()
+    .withMessage('Theme ID must be a valid UUID'),
 ];
 
 /**
@@ -71,6 +81,11 @@ export const updateFormValidator = [
     .isIn([FormStatus.DRAFT, FormStatus.PUBLISHED])
     .withMessage('Status must be either draft or published'),
 
+  body('themeId')
+    .optional()
+    .isUUID()
+    .withMessage('Theme ID must be a valid UUID'),
+
   body('schema')
     .optional()
     .isObject()
@@ -80,6 +95,11 @@ export const updateFormValidator = [
     .optional()
     .isArray()
     .withMessage('Schema fields must be an array'),
+
+  body('schema.themeId')
+    .optional()
+    .isUUID()
+    .withMessage('Theme ID must be a valid UUID'),
 ];
 
 /**

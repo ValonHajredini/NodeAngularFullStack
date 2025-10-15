@@ -380,4 +380,332 @@ describe('FormBuilderComponent', () => {
       expect(component.previewFormSchema()).toBeNull();
     });
   });
+
+  describe('Theme Integration', () => {
+    let themesApiService: jasmine.SpyObj<any>;
+    let themePreviewService: jasmine.SpyObj<any>;
+
+    beforeEach(() => {
+      // Create spies for theme services
+      themesApiService = jasmine.createSpyObj('ThemesApiService', ['getThemes', 'applyTheme']);
+      themePreviewService = jasmine.createSpyObj('ThemePreviewService', [
+        'applyThemeCss',
+        'clearThemeCss',
+      ]);
+
+      // Replace the injected services with spies
+      (formBuilderService as any).themesApi = themesApiService;
+      (formBuilderService as any).themePreviewService = themePreviewService;
+    });
+
+    describe('onThemeSelected', () => {
+      it('should apply theme when theme is selected', () => {
+        const mockTheme = {
+          id: 'theme-1',
+          name: 'Test Theme',
+          description: 'A test theme',
+          thumbnailUrl: 'https://example.com/thumb.jpg',
+          themeConfig: {
+            desktop: {
+              primaryColor: '#FF5733',
+              secondaryColor: '#33FF57',
+              backgroundColor: '#FFFFFF',
+              textColorPrimary: '#000000',
+              textColorSecondary: '#666666',
+              fontFamilyHeading: 'Arial, sans-serif',
+              fontFamilyBody: 'Helvetica, sans-serif',
+              fieldBorderRadius: '8px',
+              fieldSpacing: '12px',
+              containerBackground: '#F5F5F5',
+              containerOpacity: 0.9,
+              containerPosition: 'center' as const,
+            },
+          },
+          usageCount: 0,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        // Mock API response
+        themesApiService.applyTheme.and.returnValue({
+          subscribe: (callback: any) => {
+            callback.next({ data: { usageCount: 10 } });
+          },
+        });
+
+        // Set up available themes
+        (formBuilderService as any)._availableThemes.set([mockTheme]);
+
+        // Set up current form
+        const mockForm = {
+          id: 'form-1',
+          userId: 'user-1',
+          title: 'Test Form',
+          status: FormStatus.DRAFT,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        formBuilderService.setCurrentForm(mockForm);
+
+        // Select theme
+        component.onThemeSelected('theme-1');
+
+        // Verify theme was applied
+        expect(formBuilderService.currentTheme()).toEqual(mockTheme);
+        expect(formBuilderService.isDirty()).toBe(true);
+        expect(themePreviewService.applyThemeCss).toHaveBeenCalledWith(mockTheme);
+        expect(themesApiService.applyTheme).toHaveBeenCalledWith('theme-1');
+      });
+
+      it('should clear theme when "No Theme" is selected', () => {
+        const mockTheme = {
+          id: 'theme-1',
+          name: 'Test Theme',
+          description: 'A test theme',
+          thumbnailUrl: 'https://example.com/thumb.jpg',
+          themeConfig: {
+            desktop: {
+              primaryColor: '#FF5733',
+              secondaryColor: '#33FF57',
+              backgroundColor: '#FFFFFF',
+              textColorPrimary: '#000000',
+              textColorSecondary: '#666666',
+              fontFamilyHeading: 'Arial, sans-serif',
+              fontFamilyBody: 'Helvetica, sans-serif',
+              fieldBorderRadius: '8px',
+              fieldSpacing: '12px',
+              containerBackground: '#F5F5F5',
+              containerOpacity: 0.9,
+              containerPosition: 'center' as const,
+            },
+          },
+          usageCount: 0,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        // Set up current theme
+        (formBuilderService as any)._currentTheme.set(mockTheme);
+
+        // Set up current form with theme
+        const mockForm = {
+          id: 'form-1',
+          userId: 'user-1',
+          title: 'Test Form',
+          status: FormStatus.DRAFT,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          schema: {
+            id: 'schema-1',
+            formId: 'form-1',
+            version: 1,
+            fields: [],
+            settings: {
+              layout: { columns: 1, spacing: 'medium' },
+              submission: {
+                showSuccessMessage: true,
+                successMessage: 'Thank you!',
+                allowMultipleSubmissions: false,
+              },
+              themeId: 'theme-1',
+            },
+            isPublished: false,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        };
+        formBuilderService.setCurrentForm(mockForm);
+
+        // Select "No Theme"
+        component.onThemeSelected('');
+
+        // Verify theme was cleared
+        expect(formBuilderService.currentTheme()).toBeNull();
+        expect(formBuilderService.isDirty()).toBe(true);
+        expect(themePreviewService.clearThemeCss).toHaveBeenCalled();
+      });
+
+      it('should handle theme selection error gracefully', () => {
+        spyOn(console, 'error');
+
+        // Mock API error
+        themesApiService.applyTheme.and.returnValue({
+          subscribe: (callback: any) => {
+            callback.error(new Error('API Error'));
+          },
+        });
+
+        // Set up available themes
+        const mockTheme = {
+          id: 'theme-1',
+          name: 'Test Theme',
+          description: 'A test theme',
+          thumbnailUrl: 'https://example.com/thumb.jpg',
+          themeConfig: {
+            desktop: {
+              primaryColor: '#FF5733',
+              secondaryColor: '#33FF57',
+              backgroundColor: '#FFFFFF',
+              textColorPrimary: '#000000',
+              textColorSecondary: '#666666',
+              fontFamilyHeading: 'Arial, sans-serif',
+              fontFamilyBody: 'Helvetica, sans-serif',
+              fieldBorderRadius: '8px',
+              fieldSpacing: '12px',
+              containerBackground: '#F5F5F5',
+              containerOpacity: 0.9,
+              containerPosition: 'center' as const,
+            },
+          },
+          usageCount: 0,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        (formBuilderService as any)._availableThemes.set([mockTheme]);
+
+        // Set up current form
+        const mockForm = {
+          id: 'form-1',
+          userId: 'user-1',
+          title: 'Test Form',
+          status: FormStatus.DRAFT,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        formBuilderService.setCurrentForm(mockForm);
+
+        // Select theme
+        component.onThemeSelected('theme-1');
+
+        // Verify error was handled gracefully
+        expect(console.error).toHaveBeenCalledWith(
+          'Failed to track theme usage:',
+          jasmine.any(Error),
+        );
+        // Theme should still be applied locally even if API call fails
+        expect(formBuilderService.currentTheme()).toEqual(mockTheme);
+        expect(themePreviewService.applyThemeCss).toHaveBeenCalledWith(mockTheme);
+      });
+    });
+
+    describe('Theme State Integration', () => {
+      it('should reflect theme state in component signals', () => {
+        const mockTheme = {
+          id: 'theme-1',
+          name: 'Test Theme',
+          description: 'A test theme',
+          thumbnailUrl: 'https://example.com/thumb.jpg',
+          themeConfig: {
+            desktop: {
+              primaryColor: '#FF5733',
+              secondaryColor: '#33FF57',
+              backgroundColor: '#FFFFFF',
+              textColorPrimary: '#000000',
+              textColorSecondary: '#666666',
+              fontFamilyHeading: 'Arial, sans-serif',
+              fontFamilyBody: 'Helvetica, sans-serif',
+              fieldBorderRadius: '8px',
+              fieldSpacing: '12px',
+              containerBackground: '#F5F5F5',
+              containerOpacity: 0.9,
+              containerPosition: 'center' as const,
+            },
+          },
+          usageCount: 0,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        // Set theme in service
+        (formBuilderService as any)._currentTheme.set(mockTheme);
+
+        // Trigger change detection
+        fixture.detectChanges();
+
+        // Verify component reflects theme state
+        expect(component.currentTheme()).toEqual(mockTheme);
+      });
+
+      it('should reflect theme loading state in component signals', () => {
+        // Set loading state in service
+        (formBuilderService as any)._isThemeLoading.set(true);
+
+        // Trigger change detection
+        fixture.detectChanges();
+
+        // Verify component reflects loading state
+        expect(component.isThemeLoading()).toBe(true);
+      });
+
+      it('should reflect available themes in component signals', () => {
+        const mockThemes = [
+          {
+            id: 'theme-1',
+            name: 'Theme 1',
+            description: 'First theme',
+            thumbnailUrl: 'https://example.com/thumb1.jpg',
+            themeConfig: {
+              desktop: {
+                primaryColor: '#FF5733',
+                secondaryColor: '#33FF57',
+                backgroundColor: '#FFFFFF',
+                textColorPrimary: '#000000',
+                textColorSecondary: '#666666',
+                fontFamilyHeading: 'Arial, sans-serif',
+                fontFamilyBody: 'Helvetica, sans-serif',
+                fieldBorderRadius: '8px',
+                fieldSpacing: '12px',
+                containerBackground: '#F5F5F5',
+                containerOpacity: 0.9,
+                containerPosition: 'center' as const,
+              },
+            },
+            usageCount: 0,
+            isActive: true,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+          {
+            id: 'theme-2',
+            name: 'Theme 2',
+            description: 'Second theme',
+            thumbnailUrl: 'https://example.com/thumb2.jpg',
+            themeConfig: {
+              desktop: {
+                primaryColor: '#33FF57',
+                secondaryColor: '#FF5733',
+                backgroundColor: '#F0F0F0',
+                textColorPrimary: '#333333',
+                textColorSecondary: '#666666',
+                fontFamilyHeading: 'Georgia, serif',
+                fontFamilyBody: 'Times, serif',
+                fieldBorderRadius: '4px',
+                fieldSpacing: '16px',
+                containerBackground: '#FFFFFF',
+                containerOpacity: 0.95,
+                containerPosition: 'center' as const,
+              },
+            },
+            usageCount: 0,
+            isActive: true,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ];
+
+        // Set available themes in service
+        (formBuilderService as any)._availableThemes.set(mockThemes);
+
+        // Trigger change detection
+        fixture.detectChanges();
+
+        // Verify component reflects available themes
+        expect(component.availableThemes()).toEqual(mockThemes);
+      });
+    });
+  });
 });

@@ -91,13 +91,14 @@ export class PublicFormsController {
         throw new ApiError('This form has expired', 410, 'TOKEN_EXPIRED');
       }
 
-      // Return schema and settings
+      // Return schema and settings with embedded theme
       res.status(200).json({
         success: true,
         message: 'Form schema retrieved successfully',
         data: {
           schema: formSchema,
           settings: formSchema.settings,
+          theme: formSchema.theme || null,
         },
         timestamp: new Date().toISOString(),
       });

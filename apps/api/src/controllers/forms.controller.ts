@@ -33,7 +33,8 @@ export class FormsController {
    * {
    *   "title": "Contact Form",
    *   "description": "Customer feedback form",
-   *   "status": "draft"
+   *   "status": "draft",
+   *   "themeId": "uuid-here"
    * }
    */
   createForm = AsyncHandler(
@@ -57,7 +58,12 @@ export class FormsController {
         title: req.body.title,
         description: req.body.description,
         status: req.body.status || FormStatus.DRAFT,
-        schema: req.body.schema,
+        schema: req.body.schema
+          ? {
+              ...req.body.schema,
+              themeId: req.body.themeId,
+            }
+          : undefined,
       };
 
       // Create form using service
@@ -202,7 +208,8 @@ export class FormsController {
    * Authorization: Bearer <token>
    * {
    *   "title": "Updated Contact Form",
-   *   "description": "Updated description"
+   *   "description": "Updated description",
+   *   "themeId": "new-theme-uuid"
    * }
    */
   updateForm = AsyncHandler(
@@ -256,11 +263,19 @@ export class FormsController {
         updateData.description = req.body.description;
       if (req.body.status !== undefined) updateData.status = req.body.status;
 
+      // Prepare schema data with themeId
+      const schemaData = req.body.schema
+        ? {
+            ...req.body.schema,
+            themeId: req.body.themeId,
+          }
+        : undefined;
+
       // Update form using service
       const updatedForm = await formsService.updateForm(
         id,
         updateData,
-        req.body.schema
+        schemaData
       );
 
       res.status(200).json({

@@ -53,6 +53,10 @@ const router = Router();
  *                 enum: [draft, published]
  *                 default: draft
  *                 description: Form status
+ *               themeId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: Optional theme ID for form styling
  *               schema:
  *                 type: object
  *                 description: Optional form schema
@@ -64,6 +68,7 @@ const router = Router();
  *             title: "Contact Form"
  *             description: "Customer feedback form"
  *             status: "draft"
+ *             themeId: "123e4567-e89b-12d3-a456-426614174000"
  *     responses:
  *       201:
  *         description: Form created successfully
@@ -572,6 +577,10 @@ router.get(
  *                 type: string
  *                 enum: [draft, published]
  *                 description: Form status
+ *               themeId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: Optional theme ID for form styling
  *               schema:
  *                 type: object
  *                 description: Optional form schema
@@ -583,6 +592,7 @@ router.get(
  *             title: "Updated Contact Form"
  *             description: "Updated description"
  *             status: "draft"
+ *             themeId: "123e4567-e89b-12d3-a456-426614174000"
  *     responses:
  *       200:
  *         description: Form updated successfully

@@ -22,7 +22,8 @@ export class FormSchemasRepository {
    *   version: 1,
    *   fields: [...],
    *   settings: {...},
-   *   isPublished: false
+   *   isPublished: false,
+   *   themeId: 'theme-uuid'
    * });
    */
   async createSchema(
@@ -39,9 +40,10 @@ export class FormSchemasRepository {
           schema_json,
           is_published,
           render_token,
-          expires_at
+          expires_at,
+          theme_id
         )
-        VALUES ($1, $2, $3, $4, $5, $6)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING
           id,
           form_id as "formId",
@@ -50,6 +52,7 @@ export class FormSchemasRepository {
           is_published as "isPublished",
           render_token as "renderToken",
           expires_at as "expiresAt",
+          theme_id as "themeId",
           created_at as "createdAt",
           updated_at as "updatedAt"
       `;
@@ -67,6 +70,7 @@ export class FormSchemasRepository {
         schema.isPublished || false,
         schema.renderToken || null,
         schema.expiresAt || null,
+        schema.themeId || null,
       ];
 
       const result = await client.query(query, values);
@@ -87,6 +91,7 @@ export class FormSchemasRepository {
         isPublished: row.isPublished,
         renderToken: row.renderToken,
         expiresAt: row.expiresAt,
+        themeId: row.themeId,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
       } as FormSchema;
@@ -98,9 +103,9 @@ export class FormSchemasRepository {
   }
 
   /**
-   * Finds a form schema by its ID.
+   * Finds a form schema by its ID with embedded theme data.
    * @param id - Schema ID to find
-   * @returns Promise containing the schema or null if not found
+   * @returns Promise containing the schema with theme or null if not found
    * @throws {Error} When database query fails
    * @example
    * const schema = await formSchemasRepository.findById('schema-uuid');
@@ -111,17 +116,28 @@ export class FormSchemasRepository {
     try {
       const query = `
         SELECT
-          id,
-          form_id as "formId",
-          schema_version as version,
-          schema_json,
-          is_published as "isPublished",
-          render_token as "renderToken",
-          expires_at as "expiresAt",
-          created_at as "createdAt",
-          updated_at as "updatedAt"
+          form_schemas.id,
+          form_schemas.form_id as "formId",
+          form_schemas.schema_version as version,
+          form_schemas.schema_json,
+          form_schemas.is_published as "isPublished",
+          form_schemas.render_token as "renderToken",
+          form_schemas.expires_at as "expiresAt",
+          form_schemas.theme_id as "themeId",
+          form_schemas.created_at as "createdAt",
+          form_schemas.updated_at as "updatedAt",
+          form_themes.id as "theme.id",
+          form_themes.name as "theme.name",
+          form_themes.description as "theme.description",
+          form_themes.thumbnail_url as "theme.thumbnailUrl",
+          form_themes.theme_config as "theme.themeConfig",
+          form_themes.usage_count as "theme.usageCount",
+          form_themes.is_active as "theme.isActive",
+          form_themes.created_at as "theme.createdAt",
+          form_themes.updated_at as "theme.updatedAt"
         FROM form_schemas
-        WHERE id = $1
+        LEFT JOIN form_themes ON form_schemas.theme_id = form_themes.id
+        WHERE form_schemas.id = $1
       `;
 
       const result = await client.query(query, [id]);
@@ -133,7 +149,7 @@ export class FormSchemasRepository {
       const row = result.rows[0];
       const parsedSchemaJson = row.schema_json;
 
-      return {
+      const schema: FormSchema = {
         id: row.id,
         formId: row.formId,
         version: row.version,
@@ -142,9 +158,28 @@ export class FormSchemasRepository {
         isPublished: row.isPublished,
         renderToken: row.renderToken,
         expiresAt: row.expiresAt,
+        themeId: row.themeId,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
-      } as FormSchema;
+      };
+
+      // Add embedded theme object if theme exists
+      if (row['theme.id']) {
+        schema.theme = {
+          id: row['theme.id'],
+          name: row['theme.name'],
+          description: row['theme.description'],
+          thumbnailUrl: row['theme.thumbnailUrl'],
+          themeConfig: row['theme.themeConfig'],
+          usageCount: row['theme.usageCount'],
+          isActive: row['theme.isActive'],
+          createdBy: undefined, // Not included in this query
+          createdAt: row['theme.createdAt'],
+          updatedAt: row['theme.updatedAt'],
+        };
+      }
+
+      return schema;
     } catch (error: any) {
       throw new Error(`Failed to find schema by ID: ${error.message}`);
     } finally {
@@ -173,6 +208,7 @@ export class FormSchemasRepository {
           is_published as "isPublished",
           render_token as "renderToken",
           expires_at as "expiresAt",
+          theme_id as "themeId",
           created_at as "createdAt",
           updated_at as "updatedAt"
         FROM form_schemas
@@ -192,6 +228,7 @@ export class FormSchemasRepository {
           isPublished: row.isPublished,
           renderToken: row.renderToken,
           expiresAt: row.expiresAt,
+          themeId: row.themeId,
           createdAt: row.createdAt,
           updatedAt: row.updatedAt,
         };
@@ -204,9 +241,9 @@ export class FormSchemasRepository {
   }
 
   /**
-   * Finds a form schema by render token.
+   * Finds a form schema by render token with embedded theme data.
    * @param token - Render token to search for
-   * @returns Promise containing the schema or null if not found
+   * @returns Promise containing the schema with theme or null if not found
    * @throws {Error} When database query fails
    * @example
    * const schema = await formSchemasRepository.findByToken('jwt-token-here');
@@ -217,17 +254,28 @@ export class FormSchemasRepository {
     try {
       const query = `
         SELECT
-          id,
-          form_id as "formId",
-          schema_version as version,
-          schema_json,
-          is_published as "isPublished",
-          render_token as "renderToken",
-          expires_at as "expiresAt",
-          created_at as "createdAt",
-          updated_at as "updatedAt"
+          form_schemas.id,
+          form_schemas.form_id as "formId",
+          form_schemas.schema_version as version,
+          form_schemas.schema_json,
+          form_schemas.is_published as "isPublished",
+          form_schemas.render_token as "renderToken",
+          form_schemas.expires_at as "expiresAt",
+          form_schemas.theme_id as "themeId",
+          form_schemas.created_at as "createdAt",
+          form_schemas.updated_at as "updatedAt",
+          form_themes.id as "theme.id",
+          form_themes.name as "theme.name",
+          form_themes.description as "theme.description",
+          form_themes.thumbnail_url as "theme.thumbnailUrl",
+          form_themes.theme_config as "theme.themeConfig",
+          form_themes.usage_count as "theme.usageCount",
+          form_themes.is_active as "theme.isActive",
+          form_themes.created_at as "theme.createdAt",
+          form_themes.updated_at as "theme.updatedAt"
         FROM form_schemas
-        WHERE render_token = $1 AND is_published = true
+        LEFT JOIN form_themes ON form_schemas.theme_id = form_themes.id
+        WHERE form_schemas.render_token = $1 AND form_schemas.is_published = true
       `;
 
       const result = await client.query(query, [token]);
@@ -239,7 +287,7 @@ export class FormSchemasRepository {
       const row = result.rows[0];
       const parsedSchemaJson = row.schema_json;
 
-      return {
+      const schema: FormSchema = {
         id: row.id,
         formId: row.formId,
         version: row.version,
@@ -248,9 +296,28 @@ export class FormSchemasRepository {
         isPublished: row.isPublished,
         renderToken: row.renderToken,
         expiresAt: row.expiresAt,
+        themeId: row.themeId,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
-      } as FormSchema;
+      };
+
+      // Add embedded theme object if theme exists
+      if (row['theme.id']) {
+        schema.theme = {
+          id: row['theme.id'],
+          name: row['theme.name'],
+          description: row['theme.description'],
+          thumbnailUrl: row['theme.thumbnailUrl'],
+          themeConfig: row['theme.themeConfig'],
+          usageCount: row['theme.usageCount'],
+          isActive: row['theme.isActive'],
+          createdBy: undefined, // Not included in this query
+          createdAt: row['theme.createdAt'],
+          updatedAt: row['theme.updatedAt'],
+        };
+      }
+
+      return schema;
     } catch (error: any) {
       throw new Error(`Failed to find schema by token: ${error.message}`);
     } finally {
@@ -267,7 +334,8 @@ export class FormSchemasRepository {
    * @example
    * const schema = await formSchemasRepository.updateSchema('schema-uuid', {
    *   fields: [...],
-   *   settings: {...}
+   *   settings: {...},
+   *   themeId: 'theme-uuid'
    * });
    */
   async updateSchema(
@@ -330,6 +398,11 @@ export class FormSchemasRepository {
         values.push(schema.expiresAt);
       }
 
+      if (schema.themeId !== undefined) {
+        updateFields.push(`theme_id = $${paramIndex++}`);
+        values.push(schema.themeId);
+      }
+
       if (updateFields.length === 0) {
         throw new Error('No fields to update');
       }
@@ -350,6 +423,7 @@ export class FormSchemasRepository {
           is_published as "isPublished",
           render_token as "renderToken",
           expires_at as "expiresAt",
+          theme_id as "themeId",
           created_at as "createdAt",
           updated_at as "updatedAt"
       `;
@@ -372,6 +446,7 @@ export class FormSchemasRepository {
         isPublished: row.isPublished,
         renderToken: row.renderToken,
         expiresAt: row.expiresAt,
+        themeId: row.themeId,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
       } as FormSchema;
@@ -420,6 +495,7 @@ export class FormSchemasRepository {
           is_published as "isPublished",
           render_token as "renderToken",
           expires_at as "expiresAt",
+          theme_id as "themeId",
           created_at as "createdAt",
           updated_at as "updatedAt"
       `;
@@ -442,6 +518,7 @@ export class FormSchemasRepository {
         isPublished: row.isPublished,
         renderToken: row.renderToken,
         expiresAt: row.expiresAt,
+        themeId: row.themeId,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
       } as FormSchema;
@@ -478,6 +555,7 @@ export class FormSchemasRepository {
           is_published as "isPublished",
           render_token as "renderToken",
           expires_at as "expiresAt",
+          theme_id as "themeId",
           created_at as "createdAt",
           updated_at as "updatedAt"
       `;
@@ -500,6 +578,7 @@ export class FormSchemasRepository {
         isPublished: row.isPublished,
         renderToken: row.renderToken,
         expiresAt: row.expiresAt,
+        themeId: row.themeId,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
       } as FormSchema;

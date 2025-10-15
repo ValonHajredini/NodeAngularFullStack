@@ -21,12 +21,12 @@ export class StepProgressIndicatorComponent {
   /**
    * Current active step index (0-based)
    */
-  @Input() currentStepIndex: number = 0;
+  @Input() currentStepIndex = 0;
 
   /**
    * Total number of steps
    */
-  @Input() totalSteps: number = 1;
+  @Input() totalSteps = 1;
 
   /**
    * Array of form steps with metadata
@@ -36,7 +36,7 @@ export class StepProgressIndicatorComponent {
   /**
    * Set of validated step indices
    */
-  @Input() validatedSteps: Set<number> = new Set();
+  @Input() validatedSteps = new Set<number>();
 
   /**
    * Event emitted when user clicks on a step (for navigation)

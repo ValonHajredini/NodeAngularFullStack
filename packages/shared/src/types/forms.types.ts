@@ -6,7 +6,7 @@
 import { FormTheme, ResponsiveThemeConfig, ThemeProperties } from './theme.types';
 
 // Re-export theme types for convenience
-export { FormTheme, ResponsiveThemeConfig, ThemeProperties } from './theme.types';
+export type { FormTheme, ResponsiveThemeConfig, ThemeProperties } from './theme.types';
 
 /**
  * Supported form field types
@@ -454,6 +454,8 @@ export interface FormSchema {
   renderToken?: string;
   /** Token expiration timestamp */
   expiresAt?: Date;
+  /** Optional theme ID reference for form styling */
+  themeId?: string;
   /** Schema creation timestamp */
   createdAt: Date;
   /** Schema last update timestamp */
