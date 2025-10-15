@@ -145,3 +145,8 @@ public/uploads/
 playwright-report
 test-results
 reports/security
+
+# Docker
+.env.docker.local
+docker-compose.override.yml
+docker-compose.prod.yml

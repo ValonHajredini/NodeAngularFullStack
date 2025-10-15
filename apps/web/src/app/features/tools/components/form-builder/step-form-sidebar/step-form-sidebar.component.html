@@ -1,9 +1,17 @@
 <div class="step-form-sidebar p-4 flex flex-col gap-4">
+  <!-- Confirmation Dialog -->
+  <p-confirmDialog></p-confirmDialog>
+
   <!-- Header Section -->
   <div class="sidebar-header">
     <h3 class="text-lg font-semibold text-gray-800 mb-2">Step Form Configuration</h3>
     <p class="text-sm text-gray-600 mb-4">
       Create multi-step forms with custom step titles and descriptions.
+      @if (rowLayoutEnabled()) {
+        <span class="text-xs text-blue-600 block mt-1">
+          Row layout is enabled. Rows are grouped by steps below.
+        </span>
+      }
     </p>
   </div>
 
@@ -12,7 +20,7 @@
     <div class="flex items-center justify-between">
       <label class="font-medium text-gray-700">Enable Step Form</label>
       <p-toggleButton
-        [(ngModel)]="stepFormEnabled"
+        [(ngModel)]="stepFormToggleValue"
         (onChange)="onToggleStepForm($event)"
         onLabel="ON"
         offLabel="OFF"
@@ -49,60 +57,191 @@
         @for (step of steps(); track step.id) {
           <div
             cdkDrag
-            class="step-item border border-gray-300 rounded-md p-3 flex items-center gap-3 hover:border-primary-500 transition-colors bg-white"
+            class="step-group-container border border-gray-300 rounded-md bg-white hover:border-primary-500 transition-colors"
           >
-            <!-- Drag Handle -->
-            <div cdkDragHandle class="drag-handle cursor-move" aria-label="Drag to reorder">
-              <i class="pi pi-bars text-gray-400 hover:text-gray-600"></i>
-            </div>
-
-            <!-- Step Badge -->
-            <div
-              class="step-badge flex-shrink-0 w-6 h-6 rounded-full bg-primary-500 text-white text-xs font-semibold flex items-center justify-center"
-            >
-              {{ step.order + 1 }}
-            </div>
-
-            <!-- Step Info -->
-            <div class="step-info flex-1 min-w-0">
-              <div class="step-title font-medium text-gray-800 truncate">
-                {{ step.title }}
+            <!-- Step Header -->
+            <div class="step-item-header p-3 flex items-center gap-3">
+              <!-- Drag Handle -->
+              <div cdkDragHandle class="drag-handle cursor-move" aria-label="Drag to reorder">
+                <i class="pi pi-bars text-gray-400 hover:text-gray-600"></i>
               </div>
-              @if (step.description) {
-                <div class="step-description text-xs text-gray-500 truncate">
-                  {{ step.description }}
-                </div>
+
+              <!-- Expand/Collapse Icon (only shown when row layout enabled) -->
+              @if (rowLayoutEnabled()) {
+                <button
+                  type="button"
+                  class="expand-button p-1 rounded hover:bg-gray-100 transition-colors"
+                  (click)="toggleStepExpansion(step.id)"
+                  [attr.aria-label]="isStepExpanded(step.id) ? 'Collapse' : 'Expand'"
+                >
+                  <i
+                    class="pi text-gray-600 text-sm"
+                    [class.pi-chevron-down]="isStepExpanded(step.id)"
+                    [class.pi-chevron-right]="!isStepExpanded(step.id)"
+                  ></i>
+                </button>
               }
+
+              <!-- Step Badge -->
+              <div
+                class="step-badge flex-shrink-0 w-6 h-6 rounded-full bg-primary-500 text-white text-xs font-semibold flex items-center justify-center"
+              >
+                {{ step.order + 1 }}
+              </div>
+
+              <!-- Step Info -->
+              <div
+                class="step-info flex-1 min-w-0 cursor-pointer"
+                (click)="onSetActiveStep(step.id)"
+              >
+                <div class="step-title font-medium text-gray-800 truncate">
+                  {{ step.title }}
+                </div>
+                <div class="step-meta flex items-center gap-2 mt-1">
+                  @if (step.description) {
+                    <span class="step-description text-xs text-gray-500 truncate">
+                      {{ step.description }}
+                    </span>
+                  }
+                  @if (rowLayoutEnabled() && getRowCountForStep(step.id) > 0) {
+                    <span
+                      class="row-count-badge text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full"
+                    >
+                      {{ getRowCountForStep(step.id) }}
+                      {{ getRowCountForStep(step.id) === 1 ? 'row' : 'rows' }}
+                    </span>
+                  }
+                </div>
+              </div>
+
+              <!-- Actions -->
+              <div class="step-actions flex items-center gap-2">
+                <!-- Add Row Button (only when row layout enabled) -->
+                @if (rowLayoutEnabled()) {
+                  <button
+                    type="button"
+                    class="icon-button p-1 rounded hover:bg-green-50 transition-colors"
+                    (click)="onAddRowToStep(step.id)"
+                    aria-label="Add row to step"
+                    pTooltip="Add row to this step"
+                    tooltipPosition="top"
+                  >
+                    <i class="pi pi-plus text-green-600 text-sm"></i>
+                  </button>
+                }
+                <button
+                  type="button"
+                  class="icon-button p-1 rounded hover:bg-gray-100 transition-colors"
+                  (click)="onEditStep(step)"
+                  aria-label="Edit step"
+                  pTooltip="Edit step"
+                  tooltipPosition="top"
+                >
+                  <i class="pi pi-pencil text-gray-600 text-sm"></i>
+                </button>
+                <button
+                  type="button"
+                  class="icon-button p-1 rounded hover:bg-red-50 transition-colors"
+                  (click)="onDeleteStep(step)"
+                  [disabled]="!canDeleteStep()"
+                  aria-label="Delete step"
+                  [pTooltip]="deleteStepTooltip()"
+                  tooltipPosition="top"
+                >
+                  <i
+                    class="pi pi-trash text-sm"
+                    [class.text-red-600]="canDeleteStep()"
+                    [class.text-gray-300]="!canDeleteStep()"
+                  ></i>
+                </button>
+              </div>
             </div>
 
-            <!-- Actions -->
-            <div class="step-actions flex items-center gap-2">
-              <button
-                type="button"
-                class="icon-button p-1 rounded hover:bg-gray-100 transition-colors"
-                (click)="onEditStep(step)"
-                aria-label="Edit step"
-                pTooltip="Edit step"
-                tooltipPosition="top"
-              >
-                <i class="pi pi-pencil text-gray-600 text-sm"></i>
-              </button>
-              <button
-                type="button"
-                class="icon-button p-1 rounded hover:bg-red-50 transition-colors"
-                (click)="onDeleteStep(step)"
-                [disabled]="!canDeleteStep()"
-                aria-label="Delete step"
-                [pTooltip]="deleteStepTooltip()"
-                tooltipPosition="top"
-              >
-                <i
-                  class="pi pi-trash text-sm"
-                  [class.text-red-600]="canDeleteStep()"
-                  [class.text-gray-300]="!canDeleteStep()"
-                ></i>
-              </button>
-            </div>
+            <!-- Rows Section (shown when row layout enabled and step expanded) -->
+            @if (rowLayoutEnabled() && isStepExpanded(step.id)) {
+              <div class="step-rows-section border-t border-gray-200 bg-gray-50">
+                @if (getRowsForStep(step.id).length > 0) {
+                  <!-- Rows List -->
+                  <div
+                    class="rows-list p-3 space-y-2"
+                    [class.scrollable]="getRowsForStep(step.id).length > 4"
+                  >
+                    @for (row of getRowsForStep(step.id); track row.rowId) {
+                      <div
+                        class="row-item bg-white border border-gray-200 rounded p-2 flex items-center gap-2"
+                      >
+                        <!-- Row Label -->
+                        <div class="row-label flex-1 text-sm text-gray-700">
+                          <span class="font-medium">Row {{ row.order + 1 }}</span>
+                          <span class="text-gray-500 ml-2 columns-text">
+                            {{ row.columnCount }}
+                            {{ row.columnCount === 1 ? 'column' : 'columns' }}
+                          </span>
+                        </div>
+
+                        <!-- Column Count Selector -->
+                        <div class="column-selector flex gap-1">
+                          @for (count of [1, 2, 3, 4]; track count) {
+                            <button
+                              type="button"
+                              class="column-btn w-6 h-6 text-xs rounded transition-colors"
+                              [class.bg-primary-500]="row.columnCount === count"
+                              [class.text-white]="row.columnCount === count"
+                              [class.bg-gray-200]="row.columnCount !== count"
+                              [class.text-gray-600]="row.columnCount !== count"
+                              [class.hover:bg-primary-400]="row.columnCount === count"
+                              [class.hover:bg-gray-300]="row.columnCount !== count"
+                              (click)="onUpdateRowColumns(row.rowId, $any(count))"
+                              [attr.aria-label]="count + ' columns'"
+                            >
+                              {{ count }}
+                            </button>
+                          }
+                        </div>
+
+                        <!-- Delete Row Button -->
+                        <button
+                          type="button"
+                          class="delete-row-btn p-1 rounded hover:bg-red-50 transition-colors"
+                          (click)="onRemoveRowFromStep(row.rowId)"
+                          aria-label="Remove row"
+                          pTooltip="Remove row"
+                          tooltipPosition="left"
+                        >
+                          <i class="pi pi-trash text-red-500 text-xs"></i>
+                        </button>
+                      </div>
+                    }
+                  </div>
+
+                  <!-- Add Row Button -->
+                  <div class="add-row-section px-3 pb-3">
+                    <button
+                      type="button"
+                      class="add-row-btn w-full py-2 px-3 text-xs bg-white border border-dashed border-gray-300 rounded hover:border-primary-500 hover:bg-primary-50 transition-colors text-gray-600 hover:text-primary-600"
+                      (click)="onAddRowToStep(step.id)"
+                    >
+                      <i class="pi pi-plus text-xs mr-1"></i>
+                      Add Row to {{ step.title }}
+                    </button>
+                  </div>
+                } @else {
+                  <!-- Empty State -->
+                  <div class="empty-state p-4 text-center">
+                    <i class="pi pi-inbox text-gray-300 text-2xl mb-2 block"></i>
+                    <p class="text-xs text-gray-500 mb-3">No rows in this step yet</p>
+                    <button
+                      type="button"
+                      class="add-first-row-btn py-1.5 px-3 text-xs bg-primary-500 text-white rounded hover:bg-primary-600 transition-colors"
+                      (click)="onAddRowToStep(step.id)"
+                    >
+                      <i class="pi pi-plus text-xs mr-1"></i>
+                      Add First Row
+                    </button>
+                  </div>
+                }
+              </div>
+            }
           </div>
         }
       </div>

@@ -337,9 +337,9 @@ packages/
 
 **Test User Credentials:**
 
-- Admin: admin@example.com / password123
-- User: user@example.com / password123
-- ReadOnly: readonly@example.com / password123
+- Admin: admin@example.com / Admin123!@#
+- User: user@example.com / User123!@#
+- ReadOnly: readonly@example.com / Read123!@#
 
 ## Utility Scripts
 

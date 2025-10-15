@@ -224,50 +224,83 @@ import { trigger, transition, style, animate } from '@angular/animations';
           </div>
         </div>
 
-        <!-- Right sidebar: Row Layout / Step Form (sticky, tabbed) -->
-        <div class="flex-shrink-0 sticky-sidebar bg-white border-l border-gray-200">
-          <!-- Tab Navigation -->
-          <div class="border-b border-gray-200 bg-gray-50">
-            <nav class="flex" aria-label="Sidebar tabs">
-              <button
-                type="button"
-                (click)="activeSidebarTab.set(0)"
-                class="flex-1 py-3 px-4 text-center text-sm font-medium transition-colors"
-                [class.border-b-2]="activeSidebarTab() === 0"
-                [class.border-blue-500]="activeSidebarTab() === 0"
-                [class.text-blue-600]="activeSidebarTab() === 0"
-                [class.text-gray-600]="activeSidebarTab() !== 0"
-                [class.hover:text-blue-600]="activeSidebarTab() !== 0"
-              >
-                <i class="pi pi-th-large mr-2"></i>
-                Row Layout
-              </button>
-              <button
-                type="button"
-                (click)="activeSidebarTab.set(1)"
-                class="flex-1 py-3 px-4 text-center text-sm font-medium transition-colors"
-                [class.border-b-2]="activeSidebarTab() === 1"
-                [class.border-blue-500]="activeSidebarTab() === 1"
-                [class.text-blue-600]="activeSidebarTab() === 1"
-                [class.text-gray-600]="activeSidebarTab() !== 1"
-                [class.hover:text-blue-600]="activeSidebarTab() !== 1"
-              >
-                <i class="pi pi-list mr-2"></i>
-                Step Form
-              </button>
-            </nav>
-          </div>
+        <!-- Floating toggle button (only visible when sidebar collapsed) -->
+        @if (sidebarCollapsed()) {
+          <button
+            pButton
+            icon="pi pi-cog"
+            (click)="toggleSidebar()"
+            class="floating-sidebar-toggle"
+            [attr.aria-label]="'Expand layout settings'"
+            severity="primary"
+            [rounded]="true"
+            title="Expand Layout Settings"
+          ></button>
+        }
 
-          <!-- Tab Content -->
-          <div class="sidebar-content">
-            @if (activeSidebarTab() === 0) {
-              <app-row-layout-sidebar></app-row-layout-sidebar>
-            }
-            @if (activeSidebarTab() === 1) {
-              <app-step-form-sidebar></app-step-form-sidebar>
-            }
+        <!-- Right sidebar: Row Layout / Step Form (sticky, tabbed, collapsible) -->
+        @if (!sidebarCollapsed()) {
+          <div class="flex-shrink-0 sticky-sidebar right-sidebar bg-white border-l border-gray-200">
+            <!-- Header with close button -->
+            <div
+              class="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50"
+            >
+              <span class="text-sm font-semibold text-gray-700">Layout Settings</span>
+              <button
+                pButton
+                icon="pi pi-times"
+                (click)="toggleSidebar()"
+                size="small"
+                [text]="true"
+                [rounded]="true"
+                [attr.aria-label]="'Collapse sidebar'"
+                title="Collapse Sidebar"
+              ></button>
+            </div>
+
+            <!-- Tab Navigation -->
+            <div class="border-b border-gray-200 bg-gray-50">
+              <nav class="flex" aria-label="Sidebar tabs">
+                <button
+                  type="button"
+                  (click)="activeSidebarTab.set(0)"
+                  class="flex-1 py-3 px-4 text-center text-sm font-medium transition-colors"
+                  [class.border-b-2]="activeSidebarTab() === 0"
+                  [class.border-blue-500]="activeSidebarTab() === 0"
+                  [class.text-blue-600]="activeSidebarTab() === 0"
+                  [class.text-gray-600]="activeSidebarTab() !== 0"
+                  [class.hover:text-blue-600]="activeSidebarTab() !== 0"
+                >
+                  <i class="pi pi-th-large mr-2"></i>
+                  Row Layout
+                </button>
+                <button
+                  type="button"
+                  (click)="activeSidebarTab.set(1)"
+                  class="flex-1 py-3 px-4 text-center text-sm font-medium transition-colors"
+                  [class.border-b-2]="activeSidebarTab() === 1"
+                  [class.border-blue-500]="activeSidebarTab() === 1"
+                  [class.text-blue-600]="activeSidebarTab() === 1"
+                  [class.text-gray-600]="activeSidebarTab() !== 1"
+                  [class.hover:text-blue-600]="activeSidebarTab() !== 1"
+                >
+                  <i class="pi pi-list mr-2"></i>
+                  Step Form
+                </button>
+              </nav>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="sidebar-content h-[calc(100%-104px)] overflow-hidden">
+              @if (activeSidebarTab() === 0) {
+                <app-row-layout-sidebar></app-row-layout-sidebar>
+              }
+              @if (activeSidebarTab() === 1) {
+                <app-step-form-sidebar></app-step-form-sidebar>
+              }
+            </div>
           </div>
-        </div>
+        }
       </div>
 
       <!-- Unified Field Editor Modal (Story 16.8) -->
@@ -421,13 +454,30 @@ import { trigger, transition, style, animate } from '@angular/animations';
         display: block;
         height: calc(100vh - 70px);
         overflow: hidden;
-        // border: 1px solid red
       }
 
       .sticky-sidebar {
         height: 100%;
         overflow-y: auto;
         overflow-x: hidden;
+      }
+
+      /* Right sidebar with equal width for both tabs */
+      .right-sidebar {
+        width: 380px;
+        min-width: 380px;
+      }
+
+      /* Floating toggle button (shown when sidebar collapsed) */
+      .floating-sidebar-toggle {
+        position: fixed;
+        right: 16px;
+        top: 25%;
+        transform: translateY(-50%);
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        width: 48px;
+        height: 48px;
       }
 
       .canvas-container {
@@ -484,10 +534,17 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
   // Sidebar tab state (Story 19.2)
   readonly activeSidebarTab = signal<number>(0); // 0 = Row Layout, 1 = Step Form
 
+  // Sidebar collapse state
+  readonly sidebarCollapsed = signal<boolean>(false);
+  private readonly SIDEBAR_STORAGE_KEY = 'formBuilder.sidebarCollapsed';
+
   private fieldCounter = 0;
   private autoSaveInterval?: number;
 
   ngOnInit(): void {
+    // Restore sidebar collapse state from localStorage
+    this.restoreSidebarCollapseState();
+
     // Check if loading existing form from route param
     const formId = this.route.snapshot.paramMap.get('id');
     if (formId) {
@@ -1473,5 +1530,27 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
     // Background settings are now managed in form-settings.component
     // They are stored in schema.settings.background, not as fields
     // This method is kept for compatibility but does nothing
+  }
+
+  /**
+   * Toggles the sidebar collapse state and persists it to localStorage.
+   */
+  toggleSidebar(): void {
+    this.sidebarCollapsed.update((collapsed) => !collapsed);
+    localStorage.setItem(this.SIDEBAR_STORAGE_KEY, String(this.sidebarCollapsed()));
+  }
+
+  /**
+   * Restores the sidebar collapse state from localStorage.
+   * Defaults to collapsed on small screens (<1024px).
+   */
+  private restoreSidebarCollapseState(): void {
+    const savedState = localStorage.getItem(this.SIDEBAR_STORAGE_KEY);
+    if (savedState !== null) {
+      this.sidebarCollapsed.set(savedState === 'true');
+    } else {
+      // Default to collapsed on small screens
+      this.sidebarCollapsed.set(window.innerWidth < 1024);
+    }
   }
 }

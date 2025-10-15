@@ -1,0 +1,67 @@
+// Desktop Stepper Styles
+.step-progress-desktop {
+  @apply flex items-center justify-center gap-4 mb-8 px-4;
+}
+
+.step-item {
+  @apply flex flex-col items-center gap-2 transition-all duration-200;
+
+  &.clickable {
+    @apply cursor-pointer;
+
+    &:hover .step-circle {
+      @apply scale-105;
+    }
+  }
+
+  &.active .step-circle {
+    @apply bg-blue-600 text-white scale-110 shadow-lg;
+  }
+
+  &.completed .step-circle {
+    @apply bg-green-600 text-white;
+  }
+
+  &:not(.clickable):not(.active):not(.completed) {
+    @apply cursor-default;
+  }
+}
+
+.step-circle {
+  @apply flex items-center justify-center w-10 h-10 rounded-full bg-gray-300 text-gray-700 font-bold transition-all duration-200;
+}
+
+.step-connector {
+  @apply flex-1 h-1 bg-gray-300 max-w-[100px] transition-all duration-200;
+
+  &.completed {
+    @apply bg-green-600;
+  }
+}
+
+.step-label {
+  @apply text-center max-w-[120px];
+}
+
+.step-title {
+  @apply text-sm font-semibold text-gray-700;
+}
+
+.step-description {
+  @apply text-xs text-gray-500 mt-1;
+}
+
+// Mobile Progress Bar Styles
+.step-progress-mobile {
+  @apply mb-6 px-4;
+}
+
+.progress-text {
+  @apply mb-2 text-sm;
+}
+
+// Screen reader only class
+.sr-only {
+  @apply absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0;
+  clip: rect(0, 0, 0, 0);
+}

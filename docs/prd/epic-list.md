@@ -63,3 +63,8 @@ button behavior), storing the selected image key with visual selection feedback.
 enabling users to create guided, sequential forms that display one step at a time with navigation
 controls, step progress indicators, and per-step validation for improved complex data collection
 workflows.
+
+**Epic 20: Form Builder Styling Theme System** Enable users to apply pre-designed visual themes
+(colors, fonts, spacing, backgrounds) to their forms through a dropdown selector in the form builder
+toolbar, providing instant visual transformations similar to Typeform or Google Forms theme systems
+with 6-8 curated themes out-of-the-box, responsive breakpoint support, and usage-based sorting.

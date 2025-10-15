@@ -488,6 +488,30 @@ export interface FormMetadata {
 }
 
 /**
+ * Step navigation event for tracking user progression through multi-step forms
+ */
+export interface StepNavigationEvent {
+  /** Step identifier */
+  stepId: string;
+  /** Step order index (0-based) */
+  stepOrder: number;
+  /** Navigation action performed */
+  action: 'view' | 'next' | 'previous' | 'submit';
+  /** Event timestamp */
+  timestamp: Date;
+}
+
+/**
+ * Form submission metadata with optional step events
+ */
+export interface FormSubmissionMetadata {
+  /** Step navigation events for multi-step forms */
+  stepEvents?: StepNavigationEvent[];
+  /** Additional custom metadata */
+  [key: string]: unknown;
+}
+
+/**
  * Form submission data
  */
 export interface FormSubmission {
@@ -503,8 +527,8 @@ export interface FormSubmission {
   submitterIp: string;
   /** Optional user ID for authenticated submissions */
   userId?: string;
-  /** Additional metadata */
-  metadata?: Record<string, unknown>;
+  /** Additional metadata with optional step events */
+  metadata?: FormSubmissionMetadata;
 }
 
 /**
@@ -613,4 +637,46 @@ export interface ChartTypeOption {
   label: string;
   /** PrimeNG icon class */
   icon: string;
+}
+
+/**
+ * Step completion statistics for multi-step form analytics
+ */
+export interface StepCompletionStats {
+  /** Step identifier */
+  stepId: string;
+  /** Step title */
+  stepTitle: string;
+  /** Step order index (0-based) */
+  stepOrder: number;
+  /** Number of users who viewed/reached this step */
+  totalStarted: number;
+  /** Number of users who completed this step (clicked Next or Submit) */
+  totalCompleted: number;
+  /** Completion rate percentage (completed / started * 100) */
+  completionRate: number;
+  /** Number of users who abandoned at this step */
+  dropOffCount: number;
+  /** Drop-off rate percentage (dropOff / started * 100) */
+  dropOffRate: number;
+  /** Average time spent on this step in seconds (optional) */
+  averageTimeSpent?: number;
+}
+
+/**
+ * Step form analytics data for multi-step wizard forms
+ */
+export interface StepFormAnalytics {
+  /** Whether the form is a multi-step form */
+  isStepForm: boolean;
+  /** Total number of steps in the form */
+  totalSteps: number;
+  /** Overall completion rate (percentage who completed all steps) */
+  overallCompletionRate: number;
+  /** Total number of submissions */
+  totalSubmissions: number;
+  /** Step-level completion statistics */
+  stepStats: StepCompletionStats[];
+  /** Funnel visualization data (step progression) */
+  funnelData: { step: string; count: number }[];
 }

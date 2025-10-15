@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnDestroy } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, HostListener, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   ReactiveFormsModule,
@@ -15,6 +15,7 @@ import { takeUntil } from 'rxjs/operators';
 import { ProgressSpinner } from 'primeng/progressspinner';
 import { Card } from 'primeng/card';
 import { ButtonDirective } from 'primeng/button';
+import { MessageService } from 'primeng/api';
 
 // Shared Types
 import {
@@ -26,6 +27,9 @@ import {
   HeadingMetadata,
   TextBlockMetadata,
   ImageMetadata,
+  FormStep,
+  StepNavigationEvent,
+  RowLayoutConfig,
   isInputField,
   isDisplayElement,
 } from '@nodeangularfullstack/shared';
@@ -39,6 +43,7 @@ import { FormRendererService, FormRenderError, FormRenderErrorType } from './for
 
 // Field Renderers
 import { ImageGalleryRendererComponent } from './image-gallery-renderer.component';
+import { StepProgressIndicatorComponent } from './step-progress-indicator/step-progress-indicator.component';
 
 /**
  * Component state for UI management
@@ -73,7 +78,9 @@ interface ComponentState {
     Card,
     ButtonDirective,
     ImageGalleryRendererComponent,
+    StepProgressIndicatorComponent,
   ],
+  providers: [MessageService],
   templateUrl: './form-renderer.component.html',
   styleUrls: ['./form-renderer.component.scss'],
 })
@@ -94,6 +101,35 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   schema: FormSchema | null = null;
   settings: FormSettings | null = null;
   isPreview = false;
+
+  // Step Form Navigation Signals
+  private readonly _formSchemaSignal = signal<FormSchema | null>(null);
+  protected readonly isStepFormEnabled = computed(
+    () => this._formSchemaSignal()?.settings?.stepForm?.enabled === true,
+  );
+  protected readonly steps = computed(
+    () => this._formSchemaSignal()?.settings?.stepForm?.steps ?? [],
+  );
+
+  private readonly _currentStepIndex = signal<number>(0);
+  readonly currentStepIndex = this._currentStepIndex.asReadonly();
+  readonly currentStep = computed(() => this.steps()[this._currentStepIndex()]);
+
+  readonly isFirstStep = computed(() => this._currentStepIndex() === 0);
+  readonly isLastStep = computed(() => this._currentStepIndex() === this.steps().length - 1);
+
+  private readonly _stepValidationStates = signal<Set<number>>(new Set());
+  readonly stepValidationStates = this._stepValidationStates.asReadonly();
+
+  // Step navigation events tracking (Story 19.5)
+  private readonly _stepEvents = signal<StepNavigationEvent[]>([]);
+  readonly stepEvents = this._stepEvents.asReadonly();
+
+  // Filter fields by current step
+  protected readonly currentStepFields = computed(() => {
+    const fields = this._formSchemaSignal()?.fields ?? [];
+    return this.filterFieldsForCurrentStep(fields);
+  });
 
   state: ComponentState = {
     loading: true,
@@ -120,17 +156,25 @@ export class FormRendererComponent implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private htmlSanitizer: HtmlSanitizerService,
     private domSanitizer: DomSanitizer,
+    private messageService: MessageService,
   ) {}
 
   ngOnInit(): void {
     // If in preview mode with provided schema, use it directly (Story 14.3)
     if (this.previewMode && this.formSchema) {
       this.schema = this.formSchema;
+      this._formSchemaSignal.set(this.formSchema);
       this.settings = this.formSchema.settings as FormSettings;
       this.isPreview = true;
       this.formGroup = this.buildFormGroup(this.formSchema);
       this.setupConditionalVisibility();
       this.state = { ...this.state, loading: false };
+
+      // Record initial 'view' event for step forms (Story 19.5)
+      if (this.isStepFormEnabled()) {
+        this.recordStepEvent('view');
+      }
+
       return;
     }
 
@@ -182,6 +226,7 @@ export class FormRendererComponent implements OnInit, OnDestroy {
       }
 
       this.schema = previewData.schema;
+      this._formSchemaSignal.set(previewData.schema);
       this.settings = previewData.settings;
       this.isPreview = previewData.isPreview || false;
 
@@ -191,6 +236,11 @@ export class FormRendererComponent implements OnInit, OnDestroy {
       }
 
       this.state = { ...this.state, loading: false };
+
+      // Record initial 'view' event for step forms (Story 19.5)
+      if (this.isStepFormEnabled()) {
+        this.recordStepEvent('view');
+      }
     } catch (error) {
       this.handleError('Failed to load preview data', FormRenderErrorType.PARSE_ERROR);
     }
@@ -230,6 +280,163 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Navigate to next step with validation
+   */
+  goToNextStep(): void {
+    if (this.isLastStep()) return;
+    if (!this.validateCurrentStep()) return;
+
+    // Record 'next' event before navigating
+    this.recordStepEvent('next');
+
+    this.markStepAsValid(this._currentStepIndex());
+    this._currentStepIndex.update((i) => i + 1);
+
+    // Record 'view' event for the new step
+    this.recordStepEvent('view');
+
+    this.scrollToTop();
+  }
+
+  /**
+   * Navigate to previous step without validation
+   */
+  goToPreviousStep(): void {
+    if (this.isFirstStep()) return;
+
+    // Record 'previous' event before navigating
+    this.recordStepEvent('previous');
+
+    this._currentStepIndex.update((i) => i - 1);
+
+    // Record 'view' event for the previous step
+    this.recordStepEvent('view');
+
+    this.scrollToTop();
+  }
+
+  /**
+   * Navigate to specific step
+   */
+  goToStep(stepIndex: number): void {
+    // Allow navigation to previously validated steps only
+    if (stepIndex < 0 || stepIndex >= this.steps().length) return;
+    if (stepIndex > this._currentStepIndex() && !this.validateCurrentStep()) return;
+
+    const previousIndex = this._currentStepIndex();
+    this._currentStepIndex.set(stepIndex);
+
+    // Record 'view' event for the target step
+    this.recordStepEvent('view');
+
+    this.scrollToTop();
+  }
+
+  /**
+   * Scroll to top of form
+   */
+  private scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /**
+   * Validate current step fields
+   */
+  validateCurrentStep(): boolean {
+    const currentStepId = this.currentStep()?.id;
+    if (!currentStepId) return true;
+
+    // Get all form controls for current step fields
+    const stepFields = this.currentStepFields();
+    const stepFieldNames = stepFields.filter((f) => isInputField(f.type)).map((f) => f.fieldName);
+
+    // Validate each field in current step
+    let isValid = true;
+    stepFieldNames.forEach((fieldName) => {
+      const control = this.formGroup?.get(fieldName);
+      if (control) {
+        control.markAsTouched();
+        control.updateValueAndValidity();
+        if (control.invalid) {
+          isValid = false;
+        }
+      }
+    });
+
+    if (!isValid) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Validation Error',
+        detail: 'Please fix the errors before continuing to the next step.',
+        life: 5000,
+      });
+    }
+
+    return isValid;
+  }
+
+  /**
+   * Mark step as validated
+   */
+  markStepAsValid(stepIndex: number): void {
+    const states = new Set(this._stepValidationStates());
+    states.add(stepIndex);
+    this._stepValidationStates.set(states);
+  }
+
+  /**
+   * Handle keyboard navigation for steps
+   */
+  @HostListener('window:keydown', ['$event'])
+  handleKeyboardNavigation(event: KeyboardEvent): void {
+    // Only apply keyboard shortcuts for step forms
+    if (!this.isStepFormEnabled()) return;
+
+    if (event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLInputElement) {
+      return; // Don't interfere with form input
+    }
+
+    if (event.ctrlKey || event.metaKey) {
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        this.goToNextStep();
+      } else if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        this.goToPreviousStep();
+      }
+    }
+
+    if (event.key === 'Enter' && !this.isLastStep()) {
+      // Prevent form submission on Enter unless on last step
+      if (event.target instanceof HTMLButtonElement) return;
+      event.preventDefault();
+      this.goToNextStep();
+    }
+  }
+
+  /**
+   * Records a step navigation event for analytics tracking (Story 19.5).
+   * Events are stored in metadata and submitted with the form for step completion analysis.
+   *
+   * @param action - The navigation action performed ('view' | 'next' | 'previous' | 'submit')
+   */
+  private recordStepEvent(action: 'view' | 'next' | 'previous' | 'submit'): void {
+    if (!this.isStepFormEnabled()) return;
+
+    const currentStepData = this.currentStep();
+    if (!currentStepData) return;
+
+    const event: StepNavigationEvent = {
+      stepId: currentStepData.id,
+      stepOrder: currentStepData.order,
+      action,
+      timestamp: new Date(),
+    };
+
+    this._stepEvents.update((events) => [...events, event]);
+  }
+
+  /**
    * Type guard to safely access HeadingMetadata properties
    */
   getHeadingMetadata(field: FormField): HeadingMetadata | null {
@@ -249,10 +456,16 @@ export class FormRendererComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (result) => {
           this.schema = result.schema;
+          this._formSchemaSignal.set(result.schema);
           this.settings = result.settings;
           this.formGroup = this.buildFormGroup(result.schema);
           this.setupConditionalVisibility();
           this.state = { ...this.state, loading: false };
+
+          // Record initial 'view' event for step forms (Story 19.5)
+          if (this.isStepFormEnabled()) {
+            this.recordStepEvent('view');
+          }
         },
         error: (error: FormRenderError) => {
           this.state = {
@@ -475,7 +688,8 @@ export class FormRendererComponent implements OnInit, OnDestroy {
    */
   getSortedFields(): FormField[] {
     if (!this.schema) return [];
-    return [...this.schema.fields].sort((a, b) => a.order - b.order);
+    const fields = this.filterFieldsForCurrentStep(this.schema.fields);
+    return [...fields].sort((a, b) => a.order - b.order);
   }
 
   /**
@@ -488,12 +702,13 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   /**
    * Get row configurations from form settings, sorted by order
    */
-  getRowConfigs(): { rowId: string; columnCount: number; order: number }[] {
+  getRowConfigs(): RowLayoutConfig[] {
     if (!this.settings?.rowLayout?.enabled || !this.settings.rowLayout.rows) {
       return [];
     }
     // Sort rows by order (ascending)
-    return [...this.settings.rowLayout.rows].sort((a, b) => a.order - b.order);
+    const rows = [...this.settings.rowLayout.rows].sort((a, b) => a.order - b.order);
+    return this.filterRowsForCurrentStep(rows);
   }
 
   /**
@@ -506,7 +721,9 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   getFieldsInColumn(rowId: string, columnIndex: number): FormField[] {
     if (!this.schema?.fields) return [];
 
-    return this.schema.fields
+    const fieldsForStep = this.filterFieldsForCurrentStep(this.schema.fields);
+
+    return fieldsForStep
       .filter(
         (field) => field.position?.rowId === rowId && field.position?.columnIndex === columnIndex,
       )
@@ -534,8 +751,9 @@ export class FormRendererComponent implements OnInit, OnDestroy {
    */
   getFieldsWithoutPosition(): FormField[] {
     if (!this.schema) return [];
+    const fieldsForStep = this.filterFieldsForCurrentStep(this.schema.fields);
     // Return ALL fields sorted by order (ignore position when rowLayout disabled)
-    return this.schema.fields.slice().sort((a, b) => a.order - b.order);
+    return fieldsForStep.slice().sort((a, b) => a.order - b.order);
   }
 
   /**
@@ -651,12 +869,47 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   /**
    * Handles form submission
    * Prevents submission in preview mode (Story 14.3)
+   * For step forms, validates all steps before submission (Story 19.4)
+   * Records step navigation events for analytics (Story 19.5)
    */
   onSubmit(): void {
     // Prevent submission in preview mode (Story 14.3)
     if (this.previewMode || this.isPreview) {
       console.log('Form submission disabled in preview mode');
       return;
+    }
+
+    // Record 'submit' event for step forms (Story 19.5)
+    if (this.isStepFormEnabled()) {
+      this.recordStepEvent('submit');
+    }
+
+    // For step forms, validate all steps before submission
+    if (this.isStepFormEnabled()) {
+      let allStepsValid = true;
+      const currentStep = this._currentStepIndex();
+
+      // Validate all steps from 0 to current
+      for (let i = 0; i <= currentStep; i++) {
+        this._currentStepIndex.set(i);
+        if (!this.validateCurrentStep()) {
+          allStepsValid = false;
+          break;
+        }
+      }
+
+      // Restore current step index
+      this._currentStepIndex.set(currentStep);
+
+      if (!allStepsValid) {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Validation Error',
+          detail: 'Please complete all steps before submitting.',
+          life: 5000,
+        });
+        return;
+      }
     }
 
     // Validate form before submission
@@ -676,9 +929,21 @@ export class FormRendererComponent implements OnInit, OnDestroy {
       errorType: null,
     };
 
-    // Submit form values (with prepared/transformed data)
+    // Prepare submission data with step events (Story 19.5)
+    const submissionPayload: any = {
+      values: this.prepareSubmissionData(),
+    };
+
+    // Include step events in metadata for step forms
+    if (this.isStepFormEnabled()) {
+      submissionPayload.metadata = {
+        stepEvents: this.stepEvents(),
+      };
+    }
+
+    // Submit form values (with prepared/transformed data and step events)
     this.formRendererService
-      .submitForm(this.token, this.prepareSubmissionData())
+      .submitForm(this.token, submissionPayload.values, submissionPayload.metadata)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (result) => {
@@ -1099,6 +1364,51 @@ export class FormRendererComponent implements OnInit, OnDestroy {
     }
 
     return Boolean(value);
+  }
+
+  /**
+   * Filters provided fields by the currently active step when step form mode is enabled.
+   * Fields without a step assignment fall back to the first step for backward compatibility.
+   */
+  private filterFieldsForCurrentStep(fields: FormField[]): FormField[] {
+    if (!this.isStepFormEnabled()) {
+      return fields;
+    }
+
+    const currentStep = this.currentStep();
+    if (!currentStep) {
+      return [];
+    }
+
+    return fields.filter((field) => {
+      const fieldStepId = field.position?.stepId;
+      if (!fieldStepId) {
+        return this._currentStepIndex() === 0;
+      }
+      return fieldStepId === currentStep.id;
+    });
+  }
+
+  /**
+   * Filters row configurations to only those that belong to the active step.
+   * Rows without a step assignment are treated as part of the first step (legacy fallback).
+   */
+  private filterRowsForCurrentStep(rows: RowLayoutConfig[]): RowLayoutConfig[] {
+    if (!this.isStepFormEnabled()) {
+      return rows;
+    }
+
+    const currentStep = this.currentStep();
+    if (!currentStep) {
+      return [];
+    }
+
+    return rows.filter((row) => {
+      if (!row.stepId) {
+        return this._currentStepIndex() === 0;
+      }
+      return row.stepId === currentStep.id;
+    });
   }
 
   /**

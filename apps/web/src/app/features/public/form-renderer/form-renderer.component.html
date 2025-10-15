@@ -126,6 +126,17 @@
 
         <p-card [ngStyle]="{ background: 'white', position: 'relative', 'z-index': '10' }">
           <div class="form-content-wrapper">
+            <!-- Step Progress Indicator -->
+            @if (isStepFormEnabled()) {
+              <app-step-progress-indicator
+                [currentStepIndex]="currentStepIndex()"
+                [totalSteps]="steps().length"
+                [steps]="steps()"
+                [validatedSteps]="stepValidationStates()"
+                (stepClicked)="goToStep($event)"
+              />
+            }
+
             <form [formGroup]="formGroup" (ngSubmit)="onSubmit()" class="space-y-6">
               <!-- Form Fields: Row-Based Layout or Global Grid -->
               @if (isRowLayoutEnabled()) {
@@ -980,25 +991,70 @@
                 </div>
               }
 
-              <!-- Submit Button -->
-              <div class="flex justify-end mt-6">
-                @if (!isPreview) {
+              <!-- Step Navigation Buttons or Submit Button -->
+              @if (isStepFormEnabled() && !isPreview) {
+                <!-- Step Navigation Buttons -->
+                <div
+                  class="step-navigation-buttons flex flex-col md:flex-row items-center gap-4 mt-8 pt-6 border-t border-gray-200"
+                >
                   <button
-                    type="submit"
+                    type="button"
                     pButton
-                    [disabled]="formGroup.invalid || state.submitting"
-                    class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                  >
-                    @if (state.submitting) {
-                      <i class="pi pi-spin pi-spinner mr-2"></i>
-                      Submitting...
-                    } @else {
-                      <i class="pi pi-check mr-2"></i>
-                      Submit
-                    }
-                  </button>
-                }
-              </div>
+                    label="Previous"
+                    icon="pi pi-arrow-left"
+                    class="p-button-secondary w-full md:w-auto"
+                    [disabled]="isFirstStep()"
+                    [attr.aria-label]="'Go to previous step'"
+                    (click)="goToPreviousStep()"
+                  ></button>
+
+                  <div class="flex-1"></div>
+
+                  @if (!isLastStep()) {
+                    <button
+                      type="button"
+                      pButton
+                      label="Next"
+                      icon="pi pi-arrow-right"
+                      iconPos="right"
+                      class="p-button-primary w-full md:w-auto"
+                      [attr.aria-label]="'Go to next step'"
+                      (click)="goToNextStep()"
+                    ></button>
+                  } @else {
+                    <button
+                      type="submit"
+                      pButton
+                      label="Submit"
+                      icon="pi pi-check"
+                      class="p-button-success w-full md:w-auto"
+                      [loading]="state.submitting"
+                      [attr.aria-label]="'Submit form'"
+                      (click)="onSubmit()"
+                    ></button>
+                  }
+                </div>
+              } @else {
+                <!-- Single-Page Form Submit Button -->
+                <div class="flex justify-end mt-6">
+                  @if (!isPreview) {
+                    <button
+                      type="submit"
+                      pButton
+                      [disabled]="formGroup.invalid || state.submitting"
+                      class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    >
+                      @if (state.submitting) {
+                        <i class="pi pi-spin pi-spinner mr-2"></i>
+                        Submitting...
+                      } @else {
+                        <i class="pi pi-check mr-2"></i>
+                        Submit
+                      }
+                    </button>
+                  }
+                </div>
+              }
             </form>
           </div>
         </p-card>
