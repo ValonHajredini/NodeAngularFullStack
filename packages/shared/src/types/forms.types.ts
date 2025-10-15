@@ -3,6 +3,11 @@
  * Shared types for form creation, schema management, and submissions
  */
 
+import { FormTheme, ResponsiveThemeConfig, ThemeProperties } from './theme.types';
+
+// Re-export theme types for convenience
+export { FormTheme, ResponsiveThemeConfig, ThemeProperties } from './theme.types';
+
 /**
  * Supported form field types
  */
@@ -425,6 +430,8 @@ export interface FormSettings {
   };
   /** Optional step form configuration for multi-step wizard forms */
   stepForm?: StepFormConfig;
+  /** Optional theme ID reference for applying pre-designed styling */
+  themeId?: string;
 }
 
 /**
@@ -451,6 +458,8 @@ export interface FormSchema {
   createdAt: Date;
   /** Schema last update timestamp */
   updatedAt: Date;
+  /** Embedded theme object when fetched from API (not stored in DB) */
+  theme?: FormTheme;
 }
 
 /**
@@ -680,3 +689,4 @@ export interface StepFormAnalytics {
   /** Funnel visualization data (step progression) */
   funnelData: { step: string; count: number }[];
 }
+

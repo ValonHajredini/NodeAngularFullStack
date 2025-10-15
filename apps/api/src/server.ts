@@ -27,6 +27,7 @@ import shortLinksRoutes from './routes/short-links.routes';
 import drawingProjectsRoutes from './routes/drawing-projects.routes';
 import { formsRoutes } from './routes/forms.routes';
 import { publicFormsRoutes } from './routes/public-forms.routes';
+import { themesRoutes } from './routes/themes.routes';
 import { shortLinksController } from './controllers/short-links.controller';
 import { resolveShortLinkValidator } from './validators/url.validators';
 
@@ -163,6 +164,7 @@ class Server {
     this.app.use('/api/v1/users', usersRoutes);
     this.app.use('/api/v1/tokens', tokensRoutes);
     this.app.use('/api/v1/forms', formsRoutes);
+    this.app.use('/api/v1/themes', themesRoutes);
     this.app.use('/api/v1/public', publicFormsRoutes);
     this.app.use('/api/v1/tools/short-links', shortLinksRoutes);
     console.log(
