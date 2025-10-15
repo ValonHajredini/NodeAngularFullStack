@@ -1,0 +1,97 @@
+╔════════════════════════════════════════════════════════════════════════════════╗
+║                  NodeAngularFullStack - Docker Quick Reference                 ║
+╚════════════════════════════════════════════════════════════════════════════════╝
+
+🚀 STARTUP
+─────────────────────────────────────────────────────────────────────────────────
+  ./docker-start.sh                    # Start all services (detached)
+  ./docker-start.sh --with-pgweb       # Start with pgWeb database UI
+  ./docker-start.sh --build            # Force rebuild images
+  ./docker-start.sh --foreground       # Run in foreground (see logs)
+
+🛑 SHUTDOWN
+─────────────────────────────────────────────────────────────────────────────────
+  ./docker-stop.sh                     # Stop all services
+  docker-compose down -v               # Stop and remove volumes (⚠️  deletes data!)
+
+📊 MONITORING
+─────────────────────────────────────────────────────────────────────────────────
+  docker-compose ps                    # View service status
+  docker-compose logs -f               # Follow logs (all services)
+  docker-compose logs -f api           # Follow API logs only
+  docker-compose logs -f web           # Follow frontend logs only
+  docker-compose logs -f postgres      # Follow database logs only
+  docker-compose logs --tail=100 api   # Last 100 lines of API logs
+
+🗄️  DATABASE OPERATIONS
+─────────────────────────────────────────────────────────────────────────────────
+  docker-compose exec api npm run db:migrate    # Run migrations
+  docker-compose exec api npm run db:seed       # Seed database
+  docker-compose exec api npm run db:reset      # Reset database
+  docker-compose exec postgres psql -U dbuser -d nodeangularfullstack  # SQL shell
+
+🔧 CONTAINER MANAGEMENT
+─────────────────────────────────────────────────────────────────────────────────
+  docker-compose restart                # Restart all services
+  docker-compose restart api            # Restart API only
+  docker-compose stop                   # Stop without removing containers
+  docker-compose start                  # Start stopped containers
+  docker-compose exec api sh            # Open shell in API container
+  docker-compose exec web sh            # Open shell in web container
+
+🔨 BUILD & REBUILD
+─────────────────────────────────────────────────────────────────────────────────
+  docker-compose build                  # Rebuild all images
+  docker-compose build api              # Rebuild API image only
+  docker-compose build --no-cache       # Rebuild without cache
+  docker system prune -a                # Clean up all unused images
+
+🧪 TESTING & DEBUGGING
+─────────────────────────────────────────────────────────────────────────────────
+  docker-compose exec api npm test                      # Run API tests
+  docker-compose exec api npm run lint                  # Lint API code
+  docker-compose exec api npm run typecheck             # TypeScript check
+  docker-compose exec api sh -c 'nc -zv postgres 5432'  # Test DB connection
+  curl http://localhost:3000/health                     # API health check
+
+📁 USEFUL PATHS
+─────────────────────────────────────────────────────────────────────────────────
+  Frontend:        http://localhost:80
+  Backend API:     http://localhost:3000
+  API Docs:        http://localhost:3000/api-docs
+  Health Check:    http://localhost:3000/health
+  pgWeb UI:        http://localhost:8080  (with --with-pgweb flag)
+
+📝 CONFIGURATION FILES
+─────────────────────────────────────────────────────────────────────────────────
+  .env.docker                  # Default Docker environment (committed)
+  .env.docker.local            # Local overrides (NOT committed)
+  docker-compose.yml           # Main compose configuration
+  docker-compose.override.yml  # Local overrides (NOT committed)
+  apps/api/Dockerfile          # API image definition
+  apps/web/Dockerfile          # Frontend image definition
+  apps/web/nginx.conf          # nginx configuration
+
+🔐 SECURITY CHECKLIST (Production)
+─────────────────────────────────────────────────────────────────────────────────
+  ☐ Change JWT_SECRET in .env.docker.local
+  ☐ Change JWT_REFRESH_SECRET in .env.docker.local
+  ☐ Change POSTGRES_PASSWORD in .env.docker.local
+  ☐ Update CORS_ORIGIN to production domain
+  ☐ Enable HTTPS with reverse proxy
+  ☐ Set up database backups
+  ☐ Configure monitoring and logging
+
+💡 TIPS
+─────────────────────────────────────────────────────────────────────────────────
+  • Copy .env.docker to .env.docker.local for custom configuration
+  • Use --profile tools flag to start optional services
+  • Check logs first when debugging issues
+  • Run migrations after database changes
+  • Use docker system df to check disk usage
+  • Clean up with docker system prune periodically
+
+📖 MORE INFO
+─────────────────────────────────────────────────────────────────────────────────
+  Read DOCKER.md for comprehensive documentation
+  Read README.md for project-specific information

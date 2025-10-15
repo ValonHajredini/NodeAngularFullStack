@@ -1,0 +1,136 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:14-alpine
+    container_name: nodeangularfullstack-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-nodeangularfullstack}
+      POSTGRES_USER: ${POSTGRES_USER:-dbuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dbpassword}
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./apps/api/src/db/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dbuser} -d ${POSTGRES_DB:-nodeangularfullstack}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: nodeangularfullstack-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-nodeangularfullstack}
+      DB_USER: ${POSTGRES_USER:-dbuser}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-dbpassword}
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your-super-secret-jwt-refresh-key-change-in-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      FORM_RENDER_TOKEN_SECRET: ${FORM_RENDER_TOKEN_SECRET:-change-this-secret}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:4200,http://localhost,http://localhost:80,http://localhost:8080}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-900000}
+      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-100}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:80}
+      # Redis (optional, uses in-memory fallback if not configured)
+      REDIS_HOST: ${REDIS_HOST:-}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      # File Storage (DigitalOcean Spaces/S3 compatible)
+      DO_SPACES_ENDPOINT: ${DO_SPACES_ENDPOINT:-https://lon1.digitaloceanspaces.com}
+      DO_SPACES_KEY: ${DO_SPACES_KEY:-DO00LZ22KQG9RLBMBNFE}
+      DO_SPACES_SECRET: ${DO_SPACES_SECRET:-dev-secret}
+      DO_SPACES_BUCKET: ${DO_SPACES_BUCKET:-dev-bucket}
+      DO_SPACES_REGION: ${DO_SPACES_REGION:-lon1}
+      # Email (optional)
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-noreply@localhost}
+      # Monitoring (optional)
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      LOGTAIL_TOKEN: ${LOGTAIL_TOKEN:-}
+      # API Key
+      API_KEY: ${API_KEY:-dev-api-key}
+      # Multi-tenancy
+      ENABLE_MULTI_TENANCY: ${ENABLE_MULTI_TENANCY:-false}
+      # pgWeb
+      PGWEB_AUTH_USER: ${PGWEB_AUTH_USER:-admin}
+      PGWEB_AUTH_PASS: ${PGWEB_AUTH_PASS:-pgweb_dev_password_2024}
+      PGWEB_READ_ONLY: ${PGWEB_READ_ONLY:-false}
+      PGWEB_SESSIONS: ${PGWEB_SESSIONS:-true}
+      PGWEB_CORS_ORIGIN: ${PGWEB_CORS_ORIGIN:-http://localhost:4200}
+      PGWEB_DATABASE_URL: ${PGWEB_DATABASE_URL:-postgresql://dbuser:dbpassword@postgres:5432/nodeangularfullstack?sslmode=disable}
+      # Additional config
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-NodeAngularFullStack}
+      DB_SSL: ${DB_SSL:-false}
+      REDIS_DB: ${REDIS_DB:-0}
+    ports:
+      - "${API_PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Web App
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: nodeangularfullstack-web
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-80}:80"
+    depends_on:
+      - api
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # pgWeb - Optional database UI
+  pgweb:
+    image: sosedoff/pgweb
+    container_name: nodeangularfullstack-pgweb
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-dbuser}:${POSTGRES_PASSWORD:-dbpassword}@postgres:5432/${POSTGRES_DB:-nodeangularfullstack}?sslmode=disable
+    ports:
+      - "${PGWEB_PORT:-8080}:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+    profiles:
+      - tools  # Only start with --profile tools
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local

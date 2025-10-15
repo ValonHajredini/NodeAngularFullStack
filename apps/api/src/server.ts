@@ -14,6 +14,7 @@ import swaggerUi from 'swagger-ui-express';
 import path from 'path';
 
 import { config } from './utils/config.utils';
+import { appConfig } from './config/app.config';
 import { databaseService, DatabaseService } from './services/database.service';
 import swaggerSpec from './config/swagger.config';
 import healthRoutes from './routes/health.routes';
@@ -81,7 +82,7 @@ class Server {
     // CORS configuration
     this.app.use(
       cors({
-        origin: config.FRONTEND_URL,
+        origin: appConfig.cors.origins,
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -275,7 +276,9 @@ class Server {
             console.log('\n🚀 NodeAngularFullStack API Server Started');
             console.log(`📡 Server: http://localhost:${this.port}`);
             console.log(`📦 Environment: ${config.NODE_ENV}`);
-            console.log(`🔗 CORS Origin: ${config.FRONTEND_URL}`);
+            console.log(
+              `🔗 CORS Origins: ${appConfig.cors.origins.join(', ')}`
+            );
             console.log(`💾 Database: Connected`);
 
             if (config.NODE_ENV === 'production') {
