@@ -16,10 +16,11 @@ import { PanelModule } from 'primeng/panel';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
-import { MessageService } from 'primeng/api';
+import { MessageService, ConfirmationService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
+import { ConfirmDialog } from 'primeng/confirmdialog';
 import { FormBuilderService } from '../form-builder.service';
-import { FormStep } from '@nodeangularfullstack/shared';
+import { FormStep, RowLayoutConfig } from '@nodeangularfullstack/shared';
 
 /**
  * Step Form Sidebar Component
@@ -41,7 +42,9 @@ import { FormStep } from '@nodeangularfullstack/shared';
     TextareaModule,
     DragDropModule,
     TooltipModule,
+    ConfirmDialog,
   ],
+  providers: [ConfirmationService],
   templateUrl: './step-form-sidebar.component.html',
   styleUrls: ['./step-form-sidebar.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -49,6 +52,7 @@ import { FormStep } from '@nodeangularfullstack/shared';
 export class StepFormSidebarComponent {
   private readonly formBuilderService = inject(FormBuilderService);
   private readonly messageService = inject(MessageService);
+  private readonly confirmationService = inject(ConfirmationService);
   private readonly fb = inject(FormBuilder);
   private readonly changeDetectorRef = inject(ChangeDetectorRef);
 
@@ -57,6 +61,9 @@ export class StepFormSidebarComponent {
   protected readonly stepFormEnabled = this.formBuilderService.stepFormEnabled;
   protected readonly canAddStep = this.formBuilderService.canAddStep;
   protected readonly canDeleteStep = this.formBuilderService.canDeleteStep;
+  protected readonly rowLayoutEnabled = this.formBuilderService.rowLayoutEnabled;
+  protected readonly rowConfigs = this.formBuilderService.rowConfigs;
+  protected readonly activeStepId = this.formBuilderService.activeStepId;
 
   // Local toggle state (kept in sync with signal-based state)
   protected stepFormToggleValue = false;
@@ -77,6 +84,42 @@ export class StepFormSidebarComponent {
     description: ['', [Validators.maxLength(500)]],
   });
 
+  // Step expansion state (Map<stepId, boolean>)
+  protected stepExpansionState = signal<Map<string, boolean>>(new Map());
+
+  // Initialize all steps collapsed by default; do not auto-expand first
+  private readonly initExpansionEffect = effect(() => {
+    const steps = this.steps();
+    const current = this.stepExpansionState();
+    if (steps.length > 0 && current.size === 0) {
+      const initial = new Map<string, boolean>();
+      steps.forEach((s) => initial.set(s.id, false));
+      this.stepExpansionState.set(initial);
+    }
+  });
+
+  // Computed: rows grouped by step ID
+  protected rowsByStep = computed(() => {
+    const rows = this.rowConfigs();
+    const grouped = new Map<string, any[]>();
+
+    rows.forEach((row) => {
+      if (row.stepId) {
+        if (!grouped.has(row.stepId)) {
+          grouped.set(row.stepId, []);
+        }
+        grouped.get(row.stepId)!.push(row);
+      }
+    });
+
+    return grouped;
+  });
+
+  // Computed: row count per step
+  protected getRowCountForStep = (stepId: string): number => {
+    return this.rowsByStep().get(stepId)?.length || 0;
+  };
+
   // Computed tooltip messages
   protected addStepTooltip = computed(() =>
     this.canAddStep() ? 'Add new step' : 'Maximum 10 steps reached',
@@ -90,6 +133,20 @@ export class StepFormSidebarComponent {
   private readonly syncToggleEffect = effect(() => {
     this.stepFormToggleValue = this.stepFormEnabled();
     this.changeDetectorRef.markForCheck();
+  });
+
+  // When active step changes (e.g., clicking tabs on the canvas), expand that group only
+  private readonly syncActiveStepExpansion = effect(() => {
+    const activeId = this.activeStepId();
+    const enabled = this.stepFormEnabled();
+    if (!enabled || !activeId) return;
+
+    const steps = this.steps();
+    if (steps.length === 0) return;
+
+    const next = new Map<string, boolean>();
+    steps.forEach((s) => next.set(s.id, s.id === activeId));
+    this.stepExpansionState.set(next);
   });
 
   /**
@@ -291,5 +348,107 @@ export class StepFormSidebarComponent {
       detail: 'Step order has been updated.',
       life: 2000,
     });
+  }
+
+  /**
+   * Toggle step expansion state
+   * @param stepId - ID of the step to toggle
+   */
+  toggleStepExpansion(stepId: string): void {
+    // Accordion behavior: opening one closes others
+    const currentMap = this.stepExpansionState();
+    const isCurrentlyOpen = currentMap.get(stepId) ?? false;
+
+    if (isCurrentlyOpen) {
+      // Close the current step
+      const closed = new Map(currentMap);
+      closed.set(stepId, false);
+      this.stepExpansionState.set(closed);
+      return;
+    }
+
+    // Open the requested step and close all others
+    const next = new Map<string, boolean>();
+    this.steps().forEach((s) => next.set(s.id, s.id === stepId));
+    this.stepExpansionState.set(next);
+  }
+
+  /**
+   * Check if step is expanded
+   * @param stepId - ID of the step to check
+   * @returns true if expanded, false if collapsed
+   */
+  isStepExpanded(stepId: string): boolean {
+    return this.stepExpansionState().get(stepId) ?? false; // Default to collapsed
+  }
+
+  /**
+   * Get rows for a specific step
+   * @param stepId - ID of the step
+   * @returns Array of row configurations for the step
+   */
+  getRowsForStep(stepId: string): any[] {
+    return this.rowsByStep().get(stepId) || [];
+  }
+
+  /**
+   * Add row to a specific step
+   * @param stepId - ID of the step to add row to
+   */
+  onAddRowToStep(stepId: string): void {
+    const rowId = this.formBuilderService.addRowToStep(2, stepId); // Default: 2 columns
+    if (rowId) {
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Row Added',
+        detail: 'New row has been added to the step.',
+        life: 3000,
+      });
+      // Ensure step is expanded to show new row
+      // Ensure only this step is expanded (accordion behavior)
+      const next = new Map<string, boolean>();
+      this.steps().forEach((s) => next.set(s.id, s.id === stepId));
+      this.stepExpansionState.set(next);
+    }
+  }
+
+  /**
+   * Remove row from step
+   * @param rowId - ID of the row to remove
+   */
+  onRemoveRowFromStep(rowId: string): void {
+    this.confirmationService.confirm({
+      message: 'Remove this row? Fields in this row will be moved to another row.',
+      header: 'Remove Row',
+      icon: 'pi pi-exclamation-triangle',
+      acceptButtonStyleClass: 'p-button-danger',
+      rejectButtonStyleClass: 'p-button-outlined',
+      accept: () => {
+        this.formBuilderService.removeRow(rowId);
+        this.messageService.add({
+          severity: 'info',
+          summary: 'Row Removed',
+          detail: 'Row has been removed.',
+          life: 2000,
+        });
+      },
+    });
+  }
+
+  /**
+   * Update row column count
+   * @param rowId - ID of the row to update
+   * @param columnCount - New column count (1-4)
+   */
+  onUpdateRowColumns(rowId: string, columnCount: 1 | 2 | 3 | 4): void {
+    this.formBuilderService.updateRowColumns(rowId, columnCount);
+  }
+
+  /**
+   * Set active step (for canvas navigation)
+   * @param stepId - ID of the step to activate
+   */
+  onSetActiveStep(stepId: string): void {
+    this.formBuilderService.setActiveStep(stepId);
   }
 }

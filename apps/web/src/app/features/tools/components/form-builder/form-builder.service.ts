@@ -1211,4 +1211,78 @@ export class FormBuilderService {
       })),
     );
   }
+
+  /**
+   * Get all rows assigned to a specific step.
+   * Returns rows filtered by stepId and sorted by order.
+   * @param stepId - ID of the step to get rows for
+   * @returns Array of row configurations for the step
+   */
+  getRowsByStep(stepId: string): RowLayoutConfig[] {
+    return this._rowConfigs()
+      .filter((row) => row.stepId === stepId)
+      .sort((a, b) => a.order - b.order);
+  }
+
+  /**
+   * Move a row to a different step.
+   * Updates the row's stepId property and marks form as dirty.
+   * @param rowId - ID of the row to move
+   * @param targetStepId - ID of the target step
+   */
+  moveRowToStep(rowId: string, targetStepId: string): void {
+    // Verify target step exists
+    const targetStep = this._steps().find((s) => s.id === targetStepId);
+    if (!targetStep) {
+      console.error('Target step not found:', targetStepId);
+      return;
+    }
+
+    // Update row's stepId
+    this._rowConfigs.update((rows) =>
+      rows.map((row) => (row.rowId === rowId ? { ...row, stepId: targetStepId } : row)),
+    );
+
+    // Update all fields in this row to have the new stepId
+    this._formFields.update((fields) =>
+      fields.map((field) => {
+        if (field.position?.rowId === rowId) {
+          return {
+            ...field,
+            position: {
+              ...field.position,
+              stepId: targetStepId,
+            },
+          };
+        }
+        return field;
+      }),
+    );
+
+    this.markDirty();
+  }
+
+  /**
+   * Add a new row to a specific step.
+   * Creates row with specified column count and assigns it to the step.
+   * @param columnCount - Number of columns in the row (1-4)
+   * @param stepId - ID of the step to add row to
+   * @returns Row ID of the created row
+   */
+  addRowToStep(columnCount: 1 | 2 | 3 | 4, stepId: string): string {
+    // Verify step exists
+    const step = this._steps().find((s) => s.id === stepId);
+    if (!step) {
+      console.error('Step not found:', stepId);
+      return '';
+    }
+
+    const rowId = `row_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+    const order = this._rowConfigs().length;
+
+    this._rowConfigs.update((rows) => [...rows, { rowId, columnCount, order, stepId }]);
+    this.markDirty();
+
+    return rowId;
+  }
 }
