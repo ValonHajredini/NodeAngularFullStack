@@ -47,6 +47,11 @@ const swaggerSpec = {
       description: 'Form theme management and customization',
     },
     {
+      name: 'Admin - Themes',
+      description:
+        'Admin-only theme management with enhanced validation and security',
+    },
+    {
       name: 'Public Forms',
       description:
         'Public form rendering and submission (no authentication required)',

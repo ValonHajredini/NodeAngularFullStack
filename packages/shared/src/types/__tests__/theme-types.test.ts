@@ -27,6 +27,7 @@ describe('Theme Type Tests', () => {
       },
       usageCount: 42,
       isActive: true,
+      isCustom: false,
       createdBy: 'admin-user-id',
       createdAt: new Date('2025-01-15T10:00:00.000Z'),
       updatedAt: new Date('2025-01-15T10:00:00.000Z'),
@@ -143,6 +144,7 @@ describe('Theme Type Tests', () => {
       },
       usageCount: 0,
       isActive: true,
+      isCustom: false,
       createdAt: new Date('2025-01-15T10:00:00.000Z'),
       updatedAt: new Date('2025-01-15T10:00:00.000Z'),
     };
@@ -208,6 +210,7 @@ describe('Theme Type Tests', () => {
       },
       usageCount: 0,
       isActive: true,
+      isCustom: false,
       createdAt: new Date(),
       updatedAt: new Date(),
       // Optional fields not provided

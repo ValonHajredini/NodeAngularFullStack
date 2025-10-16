@@ -71,6 +71,12 @@ export interface FormTheme {
   createdAt: Date;
   /** Last modification timestamp */
   updatedAt: Date;
+  /** Distinguishes custom themes (true) from predefined themes (false) */
+  isCustom: boolean;
+  /** UUID reference to custom theme creator, null for predefined themes */
+  creatorId?: string;
+  /** JSONB storage for custom theme definitions (max 50KB), null for predefined themes */
+  themeDefinition?: any;
 }
 
 /**
@@ -87,6 +93,12 @@ export interface CreateThemeRequest {
   themeConfig: ResponsiveThemeConfig;
   /** Optional creator user ID */
   createdBy?: string;
+  /** Whether this is a custom theme */
+  isCustom?: boolean;
+  /** Creator ID for custom themes */
+  creatorId?: string;
+  /** Custom theme definition (max 50KB) */
+  themeDefinition?: any;
 }
 
 /**
@@ -101,4 +113,28 @@ export interface UpdateThemeRequest {
   thumbnailUrl?: string;
   /** Theme configuration */
   themeConfig?: ResponsiveThemeConfig;
+  /** Custom theme definition (max 50KB) */
+  themeDefinition?: any;
+}
+
+/**
+ * Request interface for creating a custom theme
+ */
+export interface CreateCustomThemeRequest extends Omit<CreateThemeRequest, 'isCustom'> {
+  /** Creator user ID (required for custom themes) */
+  creatorId: string;
+  /** Custom theme definition (required for custom themes) */
+  themeDefinition: any;
+}
+
+/**
+ * Validation result for theme definition size
+ */
+export interface ThemeValidationResult {
+  /** Whether the theme definition is valid */
+  valid: boolean;
+  /** Error message if validation fails */
+  error?: string;
+  /** Size of theme definition in bytes */
+  sizeInBytes?: number;
 }

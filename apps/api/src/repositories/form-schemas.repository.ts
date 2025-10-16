@@ -138,7 +138,10 @@ export class FormSchemasRepository {
           form_themes.usage_count as "theme.usageCount",
           form_themes.is_active as "theme.isActive",
           form_themes.created_at as "theme.createdAt",
-          form_themes.updated_at as "theme.updatedAt"
+          form_themes.updated_at as "theme.updatedAt",
+          form_themes.is_custom as "theme.isCustom",
+          form_themes.creator_id as "theme.creatorId",
+          form_themes.theme_definition as "theme.themeDefinition"
         FROM form_schemas
         LEFT JOIN form_themes ON form_schemas.theme_id = form_themes.id
         WHERE form_schemas.id = $1
@@ -184,6 +187,9 @@ export class FormSchemasRepository {
           createdBy: undefined, // Not included in this query
           createdAt: row['theme.createdAt'],
           updatedAt: row['theme.updatedAt'],
+          isCustom: row['theme.isCustom'],
+          creatorId: row['theme.creatorId'],
+          themeDefinition: row['theme.themeDefinition'],
         };
       }
 
@@ -284,7 +290,10 @@ export class FormSchemasRepository {
           form_themes.usage_count as "theme.usageCount",
           form_themes.is_active as "theme.isActive",
           form_themes.created_at as "theme.createdAt",
-          form_themes.updated_at as "theme.updatedAt"
+          form_themes.updated_at as "theme.updatedAt",
+          form_themes.is_custom as "theme.isCustom",
+          form_themes.creator_id as "theme.creatorId",
+          form_themes.theme_definition as "theme.themeDefinition"
         FROM form_schemas
         LEFT JOIN form_themes ON form_schemas.theme_id = form_themes.id
         WHERE form_schemas.render_token = $1 AND form_schemas.is_published = true
@@ -330,6 +339,9 @@ export class FormSchemasRepository {
           createdBy: undefined, // Not included in this query
           createdAt: row['theme.createdAt'],
           updatedAt: row['theme.updatedAt'],
+          isCustom: row['theme.isCustom'],
+          creatorId: row['theme.creatorId'],
+          themeDefinition: row['theme.themeDefinition'],
         };
       }
 

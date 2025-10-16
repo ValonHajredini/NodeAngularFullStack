@@ -166,21 +166,32 @@ export class ThemesService {
     }
 
     // Validate color fields (hex format)
-    const colorFields = [
+    const hexColorFields = [
       'primaryColor',
       'secondaryColor',
-      'backgroundColor',
       'textColorPrimary',
       'textColorSecondary',
-      'containerBackground',
     ];
-    for (const field of colorFields) {
+    for (const field of hexColorFields) {
       if (
         properties[field] !== undefined &&
         !this.isValidHexColor(properties[field])
       ) {
         throw new Error(
           `${context} theme configuration: ${field} must be a valid hex color code (e.g., #FF5733)`
+        );
+      }
+    }
+
+    // Validate background fields (allow hex colors and safe CSS)
+    const backgroundFields = ['backgroundColor', 'containerBackground'];
+    for (const field of backgroundFields) {
+      if (
+        properties[field] !== undefined &&
+        !this.isValidColorOrCSS(properties[field])
+      ) {
+        throw new Error(
+          `${context} theme configuration: ${field} must be a valid hex color code or safe CSS gradient`
         );
       }
     }
@@ -243,6 +254,25 @@ export class ThemesService {
    */
   private isValidHexColor(color: string): boolean {
     return /^#[0-9A-Fa-f]{6}$/.test(color);
+  }
+
+  /**
+   * Validates hex color format or safe CSS background.
+   * @param color - Color string to validate
+   * @returns Boolean indicating if color is valid hex format or safe CSS
+   * @private
+   */
+  private isValidColorOrCSS(color: string): boolean {
+    // First check for hex color
+    if (/^#[0-9A-Fa-f]{6}$/.test(color)) {
+      return true;
+    }
+
+    // Also allow safe CSS gradients and color functions
+    // This regex matches the same patterns validated in themes.validator.ts
+    const safeCSS =
+      /^(rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)|rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*[01]?\.?\d*\s*\)|hsl\(\s*\d+\s*,\s*\d+%\s*,\s*\d+%\s*\)|hsla\(\s*\d+\s*,\s*\d+%\s*,\s*\d+%\s*,\s*[01]?\.?\d*\s*\)|linear-gradient\([^)]+\)|radial-gradient\([^)]+\))$/;
+    return safeCSS.test(color);
   }
 }
 
