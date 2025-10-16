@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SkeletonModule } from 'primeng/skeleton';
+import { BadgeModule } from 'primeng/badge';
 import { FormTheme } from '@nodeangularfullstack/shared';
 
 /**
@@ -10,7 +11,7 @@ import { FormTheme } from '@nodeangularfullstack/shared';
 @Component({
   selector: 'app-theme-card',
   standalone: true,
-  imports: [CommonModule, SkeletonModule],
+  imports: [CommonModule, SkeletonModule, BadgeModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
@@ -37,9 +38,17 @@ import { FormTheme } from '@nodeangularfullstack/shared';
         <div *ngIf="isActive" class="active-indicator">
           <i class="pi pi-check-circle"></i>
         </div>
+
+        <!-- Custom theme indicator -->
+        <div *ngIf="theme.isCustom" class="custom-indicator" title="Created by admin">
+          <i class="pi pi-cog"></i>
+        </div>
       </div>
       <div class="theme-info">
-        <h4 class="theme-name">{{ theme.name }}</h4>
+        <div class="theme-header">
+          <h4 class="theme-name">{{ theme.name }}</h4>
+          <p-badge *ngIf="theme.isCustom" value="Custom" severity="info" />
+        </div>
         <span class="theme-usage"> <i class="pi pi-star"></i> {{ theme.usageCount }} </span>
       </div>
     </div>
@@ -70,9 +79,18 @@ import { FormTheme } from '@nodeangularfullstack/shared';
         @apply absolute top-2 right-2 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg;
         background-color: var(--theme-primary-color, #3b82f6);
         animation: scaleIn 0.3s ease-out;
+        z-index: 2;
       }
       .active-indicator i {
         font-size: 1.2rem;
+      }
+      .custom-indicator {
+        @apply absolute top-2 left-2 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-md;
+        background-color: #6366f1; /* indigo-500 for custom themes */
+        z-index: 1;
+      }
+      .custom-indicator i {
+        font-size: 0.85rem;
       }
       @keyframes scaleIn {
         from {
@@ -85,8 +103,11 @@ import { FormTheme } from '@nodeangularfullstack/shared';
       .theme-thumbnail img {
         @apply w-full h-full object-cover;
       }
+      .theme-header {
+        @apply flex items-center justify-between mb-1;
+      }
       .theme-name {
-        @apply text-sm font-semibold mb-1;
+        @apply text-sm font-semibold;
       }
       .theme-usage {
         @apply text-xs text-gray-600 flex items-center gap-1;

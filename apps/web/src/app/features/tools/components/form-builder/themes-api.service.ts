@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { ApiClientService } from '../../../../core/api/api-client.service';
 import { ApiResponse, FormTheme } from '@nodeangularfullstack/shared';
 
@@ -22,6 +23,23 @@ export class ThemesApiService {
    */
   getThemes(): Observable<ApiResponse<FormTheme[]>> {
     return this.api.get<ApiResponse<FormTheme[]>>('/themes');
+  }
+
+  /**
+   * Fetches all themes (predefined + custom) for use in theme dropdown.
+   * The /themes endpoint returns both predefined and custom themes that are active.
+   * Custom themes are distinguished by the isCustom property.
+   * @returns Observable containing all available themes
+   * @example
+   * themesApi.getAllThemes().subscribe(themes => {
+   *   const customThemes = themes.filter(t => t.isCustom);
+   *   const predefinedThemes = themes.filter(t => !t.isCustom);
+   * });
+   */
+  getAllThemes(): Observable<FormTheme[]> {
+    return this.api
+      .get<ApiResponse<FormTheme[]>>('/themes')
+      .pipe(map((response) => response.data || []));
   }
 
   /**

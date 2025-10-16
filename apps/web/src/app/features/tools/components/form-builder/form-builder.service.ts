@@ -1361,19 +1361,19 @@ export class FormBuilderService {
 
   /**
    * Loads a theme when editing an existing form.
-   * Fetches theme from API and applies it to the form.
+   * Fetches all themes (predefined + custom) from API and applies the specified theme.
    * @param themeId - The ID of the theme to load
    */
   loadTheme(themeId: string): void {
     if (!themeId) return;
 
     this._isThemeLoading.set(true);
-    this.themesApi.getThemes().subscribe({
-      next: (response) => {
+    this.themesApi.getAllThemes().subscribe({
+      next: (themes) => {
         // Populate available themes for use in applyTheme()
-        this._availableThemes.set(response.data || []);
+        this._availableThemes.set(themes);
 
-        const theme = response.data?.find((t) => t.id === themeId);
+        const theme = themes.find((t) => t.id === themeId);
         if (theme) {
           this._currentTheme.set(theme);
           this.themePreviewService.applyThemeCss(theme);

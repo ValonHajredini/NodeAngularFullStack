@@ -20,6 +20,21 @@ interface ApiResponse<T> {
 }
 
 /**
+ * Theme usage statistics interface
+ */
+interface ThemeUsage {
+  formsCount: number;
+  publishedFormsCount: number;
+  lastUsed?: Date;
+  formsList: Array<{
+    id: string;
+    title: string;
+    published: boolean;
+    lastModified: Date;
+  }>;
+}
+
+/**
  * Service for managing theme designer operations.
  * Handles CRUD operations for custom themes and validation.
  */
@@ -28,7 +43,7 @@ interface ApiResponse<T> {
 })
 export class ThemeDesignerService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = `${environment.apiUrl}/api/themes`;
+  private readonly apiUrl = `${environment.apiUrl}/themes`;
 
   /**
    * Creates a new custom theme.
@@ -40,16 +55,17 @@ export class ThemeDesignerService {
    * );
    */
   createCustomTheme(theme: FormTheme): Observable<FormTheme> {
-    const request: CreateCustomThemeRequest = {
+    // Clean theme config to remove empty string values (validator treats "" as invalid URL)
+    const cleanedThemeConfig = this.cleanThemeConfig(theme.themeConfig);
+
+    const request = {
       name: theme.name,
       description: theme.description,
       thumbnailUrl: this.generateThumbnailUrl(theme),
-      themeConfig: theme.themeConfig,
-      creatorId: theme.creatorId ?? 'current-user', // In real app, get from auth service
-      themeDefinition: this.generateThemeDefinition(theme),
+      themeConfig: cleanedThemeConfig,
     };
 
-    return this.http.post<ApiResponse<FormTheme>>(`${this.apiUrl}/custom`, request).pipe(
+    return this.http.post<ApiResponse<FormTheme>>(`${this.apiUrl}`, request).pipe(
       map((response) => response.data),
       catchError(this.handleError),
     );
@@ -85,6 +101,21 @@ export class ThemeDesignerService {
   }
 
   /**
+   * Retrieves all themes (predefined and custom) for admin management.
+   * @returns Observable of all themes array
+   * @example
+   * themeDesignerService.getThemes().subscribe(
+   *   themes => console.log('All themes:', themes)
+   * );
+   */
+  getThemes(): Observable<FormTheme[]> {
+    return this.http.get<ApiResponse<FormTheme[]>>(`${this.apiUrl}`).pipe(
+      map((response) => response.data),
+      catchError(this.handleError),
+    );
+  }
+
+  /**
    * Retrieves all custom themes for the current user.
    * @returns Observable of custom themes array
    * @example
@@ -110,6 +141,22 @@ export class ThemeDesignerService {
    */
   getTheme(themeId: string): Observable<FormTheme> {
     return this.http.get<ApiResponse<FormTheme>>(`${this.apiUrl}/${themeId}`).pipe(
+      map((response) => response.data),
+      catchError(this.handleError),
+    );
+  }
+
+  /**
+   * Retrieves theme usage statistics.
+   * @param themeId - The ID of the theme to get usage for
+   * @returns Observable of theme usage data
+   * @example
+   * themeDesignerService.getThemeUsage('theme-id').subscribe(
+   *   usage => console.log('Theme usage:', usage)
+   * );
+   */
+  getThemeUsage(themeId: string): Observable<ThemeUsage> {
+    return this.http.get<ApiResponse<ThemeUsage>>(`${this.apiUrl}/${themeId}/usage`).pipe(
       map((response) => response.data),
       catchError(this.handleError),
     );
@@ -203,6 +250,38 @@ export class ThemeDesignerService {
     // For now, return a placeholder based on primary color
     const primaryColor = theme.themeConfig.desktop.primaryColor.replace('#', '');
     return `https://via.placeholder.com/300x200/${primaryColor}/ffffff?text=${encodeURIComponent(theme.name)}`;
+  }
+
+  /**
+   * Cleans theme configuration by removing empty string values.
+   * This prevents validation errors on optional URL fields.
+   * @private
+   * @param themeConfig - The theme configuration to clean
+   * @returns Cleaned theme configuration
+   */
+  private cleanThemeConfig(themeConfig: any): any {
+    const cleanObject = (obj: any): any => {
+      if (typeof obj !== 'object' || obj === null) {
+        return obj;
+      }
+
+      const cleaned: any = {};
+      for (const [key, value] of Object.entries(obj)) {
+        // Skip empty strings
+        if (value === '') {
+          continue;
+        }
+        // Recursively clean nested objects
+        if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+          cleaned[key] = cleanObject(value);
+        } else {
+          cleaned[key] = value;
+        }
+      }
+      return cleaned;
+    };
+
+    return cleanObject(themeConfig);
   }
 
   /**

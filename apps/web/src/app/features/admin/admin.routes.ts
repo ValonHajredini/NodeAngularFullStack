@@ -34,6 +34,18 @@ export const adminRoutes: Routes = [
     },
   },
   {
+    path: 'themes',
+    loadComponent: () =>
+      import('./pages/theme-management/theme-management.component').then(
+        (m) => m.ThemeManagementComponent,
+      ),
+    canActivate: [authGuard, roleGuard(['admin'])],
+    data: {
+      title: 'Theme Management',
+      description: 'Manage form themes, export configurations, and import designs',
+    },
+  },
+  {
     path: 'themes/designer',
     loadComponent: () =>
       import('./pages/theme-designer/theme-designer.component').then(

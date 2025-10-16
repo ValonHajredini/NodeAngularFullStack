@@ -68,6 +68,12 @@ export class NavigationService {
     '/admin': { title: 'Administration', icon: 'pi pi-cog' },
     '/admin/users': { title: 'User Management', parent: '/admin', icon: 'pi pi-users' },
     '/admin/settings': { title: 'System Settings', parent: '/admin', icon: 'pi pi-cog' },
+    '/admin/themes': { title: 'Theme Management', parent: '/admin', icon: 'pi pi-palette' },
+    '/admin/themes/designer': {
+      title: 'Theme Designer',
+      parent: '/admin/themes',
+      icon: 'pi pi-brush',
+    },
     '/settings': { title: 'Settings', parent: '/dashboard', icon: 'pi pi-cog' },
     '/support': { title: 'Help & Support', parent: '/dashboard', icon: 'pi pi-question-circle' },
   };
@@ -205,6 +211,8 @@ export class NavigationService {
       '/admin': ['admin'],
       '/admin/users': ['admin'],
       '/admin/settings': ['admin'],
+      '/admin/themes': ['admin'],
+      '/admin/themes/designer': ['admin'],
       '/reports': ['admin', 'user'],
     };
 
@@ -250,6 +258,12 @@ export class NavigationService {
           route: '/admin/users',
           icon: 'pi pi-users',
           description: 'Manage system users',
+        },
+        {
+          label: 'Theme Management',
+          route: '/admin/themes',
+          icon: 'pi pi-palette',
+          description: 'Manage form themes and custom designs',
         },
         {
           label: 'System Settings',

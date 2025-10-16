@@ -33,6 +33,7 @@ describe('ThemeDropdownComponent', () => {
       },
       usageCount: 42,
       isActive: true,
+      isCustom: false,
       createdBy: 'user-1',
       createdAt: new Date('2024-01-01'),
       updatedAt: new Date('2024-01-01'),
@@ -60,9 +61,46 @@ describe('ThemeDropdownComponent', () => {
       },
       usageCount: 15,
       isActive: true,
+      isCustom: false,
       createdBy: 'user-2',
       createdAt: new Date('2024-01-02'),
       updatedAt: new Date('2024-01-02'),
+    },
+    {
+      id: 'custom-theme-1',
+      name: 'Custom Corporate',
+      description: 'A custom corporate theme',
+      thumbnailUrl: 'https://example.com/custom-corporate.jpg',
+      themeConfig: {
+        desktop: {
+          primaryColor: '#003366',
+          secondaryColor: '#ff6600',
+          backgroundColor: '#f5f5f5',
+          textColorPrimary: '#333333',
+          textColorSecondary: '#666666',
+          fontFamilyHeading: 'Roboto',
+          fontFamilyBody: 'Open Sans',
+          fieldBorderRadius: '6px',
+          fieldSpacing: '14px',
+          containerBackground: '#ffffff',
+          containerOpacity: 1.0,
+          containerPosition: 'center',
+        },
+      },
+      usageCount: 8,
+      isActive: true,
+      isCustom: true,
+      creatorId: 'admin-1',
+      createdBy: 'admin-1',
+      createdAt: new Date('2024-01-15'),
+      updatedAt: new Date('2024-01-15'),
+      themeDefinition: {
+        primaryColor: '#003366',
+        secondaryColor: '#ff6600',
+        backgroundColor: '#f5f5f5',
+        fontHeading: 'Roboto',
+        fontBody: 'Open Sans',
+      },
     },
   ];
 
@@ -73,7 +111,11 @@ describe('ThemeDropdownComponent', () => {
   };
 
   beforeEach(async () => {
-    const themesApiSpy = jasmine.createSpyObj('ThemesApiService', ['getThemes', 'applyTheme']);
+    const themesApiSpy = jasmine.createSpyObj('ThemesApiService', [
+      'getThemes',
+      'getAllThemes',
+      'applyTheme',
+    ]);
 
     await TestBed.configureTestingModule({
       imports: [ThemeDropdownComponent], // Standalone component
@@ -94,7 +136,7 @@ describe('ThemeDropdownComponent', () => {
     fixture.detectChanges();
 
     const countEl = fixture.nativeElement.querySelector('.theme-count');
-    expect(countEl.textContent).toContain('2 themes');
+    expect(countEl.textContent).toContain('3 themes');
   });
 
   it('should show loading skeleton when loading is true', () => {
@@ -121,13 +163,13 @@ describe('ThemeDropdownComponent', () => {
   });
 
   it('should fetch themes when dropdown opens for first time', () => {
-    themesApiService.getThemes.and.returnValue(of(mockApiResponse));
+    themesApiService.getAllThemes.and.returnValue(of(mockThemes));
     component.themes.set([]); // Empty themes array
 
     const button = fixture.nativeElement.querySelector('button');
     button.click();
 
-    expect(themesApiService.getThemes).toHaveBeenCalled();
+    expect(themesApiService.getAllThemes).toHaveBeenCalled();
   });
 
   it('should not fetch themes when dropdown opens and themes already loaded', () => {
@@ -136,11 +178,11 @@ describe('ThemeDropdownComponent', () => {
     const button = fixture.nativeElement.querySelector('button');
     button.click();
 
-    expect(themesApiService.getThemes).not.toHaveBeenCalled();
+    expect(themesApiService.getAllThemes).not.toHaveBeenCalled();
   });
 
   it('should populate themes from API response', () => {
-    themesApiService.getThemes.and.returnValue(of(mockApiResponse));
+    themesApiService.getAllThemes.and.returnValue(of(mockThemes));
 
     component['fetchThemes']();
 
@@ -150,7 +192,7 @@ describe('ThemeDropdownComponent', () => {
 
   it('should handle API error when fetching themes', () => {
     const error = new Error('API Error');
-    themesApiService.getThemes.and.returnValue(throwError(() => error));
+    themesApiService.getAllThemes.and.returnValue(throwError(() => error));
     spyOn(console, 'error');
 
     component['fetchThemes']();
@@ -309,5 +351,93 @@ describe('ThemeDropdownComponent', () => {
 
     const skeletons = fixture.nativeElement.querySelectorAll('p-skeleton');
     expect(skeletons.length).toBe(8); // As specified in template
+  });
+
+  // Custom theme integration tests
+  describe('Custom Theme Integration', () => {
+    it('should load both predefined and custom themes', () => {
+      themesApiService.getAllThemes.and.returnValue(of(mockThemes));
+
+      component['fetchThemes']();
+
+      const loadedThemes = component.themes();
+      expect(loadedThemes.length).toBe(3);
+
+      const predefinedThemes = loadedThemes.filter((t) => !t.isCustom);
+      const customThemes = loadedThemes.filter((t) => t.isCustom);
+
+      expect(predefinedThemes.length).toBe(2);
+      expect(customThemes.length).toBe(1);
+      expect(customThemes[0].name).toBe('Custom Corporate');
+    });
+
+    it('should distinguish custom themes from predefined themes', () => {
+      component.themes.set(mockThemes);
+      fixture.detectChanges();
+
+      const themeCards = fixture.nativeElement.querySelectorAll('app-theme-card');
+      expect(themeCards.length).toBe(3);
+
+      // Check that custom theme has isCustom property
+      const customTheme = mockThemes.find((t) => t.isCustom);
+      expect(customTheme).toBeTruthy();
+      expect(customTheme!.isCustom).toBe(true);
+      expect(customTheme!.creatorId).toBe('admin-1');
+    });
+
+    it('should pass custom theme data to theme cards correctly', () => {
+      component.themes.set(mockThemes);
+      fixture.detectChanges();
+
+      const themeCards = fixture.nativeElement.querySelectorAll('app-theme-card');
+      const customThemeCard = themeCards[2]; // Third card should be custom theme
+
+      expect(customThemeCard.getAttribute('ng-reflect-theme')).toContain('Custom Corporate');
+    });
+
+    it('should emit custom themes on selection like predefined themes', () => {
+      spyOn(component.themeSelected, 'emit');
+      component.themes.set(mockThemes);
+      fixture.detectChanges();
+
+      const customTheme = mockThemes.find((t) => t.isCustom)!;
+
+      component.onThemeSelect(customTheme);
+
+      expect(component.themeSelected.emit).toHaveBeenCalledWith(customTheme);
+      expect(component.panelVisible).toBe(false);
+    });
+
+    it('should maintain performance with multiple custom themes', () => {
+      const manyThemes = [...mockThemes];
+      // Add more custom themes to test performance
+      for (let i = 1; i <= 20; i++) {
+        manyThemes.push({
+          ...mockThemes[2],
+          id: `custom-theme-${i}`,
+          name: `Custom Theme ${i}`,
+          isCustom: true,
+        } as FormTheme);
+      }
+
+      themesApiService.getAllThemes.and.returnValue(of(manyThemes));
+
+      const startTime = performance.now();
+      component['fetchThemes']();
+      const endTime = performance.now();
+
+      expect(component.themes().length).toBe(23); // 2 predefined + 21 custom
+      expect(endTime - startTime).toBeLessThan(100); // Should load quickly
+    });
+
+    it('should continue to work when no custom themes are available', () => {
+      const predefinedOnly = mockThemes.filter((t) => !t.isCustom);
+      themesApiService.getAllThemes.and.returnValue(of(predefinedOnly));
+
+      component['fetchThemes']();
+
+      expect(component.themes().length).toBe(2);
+      expect(component.themes().every((t) => !t.isCustom)).toBe(true);
+    });
   });
 });

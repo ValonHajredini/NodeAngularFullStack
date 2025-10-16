@@ -19,6 +19,8 @@ import { RadioButtonModule } from 'primeng/radiobutton';
 import { DatePicker } from 'primeng/datepicker';
 import { FileUploadModule } from 'primeng/fileupload';
 import { CardModule } from 'primeng/card';
+import { ToastModule } from 'primeng/toast';
+import { MessageService } from 'primeng/api';
 import { FormTheme } from '@nodeangularfullstack/shared';
 import { ThemePreviewService } from '../../../tools/components/form-builder/theme-preview.service';
 
@@ -44,7 +46,9 @@ import { ThemePreviewService } from '../../../tools/components/form-builder/them
     DatePicker,
     FileUploadModule,
     CardModule,
+    ToastModule,
   ],
+  providers: [MessageService],
   template: `
     <div class="theme-preview-container" [class.mobile-preview]="previewMode === 'mobile'">
       <div class="form-container">
@@ -207,17 +211,22 @@ import { ThemePreviewService } from '../../../tools/components/form-builder/them
               label="Submit Form"
               class="theme-submit-button"
               [disabled]="sampleForm.invalid"
+              (click)="onSubmitPreview()"
             ></button>
             <button
               pButton
               type="button"
               label="Reset"
               class="p-button-outlined theme-reset-button"
+              (click)="onResetPreview()"
             ></button>
           </div>
         </form>
       </div>
     </div>
+
+    <!-- Toast for preview feedback -->
+    <p-toast position="top-center" [life]="3000"></p-toast>
   `,
   styleUrls: ['./theme-preview.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -225,6 +234,7 @@ import { ThemePreviewService } from '../../../tools/components/form-builder/them
 export class ThemePreviewComponent implements OnChanges, OnDestroy {
   private readonly formBuilder = inject(FormBuilder);
   private readonly themePreviewService = inject(ThemePreviewService);
+  private readonly messageService = inject(MessageService);
 
   /**
    * Theme configuration to apply to the preview
@@ -306,5 +316,43 @@ export class ThemePreviewComponent implements OnChanges, OnDestroy {
 
     // The theme is applied by the parent component via ThemePreviewService
     // This component just renders the form with theme-aware CSS classes
+  }
+
+  /**
+   * Handles submit button click in preview mode.
+   * Shows informational message that this is a preview.
+   */
+  onSubmitPreview(): void {
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Preview Mode',
+      detail: 'This is a live preview to demonstrate theme styling. No data will be submitted.',
+      life: 3000,
+    });
+  }
+
+  /**
+   * Handles reset button click in preview mode.
+   * Resets the form to initial sample values.
+   */
+  onResetPreview(): void {
+    this.sampleForm.patchValue({
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john.doe@example.com',
+      country: 'us',
+      message: 'This is a sample message to demonstrate the textarea styling.',
+      newsletter: true,
+      updates: false,
+      contactMethod: 'email',
+      birthDate: null,
+    });
+
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Form Reset',
+      detail: 'Preview form has been reset to sample values.',
+      life: 3000,
+    });
   }
 }

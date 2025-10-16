@@ -203,13 +203,14 @@ export class ThemeDropdownComponent {
 
   /**
    * Fetches themes from the API and updates the themes signal.
+   * Loads both predefined and custom themes with visual indicators.
    * Shows loading state during fetch.
    */
   private fetchThemes(): void {
     this.loading.set(true);
-    this.themesApi.getThemes().subscribe({
-      next: (response) => {
-        this.themes.set(response.data || []);
+    this.themesApi.getAllThemes().subscribe({
+      next: (themes) => {
+        this.themes.set(themes);
         this.loading.set(false);
       },
       error: (err) => {

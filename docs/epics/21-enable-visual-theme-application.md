@@ -1,4 +1,28 @@
-# Epic 21: Enable Visual Theme Application on Forms - Brownfield Enhancement
+# Epic 21: Enable Visual Theme Application on Forms - ~~DEPRECATED~~
+
+**STATUS:** ⚠️ **DEPRECATED - ROLLED BACK**  
+**Date:** 2025-10-16  
+**Reason:** Incomplete implementation - theme utility classes only covered form inputs/buttons, not
+backgrounds/containers. Tailwind removal was partial, causing CSS conflicts.
+
+**Replacement:** See Epic 23 - Complete Theme System Implementation
+
+**Issues Identified:**
+
+1. `theme-variables.css` only defined classes for `.theme-input`, `.theme-button`, `.theme-label`
+2. Missing classes for `.theme-form-background`, `.theme-container-wrapper`, row/column containers
+3. Partial Tailwind replacement left conflicts (Tailwind specificity > theme variables)
+4. Theme rendering broken: only inputs/labels/buttons styled, backgrounds/divs not styled
+
+**Files to Revert:**
+
+- `apps/web/src/app/features/tools/components/form-builder/form-canvas/form-canvas.component.ts`
+- `apps/web/src/app/features/public/form-renderer/form-renderer.component.html`
+- `apps/web/src/styles/theme-variables.css` (partial modifications)
+
+---
+
+## Original Epic Content (For Reference Only)
 
 ## Epic Goal
 
