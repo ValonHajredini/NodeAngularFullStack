@@ -103,6 +103,34 @@ export class ThemesService {
   }
 
   /**
+   * Gets theme usage statistics including forms using this theme.
+   * @param id - Theme ID to get usage statistics for
+   * @returns Promise containing usage statistics
+   * @throws {Error} When theme not found or query fails
+   * @example
+   * const usage = await themesService.getThemeUsage('theme-uuid');
+   */
+  async getThemeUsage(id: string): Promise<{
+    formsCount: number;
+    publishedFormsCount: number;
+    lastUsed?: Date;
+    formsList: Array<{
+      id: string;
+      title: string;
+      published: boolean;
+      lastModified: Date;
+    }>;
+  }> {
+    // Verify theme exists
+    const theme = await themesRepository.findById(id);
+    if (!theme) {
+      throw new Error('Theme not found');
+    }
+
+    return await themesRepository.getThemeUsage(id);
+  }
+
+  /**
    * Validates theme configuration structure and values.
    * @param themeConfig - Theme configuration to validate
    * @throws {Error} When validation fails

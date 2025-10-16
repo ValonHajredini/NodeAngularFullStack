@@ -33,30 +33,6 @@ export const adminRoutes: Routes = [
       description: 'Register a new tool using the guided wizard',
     },
   },
-  {
-    path: 'themes',
-    loadComponent: () =>
-      import('./pages/theme-management/theme-management.component').then(
-        (m) => m.ThemeManagementComponent,
-      ),
-    canActivate: [authGuard, roleGuard(['admin'])],
-    data: {
-      title: 'Theme Management',
-      description: 'Manage form themes, export configurations, and import designs',
-    },
-  },
-  {
-    path: 'themes/designer',
-    loadComponent: () =>
-      import('./pages/theme-designer/theme-designer.component').then(
-        (m) => m.ThemeDesignerComponent,
-      ),
-    canActivate: [authGuard, roleGuard(['admin'])],
-    data: {
-      title: 'Theme Designer',
-      description: 'Create and customize form themes with real-time preview',
-    },
-  },
 ];
 
 export default adminRoutes;

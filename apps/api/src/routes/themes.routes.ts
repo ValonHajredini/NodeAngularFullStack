@@ -446,4 +446,95 @@ router.post(
   themesController.applyTheme
 );
 
+/**
+ * @swagger
+ * /api/themes/{id}/usage:
+ *   get:
+ *     summary: Get theme usage statistics
+ *     description: Get detailed usage statistics for a theme including forms using it
+ *     tags: [Themes]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Theme ID (UUID)
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *     responses:
+ *       200:
+ *         description: Theme usage statistics retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Theme usage retrieved successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     formsCount:
+ *                       type: integer
+ *                       description: Total number of forms using this theme
+ *                       example: 15
+ *                     publishedFormsCount:
+ *                       type: integer
+ *                       description: Number of published forms using this theme
+ *                       example: 12
+ *                     lastUsed:
+ *                       type: string
+ *                       format: date-time
+ *                       description: Timestamp of the most recently modified form using this theme
+ *                       example: "2025-10-15T14:30:00.000Z"
+ *                     formsList:
+ *                       type: array
+ *                       description: List of forms using this theme
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                             example: "98765432-e89b-12d3-a456-426614174111"
+ *                           title:
+ *                             type: string
+ *                             example: "Contact Form"
+ *                           published:
+ *                             type: boolean
+ *                             example: true
+ *                           lastModified:
+ *                             type: string
+ *                             format: date-time
+ *                             example: "2025-10-15T14:30:00.000Z"
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Theme not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get(
+  '/:id/usage',
+  AuthMiddleware.authenticate,
+  validateThemeId,
+  themesController.getThemeUsage
+);
+
 export { router as themesRoutes };

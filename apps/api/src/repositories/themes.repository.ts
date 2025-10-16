@@ -621,6 +621,74 @@ export class ThemesRepository extends BaseRepository<FormTheme> {
       client.release();
     }
   }
+
+  /**
+   * Gets theme usage statistics including forms using this theme.
+   * @param themeId - Theme ID to get usage for
+   * @returns Promise containing usage statistics
+   * @throws {Error} When database query fails
+   * @example
+   * const usage = await themesRepository.getThemeUsage('theme-uuid');
+   */
+  async getThemeUsage(themeId: string): Promise<{
+    formsCount: number;
+    publishedFormsCount: number;
+    lastUsed?: Date;
+    formsList: Array<{
+      id: string;
+      title: string;
+      published: boolean;
+      lastModified: Date;
+    }>;
+  }> {
+    const client = await this.pool.connect();
+
+    try {
+      // Query forms that use this theme
+      const query = `
+        SELECT
+          f.id,
+          f.title,
+          f.published,
+          f.updated_at as "updatedAt"
+        FROM forms f
+        INNER JOIN form_schemas fs ON f.id = fs.form_id
+        WHERE fs.theme_id = $1
+        ORDER BY f.updated_at DESC
+      `;
+
+      const result = await client.query(query, [themeId]);
+
+      const formsList = result.rows.map((row) => ({
+        id: row.id,
+        title: row.title,
+        published: row.published,
+        lastModified: row.updatedAt,
+      }));
+
+      const formsCount = formsList.length;
+      const publishedFormsCount = formsList.filter((f) => f.published).length;
+      const lastUsed =
+        formsCount > 0
+          ? new Date(
+              Math.max(
+                ...formsList.map((f) => new Date(f.lastModified).getTime())
+              )
+            )
+          : undefined;
+
+      return {
+        formsCount,
+        publishedFormsCount,
+        lastUsed,
+        formsList,
+      };
+    } catch (error: any) {
+      throw new Error(`Failed to get theme usage: ${error.message}`);
+    } finally {
+      client.release();
+    }
+  }
 }
 
 // Export singleton instance

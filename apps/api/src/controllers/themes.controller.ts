@@ -315,6 +315,49 @@ export class ThemesController {
       }
     }
   );
+
+  /**
+   * Gets theme usage statistics including forms using this theme.
+   * @route GET /api/themes/:id/usage
+   * @param req - Express request object with theme ID parameter
+   * @param res - Express response object
+   * @param next - Express next function
+   * @returns HTTP response with theme usage statistics
+   * @throws {ApiError} 401 - Authentication required
+   * @throws {ApiError} 404 - Theme not found
+   * @example
+   * GET /api/themes/theme-uuid/usage
+   * Authorization: Bearer <token>
+   */
+  getThemeUsage = AsyncHandler(
+    async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+      const { id } = req.params;
+
+      try {
+        const usage = await themesService.getThemeUsage(id);
+
+        res.status(200).json({
+          success: true,
+          message: 'Theme usage retrieved successfully',
+          data: usage,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (error: any) {
+        if (error.message.includes('Theme not found')) {
+          res.status(404).json({
+            success: false,
+            error: {
+              code: 'NOT_FOUND',
+              message: 'Theme not found',
+            },
+            timestamp: new Date().toISOString(),
+          });
+          return;
+        }
+        throw error;
+      }
+    }
+  );
 }
 
 // Export singleton instance
