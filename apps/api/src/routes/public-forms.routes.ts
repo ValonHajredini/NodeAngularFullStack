@@ -190,4 +190,67 @@ router.post(
   publicFormsController.submitForm
 );
 
+/**
+ * @swagger
+ * /api/public/forms/{shortCode}:
+ *   get:
+ *     summary: Get form schema for public rendering by short code
+ *     description: Retrieves form schema with embedded theme using short code (alternative to JWT token method)
+ *     tags: [Public Forms]
+ *     parameters:
+ *       - in: path
+ *         name: shortCode
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Short code for the published form
+ *         example: "abc123"
+ *     responses:
+ *       200:
+ *         description: Form schema retrieved successfully with optional theme
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Form schema retrieved successfully"
+ *                 form:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                     schema:
+ *                       $ref: '#/components/schemas/FormSchema'
+ *                     settings:
+ *                       type: object
+ *                       description: Form settings for rendering
+ *                     theme:
+ *                       nullable: true
+ *                       description: Optional theme object (null if no theme or theme deleted)
+ *                       $ref: '#/components/schemas/FormTheme'
+ *                     shortCode:
+ *                       type: string
+ *                       example: "abc123"
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *       404:
+ *         description: Form not found or short code invalid
+ *       410:
+ *         description: Form has expired
+ *       429:
+ *         description: Rate limit exceeded
+ */
+router.get(
+  '/forms/:shortCode',
+  RateLimitMiddleware.publicFormRenderLimit(),
+  publicFormsController.getPublicFormByShortCode
+);
+
 export { router as publicFormsRoutes };

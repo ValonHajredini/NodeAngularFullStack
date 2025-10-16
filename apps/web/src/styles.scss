@@ -3,6 +3,9 @@
 /* Theme System - Must be imported first */
 @use './styles/theme.scss';
 
+/* Form Theme Variables - Epic 20 */
+@import './styles/theme-variables.css';
+
 /* Tailwind CSS imports */
 @tailwind base;
 @tailwind components;

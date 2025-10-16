@@ -51,6 +51,11 @@ export const createFormValidator = [
     .optional()
     .isUUID()
     .withMessage('Theme ID must be a valid UUID'),
+
+  body('schema.settings.themeId')
+    .optional()
+    .isUUID()
+    .withMessage('Theme ID must be a valid UUID'),
 ];
 
 /**
@@ -97,6 +102,11 @@ export const updateFormValidator = [
     .withMessage('Schema fields must be an array'),
 
   body('schema.themeId')
+    .optional()
+    .isUUID()
+    .withMessage('Theme ID must be a valid UUID'),
+
+  body('schema.settings.themeId')
     .optional()
     .isUUID()
     .withMessage('Theme ID must be a valid UUID'),

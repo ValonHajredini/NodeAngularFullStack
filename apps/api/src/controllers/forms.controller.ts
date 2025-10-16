@@ -54,6 +54,10 @@ export class FormsController {
       }
 
       // Prepare form data
+      // Extract themeId from schema.settings.themeId (new format from frontend)
+      // or fallback to top-level themeId (old format for backward compatibility)
+      const themeId = req.body.schema?.settings?.themeId || req.body.themeId;
+
       const formData = {
         title: req.body.title,
         description: req.body.description,
@@ -61,7 +65,7 @@ export class FormsController {
         schema: req.body.schema
           ? {
               ...req.body.schema,
-              themeId: req.body.themeId,
+              themeId: themeId,
             }
           : undefined,
       };
@@ -264,10 +268,14 @@ export class FormsController {
       if (req.body.status !== undefined) updateData.status = req.body.status;
 
       // Prepare schema data with themeId
+      // Extract themeId from schema.settings.themeId (new format from frontend)
+      // or fallback to top-level themeId (old format for backward compatibility)
+      const themeId = req.body.schema?.settings?.themeId || req.body.themeId;
+
       const schemaData = req.body.schema
         ? {
             ...req.body.schema,
-            themeId: req.body.themeId,
+            themeId: themeId,
           }
         : undefined;
 

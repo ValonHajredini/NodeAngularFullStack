@@ -21,11 +21,11 @@ import { FormsModule } from '@angular/forms';
           (keydown.enter)="saveLabel(); $event.preventDefault()"
           (keydown.escape)="cancelEdit(); $event.preventDefault()"
           (click)="$event.stopPropagation()"
-          class="inline-label-input"
+          class="inline-label-input theme-input"
           [attr.aria-label]="'Edit label for ' + originalLabel"
         />
       } @else {
-        <label class="field-label">
+        <label class="field-label theme-label">
           {{ label }}
           <i class="pi pi-pencil text-xs ml-2 text-gray-400"></i>
         </label>
@@ -46,23 +46,20 @@ import { FormsModule } from '@angular/forms';
         cursor: text;
       }
       .inline-label-input {
-        border: 2px solid #3b82f6;
         outline: none;
         padding: 0.5rem;
         font-weight: 500;
-        border-radius: 0.375rem;
         width: 100%;
         font-size: 0.875rem;
       }
       .field-label {
         display: block;
         font-weight: 500;
-        color: #111827;
-        padding: 0.5rem 0;
+        padding: 0;
         font-size: 0.875rem;
       }
       .field-label:hover .pi-pencil {
-        color: #3b82f6;
+        opacity: 0.7;
       }
     `,
   ],

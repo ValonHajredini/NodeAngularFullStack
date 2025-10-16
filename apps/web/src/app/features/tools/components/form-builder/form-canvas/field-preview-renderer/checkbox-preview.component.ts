@@ -23,10 +23,11 @@ import { FormField } from '@nodeangularfullstack/shared';
             [(ngModel)]="previewBinaryValue"
             [disabled]="true"
             inputId="checkbox-preview"
+            styleClass="theme-checkbox"
             [attr.aria-label]="field.label"
             [attr.aria-required]="field.required"
           ></p-checkbox>
-          <label for="checkbox-preview" class="ml-2 text-sm font-medium text-gray-700">
+          <label for="checkbox-preview" class="ml-2 text-sm font-medium theme-label">
             {{ field.label }}
             @if (field.required) {
               <span class="text-red-500 ml-1">*</span>
@@ -43,12 +44,13 @@ import { FormField } from '@nodeangularfullstack/shared';
                 [(ngModel)]="previewArrayValue"
                 [disabled]="true"
                 [binary]="false"
+                styleClass="theme-checkbox"
                 [inputId]="'checkbox-' + field.id + '-' + option.value"
                 [attr.aria-label]="option.label"
               ></p-checkbox>
               <label
                 [for]="'checkbox-' + field.id + '-' + option.value"
-                class="ml-2 text-sm text-gray-700"
+                class="ml-2 text-sm theme-label"
               >
                 {{ option.label }}
               </label>

@@ -24,6 +24,7 @@ import {
   FormField,
   FormFieldType,
   FormBackgroundSettings,
+  FormTheme,
   HeadingMetadata,
   TextBlockMetadata,
   ImageMetadata,
@@ -40,6 +41,7 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
 // Service
 import { FormRendererService, FormRenderError, FormRenderErrorType } from './form-renderer.service';
+import { ThemePreviewService } from '../../tools/components/form-builder/theme-preview.service';
 
 // Field Renderers
 import { ImageGalleryRendererComponent } from './image-gallery-renderer.component';
@@ -102,6 +104,10 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   settings: FormSettings | null = null;
   isPreview = false;
 
+  // Theme loading signal (Story 20.7)
+  private readonly _themeLoaded = signal<boolean>(false);
+  readonly themeLoaded = this._themeLoaded.asReadonly();
+
   // Step Form Navigation Signals
   private readonly _formSchemaSignal = signal<FormSchema | null>(null);
   protected readonly isStepFormEnabled = computed(
@@ -157,6 +163,7 @@ export class FormRendererComponent implements OnInit, OnDestroy {
     private htmlSanitizer: HtmlSanitizerService,
     private domSanitizer: DomSanitizer,
     private messageService: MessageService,
+    private themePreviewService: ThemePreviewService,
   ) {}
 
   ngOnInit(): void {
@@ -169,6 +176,12 @@ export class FormRendererComponent implements OnInit, OnDestroy {
       this.formGroup = this.buildFormGroup(this.formSchema);
       this.setupConditionalVisibility();
       this.state = { ...this.state, loading: false };
+
+      // Apply theme CSS if available (Story 20.7)
+      // Note: Preview mode may not include theme data
+      const themeIdFromSettings = this.settings?.themeId;
+      const theme = (this.formSchema as any).theme; // Theme might be attached to schema
+      this.applyThemeIfAvailable(theme, themeIdFromSettings);
 
       // Record initial 'view' event for step forms (Story 19.5)
       if (this.isStepFormEnabled()) {
@@ -237,6 +250,11 @@ export class FormRendererComponent implements OnInit, OnDestroy {
 
       this.state = { ...this.state, loading: false };
 
+      // Apply theme CSS if available (Story 20.7)
+      // Note: Preview data may not include theme data
+      const themeIdFromSettings = previewData.settings?.themeId;
+      this.applyThemeIfAvailable(previewData.theme, themeIdFromSettings);
+
       // Record initial 'view' event for step forms (Story 19.5)
       if (this.isStepFormEnabled()) {
         this.recordStepEvent('view');
@@ -274,9 +292,43 @@ export class FormRendererComponent implements OnInit, OnDestroy {
     };
   }
 
+  /**
+   * Applies theme CSS if theme is provided, otherwise clears theme CSS.
+   * Handles deleted/missing themes gracefully (AC: 5).
+   * Story 20.7: Public Form Rendering with Themes
+   * @param theme - Optional theme object to apply
+   * @param themeIdFromSettings - Optional theme ID from form settings (for deleted theme detection)
+   */
+  private applyThemeIfAvailable(
+    theme: FormTheme | null | undefined,
+    themeIdFromSettings?: string,
+  ): void {
+    // If theme is provided, apply it
+    if (theme) {
+      this.themePreviewService.applyThemeCss(theme);
+      this._themeLoaded.set(true);
+      console.log('[Theme] Applied theme:', theme.name);
+    } else {
+      // No theme available - clear any existing theme CSS
+      this.themePreviewService.clearThemeCss();
+      this._themeLoaded.set(false);
+
+      // If theme ID was expected but theme is null, warn about deleted theme (AC: 5)
+      if (themeIdFromSettings) {
+        console.warn(
+          `[Theme] Theme ${themeIdFromSettings} not found for form, using default styles. The theme may have been deleted.`,
+        );
+      }
+    }
+  }
+
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+
+    // Clear theme CSS on component destruction (Story 20.7)
+    this.themePreviewService.clearThemeCss();
+    this._themeLoaded.set(false);
   }
 
   /**
@@ -461,6 +513,10 @@ export class FormRendererComponent implements OnInit, OnDestroy {
           this.formGroup = this.buildFormGroup(result.schema);
           this.setupConditionalVisibility();
           this.state = { ...this.state, loading: false };
+
+          // Apply theme CSS if available (Story 20.7)
+          const themeIdFromSettings = result.settings?.themeId;
+          this.applyThemeIfAvailable(result.theme, themeIdFromSettings);
 
           // Record initial 'view' event for step forms (Story 19.5)
           if (this.isStepFormEnabled()) {

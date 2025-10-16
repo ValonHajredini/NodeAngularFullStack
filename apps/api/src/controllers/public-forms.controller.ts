@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import validator from 'validator';
 import { formSchemasRepository } from '../repositories/form-schemas.repository';
 import { formSubmissionsRepository } from '../repositories/form-submissions.repository';
+import { shortLinksRepository } from '../repositories/short-links.repository';
 import { ApiError } from '../services/forms.service';
 import { AsyncHandler } from '../utils/async-handler.utils';
 import { AppConfig } from '../config/app.config';
@@ -422,6 +423,64 @@ export class PublicFormsController {
           successMessage:
             formSchema.settings?.submission?.successMessage ||
             'Thank you for your submission!',
+        },
+        timestamp: new Date().toISOString(),
+      });
+    }
+  );
+
+  /**
+   * Retrieves form schema for public rendering using short code.
+   * @route GET /api/public/forms/:shortCode
+   * @param req - Express request object with shortCode parameter
+   * @param res - Express response object
+   * @returns HTTP response with form schema, settings, and theme
+   * @throws {ApiError} 404 - Short code not found or form not published
+   * @throws {ApiError} 410 - Form has expired
+   * @example
+   * GET /api/public/forms/abc123
+   */
+  getPublicFormByShortCode = AsyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const { shortCode } = req.params;
+
+      if (!shortCode) {
+        throw new ApiError('Invalid short code', 404, 'INVALID_SHORT_CODE');
+      }
+
+      // Query short_links table and join with form_schemas and form_themes
+      const formData =
+        await shortLinksRepository.findFormSchemaByCode(shortCode);
+
+      if (!formData) {
+        throw new ApiError('Form not found', 404, 'FORM_NOT_FOUND');
+      }
+
+      // Check if form has expired
+      if (
+        formData.schema.expiresAt &&
+        new Date(formData.schema.expiresAt) < new Date()
+      ) {
+        throw new ApiError('This form has expired', 410, 'FORM_EXPIRED');
+      }
+
+      // Handle deleted theme gracefully (AC: 5)
+      if (formData.settings?.themeId && !formData.theme) {
+        console.warn(
+          `Theme ${formData.settings.themeId} not found for form ${formData.schema.id}, using default styles`
+        );
+      }
+
+      // Return form with embedded theme (AC: 1, 2, 4)
+      res.status(200).json({
+        success: true,
+        message: 'Form schema retrieved successfully',
+        form: {
+          id: formData.schema.id,
+          schema: formData.schema,
+          settings: formData.settings,
+          theme: formData.theme || null, // null if no theme or theme deleted
+          shortCode: formData.shortCode,
         },
         timestamp: new Date().toISOString(),
       });

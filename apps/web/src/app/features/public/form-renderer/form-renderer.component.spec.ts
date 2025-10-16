@@ -5,12 +5,14 @@ import { of, throwError, Subject } from 'rxjs';
 import { MessageService } from 'primeng/api';
 import { FormRendererComponent } from './form-renderer.component';
 import { FormRendererService, FormRenderError, FormRenderErrorType } from './form-renderer.service';
-import { FormFieldType, FormSchema, FormSettings } from '@nodeangularfullstack/shared';
+import { FormFieldType, FormSchema, FormSettings, FormTheme } from '@nodeangularfullstack/shared';
+import { ThemePreviewService } from '../../tools/components/form-builder/theme-preview.service';
 
 describe('FormRendererComponent', () => {
   let component: FormRendererComponent;
   let fixture: ComponentFixture<FormRendererComponent>;
   let formRendererService: jasmine.SpyObj<FormRendererService>;
+  let themePreviewService: jasmine.SpyObj<ThemePreviewService>;
   let activatedRoute: any;
 
   const mockSchema: FormSchema = {
@@ -108,6 +110,10 @@ describe('FormRendererComponent', () => {
 
   beforeEach(async () => {
     const formRendererServiceSpy = jasmine.createSpyObj('FormRendererService', ['getFormSchema']);
+    const themePreviewServiceSpy = jasmine.createSpyObj('ThemePreviewService', [
+      'applyThemeCss',
+      'clearThemeCss',
+    ]);
     const activatedRouteStub = {
       snapshot: {
         paramMap: {
@@ -120,6 +126,7 @@ describe('FormRendererComponent', () => {
       imports: [FormRendererComponent, HttpClientTestingModule],
       providers: [
         { provide: FormRendererService, useValue: formRendererServiceSpy },
+        { provide: ThemePreviewService, useValue: themePreviewServiceSpy },
         { provide: ActivatedRoute, useValue: activatedRouteStub },
       ],
     }).compileComponents();
@@ -127,6 +134,9 @@ describe('FormRendererComponent', () => {
     formRendererService = TestBed.inject(
       FormRendererService,
     ) as jasmine.SpyObj<FormRendererService>;
+    themePreviewService = TestBed.inject(
+      ThemePreviewService,
+    ) as jasmine.SpyObj<ThemePreviewService>;
     activatedRoute = TestBed.inject(ActivatedRoute);
 
     formRendererService.getFormSchema.and.returnValue(
@@ -2687,6 +2697,285 @@ describe('FormRendererComponent', () => {
 
         // preventDefault should not be called
         expect(event.preventDefault).not.toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('Theme Application (Story 20.7)', () => {
+    const mockTheme: FormTheme = {
+      id: 'theme-1',
+      name: 'Neon Theme',
+      description: 'Bright neon colors',
+      thumbnailUrl: 'https://example.com/neon-thumb.jpg',
+      themeConfig: {
+        desktop: {
+          primaryColor: '#FF006E',
+          secondaryColor: '#8338EC',
+          backgroundColor: '#1a1a1a',
+          textColorPrimary: '#ffffff',
+          textColorSecondary: '#cccccc',
+          fontFamilyHeading: 'Arial, sans-serif',
+          fontFamilyBody: 'Arial, sans-serif',
+          fieldBorderRadius: '8px',
+          fieldSpacing: '12px',
+          containerBackground: '#2a2a2a',
+          containerOpacity: 0.9,
+          containerPosition: 'center',
+        },
+        mobile: {
+          primaryColor: '#FF006E',
+          secondaryColor: '#8338EC',
+          fieldBorderRadius: '6px',
+          fieldSpacing: '8px',
+        },
+      },
+      usageCount: 5,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    describe('Theme Application on Form Load', () => {
+      it('should apply theme CSS when form has theme', () => {
+        const formWithTheme = {
+          schema: mockSchema,
+          settings: { ...mockSettings, themeId: 'theme-1' },
+          theme: mockTheme,
+        };
+
+        formRendererService.getFormSchema.and.returnValue(of(formWithTheme));
+
+        fixture.detectChanges();
+
+        expect(themePreviewService.applyThemeCss).toHaveBeenCalledWith(mockTheme);
+        expect(component.themeLoaded()).toBe(true);
+      });
+
+      it('should clear theme CSS when form has no theme', () => {
+        const formWithoutTheme = {
+          schema: mockSchema,
+          settings: mockSettings,
+          theme: null,
+        };
+
+        formRendererService.getFormSchema.and.returnValue(of(formWithoutTheme));
+
+        fixture.detectChanges();
+
+        expect(themePreviewService.clearThemeCss).toHaveBeenCalled();
+        expect(component.themeLoaded()).toBe(false);
+      });
+
+      it('should handle deleted theme gracefully with console warning', () => {
+        const formWithDeletedTheme = {
+          schema: mockSchema,
+          settings: { ...mockSettings, themeId: 'deleted-theme-id' },
+          theme: null, // Theme was deleted
+        };
+
+        spyOn(console, 'warn');
+        formRendererService.getFormSchema.and.returnValue(of(formWithDeletedTheme));
+
+        fixture.detectChanges();
+
+        expect(themePreviewService.clearThemeCss).toHaveBeenCalled();
+        expect(console.warn).toHaveBeenCalledWith(
+          'Theme deleted-theme-id not found, using default styles',
+        );
+        expect(component.themeLoaded()).toBe(false);
+      });
+
+      it('should apply theme in preview mode when theme is provided', () => {
+        const previewData = {
+          schema: mockSchema,
+          settings: { ...mockSettings, themeId: 'theme-1' },
+          theme: mockTheme,
+          isPreview: true,
+        };
+
+        const previewId = 'test-preview-theme';
+        const urlSubject = new Subject<any>();
+        const previewRouteStub = {
+          snapshot: {
+            paramMap: {
+              get: jasmine.createSpy('get').and.returnValue(previewId),
+            },
+          },
+          url: urlSubject.asObservable(),
+        };
+
+        spyOn(localStorage, 'getItem').and.returnValue(JSON.stringify(previewData));
+
+        TestBed.overrideProvider(ActivatedRoute, { useValue: previewRouteStub });
+
+        const newFixture = TestBed.createComponent(FormRendererComponent);
+        const newComponent = newFixture.componentInstance;
+
+        urlSubject.next([{ path: 'forms' }, { path: 'preview' }, { path: previewId }]);
+        newFixture.detectChanges();
+
+        expect(themePreviewService.applyThemeCss).toHaveBeenCalledWith(mockTheme);
+        expect(newComponent.themeLoaded()).toBe(true);
+      });
+    });
+
+    describe('Theme Cleanup', () => {
+      it('should clear theme CSS on component destroy', () => {
+        const formWithTheme = {
+          schema: mockSchema,
+          settings: { ...mockSettings, themeId: 'theme-1' },
+          theme: mockTheme,
+        };
+
+        formRendererService.getFormSchema.and.returnValue(of(formWithTheme));
+        fixture.detectChanges();
+
+        component.ngOnDestroy();
+
+        expect(themePreviewService.clearThemeCss).toHaveBeenCalledTimes(2); // Once on load, once on destroy
+      });
+
+      it('should clear theme CSS on destroy even when no theme was applied', () => {
+        fixture.detectChanges();
+
+        component.ngOnDestroy();
+
+        expect(themePreviewService.clearThemeCss).toHaveBeenCalled();
+      });
+    });
+
+    describe('Theme and Custom Background Coexistence (AC 6)', () => {
+      it('should apply theme CSS variables as base layer when both theme and custom background exist', () => {
+        const formWithThemeAndCustomBg = {
+          schema: mockSchema,
+          settings: {
+            ...mockSettings,
+            themeId: 'theme-1',
+            backgroundType: 'image',
+            backgroundImageUrl: 'https://example.com/bg.jpg',
+            backgroundImagePosition: 'cover',
+          },
+          theme: mockTheme,
+        };
+
+        formRendererService.getFormSchema.and.returnValue(of(formWithThemeAndCustomBg));
+
+        fixture.detectChanges();
+
+        // Theme should be applied first (base layer)
+        expect(themePreviewService.applyThemeCss).toHaveBeenCalledWith(mockTheme);
+        expect(component.themeLoaded()).toBe(true);
+
+        // Custom background should override theme background via higher CSS specificity
+        // This is handled in the template via inline styles or CSS classes
+        expect(component.settings.backgroundType).toBe('image');
+        expect(component.settings.backgroundImageUrl).toBe('https://example.com/bg.jpg');
+      });
+
+      it('should apply theme colors while preserving custom background image', () => {
+        const formWithThemeAndGradient = {
+          schema: mockSchema,
+          settings: {
+            ...mockSettings,
+            themeId: 'theme-1',
+            backgroundType: 'custom',
+            backgroundColor: 'linear-gradient(45deg, #ff6b6b, #4ecdc4)',
+          },
+          theme: mockTheme,
+        };
+
+        formRendererService.getFormSchema.and.returnValue(of(formWithThemeAndGradient));
+
+        fixture.detectChanges();
+
+        // Theme provides colors/fonts/styling
+        expect(themePreviewService.applyThemeCss).toHaveBeenCalledWith(mockTheme);
+
+        // Custom background overrides theme background
+        expect(component.settings.backgroundType).toBe('custom');
+        expect(component.settings.backgroundColor).toBe('linear-gradient(45deg, #ff6b6b, #4ecdc4)');
+      });
+
+      it('should handle theme with custom background in row layout', () => {
+        const formWithThemeRowLayout = {
+          schema: {
+            ...mockSchema,
+            settings: {
+              ...mockSchema.settings,
+              rowLayout: {
+                enabled: true,
+                rows: [{ rowId: 'row-1', columnCount: 2, order: 0 }],
+              },
+            },
+          },
+          settings: {
+            ...mockSettings,
+            themeId: 'theme-1',
+            backgroundType: 'image',
+            backgroundImageUrl: 'https://example.com/bg.jpg',
+            rowLayout: {
+              enabled: true,
+              rows: [{ rowId: 'row-1', columnCount: 2, order: 0 }],
+            },
+          },
+          theme: mockTheme,
+        };
+
+        formRendererService.getFormSchema.and.returnValue(of(formWithThemeRowLayout));
+
+        fixture.detectChanges();
+
+        // Theme should apply to row layout
+        expect(themePreviewService.applyThemeCss).toHaveBeenCalledWith(mockTheme);
+        expect(component.isRowLayoutEnabled()).toBe(true);
+
+        // Custom background should still override theme background
+        expect(component.settings.backgroundType).toBe('image');
+      });
+    });
+
+    describe('Responsive Theme Application', () => {
+      it('should apply responsive theme configuration', () => {
+        const formWithResponsiveTheme = {
+          schema: mockSchema,
+          settings: { ...mockSettings, themeId: 'theme-1' },
+          theme: mockTheme,
+        };
+
+        formRendererService.getFormSchema.and.returnValue(of(formWithResponsiveTheme));
+
+        fixture.detectChanges();
+
+        // ThemePreviewService should handle responsive configuration
+        expect(themePreviewService.applyThemeCss).toHaveBeenCalledWith(mockTheme);
+
+        // Verify theme has both desktop and mobile config
+        expect(mockTheme.themeConfig.desktop).toBeDefined();
+        expect(mockTheme.themeConfig.mobile).toBeDefined();
+        expect(mockTheme.themeConfig.mobile?.fieldBorderRadius).toBe('6px');
+      });
+
+      it('should handle theme without mobile configuration', () => {
+        const themeWithoutMobile: FormTheme = {
+          ...mockTheme,
+          themeConfig: {
+            desktop: mockTheme.themeConfig.desktop,
+            // mobile: undefined
+          },
+        };
+
+        const formWithDesktopOnlyTheme = {
+          schema: mockSchema,
+          settings: { ...mockSettings, themeId: 'theme-1' },
+          theme: themeWithoutMobile,
+        };
+
+        formRendererService.getFormSchema.and.returnValue(of(formWithDesktopOnlyTheme));
+
+        fixture.detectChanges();
+
+        expect(themePreviewService.applyThemeCss).toHaveBeenCalledWith(themeWithoutMobile);
+        expect(component.themeLoaded()).toBe(true);
       });
     });
   });

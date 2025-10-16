@@ -1,0 +1,291 @@
+/**
+ * Theme CSS Variables Stylesheet
+ *
+ * This stylesheet provides utility classes that use theme CSS variables.
+ * When a theme is applied via ThemePreviewService, these variables are set on :root.
+ *
+ * CSS Variables injected by ThemePreviewService:
+ * - --theme-primary-color
+ * - --theme-secondary-color
+ * - --theme-bg-color
+ * - --theme-text-primary
+ * - --theme-text-secondary
+ * - --theme-font-heading
+ * - --theme-font-body
+ * - --theme-field-radius
+ * - --theme-field-spacing
+ * - --theme-container-bg
+ * - --theme-container-opacity
+ */
+
+/* ========================================
+   Theme-Aware Form Input Styles
+   ======================================== */
+
+/**
+ * Base input styling with theme variables
+ * Applies theme colors for borders, focus states, and text
+ */
+.theme-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid var(--theme-primary-color, #3b82f6);
+  border-radius: var(--theme-field-radius, 0.375rem);
+  background-color: white;
+  color: var(--theme-text-primary, #1f2937);
+  font-family: var(--theme-font-body, inherit);
+  transition: all 0.2s ease;
+}
+
+.theme-input::placeholder {
+  color: var(--theme-text-secondary, #9ca3af);
+}
+
+.theme-input:focus {
+  outline: none;
+  border-color: var(--theme-primary-color, #3b82f6);
+  box-shadow: 0 0 0 3px var(--theme-primary-color, #3b82f6) 33;
+}
+
+.theme-input:disabled {
+  background-color: #f9fafb;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* ========================================
+   Theme-Aware Button Styles
+   ======================================== */
+
+.theme-button-primary {
+  padding: 0.75rem 1.5rem;
+  background-color: var(--theme-primary-color, #3b82f6);
+  color: white;
+  border: none;
+  border-radius: var(--theme-field-radius, 0.375rem);
+  font-family: var(--theme-font-body, inherit);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.theme-button-primary:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.theme-button-primary:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.theme-button-secondary {
+  padding: 0.75rem 1.5rem;
+  background-color: var(--theme-secondary-color, #6b7280);
+  color: white;
+  border: none;
+  border-radius: var(--theme-field-radius, 0.375rem);
+  font-family: var(--theme-font-body, inherit);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.theme-button-secondary:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+/* ========================================
+   Theme-Aware Typography
+   ======================================== */
+
+.theme-heading {
+  font-family: var(--theme-font-heading, inherit);
+  color: var(--theme-text-primary, #1f2937);
+}
+
+.theme-text-primary {
+  color: var(--theme-text-primary, #1f2937);
+  font-family: var(--theme-font-body, inherit);
+}
+
+.theme-text-secondary {
+  color: var(--theme-text-secondary, #6b7280);
+  font-family: var(--theme-font-body, inherit);
+}
+
+/* ========================================
+   Theme-Aware Label Styles
+   ======================================== */
+
+.theme-label {
+  display: block;
+  margin-bottom: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--theme-text-primary, #374151);
+  font-family: var(--theme-font-body, inherit);
+}
+
+/* ========================================
+   Theme-Aware Container Styles
+   ======================================== */
+
+.theme-container {
+  background-color: var(--theme-container-bg, white);
+  opacity: var(--theme-container-opacity, 1);
+  border-radius: var(--theme-field-radius, 0.5rem);
+  padding: 1.5rem;
+}
+
+.theme-background {
+  background: var(--theme-bg-color, #f9fafb);
+  min-height: 100vh;
+}
+
+/* ========================================
+   Theme-Aware Field Spacing
+   ======================================== */
+
+.theme-field-spacing {
+  margin-bottom: var(--theme-field-spacing, 1rem);
+}
+
+/* ========================================
+   Theme-Aware Select/Dropdown Styles
+   ======================================== */
+
+.theme-select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid var(--theme-primary-color, #3b82f6);
+  border-radius: var(--theme-field-radius, 0.375rem);
+  background-color: white;
+  color: var(--theme-text-primary, #1f2937);
+  font-family: var(--theme-font-body, inherit);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.theme-select:focus {
+  outline: none;
+  border-color: var(--theme-primary-color, #3b82f6);
+  box-shadow: 0 0 0 3px var(--theme-primary-color, #3b82f6) 33;
+}
+
+/* ========================================
+   Theme-Aware Checkbox/Radio Styles
+   ======================================== */
+
+.theme-checkbox,
+.theme-radio {
+  margin-right: 0.5rem;
+  accent-color: var(--theme-primary-color, #3b82f6);
+  width: 1.25rem;
+  height: 1.25rem;
+  cursor: pointer;
+}
+
+.theme-checkbox-label,
+.theme-radio-label {
+  display: flex;
+  align-items: center;
+  color: var(--theme-text-primary, #374151);
+  font-family: var(--theme-font-body, inherit);
+  cursor: pointer;
+  margin-bottom: 0.5rem;
+}
+
+/* ========================================
+   Theme-Aware Textarea Styles
+   ======================================== */
+
+.theme-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid var(--theme-primary-color, #3b82f6);
+  border-radius: var(--theme-field-radius, 0.375rem);
+  background-color: white;
+  color: var(--theme-text-primary, #1f2937);
+  font-family: var(--theme-font-body, inherit);
+  resize: vertical;
+  min-height: 120px;
+  transition: all 0.2s ease;
+}
+
+.theme-textarea::placeholder {
+  color: var(--theme-text-secondary, #9ca3af);
+}
+
+.theme-textarea:focus {
+  outline: none;
+  border-color: var(--theme-primary-color, #3b82f6);
+  box-shadow: 0 0 0 3px var(--theme-primary-color, #3b82f6) 33;
+}
+
+/* ========================================
+   Theme-Aware Error States
+   ======================================== */
+
+.theme-error-text {
+  color: #ef4444;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  font-family: var(--theme-font-body, inherit);
+}
+
+.theme-input-error {
+  border-color: #ef4444 !important;
+}
+
+.theme-input-error:focus {
+  box-shadow: 0 0 0 3px #ef444433 !important;
+}
+
+/* ========================================
+   Theme-Aware Help Text
+   ======================================== */
+
+.theme-help-text {
+  font-size: 0.875rem;
+  color: var(--theme-text-secondary, #6b7280);
+  margin-top: 0.25rem;
+  font-family: var(--theme-font-body, inherit);
+}
+
+/* ========================================
+   Theme-Aware Card/Panel Styles
+   ======================================== */
+
+.theme-card {
+  background-color: white;
+  border-radius: var(--theme-field-radius, 0.5rem);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  margin-bottom: var(--theme-field-spacing, 1rem);
+}
+
+/* ========================================
+   Responsive Theme Overrides
+   ======================================== */
+
+@media (max-width: 767px) {
+  /* Mobile-specific theme adjustments if needed */
+  .theme-input,
+  .theme-select,
+  .theme-textarea {
+    font-size: 16px; /* Prevent iOS zoom on focus */
+  }
+}
+
+/* ========================================
+   Theme Transition Animations
+   ======================================== */
+
+.theme-transition {
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease,
+    opacity 0.3s ease;
+}

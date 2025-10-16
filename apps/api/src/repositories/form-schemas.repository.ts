@@ -87,7 +87,11 @@ export class FormSchemasRepository {
         formId: row.formId,
         version: row.version,
         fields: parsedSchemaJson.fields || [],
-        settings: parsedSchemaJson.settings || {},
+        settings: {
+          ...(parsedSchemaJson.settings || {}),
+          // Copy themeId from DB column into settings for frontend compatibility
+          themeId: row.themeId || parsedSchemaJson.settings?.themeId,
+        },
         isPublished: row.isPublished,
         renderToken: row.renderToken,
         expiresAt: row.expiresAt,
@@ -154,7 +158,11 @@ export class FormSchemasRepository {
         formId: row.formId,
         version: row.version,
         fields: parsedSchemaJson.fields || [],
-        settings: parsedSchemaJson.settings || {},
+        settings: {
+          ...(parsedSchemaJson.settings || {}),
+          // Copy themeId from DB column into settings for frontend compatibility
+          themeId: row.themeId || parsedSchemaJson.settings?.themeId,
+        },
         isPublished: row.isPublished,
         renderToken: row.renderToken,
         expiresAt: row.expiresAt,
@@ -224,7 +232,11 @@ export class FormSchemasRepository {
           formId: row.formId,
           version: row.version,
           fields: parsedSchemaJson.fields || [],
-          settings: parsedSchemaJson.settings || {},
+          settings: {
+            ...(parsedSchemaJson.settings || {}),
+            // Copy themeId from DB column into settings for frontend compatibility
+            themeId: row.themeId || parsedSchemaJson.settings?.themeId,
+          },
           isPublished: row.isPublished,
           renderToken: row.renderToken,
           expiresAt: row.expiresAt,
@@ -292,7 +304,11 @@ export class FormSchemasRepository {
         formId: row.formId,
         version: row.version,
         fields: parsedSchemaJson.fields || [],
-        settings: parsedSchemaJson.settings || {},
+        settings: {
+          ...(parsedSchemaJson.settings || {}),
+          // Copy themeId from DB column into settings for frontend compatibility
+          themeId: row.themeId || parsedSchemaJson.settings?.themeId,
+        },
         isPublished: row.isPublished,
         renderToken: row.renderToken,
         expiresAt: row.expiresAt,
@@ -442,7 +458,11 @@ export class FormSchemasRepository {
         formId: row.formId,
         version: row.version,
         fields: parsedSchemaJson.fields || [],
-        settings: parsedSchemaJson.settings || {},
+        settings: {
+          ...(parsedSchemaJson.settings || {}),
+          // Copy themeId from DB column into settings for frontend compatibility
+          themeId: row.themeId || parsedSchemaJson.settings?.themeId,
+        },
         isPublished: row.isPublished,
         renderToken: row.renderToken,
         expiresAt: row.expiresAt,
@@ -514,7 +534,11 @@ export class FormSchemasRepository {
         formId: row.formId,
         version: row.version,
         fields: parsedSchemaJson.fields || [],
-        settings: parsedSchemaJson.settings || {},
+        settings: {
+          ...(parsedSchemaJson.settings || {}),
+          // Copy themeId from DB column into settings for frontend compatibility
+          themeId: row.themeId || parsedSchemaJson.settings?.themeId,
+        },
         isPublished: row.isPublished,
         renderToken: row.renderToken,
         expiresAt: row.expiresAt,
@@ -574,7 +598,11 @@ export class FormSchemasRepository {
         formId: row.formId,
         version: row.version,
         fields: parsedSchemaJson.fields || [],
-        settings: parsedSchemaJson.settings || {},
+        settings: {
+          ...(parsedSchemaJson.settings || {}),
+          // Copy themeId from DB column into settings for frontend compatibility
+          themeId: row.themeId || parsedSchemaJson.settings?.themeId,
+        },
         isPublished: row.isPublished,
         renderToken: row.renderToken,
         expiresAt: row.expiresAt,

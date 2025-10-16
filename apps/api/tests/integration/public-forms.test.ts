@@ -226,5 +226,241 @@ describe('Public Forms API', () => {
 
       expect(response.body.success).toBe(true);
     });
+
+    it('should include theme in response when form has theme (Story 20.7)', async () => {
+      // Create a theme
+      const { themesRepository } = await import(
+        '../../src/repositories/themes.repository'
+      );
+      const theme = await themesRepository.create({
+        name: 'Test Theme',
+        description: 'Test theme for integration test',
+        thumbnailUrl: 'https://example.com/theme-test.jpg',
+        themeConfig: {
+          desktop: {
+            primaryColor: '#007bff',
+            secondaryColor: '#6c757d',
+            backgroundColor: '#ffffff',
+            textColorPrimary: '#212529',
+            textColorSecondary: '#6c757d',
+            fontFamilyHeading: 'Arial, sans-serif',
+            fontFamilyBody: 'Georgia, serif',
+            fieldBorderRadius: '4px',
+            fieldSpacing: '16px',
+            containerBackground: '#f8f9fa',
+            containerOpacity: 0.9,
+            containerPosition: 'center',
+          },
+          mobile: {
+            primaryColor: '#007bff',
+            secondaryColor: '#6c757d',
+          },
+        },
+      });
+
+      // Update schema to use the theme
+      await formSchemasRepository.updateSchema(testSchemaId, {
+        themeId: theme.id,
+      });
+
+      // Fetch form schema
+      const response = await request(app)
+        .get(`/api/v1/public/forms/render/${validToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.theme).toBeDefined();
+      expect(response.body.data.theme.id).toBe(theme.id);
+      expect(response.body.data.theme.name).toBe('Test Theme');
+      expect(response.body.data.theme.themeConfig).toBeDefined();
+      expect(response.body.data.theme.themeConfig.desktop).toBeDefined();
+      expect(response.body.data.theme.themeConfig.desktop.primaryColor).toBe(
+        '#007bff'
+      );
+    });
+
+    it('should return null theme when form has no theme (Story 20.7)', async () => {
+      const response = await request(app)
+        .get(`/api/v1/public/forms/render/${validToken}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.theme).toBeNull();
+    });
+  });
+
+  describe('GET /api/v1/public/forms/:shortCode (Story 20.7)', () => {
+    let testShortCode: string;
+
+    beforeEach(async () => {
+      // Create a short link for the form schema
+      const { shortLinksRepository } = await import(
+        '../../src/repositories/short-links.repository'
+      );
+      testShortCode = `test-${Date.now()}`;
+
+      await shortLinksRepository.create({
+        code: testShortCode,
+        originalUrl: `https://example.com/form/${testSchemaId}`,
+        createdBy: testUserId,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+      });
+
+      // Update short link to reference the form schema
+      const { databaseService } = await import(
+        '../../src/services/database.service'
+      );
+      const pool = databaseService.getPool();
+      await pool.query(
+        'UPDATE short_links SET form_schema_id = $1 WHERE code = $2',
+        [testSchemaId, testShortCode]
+      );
+    });
+
+    it('should return form schema with theme by short code', async () => {
+      // Create a theme
+      const { themesRepository } = await import(
+        '../../src/repositories/themes.repository'
+      );
+      const theme = await themesRepository.create({
+        name: 'Short Code Test Theme',
+        description: 'Test theme for short code endpoint',
+        thumbnailUrl: 'https://example.com/theme-shortcode.jpg',
+        themeConfig: {
+          desktop: {
+            primaryColor: '#28a745',
+            secondaryColor: '#17a2b8',
+            backgroundColor: '#ffffff',
+            textColorPrimary: '#212529',
+            textColorSecondary: '#6c757d',
+            fontFamilyHeading: 'Helvetica, sans-serif',
+            fontFamilyBody: 'Times New Roman, serif',
+            fieldBorderRadius: '8px',
+            fieldSpacing: '20px',
+            containerBackground: '#e9ecef',
+            containerOpacity: 0.95,
+            containerPosition: 'center',
+          },
+        },
+      });
+
+      // Update schema to use the theme
+      await formSchemasRepository.updateSchema(testSchemaId, {
+        themeId: theme.id,
+      });
+
+      // Fetch form by short code
+      const response = await request(app)
+        .get(`/api/v1/public/forms/${testShortCode}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('Form schema retrieved successfully');
+      expect(response.body.form).toBeDefined();
+      expect(response.body.form.id).toBe(testSchemaId);
+      expect(response.body.form.schema).toBeDefined();
+      expect(response.body.form.settings).toBeDefined();
+      expect(response.body.form.theme).toBeDefined();
+      expect(response.body.form.theme.id).toBe(theme.id);
+      expect(response.body.form.theme.name).toBe('Short Code Test Theme');
+      expect(response.body.form.theme.themeConfig.desktop.primaryColor).toBe(
+        '#28a745'
+      );
+      expect(response.body.form.shortCode).toBe(testShortCode);
+    });
+
+    it('should return null theme when form has no theme', async () => {
+      const response = await request(app)
+        .get(`/api/v1/public/forms/${testShortCode}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.form.theme).toBeNull();
+    });
+
+    it('should return 404 for non-existent short code', async () => {
+      const response = await request(app)
+        .get('/api/v1/public/forms/nonexistent-code')
+        .expect(404);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Form not found');
+    });
+
+    it('should return 404 for expired short link', async () => {
+      // Update short link with expired date
+      // Note: Expired short_links are filtered in the query, so they return 404 (not found), not 410 (gone)
+      const { databaseService } = await import(
+        '../../src/services/database.service'
+      );
+      const pool = databaseService.getPool();
+      const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000); // 1 day ago
+
+      await pool.query(
+        'UPDATE short_links SET expires_at = $1 WHERE code = $2',
+        [pastDate, testShortCode]
+      );
+
+      const response = await request(app)
+        .get(`/api/v1/public/forms/${testShortCode}`)
+        .expect(404);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Form not found');
+    });
+
+    it('should gracefully handle deleted theme (AC: 5)', async () => {
+      // Create and then delete a theme
+      const { themesRepository } = await import(
+        '../../src/repositories/themes.repository'
+      );
+      const theme = await themesRepository.create({
+        name: 'Deleted Theme',
+        description: 'Theme to be deleted',
+        thumbnailUrl: 'https://example.com/theme-deleted.jpg',
+        themeConfig: {
+          desktop: {
+            primaryColor: '#dc3545',
+            secondaryColor: '#ffc107',
+            backgroundColor: '#ffffff',
+            textColorPrimary: '#212529',
+            textColorSecondary: '#6c757d',
+            fontFamilyHeading: 'Arial, sans-serif',
+            fontFamilyBody: 'Georgia, serif',
+            fieldBorderRadius: '4px',
+            fieldSpacing: '16px',
+            containerBackground: '#f8f9fa',
+            containerOpacity: 0.9,
+            containerPosition: 'center',
+          },
+        },
+      });
+
+      // Update schema to use the theme
+      await formSchemasRepository.updateSchema(testSchemaId, {
+        themeId: theme.id,
+      });
+
+      // Delete the theme
+      await themesRepository.softDelete(theme.id);
+
+      // Fetch form by short code - should return null theme gracefully
+      const response = await request(app)
+        .get(`/api/v1/public/forms/${testShortCode}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.form.theme).toBeNull();
+      expect(response.body.form.settings.themeId).toBe(theme.id); // Theme ID still in settings
+    });
+
+    it('should not require authentication', async () => {
+      // Call without Authorization header
+      const response = await request(app)
+        .get(`/api/v1/public/forms/${testShortCode}`)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+    });
   });
 });

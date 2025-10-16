@@ -20,7 +20,7 @@ import { FormField } from '@nodeangularfullstack/shared';
         [disabled]="true"
         optionLabel="label"
         optionValue="value"
-        styleClass="w-full"
+        styleClass="theme-select w-full"
         [attr.aria-label]="field.label"
         [attr.aria-required]="field.required"
       ></p-select>
@@ -50,6 +50,15 @@ import { FormField } from '@nodeangularfullstack/shared';
         height: 2.5rem;
         display: flex;
         align-items: center;
+      }
+
+      /* Apply theme colors to select component */
+      ::ng-deep .field-preview p-select.theme-select {
+        border: 2px solid var(--theme-primary-color, #3b82f6);
+        border-radius: var(--theme-field-radius, 4px);
+        font-family: var(--theme-font-body, inherit);
+        color: var(--theme-text-primary, #111827);
+        transition: border-color 0.2s ease;
       }
     `,
   ],

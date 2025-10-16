@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
-import { FormSchema, FormSettings } from '@nodeangularfullstack/shared';
+import { FormSchema, FormSettings, FormTheme } from '@nodeangularfullstack/shared';
 import { environment } from '@env/environment';
 
 /**
@@ -14,6 +14,7 @@ interface FormSchemaResponse {
   data: {
     schema: FormSchema;
     settings: FormSettings;
+    theme?: FormTheme | null;
   };
   timestamp: string;
 }
@@ -76,15 +77,17 @@ export class FormRendererService {
   /**
    * Retrieves form schema using a JWT render token.
    * @param token - JWT token for form access
-   * @returns Observable with form schema and settings
+   * @returns Observable with form schema, settings, and optional theme
    * @throws {FormRenderError} Various error types based on failure reason
    * @example
    * formRendererService.getFormSchema(token).subscribe({
-   *   next: (result) => console.log('Schema:', result.schema),
+   *   next: (result) => console.log('Schema:', result.schema, 'Theme:', result.theme),
    *   error: (err) => console.error('Error:', err.type, err.message)
    * });
    */
-  getFormSchema(token: string): Observable<{ schema: FormSchema; settings: FormSettings }> {
+  getFormSchema(
+    token: string,
+  ): Observable<{ schema: FormSchema; settings: FormSettings; theme?: FormTheme | null }> {
     const url = `${this.renderApiUrl}/${token}`;
     console.log('FormRendererService: Fetching form schema from:', url);
     return this.http.get<FormSchemaResponse>(url).pipe(

@@ -186,7 +186,7 @@ import { FormBuilderService } from '../../form-builder.service';
         field.type !== FormFieldType.IMAGE &&
         field.type !== FormFieldType.TEXT_BLOCK
       ) {
-        <small class="block mt-1 text-gray-500">{{ field.helpText }}</small>
+        <small class="block mt-1 theme-help-text">{{ field.helpText }}</small>
       }
 
       <!-- Validation Chips -->

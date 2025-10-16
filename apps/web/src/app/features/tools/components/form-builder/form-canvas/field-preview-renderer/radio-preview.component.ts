@@ -26,12 +26,13 @@ import { FormField } from '@nodeangularfullstack/shared';
                 [value]="option.value"
                 [(ngModel)]="previewValue"
                 [disabled]="true"
+                styleClass="theme-radio"
                 [inputId]="'radio-' + field.id + '-' + option.value"
                 [attr.aria-label]="option.label"
               ></p-radioButton>
               <label
                 [for]="'radio-' + field.id + '-' + option.value"
-                class="ml-2 text-sm text-gray-700"
+                class="ml-2 text-sm theme-label"
               >
                 {{ option.label }}
               </label>

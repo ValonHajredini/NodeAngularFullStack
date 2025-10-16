@@ -6,12 +6,21 @@
 ALTER TABLE form_schemas 
 ADD COLUMN IF NOT EXISTS theme_id UUID;
 
--- Add foreign key constraint to form_themes table
-ALTER TABLE form_schemas 
-ADD CONSTRAINT fk_form_schemas_theme_id 
-FOREIGN KEY (theme_id) 
-REFERENCES form_themes(id) 
-ON DELETE SET NULL;
+-- Add foreign key constraint to form_themes table (if not exists)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE constraint_name = 'fk_form_schemas_theme_id'
+        AND table_name = 'form_schemas'
+    ) THEN
+        ALTER TABLE form_schemas 
+        ADD CONSTRAINT fk_form_schemas_theme_id 
+        FOREIGN KEY (theme_id) 
+        REFERENCES form_themes(id) 
+        ON DELETE SET NULL;
+    END IF;
+END $$;
 
 -- Create index on theme_id for efficient querying
 CREATE INDEX IF NOT EXISTS idx_form_schemas_theme ON form_schemas(theme_id) WHERE theme_id IS NOT NULL;

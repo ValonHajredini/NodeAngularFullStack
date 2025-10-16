@@ -543,6 +543,31 @@ export interface FormSubmission {
 }
 
 /**
+ * Public form response interface for rendering published forms via short code
+ */
+export interface PublicFormResponse {
+  /** Success indicator */
+  success: boolean;
+  /** Response message */
+  message: string;
+  /** Form data for rendering */
+  form: {
+    /** Form schema ID */
+    id: string;
+    /** Form schema with fields */
+    schema: FormSchema;
+    /** Form settings for rendering */
+    settings: FormSettings;
+    /** Optional theme object (null if no theme or theme deleted) */
+    theme?: FormTheme | null;
+    /** Short code used to access this form */
+    shortCode: string;
+  };
+  /** Response timestamp */
+  timestamp: string;
+}
+
+/**
  * Numeric field statistics
  */
 export interface NumericStatistics {

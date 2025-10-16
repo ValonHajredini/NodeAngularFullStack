@@ -35,24 +35,24 @@ interface FieldTypeDefinition {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, DragDropModule, FieldPreviewRendererComponent, GroupPreviewComponent],
   template: `
-    <div class="form-canvas h-full bg-gray-50 p-6">
+    <div class="form-canvas h-full bg-gray-50 p-6 theme-transition">
       <!-- Step Navigation Tabs (shown when step mode enabled) -->
       @if (stepFormEnabled()) {
         <div class="step-navigation-container mb-6">
           <div
-            class="step-tabs-bar flex items-center gap-2 border-b border-gray-200 pb-0 overflow-x-auto"
+            class="step-tabs-bar flex items-center gap-2 border-b theme-transition pb-0 overflow-x-auto"
           >
             @for (step of steps(); track step.id) {
               <button
                 type="button"
-                class="step-tab flex items-center gap-2 px-4 py-2 rounded-t-md border border-b-0 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors whitespace-nowrap"
+                class="step-tab flex items-center gap-2 px-4 py-2 rounded-t-md border border-b-0 theme-container theme-text-primary hover:opacity-80 theme-transition whitespace-nowrap"
                 [class.active]="step.id === activeStepId()"
                 [attr.aria-selected]="step.id === activeStepId()"
                 [attr.aria-label]="'Switch to ' + step.title"
                 (click)="onStepTabClick(step.id)"
               >
                 <span
-                  class="step-number flex items-center justify-center w-6 h-6 rounded-full bg-primary-100 text-primary-700 text-sm font-bold"
+                  class="step-number flex items-center justify-center w-6 h-6 rounded-full bg-primary-100 text-primary-700 text-sm font-bold theme-transition"
                 >
                   {{ step.order + 1 }}
                 </span>
@@ -63,16 +63,16 @@ interface FieldTypeDefinition {
 
           <!-- Step Indicator Badge -->
           <div
-            class="step-indicator-bar flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-200"
+            class="step-indicator-bar flex items-center gap-3 px-4 py-3 theme-container border-b theme-transition"
           >
             <span
-              class="badge-primary inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-primary-100 text-primary-700"
+              class="badge-primary inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-primary-100 text-primary-700 theme-transition"
             >
               Step {{ activeStepOrder() + 1 }} of {{ steps().length }}
             </span>
-            <span class="text-gray-700 font-medium">{{ activeStep()?.title }}</span>
+            <span class="theme-text-primary font-medium">{{ activeStep()?.title }}</span>
             @if (activeStep()?.description) {
-              <span class="text-sm text-gray-500">{{ activeStep()?.description }}</span>
+              <span class="text-sm theme-text-secondary">{{ activeStep()?.description }}</span>
             }
           </div>
         </div>
@@ -87,9 +87,9 @@ interface FieldTypeDefinition {
           [cdkDropListData]="formBuilderService.formFields()"
           (cdkDropListDropped)="onFieldDropped($event)"
         >
-          <i class="pi pi-file-edit text-6xl text-gray-300 mb-4"></i>
-          <h3 class="text-xl font-semibold text-gray-700 mb-2">Start Building Your Form</h3>
-          <p class="text-gray-500 max-w-md">
+          <i class="pi pi-file-edit text-6xl theme-text-secondary mb-4 theme-transition"></i>
+          <h3 class="text-xl font-semibold theme-heading mb-2">Start Building Your Form</h3>
+          <p class="theme-text-secondary max-w-md">
             Drag fields from the palette to start building your form
           </p>
         </div>
@@ -127,17 +127,19 @@ interface FieldTypeDefinition {
           }
 
           <div class="mb-4" style="position: relative; z-index: 2;">
-            <h3 class="text-lg font-semibold text-gray-900">
+            <h3 class="text-lg font-semibold theme-heading">
               {{ settings.title || 'Untitled Form' }}
             </h3>
-            <p class="text-sm text-gray-600">
+            <p class="text-sm theme-text-secondary">
               This is a live preview of your form. Click on a field to edit its properties
               @if (settings.columnLayout > 1) {
-                <span class="ml-2 text-blue-600">{{ settings.columnLayout }} columns</span>
+                <span class="ml-2 theme-text-primary font-medium"
+                  >{{ settings.columnLayout }} columns</span
+                >
               }
             </p>
             @if (settings.description) {
-              <p class="text-sm text-gray-500 mt-1">{{ settings.description }}</p>
+              <p class="text-sm theme-text-secondary mt-1">{{ settings.description }}</p>
             }
           </div>
 
@@ -150,16 +152,19 @@ interface FieldTypeDefinition {
                 style="position: relative; z-index: 2;"
               >
                 <div class="empty-icon mb-4">
-                  <i class="pi pi-inbox text-gray-300" style="font-size: 6rem;"></i>
+                  <i
+                    class="pi pi-inbox theme-text-secondary theme-transition"
+                    style="font-size: 6rem;"
+                  ></i>
                 </div>
-                <h3 class="text-xl font-semibold text-gray-700 mb-2">
+                <h3 class="text-xl font-semibold theme-heading mb-2">
                   No fields in Step {{ activeStepOrder() + 1 }} yet
                 </h3>
-                <p class="text-gray-600 mb-4 max-w-md">
+                <p class="theme-text-secondary mb-4 max-w-md">
                   Drag field types from the palette on the left to add them to this step.
                 </p>
                 <p
-                  class="flex items-center gap-2 text-sm text-gray-500 bg-blue-50 px-4 py-2 rounded-md"
+                  class="flex items-center gap-2 text-sm theme-text-secondary bg-blue-50 px-4 py-2 rounded-md"
                 >
                   <i class="pi pi-info-circle"></i>
                   You can organize fields within this step using rows and columns.
@@ -171,7 +176,7 @@ interface FieldTypeDefinition {
                   <div class="row-wrapper">
                     <!-- Row separator with label -->
                     <div class="row-separator mb-2 flex items-center gap-2">
-                      <span class="text-sm font-medium text-gray-600">
+                      <span class="text-sm font-medium theme-text-primary">
                         Row {{ row.order + 1 }} ({{ row.columnCount }} columns)
                       </span>
                       <div class="flex-1 h-px bg-gray-300"></div>
@@ -206,9 +211,8 @@ interface FieldTypeDefinition {
                                   <!-- Field wrapper with drag support -->
                                   <div class="field-wrapper mb-3" cdkDrag [cdkDragData]="field">
                                     <div
-                                      class="field-preview-container p-4 bg-white border-2 border-solid border-gray-300 rounded-lg transition-all relative group hover:border-blue-400 hover:shadow-md"
-                                      [class.border-blue-500]="isFieldSelected(field)"
-                                      [class.shadow-md]="isFieldSelected(field)"
+                                      class="field-preview-container p-4 theme-container theme-transition relative group"
+                                      [class.theme-card]="isFieldSelected(field)"
                                       [class.last:mb-0]="fieldIndex === columnFields.length - 1"
                                       (click)="onFieldClicked(field)"
                                       tabindex="0"
@@ -218,12 +222,14 @@ interface FieldTypeDefinition {
                                       <!-- Delete Button (Top Right) -->
                                       <button
                                         type="button"
-                                        class="delete-button-card absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                        class="delete-button-card absolute top-2 right-2 opacity-0 group-hover:opacity-100 theme-transition z-10"
                                         (click)="onDeleteFieldFromCard($event, field)"
                                         [attr.aria-label]="'Delete ' + field.label"
                                         title="Delete field"
                                       >
-                                        <i class="pi pi-times text-red-500 hover:text-red-700"></i>
+                                        <i
+                                          class="pi pi-times text-red-500 hover:text-red-700 theme-transition"
+                                        ></i>
                                       </button>
 
                                       <div
@@ -244,8 +250,10 @@ interface FieldTypeDefinition {
                             } @else {
                               <!-- Empty column: placeholder -->
                               <div class="empty-column-placeholder">
-                                <i class="pi pi-inbox text-gray-300 text-2xl mb-2"></i>
-                                <span class="text-xs text-gray-400">Drop field here</span>
+                                <i
+                                  class="pi pi-inbox theme-text-secondary text-2xl mb-2 theme-transition"
+                                ></i>
+                                <span class="text-xs theme-text-secondary">Drop field here</span>
                               </div>
                             }
                           }
@@ -273,11 +281,8 @@ interface FieldTypeDefinition {
                   cdkDrag
                   [cdkDragData]="field"
                   [cdkDragDisabled]="field.type === FormFieldType.GROUP"
-                  class="field-preview-container p-4 bg-white border-2 border-dashed rounded-lg transition-all relative group"
-                  [class.border-blue-500]="isFieldSelected(field)"
-                  [class.border-gray-300]="!isFieldSelected(field)"
-                  [class.shadow-md]="isFieldSelected(field)"
-                  [class.hover:border-blue-400]="!isFieldSelected(field)"
+                  class="field-preview-container p-4 theme-container theme-transition relative group"
+                  [class.theme-card]="isFieldSelected(field)"
                   (click)="onFieldClicked(field)"
                   tabindex="0"
                   role="listitem"
@@ -287,10 +292,10 @@ interface FieldTypeDefinition {
                   <!-- Drag Handle (Top Left) -->
                   @if (field.type !== FormFieldType.GROUP) {
                     <div
-                      class="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                      class="absolute top-2 left-2 opacity-0 group-hover:opacity-100 theme-transition z-10"
                     >
                       <i
-                        class="pi pi-bars text-gray-400 cursor-move hover:text-gray-600 text-lg"
+                        class="pi pi-bars theme-text-secondary cursor-move hover:opacity-80 text-lg theme-transition"
                         cdkDragHandle
                         aria-label="Reorder field"
                       ></i>
@@ -300,12 +305,12 @@ interface FieldTypeDefinition {
                   <!-- Delete Button (Top Right) -->
                   <button
                     type="button"
-                    class="delete-button-card absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                    class="delete-button-card absolute top-2 right-2 opacity-0 group-hover:opacity-100 theme-transition z-10"
                     (click)="onDeleteFieldFromCard($event, field)"
                     [attr.aria-label]="'Delete ' + field.label"
                     title="Delete field"
                   >
-                    <i class="pi pi-times text-red-500 hover:text-red-700"></i>
+                    <i class="pi pi-times text-red-500 hover:text-red-700 theme-transition"></i>
                   </button>
                   @if (field.type === FormFieldType.GROUP) {
                     <!-- Group fields - no click handler to allow drop zone interaction -->
@@ -321,11 +326,8 @@ interface FieldTypeDefinition {
                           <div
                             cdkDrag
                             [cdkDragData]="child"
-                            class="field-preview-container p-4 bg-white border-2 border-dashed rounded-lg transition-all relative group mb-3"
-                            [class.border-blue-500]="isFieldSelected(child)"
-                            [class.border-gray-300]="!isFieldSelected(child)"
-                            [class.shadow-md]="isFieldSelected(child)"
-                            [class.hover:border-blue-400]="!isFieldSelected(child)"
+                            class="field-preview-container p-4 theme-container theme-transition relative group mb-3"
+                            [class.theme-card]="isFieldSelected(child)"
                             (click)="onFieldClicked(child)"
                             tabindex="0"
                             role="listitem"
@@ -334,10 +336,10 @@ interface FieldTypeDefinition {
                           >
                             <!-- Drag Handle (Top Left) -->
                             <div
-                              class="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                              class="absolute top-2 left-2 opacity-0 group-hover:opacity-100 theme-transition z-10"
                             >
                               <i
-                                class="pi pi-bars text-gray-400 cursor-move hover:text-gray-600 text-lg"
+                                class="pi pi-bars theme-text-secondary cursor-move hover:opacity-80 text-lg theme-transition"
                                 cdkDragHandle
                                 aria-label="Reorder field"
                               ></i>
@@ -346,12 +348,14 @@ interface FieldTypeDefinition {
                             <!-- Delete Button (Top Right) -->
                             <button
                               type="button"
-                              class="delete-button-card absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                              class="delete-button-card absolute top-2 right-2 opacity-0 group-hover:opacity-100 theme-transition z-10"
                               (click)="onDeleteFieldFromCard($event, child)"
                               [attr.aria-label]="'Delete ' + child.label"
                               title="Delete field"
                             >
-                              <i class="pi pi-times text-red-500 hover:text-red-700"></i>
+                              <i
+                                class="pi pi-times text-red-500 hover:text-red-700 theme-transition"
+                              ></i>
                             </button>
                             <div
                               class="field-preview-content group cursor-pointer"

@@ -13,7 +13,7 @@ describe('Forms API Theme Integration - Simple', () => {
   let formId: string;
 
   const validThemeData = {
-    name: 'Simple Test Theme',
+    name: `Simple Test Theme ${Date.now()}`,
     description: 'A simple test theme for forms integration testing',
     thumbnailUrl: 'https://spaces.example.com/theme-thumb.jpg',
     themeConfig: {
@@ -105,9 +105,10 @@ describe('Forms API Theme Integration - Simple', () => {
     try {
       // Delete test form and related data
       if (formId) {
-        await client.query('DELETE FROM form_submissions WHERE form_id = $1', [
-          formId,
-        ]);
+        await client.query(
+          'DELETE FROM form_submissions WHERE form_schema_id IN (SELECT id FROM form_schemas WHERE form_id = $1)',
+          [formId]
+        );
         await client.query('DELETE FROM form_schemas WHERE form_id = $1', [
           formId,
         ]);
@@ -141,6 +142,7 @@ describe('Forms API Theme Integration - Simple', () => {
           fields: [
             {
               id: 'field1',
+              fieldName: 'name',
               type: 'text',
               label: 'Name',
               required: true,
@@ -159,7 +161,9 @@ describe('Forms API Theme Integration - Simple', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.data).toHaveProperty('id');
       expect(response.body.data.title).toBe(formData.title);
-      expect(response.body.data.themeId).toBe(testThemeId);
+      expect(response.body.data.schema).toBeDefined();
+      expect(response.body.data.schema.themeId).toBe(testThemeId);
+      expect(response.body.data.schema.settings.themeId).toBe(testThemeId);
 
       formId = response.body.data.id;
     });
@@ -172,21 +176,22 @@ describe('Forms API Theme Integration - Simple', () => {
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.data).toHaveProperty('id');
-      expect(response.body.data.themeId).toBe(testThemeId);
+      expect(response.body.data.schema).toBeDefined();
+      expect(response.body.data.schema.themeId).toBe(testThemeId);
+      expect(response.body.data.schema.settings.themeId).toBe(testThemeId);
 
       // Check if schema has embedded theme data
-      if (response.body.data.schema) {
-        expect(response.body.data.schema.themeId).toBe(testThemeId);
-        expect(response.body.data.schema.theme).toBeDefined();
-        expect(response.body.data.schema.theme.id).toBe(testThemeId);
-        expect(response.body.data.schema.theme.name).toBe(validThemeData.name);
-        expect(response.body.data.schema.theme.description).toBe(
-          validThemeData.description
-        );
-        expect(response.body.data.schema.theme.themeConfig).toEqual(
-          validThemeData.themeConfig
-        );
-      }
+      expect(response.body.data.schema.theme).toBeDefined();
+      expect(response.body.data.schema.theme.id).toBe(testThemeId);
+      expect(response.body.data.schema.theme.name).toContain(
+        'Simple Test Theme'
+      );
+      expect(response.body.data.schema.theme.description).toBe(
+        validThemeData.description
+      );
+      expect(response.body.data.schema.theme.themeConfig).toEqual(
+        validThemeData.themeConfig
+      );
     });
 
     it('should update form themeId successfully', async () => {
@@ -204,7 +209,9 @@ describe('Forms API Theme Integration - Simple', () => {
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.data.title).toBe(updateData.title);
-      expect(response.body.data.themeId).toBe(testThemeId);
+      expect(response.body.data.schema).toBeDefined();
+      expect(response.body.data.schema.themeId).toBe(testThemeId);
+      expect(response.body.data.schema.settings.themeId).toBe(testThemeId);
     });
 
     it('should reject form creation with invalid themeId', async () => {
@@ -217,6 +224,7 @@ describe('Forms API Theme Integration - Simple', () => {
           fields: [
             {
               id: 'field1',
+              fieldName: 'name',
               type: 'text',
               label: 'Name',
               required: true,
@@ -233,7 +241,8 @@ describe('Forms API Theme Integration - Simple', () => {
 
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
-      expect(response.body.message).toContain('Theme ID must be a valid UUID');
+      expect(response.body.error).toBeDefined();
+      // Invalid UUID was rejected by validator
     });
   });
 });

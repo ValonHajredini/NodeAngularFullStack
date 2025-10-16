@@ -17,12 +17,12 @@ import { FormField } from '@nodeangularfullstack/shared';
         [placeholder]="field.placeholder || ''"
         [disabled]="true"
         rows="4"
-        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
+        class="theme-textarea w-full disabled:bg-gray-50 disabled:cursor-not-allowed"
         [attr.aria-label]="field.label"
         [attr.aria-required]="field.required"
       ></textarea>
       @if (field.validation && field.validation.maxLength) {
-        <div class="mt-1 text-xs text-gray-400">
+        <div class="mt-1 text-xs theme-help-text">
           Max length: {{ field.validation.maxLength }} characters
         </div>
       }

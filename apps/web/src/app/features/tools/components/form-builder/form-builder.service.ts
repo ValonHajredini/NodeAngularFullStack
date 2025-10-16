@@ -1029,8 +1029,8 @@ export class FormBuilderService {
               steps: this._steps(),
             }
           : undefined,
-        // Include theme ID if a theme is applied
-        themeId: this._currentForm()?.schema?.settings?.themeId,
+        // Include theme ID if a theme is applied (fallback to in-memory selection for unsaved forms)
+        themeId: this._currentForm()?.schema?.settings?.themeId ?? this._currentTheme()?.id,
       },
     };
 
@@ -1312,12 +1312,11 @@ export class FormBuilderService {
   /**
    * Applies a theme to the current form.
    * Updates the form's themeId, applies CSS, and tracks theme application via API.
-   * @param themeId - The ID of the theme to apply
+   * @param theme - The theme to apply (full FormTheme object)
    */
-  applyTheme(themeId: string): void {
-    const theme = this._availableThemes().find((t) => t.id === themeId);
+  applyTheme(theme: FormTheme): void {
     if (!theme) {
-      console.warn(`Theme ${themeId} not found in available themes`);
+      console.warn('Cannot apply undefined theme');
       return;
     }
 
@@ -1343,8 +1342,10 @@ export class FormBuilderService {
           updatedAt: new Date(),
         };
       }
-      currentForm.schema.settings.themeId = themeId;
+      currentForm.schema.settings.themeId = theme.id;
       this._currentTheme.set(theme);
+      // Update the signal with the modified form to ensure themeId is persisted
+      this._currentForm.set({ ...currentForm });
       this.markDirty(); // AC: 7
     }
 
@@ -1352,7 +1353,7 @@ export class FormBuilderService {
     this.themePreviewService.applyThemeCss(theme);
 
     // Track theme application via API
-    this.themesApi.applyTheme(themeId).subscribe({
+    this.themesApi.applyTheme(theme.id).subscribe({
       next: (response) => console.log('Theme usage tracked:', response.data?.usageCount),
       error: (err) => console.error('Failed to track theme usage:', err),
     });
@@ -1369,6 +1370,9 @@ export class FormBuilderService {
     this._isThemeLoading.set(true);
     this.themesApi.getThemes().subscribe({
       next: (response) => {
+        // Populate available themes for use in applyTheme()
+        this._availableThemes.set(response.data || []);
+
         const theme = response.data?.find((t) => t.id === themeId);
         if (theme) {
           this._currentTheme.set(theme);

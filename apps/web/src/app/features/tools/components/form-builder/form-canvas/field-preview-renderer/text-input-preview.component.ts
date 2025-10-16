@@ -25,6 +25,17 @@ import { FormField } from '@nodeangularfullstack/shared';
       />
     </div>
   `,
+  styles: [
+    `
+      ::ng-deep .field-preview input.p-inputtext {
+        border: 2px solid var(--theme-primary-color, #3b82f6);
+        border-radius: var(--theme-field-radius, 4px);
+        font-family: var(--theme-font-body, inherit);
+        color: var(--theme-text-primary, #111827);
+        transition: border-color 0.2s ease;
+      }
+    `,
+  ],
 })
 export class TextInputPreviewComponent {
   @Input({ required: true }) field!: FormField;

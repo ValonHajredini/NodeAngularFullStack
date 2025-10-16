@@ -91,9 +91,17 @@ import { trigger, transition, style, animate } from '@angular/animations';
             Form Builder
           </a>
           <i class="pi pi-angle-right mx-2 text-gray-400"></i>
-          <span class="text-gray-900 font-medium">{{
-            formBuilderService.currentForm()?.title || 'New Form'
-          }}</span>
+          <span class="text-gray-900 font-medium">
+            {{ formBuilderService.currentForm()?.title || 'New Form' }}
+            @if (currentTheme()?.name) {
+              <span
+                class="ml-2 inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-purple-100 text-purple-700 border border-purple-200"
+              >
+                <i class="pi pi-palette mr-1 text-xs"></i>
+                {{ currentTheme()?.name }}
+              </span>
+            }
+          </span>
         </nav>
       </div>
 
@@ -118,7 +126,7 @@ import { trigger, transition, style, animate } from '@angular/animations';
 
         <div class="flex items-center gap-2">
           <app-theme-dropdown
-            [currentThemeId]="formBuilderService.currentForm()?.schema?.themeId"
+            [currentThemeId]="formBuilderService.currentForm()?.schema?.settings?.themeId"
             (themeSelected)="onThemeSelected($event)"
           />
 
@@ -831,6 +839,10 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
           redirectUrl: settings.redirectUrl || undefined,
           allowMultipleSubmissions: settings.allowMultipleSubmissions,
         },
+        // Preserve the currently applied theme when saving settings
+        themeId:
+          this.formBuilderService.currentForm()?.schema?.settings?.themeId ||
+          this.currentTheme()?.id,
         // Include background settings in schema
         background: {
           type: settings.backgroundType || 'none',
@@ -1023,7 +1035,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
    * @param theme - Selected theme
    */
   onThemeSelected(theme: FormTheme): void {
-    this.formBuilderService.applyTheme(theme.id);
+    this.formBuilderService.applyTheme(theme);
     this.messageService.add({
       severity: 'success',
       summary: 'Theme Applied',
@@ -1038,6 +1050,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
    */
   onPreview(): void {
     const settings = this.formSettings();
+    const activeTheme = this.formBuilderService.currentTheme?.() ?? null;
     const backgroundSettings = {
       type: settings.backgroundType || 'none',
       imageUrl: settings.backgroundImageUrl || '',
@@ -1071,6 +1084,10 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
           allowMultipleSubmissions: settings.allowMultipleSubmissions,
         },
         background: backgroundSettings,
+        // surface the currently selected theme for the renderer
+        themeId:
+          this.formBuilderService.currentForm()?.schema?.settings?.themeId ||
+          (activeTheme ? activeTheme.id : undefined),
         // Include row layout configuration if enabled
         rowLayout: this.formBuilderService.rowLayoutEnabled()
           ? {
@@ -1080,6 +1097,11 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
           : undefined,
       },
     };
+
+    // Attach full theme object so FormRenderer can apply CSS directly in preview mode
+    if (activeTheme) {
+      schema.theme = activeTheme;
+    }
 
     // Set preview schema and show dialog
     this.previewFormSchema.set(schema);

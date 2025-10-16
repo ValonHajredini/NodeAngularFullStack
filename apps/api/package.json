@@ -26,6 +26,7 @@
     "db:migrate": "ts-node -e \"import('./src/utils/migration.utils').then(m => m.MigrationUtils.setupDatabase())\"",
     "db:seed": "ts-node -e \"import('./src/utils/seed.utils').then(s => s.SeedUtils.seedDatabase())\"",
     "db:reset": "ts-node -e \"import('./src/utils/seed.utils').then(s => s.SeedUtils.clearTestData()).then(() => import('./src/utils/seed.utils').then(s => s.SeedUtils.seedDatabase()))\"",
+    "db:seed:themes": "ts-node database/seeds/20-seed-default-themes.ts",
     "routes": "ts-node src/scripts/simple-routes.ts",
     "routes:advanced": "ts-node src/scripts/list-routes.ts",
     "routes:json": "ts-node src/scripts/list-routes.ts --json",
