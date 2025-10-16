@@ -66,6 +66,9 @@ echo ""
 # Create new tmux session (detached)
 tmux new-session -d -s "$SESSION_NAME" -c "$ROOT_DIR"
 
+# Enable mouse support for resizing and focusing panes
+tmux set-option -t "$SESSION_NAME" mouse on
+
 # Rename the first window
 tmux rename-window -t "$SESSION_NAME:0" "dev"
 
@@ -93,8 +96,9 @@ echo -e "${YELLOW}📋 tmux Commands:${NC}"
 echo -e "  Detach:     ${BLUE}Ctrl+B${NC} then ${BLUE}D${NC}"
 echo -e "  Reattach:   ${BLUE}tmux attach -t $SESSION_NAME${NC}"
 echo -e "  Kill:       ${BLUE}tmux kill-session -t $SESSION_NAME${NC}"
-echo -e "  Switch pane:${BLUE}Ctrl+B${NC} then arrow keys"
-echo -e "  Scroll:     ${BLUE}Ctrl+B${NC} then ${BLUE}[${NC} (q to exit)"
+echo -e "  Switch pane:${BLUE}Ctrl+B${NC} then arrow keys ${GREEN}or click on pane${NC}"
+echo -e "  Resize pane:${GREEN}Click and drag pane border${NC}"
+echo -e "  Scroll:     ${BLUE}Ctrl+B${NC} then ${BLUE}[${NC} (q to exit) ${GREEN}or scroll wheel${NC}"
 echo ""
 echo -e "${GREEN}🚀 Attaching to session...${NC}"
 
