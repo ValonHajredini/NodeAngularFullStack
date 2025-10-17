@@ -676,4 +676,95 @@ describe('FormCanvasComponent', () => {
       expect(formBuilderService.formFields().length).toBe(0);
     });
   });
+
+  describe('Theme Loading (Story 23.6)', () => {
+    let themePreviewService: jasmine.SpyObj<any>;
+    let formsApiService: jasmine.SpyObj<any>;
+
+    beforeEach(() => {
+      // Get injected spy services
+      themePreviewService = (component as any).themePreviewService;
+      formsApiService = (component as any).formsApiService;
+
+      // Spy on service methods
+      spyOn(themePreviewService, 'applyThemeCss');
+      spyOn(themePreviewService, 'clearThemeCss');
+      spyOn(formsApiService, 'getTheme').and.returnValue({
+        subscribe: (callbacks: any) => {
+          callbacks.next({
+            id: 'test-theme',
+            name: 'Ocean Blue',
+            themeConfig: {
+              desktop: { primaryColor: '#3B82F6', secondaryColor: '#10B981' },
+            },
+          });
+        },
+      });
+    });
+
+    it('should apply theme-form-canvas-background class to canvas', () => {
+      const compiled = fixture.nativeElement as HTMLElement;
+      const canvas = compiled.querySelector('.form-canvas');
+
+      expect(canvas?.classList.contains('theme-form-canvas-background')).toBe(true);
+    });
+
+    it('should load and apply theme when themeId changes', () => {
+      // Set themeId in formSettingsSignal
+      formBuilderService.formSettingsSignal.set({ themeId: 'test-theme-id' });
+      fixture.detectChanges();
+
+      // Verify theme was loaded and applied
+      expect(formsApiService.getTheme).toHaveBeenCalledWith('test-theme-id');
+      expect(themePreviewService.applyThemeCss).toHaveBeenCalled();
+    });
+
+    it('should clear theme CSS when themeId is null', () => {
+      // Set themeId to null (no theme)
+      formBuilderService.formSettingsSignal.set({ themeId: null });
+      fixture.detectChanges();
+
+      // Verify theme was cleared
+      expect(themePreviewService.clearThemeCss).toHaveBeenCalled();
+    });
+
+    it('should fallback to defaults on theme load error', () => {
+      // Mock theme load error
+      (formsApiService.getTheme as jasmine.Spy).and.returnValue({
+        subscribe: (callbacks: any) => {
+          callbacks.error(new Error('Theme not found'));
+        },
+      });
+
+      // Set themeId to trigger load
+      formBuilderService.formSettingsSignal.set({ themeId: 'invalid-theme-id' });
+      fixture.detectChanges();
+
+      // Verify theme was cleared on error
+      expect(formsApiService.getTheme).toHaveBeenCalledWith('invalid-theme-id');
+      expect(themePreviewService.clearThemeCss).toHaveBeenCalled();
+    });
+
+    it('should apply theme utility classes to row containers', () => {
+      formBuilderService.enableRowLayout();
+      formBuilderService.addRow(2);
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const rowGrid = compiled.querySelector('.row-grid');
+
+      expect(rowGrid?.classList.contains('theme-row-container')).toBe(true);
+    });
+
+    it('should apply theme utility classes to column containers', () => {
+      formBuilderService.enableRowLayout();
+      formBuilderService.addRow(2);
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const columnDropZone = compiled.querySelector('.column-drop-zone');
+
+      expect(columnDropZone?.classList.contains('theme-column-container')).toBe(true);
+    });
+  });
 });

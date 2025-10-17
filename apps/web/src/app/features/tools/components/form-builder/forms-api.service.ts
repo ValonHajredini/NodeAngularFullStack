@@ -6,6 +6,8 @@ import {
   FormMetadata,
   FormSchema,
   FormSubmission,
+  FormTheme,
+  CreateThemeRequest,
   ApiResponse,
   PaginatedResponse,
 } from '@nodeangularfullstack/shared';
@@ -169,17 +171,20 @@ export class FormsApiService {
    * formsApiService.uploadBackgroundImage(imageFile)
    *   .subscribe(response => console.log('Image URL:', response.url));
    */
-  uploadBackgroundImage(file: File): Observable<{ url: string; fileName: string; size: number; mimeType: string }> {
+  uploadBackgroundImage(
+    file: File,
+  ): Observable<{ url: string; fileName: string; size: number; mimeType: string }> {
     const formData = new FormData();
     formData.append('backgroundImage', file);
 
-    return this.apiClient.post<ApiResponse<{ url: string; fileName: string; size: number; mimeType: string }>>(
-      '/forms/upload-background',
-      formData
-    ).pipe(
-      map((response) => response.data!),
-      catchError((error) => throwError(() => error))
-    );
+    return this.apiClient
+      .post<
+        ApiResponse<{ url: string; fileName: string; size: number; mimeType: string }>
+      >('/forms/upload-background', formData)
+      .pipe(
+        map((response) => response.data!),
+        catchError((error) => throwError(() => error)),
+      );
   }
 
   /**
@@ -277,6 +282,54 @@ export class FormsApiService {
     return {
       ...submission,
       submittedAt: new Date(submission.submittedAt),
+    };
+  }
+
+  /**
+   * Retrieves a single theme by ID.
+   * @param themeId - Theme ID to retrieve
+   * @returns Observable containing the theme
+   * @throws {HttpErrorResponse} When theme not found or access denied
+   * @example
+   * formsApiService.getTheme('theme-123')
+   *   .subscribe(theme => console.log('Theme:', theme));
+   */
+  getTheme(themeId: string): Observable<FormTheme> {
+    return this.apiClient.get<ApiResponse<FormTheme>>(`/themes/${themeId}`).pipe(
+      map((response) => this.convertThemeDates(response.data!)),
+      catchError((error) => throwError(() => error)),
+    );
+  }
+
+  /**
+   * Creates a new custom theme.
+   * @param themeData - Theme data to create
+   * @returns Observable containing the created theme
+   * @throws {HttpErrorResponse} When creation fails or validation errors
+   * @example
+   * formsApiService.createTheme({
+   *   name: 'Modern Blue',
+   *   thumbnailUrl: 'https://example.com/thumb.jpg',
+   *   themeConfig: { desktop: {...} }
+   * }).subscribe(theme => console.log('Theme created:', theme));
+   */
+  createTheme(themeData: Partial<CreateThemeRequest>): Observable<FormTheme> {
+    return this.apiClient.post<ApiResponse<FormTheme>>('/themes', themeData).pipe(
+      map((response) => this.convertThemeDates(response.data!)),
+      catchError((error) => throwError(() => error)),
+    );
+  }
+
+  /**
+   * Converts theme date strings to Date objects.
+   * @param theme - Theme with string dates
+   * @returns Theme with Date objects
+   */
+  private convertThemeDates(theme: FormTheme): FormTheme {
+    return {
+      ...theme,
+      createdAt: new Date(theme.createdAt),
+      updatedAt: new Date(theme.updatedAt),
     };
   }
 }

@@ -124,7 +124,10 @@
           </div>
         }
 
-        <p-card [ngStyle]="{ background: 'white', position: 'relative', 'z-index': '10' }">
+        <p-card
+          class="theme-form-container-wrapper"
+          [ngStyle]="{ background: 'white', position: 'relative', 'z-index': '10' }"
+        >
           <div class="form-content-wrapper">
             <!-- Step Progress Indicator -->
             @if (isStepFormEnabled()) {

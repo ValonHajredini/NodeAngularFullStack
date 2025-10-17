@@ -31,7 +31,7 @@ import { FormTheme } from '@nodeangularfullstack/shared';
           loading="lazy"
         />
         <ng-template #skeleton>
-          <p-skeleton width="100%" height="160px" />
+          <p-skeleton width="100%" height="112px" />
         </ng-template>
 
         <!-- Active theme indicator -->
@@ -56,7 +56,7 @@ import { FormTheme } from '@nodeangularfullstack/shared';
   styles: [
     `
       .theme-card {
-        @apply cursor-pointer rounded-lg border-2 border-gray-300 p-3;
+        @apply cursor-pointer rounded-lg border-2 border-gray-300 p-2;
         @apply hover:scale-105 hover:shadow-lg;
         transition:
           background-color 0.3s ease,
@@ -72,8 +72,8 @@ import { FormTheme } from '@nodeangularfullstack/shared';
         border-color: var(--theme-primary-color, #3b82f6);
       }
       .theme-thumbnail {
-        @apply rounded-md overflow-hidden mb-2 relative;
-        height: 160px;
+        @apply rounded-md overflow-hidden mb-1.5 relative;
+        height: 112px;
       }
       .active-indicator {
         @apply absolute top-2 right-2 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg;

@@ -7,13 +7,16 @@ import {
   inject,
   signal,
   computed,
+  effect,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DragDropModule, CdkDragDrop, CdkDrag, CdkDropList } from '@angular/cdk/drag-drop';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { FormField, FormFieldType, FieldPosition } from '@nodeangularfullstack/shared';
+import { FormField, FormFieldType, FieldPosition, FormTheme } from '@nodeangularfullstack/shared';
 import { FormBuilderService } from '../form-builder.service';
 import { FormSettings } from '../form-settings/form-settings.component';
+import { ThemePreviewService } from '../theme-preview.service';
+import { FormsApiService } from '../forms-api.service';
 import { FieldPreviewRendererComponent } from './field-preview-renderer/field-preview-renderer.component';
 import { GroupPreviewComponent } from './field-preview-renderer/group-preview.component';
 import { sanitizeCustomBackground } from '../../../../../shared/utils/sanitizer';
@@ -177,13 +180,13 @@ interface FieldTypeDefinition {
 
                     <!-- Row columns grid -->
                     <div
-                      class="row-grid"
+                      class="row-grid theme-row-container"
                       [style.grid-template-columns]="'repeat(' + row.columnCount + ', 1fr)'"
                       style="display: grid; gap: 16px; min-height: 120px;"
                     >
                       @for (columnIndex of getColumnIndices(row.columnCount); track columnIndex) {
                         <div
-                          class="column-drop-zone"
+                          class="column-drop-zone theme-column-container"
                           [attr.data-row-id]="row.rowId"
                           [attr.data-column-index]="columnIndex"
                           [class.occupied]="getFieldsInColumn(row.rowId, columnIndex).length > 0"
@@ -262,7 +265,7 @@ interface FieldTypeDefinition {
               id="canvas-drop-list"
               [cdkDropListData]="formBuilderService.formFields()"
               (cdkDropListDropped)="onFieldDropped($event)"
-              class="form-fields-grid"
+              class="form-fields-grid theme-form-container-wrapper"
               [ngClass]="[getGridClass(), getSpacingClass()]"
               style="position: relative; z-index: 2;"
             >
@@ -652,6 +655,8 @@ interface FieldTypeDefinition {
 export class FormCanvasComponent {
   readonly formBuilderService = inject(FormBuilderService);
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly themePreviewService = inject(ThemePreviewService);
+  private readonly formsApiService = inject(FormsApiService);
   protected readonly FormFieldType = FormFieldType;
 
   private _settings = signal<FormSettings>({
@@ -673,6 +678,20 @@ export class FormCanvasComponent {
   }
 
   @Output() fieldClicked = new EventEmitter<FormField>();
+
+  constructor() {
+    // Watch for theme changes and apply theme in real-time
+    effect(() => {
+      const themeId = this.formBuilderService.currentForm()?.schema?.settings?.themeId;
+
+      if (themeId) {
+        this.loadAndApplyTheme(themeId);
+      } else {
+        // No theme selected - clear theme CSS to use defaults
+        this.themePreviewService.clearThemeCss();
+      }
+    });
+  }
 
   // Step form computed signals
   protected readonly stepFormEnabled = this.formBuilderService.stepFormEnabled;
@@ -1412,4 +1431,22 @@ export class FormCanvasComponent {
 
     return true;
   };
+
+  /**
+   * Loads theme from API and applies CSS variables to canvas.
+   * Called by effect() when themeId changes.
+   * @param themeId - The ID of the theme to load
+   * @private
+   */
+  private loadAndApplyTheme(themeId: string): void {
+    this.formsApiService.getTheme(themeId).subscribe({
+      next: (theme: FormTheme) => {
+        this.themePreviewService.applyThemeCss(theme);
+      },
+      error: (err: Error) => {
+        console.warn('Failed to load theme for canvas, using defaults', err);
+        this.themePreviewService.clearThemeCss();
+      },
+    });
+  }
 }

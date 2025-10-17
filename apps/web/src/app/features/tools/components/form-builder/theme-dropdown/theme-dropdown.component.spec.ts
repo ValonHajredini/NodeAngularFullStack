@@ -353,6 +353,22 @@ describe('ThemeDropdownComponent', () => {
     expect(skeletons.length).toBe(8); // As specified in template
   });
 
+  it('should emit openThemeDesigner event when button clicked', () => {
+    spyOn(component.openThemeDesigner, 'emit');
+    component.loading.set(false);
+    component.themes.set(mockThemes);
+    fixture.detectChanges();
+
+    const footerButton = fixture.nativeElement.querySelector('.theme-dropdown-footer button');
+    expect(footerButton).toBeTruthy();
+    expect(footerButton.textContent).toContain('Build Your Own Custom Color Theme');
+
+    footerButton.click();
+
+    expect(component.openThemeDesigner.emit).toHaveBeenCalled();
+    expect(component.panelVisible).toBe(false);
+  });
+
   // Custom theme integration tests
   describe('Custom Theme Integration', () => {
     it('should load both predefined and custom themes', () => {

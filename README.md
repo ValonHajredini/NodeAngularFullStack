@@ -34,6 +34,31 @@ Create custom forms and gain powerful insights from submission data:
 
 📖 **Learn More**: [Form Analytics Charts User Guide](docs/user-guide/form-analytics-charts.md)
 
+### Custom Theme System
+
+Create stunning, branded forms with the powerful theme customization system:
+
+- **Visual Theme Designer**: 5-step wizard for creating custom themes from Form Builder
+- **Pre-Built Themes**: Choose from 9 professionally designed themes (Ocean Blue, Sunset Orange,
+  Forest Green, etc.)
+- **Custom Theme Creation**: Full control over colors, backgrounds, fonts, and styling
+- **Advanced Backgrounds**: Solid colors, linear gradients, radial gradients with angle/position
+  control
+- **Google Fonts Integration**: Access 1000+ professional fonts for headings and body text
+- **Real-Time Preview**: See changes instantly as you design your theme
+- **Responsive Design**: Themes automatically adapt to mobile, tablet, and desktop
+- **Per-Form Themes**: Apply different themes to different forms
+- **Easy Theme Management**: Edit your themes anytime, changes apply to all forms using that theme
+- **User Permissions**: All users can create themes, only owners/admins can edit
+- **Performance Optimized**: CSS variable-based rendering for instant theme switching (<300ms
+  preview updates)
+- **Backward Compatible**: Existing forms without themes continue working with default styles
+
+📖 **Learn More**:
+
+- [Theme Creation Guide](docs/user-guides/theme-creation-guide.md)
+- [Theme System Architecture](docs/architecture/theme-system.md)
+
 ### Authentication & Security
 
 - JWT-based authentication with refresh tokens

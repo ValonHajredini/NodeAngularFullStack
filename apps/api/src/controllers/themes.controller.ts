@@ -9,16 +9,34 @@ import { AsyncHandler } from '../utils/async-handler.utils';
  */
 export class ThemesController {
   /**
-   * Gets all active themes sorted by usage count.
-   * @route GET /api/themes
-   * @param req - Express request object
-   * @param res - Express response object
-   * @param next - Express next function
-   * @returns HTTP response with array of themes
-   * @throws {ApiError} 401 - Authentication required
-   * @example
-   * GET /api/themes
-   * Authorization: Bearer <token>
+   * @swagger
+   * /api/themes:
+   *   get:
+   *     summary: List all active themes
+   *     description: Retrieves all active themes sorted by usage count. Public endpoint, no authentication required.
+   *     tags:
+   *       - Themes
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved themes
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: Themes retrieved successfully
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Theme'
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
    */
   getThemes = AsyncHandler(
     async (
@@ -38,17 +56,46 @@ export class ThemesController {
   );
 
   /**
-   * Gets a single theme by ID.
-   * @route GET /api/themes/:id
-   * @param req - Express request object with theme ID parameter
-   * @param res - Express response object
-   * @param next - Express next function
-   * @returns HTTP response with theme data
-   * @throws {ApiError} 401 - Authentication required
-   * @throws {ApiError} 404 - Theme not found
-   * @example
-   * GET /api/themes/theme-uuid
-   * Authorization: Bearer <token>
+   * @swagger
+   * /api/themes/{id}:
+   *   get:
+   *     summary: Get theme by ID
+   *     description: Retrieves a single theme by its UUID. Public endpoint, no authentication required.
+   *     tags:
+   *       - Themes
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: Theme UUID
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved theme
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: Theme retrieved successfully
+   *                 data:
+   *                   $ref: '#/components/schemas/Theme'
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
+   *       404:
+   *         description: Theme not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    */
   getThemeById = AsyncHandler(
     async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
@@ -78,27 +125,108 @@ export class ThemesController {
   );
 
   /**
-   * Creates a new theme.
-   * Requires authentication. Any authenticated user can create themes.
-   * @route POST /api/themes
-   * @param req - Express request object with theme creation data
-   * @param res - Express response object
-   * @param next - Express next function
-   * @returns HTTP response with created theme data
-   * @throws {ApiError} 400 - Invalid input data
-   * @throws {ApiError} 401 - Authentication required
-   * @example
-   * POST /api/themes
-   * Authorization: Bearer <token>
-   * {
-   *   "name": "Custom Theme",
-   *   "description": "Optional description",
-   *   "thumbnailUrl": "https://...",
-   *   "themeConfig": {
-   *     "desktop": { ... },
-   *     "mobile": { ... }
-   *   }
-   * }
+   * @swagger
+   * /api/themes:
+   *   post:
+   *     summary: Create a new theme
+   *     description: Creates a new custom theme. Requires authentication. Any authenticated user can create themes.
+   *     tags:
+   *       - Themes
+   *     security:
+   *       - BearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - name
+   *               - themeConfig
+   *             properties:
+   *               name:
+   *                 type: string
+   *                 minLength: 1
+   *                 maxLength: 50
+   *                 example: My Custom Theme
+   *               description:
+   *                 type: string
+   *                 maxLength: 200
+   *                 example: A beautiful custom theme for my forms
+   *               thumbnailUrl:
+   *                 type: string
+   *                 format: uri
+   *                 example: https://example.com/thumbnail.png
+   *               themeConfig:
+   *                 type: object
+   *                 properties:
+   *                   primaryColor:
+   *                     type: string
+   *                     pattern: ^#[0-9A-Fa-f]{6}$
+   *                     example: "#3B82F6"
+   *                   secondaryColor:
+   *                     type: string
+   *                     pattern: ^#[0-9A-Fa-f]{6}$
+   *                     example: "#10B981"
+   *                   backgroundColor:
+   *                     type: string
+   *                     example: "#FFFFFF"
+   *                   backgroundType:
+   *                     type: string
+   *                     enum: [solid, linear, radial]
+   *                     example: linear
+   *                   gradientAngle:
+   *                     type: integer
+   *                     minimum: 0
+   *                     maximum: 360
+   *                     example: 135
+   *                   headingFont:
+   *                     type: string
+   *                     example: Montserrat
+   *                   bodyFont:
+   *                     type: string
+   *                     example: Open Sans
+   *                   borderRadius:
+   *                     type: integer
+   *                     minimum: 0
+   *                     maximum: 32
+   *                     example: 8
+   *                   fieldPadding:
+   *                     type: integer
+   *                     minimum: 8
+   *                     maximum: 24
+   *                     example: 12
+   *     responses:
+   *       201:
+   *         description: Theme created successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: Theme created successfully
+   *                 data:
+   *                   $ref: '#/components/schemas/Theme'
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
+   *       400:
+   *         description: Invalid input data
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ValidationError'
+   *       401:
+   *         description: Authentication required
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    */
   createTheme = AsyncHandler(
     async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
@@ -150,24 +278,89 @@ export class ThemesController {
   );
 
   /**
-   * Updates an existing theme.
-   * Requires authentication. Users can only update their own themes. Admins can update any theme.
-   * @route PUT /api/themes/:id
-   * @param req - Express request object with theme update data
-   * @param res - Express response object
-   * @param next - Express next function
-   * @returns HTTP response with updated theme data
-   * @throws {ApiError} 400 - Invalid input data
-   * @throws {ApiError} 401 - Authentication required
-   * @throws {ApiError} 403 - Forbidden if user is not theme owner or admin
-   * @throws {ApiError} 404 - Theme not found
-   * @example
-   * PUT /api/themes/theme-uuid
-   * Authorization: Bearer <token>
-   * {
-   *   "name": "Updated Theme Name",
-   *   "description": "New description"
-   * }
+   * @swagger
+   * /api/themes/{id}:
+   *   put:
+   *     summary: Update an existing theme
+   *     description: Updates a theme. Requires authentication. Users can only update their own themes. Admins can update any theme.
+   *     tags:
+   *       - Themes
+   *     security:
+   *       - BearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: Theme UUID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               name:
+   *                 type: string
+   *                 minLength: 1
+   *                 maxLength: 50
+   *                 example: Updated Theme Name
+   *               description:
+   *                 type: string
+   *                 maxLength: 200
+   *                 example: Updated description
+   *               themeConfig:
+   *                 type: object
+   *                 properties:
+   *                   primaryColor:
+   *                     type: string
+   *                     pattern: ^#[0-9A-Fa-f]{6}$
+   *                     example: "#FF5733"
+   *     responses:
+   *       200:
+   *         description: Theme updated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: Theme updated successfully
+   *                 data:
+   *                   $ref: '#/components/schemas/Theme'
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
+   *       400:
+   *         description: Invalid input data
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ValidationError'
+   *       401:
+   *         description: Authentication required
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       403:
+   *         description: Forbidden - You can only edit your own themes
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       404:
+   *         description: Theme not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    */
   updateTheme = AsyncHandler(
     async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
@@ -234,19 +427,58 @@ export class ThemesController {
   );
 
   /**
-   * Soft deletes a theme.
-   * Requires authentication. Users can only delete their own themes. Admins can delete any theme.
-   * @route DELETE /api/themes/:id
-   * @param req - Express request object with theme ID parameter
-   * @param res - Express response object
-   * @param next - Express next function
-   * @returns HTTP response with deletion confirmation
-   * @throws {ApiError} 401 - Authentication required
-   * @throws {ApiError} 403 - Forbidden if user is not theme owner or admin
-   * @throws {ApiError} 404 - Theme not found
-   * @example
-   * DELETE /api/themes/theme-uuid
-   * Authorization: Bearer <token>
+   * @swagger
+   * /api/themes/{id}:
+   *   delete:
+   *     summary: Delete a theme
+   *     description: Soft deletes a theme. Requires authentication. Users can only delete their own themes. Admins can delete any theme.
+   *     tags:
+   *       - Themes
+   *     security:
+   *       - BearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: Theme UUID
+   *     responses:
+   *       200:
+   *         description: Theme deleted successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: Theme deleted successfully
+   *                 timestamp:
+   *                   type: string
+   *                   format: date-time
+   *       401:
+   *         description: Authentication required
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       403:
+   *         description: Forbidden - You can only delete your own themes
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       404:
+   *         description: Theme not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
    */
   deleteTheme = AsyncHandler(
     async (req: Request, res: Response, _next: NextFunction): Promise<void> => {

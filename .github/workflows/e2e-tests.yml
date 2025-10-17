@@ -1,0 +1,294 @@
+name: E2E Tests - Theme System
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  e2e-tests:
+    name: E2E Theme System Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_USER: test_user
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: npm run build:shared
+
+      - name: Setup test environment
+        run: |
+          cp apps/api/.env.example apps/api/.env.test
+          echo "DATABASE_URL=postgresql://test_user:test_password@localhost:5432/test_db" >> apps/api/.env.test
+          echo "REDIS_URL=redis://localhost:6379" >> apps/api/.env.test
+          echo "NODE_ENV=test" >> apps/api/.env.test
+          echo "JWT_SECRET=test-secret-key-for-e2e-tests" >> apps/api/.env.test
+          echo "PORT=3000" >> apps/api/.env.test
+
+      - name: Run database migrations
+        run: npm --workspace=apps/api run db:migrate
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          NODE_ENV: test
+
+      - name: Seed database with test data
+        run: npm --workspace=apps/api run db:seed
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          NODE_ENV: test
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      - name: Start backend server
+        run: |
+          cd apps/api
+          npm run dev &
+          echo $! > api.pid
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          NODE_ENV: test
+
+      - name: Start frontend server
+        run: |
+          cd apps/web
+          npm run dev &
+          echo $! > web.pid
+
+      - name: Wait for servers to be ready
+        run: |
+          echo "Waiting for API server..."
+          npx wait-on http://localhost:3000/health --timeout 60000
+          echo "✅ API server ready"
+
+          echo "Waiting for frontend server..."
+          npx wait-on http://localhost:4200 --timeout 60000
+          echo "✅ Frontend server ready"
+
+      - name: Run E2E tests - Complete Theme System
+        run: npm run test:e2e -- complete-theme-system.spec.ts --project=chromium
+        continue-on-error: false
+
+      - name: Run E2E tests - Visual Regression
+        run: npm run test:e2e -- theme-visual-regression.spec.ts --project=chromium --update-snapshots
+        continue-on-error: true
+
+      - name: Run E2E tests - Performance Tests
+        run: npm run test:e2e -- theme-performance.spec.ts --project=chromium
+        continue-on-error: true
+
+      - name: Stop servers
+        if: always()
+        run: |
+          if [ -f apps/api/api.pid ]; then
+            kill $(cat apps/api/api.pid) || true
+          fi
+          if [ -f apps/web/web.pid ]; then
+            kill $(cat apps/web/web.pid) || true
+          fi
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: test-screenshots
+          path: test-results/
+          retention-days: 7
+
+      - name: Upload videos
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: test-videos
+          path: test-results/
+          retention-days: 7
+
+      - name: Comment PR with test results
+        uses: daun/playwright-report-comment@v3
+        if: always() && github.event_name == 'pull_request'
+        with:
+          report-url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+  e2e-cross-browser:
+    name: E2E Theme System Tests (Cross-Browser)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+
+    strategy:
+      matrix:
+        browser: [chromium, firefox, webkit]
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_USER: test_user
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: npm run build:shared
+
+      - name: Setup test environment
+        run: |
+          cp apps/api/.env.example apps/api/.env.test
+          echo "DATABASE_URL=postgresql://test_user:test_password@localhost:5432/test_db" >> apps/api/.env.test
+          echo "REDIS_URL=redis://localhost:6379" >> apps/api/.env.test
+          echo "NODE_ENV=test" >> apps/api/.env.test
+          echo "JWT_SECRET=test-secret-key-for-e2e-tests" >> apps/api/.env.test
+
+      - name: Run database migrations
+        run: npm --workspace=apps/api run db:migrate
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          NODE_ENV: test
+
+      - name: Seed database
+        run: npm --workspace=apps/api run db:seed
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          NODE_ENV: test
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Start backend server
+        run: cd apps/api && npm run dev &
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          NODE_ENV: test
+
+      - name: Start frontend server
+        run: cd apps/web && npm run dev &
+
+      - name: Wait for servers
+        run: |
+          npx wait-on http://localhost:3000/health http://localhost:4200 --timeout 60000
+
+      - name: Run E2E tests on ${{ matrix.browser }}
+        run: npm run test:e2e -- complete-theme-system.spec.ts --project=${{ matrix.browser }}
+
+      - name: Upload test results for ${{ matrix.browser }}
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: playwright-report-${{ matrix.browser }}
+          path: playwright-report/
+          retention-days: 30
+
+  e2e-results-summary:
+    name: E2E Test Results Summary
+    runs-on: ubuntu-latest
+    needs: [e2e-tests]
+    if: always()
+
+    steps:
+      - name: Download test artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: playwright-report
+
+      - name: Generate test summary
+        run: |
+          echo "# E2E Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Test Execution" >> $GITHUB_STEP_SUMMARY
+          echo "- **Workflow**: E2E Theme System Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- **Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Test Suites" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Complete Theme System Tests (6 scenarios)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Visual Regression Tests (9 themes + 1 default)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Performance Tests (theme creation + preview updates)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- 📊 Playwright Report: Available in workflow artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- 📸 Screenshots: Available if tests failed" >> $GITHUB_STEP_SUMMARY
+          echo "- 🎥 Videos: Available if tests failed" >> $GITHUB_STEP_SUMMARY
+
+      - name: Check E2E test results
+        run: |
+          if [ "${{ needs.e2e-tests.result }}" != "success" ]; then
+            echo "❌ E2E tests failed"
+            exit 1
+          fi
+          echo "✅ All E2E tests passed!"

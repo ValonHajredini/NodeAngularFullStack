@@ -28,6 +28,7 @@ import { RowLayoutSidebarComponent } from './row-layout-sidebar/row-layout-sideb
 import { StepFormSidebarComponent } from './step-form-sidebar/step-form-sidebar.component';
 import { PreviewDialogComponent } from './preview-dialog/preview-dialog.component';
 import { ThemeDropdownComponent } from './theme-dropdown/theme-dropdown.component';
+import { ThemeDesignerModalComponent } from './theme-designer-modal/theme-designer-modal.component';
 import { Dialog } from 'primeng/dialog';
 import { FormSchema, FormTheme } from '@nodeangularfullstack/shared';
 import { trigger, transition, style, animate } from '@angular/animations';
@@ -58,6 +59,7 @@ import { trigger, transition, style, animate } from '@angular/animations';
     StepFormSidebarComponent,
     PreviewDialogComponent,
     ThemeDropdownComponent,
+    ThemeDesignerModalComponent,
     Dialog,
   ],
   providers: [MessageService, ConfirmationService],
@@ -128,6 +130,7 @@ import { trigger, transition, style, animate } from '@angular/animations';
           <app-theme-dropdown
             [currentThemeId]="formBuilderService.currentForm()?.schema?.settings?.themeId"
             (themeSelected)="onThemeSelected($event)"
+            (openThemeDesigner)="openThemeDesigner()"
           />
 
           @if (formBuilderService.isPublished()) {
@@ -347,6 +350,12 @@ import { trigger, transition, style, animate } from '@angular/animations';
         (onClose)="closePreview()"
       ></app-preview-dialog>
 
+      <!-- Theme Designer Modal (Story 23.5) -->
+      <app-theme-designer-modal
+        [(visible)]="themeDesignerVisible"
+        (themeSaved)="onThemeSaved($event)"
+      ></app-theme-designer-modal>
+
       <!-- Toast for notifications -->
       <p-toast position="bottom-right"></p-toast>
 
@@ -537,6 +546,9 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
   // Preview state (Story 14.3)
   readonly previewDialogVisible = signal<boolean>(false);
   readonly previewFormSchema = signal<FormSchema | null>(null);
+
+  // Theme Designer Modal state (Story 23.5)
+  readonly themeDesignerVisible = signal<boolean>(false);
 
   // Sidebar tab state (Story 19.2)
   readonly activeSidebarTab = signal<number>(0); // 0 = Row Layout, 1 = Step Form
@@ -1041,6 +1053,36 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
       summary: 'Theme Applied',
       detail: `"${theme.name}" theme applied to form`,
       life: 2000,
+    });
+  }
+
+  /**
+   * Opens the Theme Designer Modal for custom theme creation (Story 23.5).
+   * Triggered by the "Build Your Own Custom Color Theme" button in theme dropdown.
+   */
+  openThemeDesigner(): void {
+    this.themeDesignerVisible.set(true);
+  }
+
+  /**
+   * Handles successful theme creation from Theme Designer Modal (Story 23.5).
+   * Applies the newly created theme to the current form and closes the modal.
+   * @param newThemeId - ID of the newly created theme
+   */
+  onThemeSaved(newThemeId: string): void {
+    // Load and apply the newly created theme
+    // This will fetch all themes, update the available themes list, and apply the selected theme
+    this.formBuilderService.loadTheme(newThemeId);
+
+    // Close the modal
+    this.themeDesignerVisible.set(false);
+
+    // Show success message
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Theme Created',
+      detail: 'Your custom theme has been created and applied successfully!',
+      life: 3000,
     });
   }
 

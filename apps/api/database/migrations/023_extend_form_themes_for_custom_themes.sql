@@ -35,20 +35,38 @@ CREATE INDEX IF NOT EXISTS idx_form_themes_is_custom ON form_themes(is_custom) W
 CREATE INDEX IF NOT EXISTS idx_form_themes_creator_id ON form_themes(creator_id) WHERE creator_id IS NOT NULL;
 
 -- Add check constraint to ensure custom themes have creator_id and theme_definition
-ALTER TABLE form_themes 
-ADD CONSTRAINT check_custom_theme_requirements 
-CHECK (
-    (is_custom = false) OR 
-    (is_custom = true AND creator_id IS NOT NULL AND theme_definition IS NOT NULL)
-);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE constraint_name = 'check_custom_theme_requirements'
+        AND table_name = 'form_themes'
+    ) THEN
+        ALTER TABLE form_themes
+        ADD CONSTRAINT check_custom_theme_requirements
+        CHECK (
+            (is_custom = false) OR
+            (is_custom = true AND creator_id IS NOT NULL AND theme_definition IS NOT NULL)
+        );
+    END IF;
+END $$;
 
 -- Add check constraint for theme_definition size limit (50KB)
-ALTER TABLE form_themes 
-ADD CONSTRAINT check_theme_definition_size 
-CHECK (
-    theme_definition IS NULL OR 
-    pg_column_size(theme_definition) <= 51200  -- 50KB in bytes
-);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE constraint_name = 'check_theme_definition_size'
+        AND table_name = 'form_themes'
+    ) THEN
+        ALTER TABLE form_themes
+        ADD CONSTRAINT check_theme_definition_size
+        CHECK (
+            theme_definition IS NULL OR
+            pg_column_size(theme_definition) <= 51200  -- 50KB in bytes
+        );
+    END IF;
+END $$;
 
 -- Update existing themes to mark them as predefined (not custom)
 UPDATE form_themes 

@@ -43,15 +43,26 @@ import { ThemeCardComponent } from './theme-card/theme-card.component';
       (onShow)="onPanelShow()"
     >
       <div class="theme-dropdown-header">
-        <h3>Styling Themes</h3>
-        <span class="theme-count">{{ themes().length }} themes</span>
+        <div class="header-left">
+          <h3>Styling Themes</h3>
+          <span class="theme-count">{{ themes().length }} themes</span>
+        </div>
+        <button
+          pButton
+          type="button"
+          label="Build Your Own"
+          icon="pi pi-plus"
+          size="small"
+          class="p-button-outlined p-button-primary"
+          (click)="onOpenThemeDesigner()"
+        ></button>
       </div>
 
       <div *ngIf="loading(); else themeGrid" class="loading-skeleton">
         <p-skeleton
           *ngFor="let i of [1, 2, 3, 4, 5, 6, 7, 8]"
-          width="240px"
-          height="200px"
+          width="168px"
+          height="140px"
           class="skeleton-card"
         />
       </div>
@@ -88,7 +99,7 @@ import { ThemeCardComponent } from './theme-card/theme-card.component';
       .theme-grid {
         display: grid;
         gap: 1rem;
-        max-height: calc(80vh - 120px);
+        max-height: calc(80vh - 80px);
         overflow-y: auto;
         overflow-x: hidden;
       }
@@ -96,30 +107,30 @@ import { ThemeCardComponent } from './theme-card/theme-card.component';
       /* Desktop: 4 columns */
       @media (min-width: 1280px) {
         .theme-grid {
-          grid-template-columns: repeat(4, minmax(200px, 1fr));
+          grid-template-columns: repeat(4, minmax(140px, 1fr));
         }
         :host ::ng-deep .theme-dropdown-panel {
-          width: min(1000px, 95vw);
+          width: min(700px, 95vw);
         }
       }
 
       /* Tablet: 3 columns */
       @media (min-width: 768px) and (max-width: 1279px) {
         .theme-grid {
-          grid-template-columns: repeat(3, minmax(200px, 1fr));
+          grid-template-columns: repeat(3, minmax(140px, 1fr));
         }
         :host ::ng-deep .theme-dropdown-panel {
-          width: min(720px, 95vw);
+          width: min(504px, 95vw);
         }
       }
 
       /* Mobile: 2 columns */
       @media (max-width: 767px) {
         .theme-grid {
-          grid-template-columns: repeat(2, minmax(150px, 1fr));
+          grid-template-columns: repeat(2, minmax(105px, 1fr));
         }
         :host ::ng-deep .theme-dropdown-panel {
-          width: min(480px, 95vw);
+          width: min(336px, 95vw);
         }
       }
 
@@ -130,6 +141,10 @@ import { ThemeCardComponent } from './theme-card/theme-card.component';
           color 0.3s ease,
           border-color 0.3s ease,
           opacity 0.3s ease;
+      }
+
+      .header-left {
+        @apply flex items-center gap-3;
       }
 
       .theme-dropdown-header h3 {
@@ -144,7 +159,7 @@ import { ThemeCardComponent } from './theme-card/theme-card.component';
 
       .loading-skeleton {
         @apply grid gap-4;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
       }
 
       .skeleton-card {
@@ -173,6 +188,9 @@ export class ThemeDropdownComponent {
 
   /** Event emitted when a theme is selected */
   @Output() themeSelected = new EventEmitter<FormTheme>();
+
+  /** Event emitted when user clicks "Build Your Own Custom Color Theme" button */
+  @Output() openThemeDesigner = new EventEmitter<void>();
 
   private readonly themesApi = inject(ThemesApiService);
 
@@ -226,6 +244,15 @@ export class ThemeDropdownComponent {
    */
   onThemeSelect(theme: FormTheme): void {
     this.themeSelected.emit(theme);
+    this.panelVisible = false;
+  }
+
+  /**
+   * Opens the theme designer modal.
+   * Emits event to parent component to handle modal display.
+   */
+  onOpenThemeDesigner(): void {
+    this.openThemeDesigner.emit();
     this.panelVisible = false;
   }
 
