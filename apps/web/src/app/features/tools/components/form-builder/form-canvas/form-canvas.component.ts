@@ -35,7 +35,7 @@ interface FieldTypeDefinition {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, DragDropModule, FieldPreviewRendererComponent, GroupPreviewComponent],
   template: `
-    <div class="form-canvas h-full bg-gray-50 p-6">
+    <div class="form-canvas h-full theme-form-canvas-background p-6">
       <!-- Step Navigation Tabs (shown when step mode enabled) -->
       @if (stepFormEnabled()) {
         <div class="step-navigation-container mb-6">
@@ -45,14 +45,14 @@ interface FieldTypeDefinition {
             @for (step of steps(); track step.id) {
               <button
                 type="button"
-                class="step-tab flex items-center gap-2 px-4 py-2 rounded-t-md border border-b-0 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors whitespace-nowrap"
+                class="step-tab flex items-center gap-2 px-4 py-2 rounded-t-md border border-b-0 theme-button-secondary transition-colors whitespace-nowrap"
                 [class.active]="step.id === activeStepId()"
                 [attr.aria-selected]="step.id === activeStepId()"
                 [attr.aria-label]="'Switch to ' + step.title"
                 (click)="onStepTabClick(step.id)"
               >
                 <span
-                  class="step-number flex items-center justify-center w-6 h-6 rounded-full bg-primary-100 text-primary-700 text-sm font-bold"
+                  class="step-number theme-step-indicator flex items-center justify-center w-6 h-6 text-sm"
                 >
                   {{ step.order + 1 }}
                 </span>
@@ -66,13 +66,13 @@ interface FieldTypeDefinition {
             class="step-indicator-bar flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-200"
           >
             <span
-              class="badge-primary inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-primary-100 text-primary-700"
+              class="badge-primary theme-step-indicator inline-flex items-center px-3 py-1 rounded-full text-sm"
             >
               Step {{ activeStepOrder() + 1 }} of {{ steps().length }}
             </span>
-            <span class="text-gray-700 font-medium">{{ activeStep()?.title }}</span>
+            <span class="theme-label">{{ activeStep()?.title }}</span>
             @if (activeStep()?.description) {
-              <span class="text-sm text-gray-500">{{ activeStep()?.description }}</span>
+              <span class="text-sm theme-help-text">{{ activeStep()?.description }}</span>
             }
           </div>
         </div>
@@ -88,8 +88,8 @@ interface FieldTypeDefinition {
           (cdkDropListDropped)="onFieldDropped($event)"
         >
           <i class="pi pi-file-edit text-6xl text-gray-300 mb-4"></i>
-          <h3 class="text-xl font-semibold text-gray-700 mb-2">Start Building Your Form</h3>
-          <p class="text-gray-500 max-w-md">
+          <h3 class="theme-heading mb-2">Start Building Your Form</h3>
+          <p class="theme-help-text max-w-md">
             Drag fields from the palette to start building your form
           </p>
         </div>
@@ -127,17 +127,17 @@ interface FieldTypeDefinition {
           }
 
           <div class="mb-4" style="position: relative; z-index: 2;">
-            <h3 class="text-lg font-semibold text-gray-900">
+            <h3 class="theme-heading">
               {{ settings.title || 'Untitled Form' }}
             </h3>
-            <p class="text-sm text-gray-600">
+            <p class="text-sm theme-text-secondary">
               This is a live preview of your form. Click on a field to edit its properties
               @if (settings.columnLayout > 1) {
-                <span class="ml-2 text-blue-600">{{ settings.columnLayout }} columns</span>
+                <span class="ml-2 theme-text-primary">{{ settings.columnLayout }} columns</span>
               }
             </p>
             @if (settings.description) {
-              <p class="text-sm text-gray-500 mt-1">{{ settings.description }}</p>
+              <p class="text-sm theme-help-text mt-1">{{ settings.description }}</p>
             }
           </div>
 
@@ -152,15 +152,13 @@ interface FieldTypeDefinition {
                 <div class="empty-icon mb-4">
                   <i class="pi pi-inbox text-gray-300" style="font-size: 6rem;"></i>
                 </div>
-                <h3 class="text-xl font-semibold text-gray-700 mb-2">
+                <h3 class="theme-heading mb-2">
                   No fields in Step {{ activeStepOrder() + 1 }} yet
                 </h3>
-                <p class="text-gray-600 mb-4 max-w-md">
+                <p class="theme-text-secondary mb-4 max-w-md">
                   Drag field types from the palette on the left to add them to this step.
                 </p>
-                <p
-                  class="flex items-center gap-2 text-sm text-gray-500 bg-blue-50 px-4 py-2 rounded-md"
-                >
+                <p class="flex items-center gap-2 text-sm theme-help-text px-4 py-2 rounded-md">
                   <i class="pi pi-info-circle"></i>
                   You can organize fields within this step using rows and columns.
                 </p>
@@ -171,7 +169,7 @@ interface FieldTypeDefinition {
                   <div class="row-wrapper">
                     <!-- Row separator with label -->
                     <div class="row-separator mb-2 flex items-center gap-2">
-                      <span class="text-sm font-medium text-gray-600">
+                      <span class="text-sm theme-label">
                         Row {{ row.order + 1 }} ({{ row.columnCount }} columns)
                       </span>
                       <div class="flex-1 h-px bg-gray-300"></div>
@@ -245,7 +243,7 @@ interface FieldTypeDefinition {
                               <!-- Empty column: placeholder -->
                               <div class="empty-column-placeholder">
                                 <i class="pi pi-inbox text-gray-300 text-2xl mb-2"></i>
-                                <span class="text-xs text-gray-400">Drop field here</span>
+                                <span class="text-xs theme-help-text">Drop field here</span>
                               </div>
                             }
                           }
@@ -614,17 +612,17 @@ interface FieldTypeDefinition {
 
         .step-tab {
           &.active {
-            background: white;
-            border-color: #3b82f6;
-            color: #1d4ed8;
+            background: var(--theme-container-background, #ffffff);
+            border-color: var(--theme-primary-color, #3b82f6);
+            color: var(--theme-primary-color, #1d4ed8);
             font-weight: 600;
-            border-bottom: 2px solid white;
+            border-bottom: 2px solid var(--theme-container-background, #ffffff);
             position: relative;
             margin-bottom: -1px;
 
             .step-number {
-              background: #3b82f6;
-              color: white;
+              background: var(--theme-step-active-color, var(--theme-primary-color, #3b82f6));
+              color: #ffffff;
             }
           }
         }

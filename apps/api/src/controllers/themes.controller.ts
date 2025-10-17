@@ -78,7 +78,8 @@ export class ThemesController {
   );
 
   /**
-   * Creates a new theme (admin only).
+   * Creates a new theme.
+   * Requires authentication. Any authenticated user can create themes.
    * @route POST /api/themes
    * @param req - Express request object with theme creation data
    * @param res - Express response object
@@ -86,10 +87,9 @@ export class ThemesController {
    * @returns HTTP response with created theme data
    * @throws {ApiError} 400 - Invalid input data
    * @throws {ApiError} 401 - Authentication required
-   * @throws {ApiError} 403 - Admin access required
    * @example
    * POST /api/themes
-   * Authorization: Bearer <admin-token>
+   * Authorization: Bearer <token>
    * {
    *   "name": "Custom Theme",
    *   "description": "Optional description",
@@ -135,6 +135,7 @@ export class ThemesController {
         description: req.body.description,
         thumbnailUrl: req.body.thumbnailUrl,
         themeConfig: req.body.themeConfig,
+        createdBy: userId,
       };
 
       const theme = await themesService.create(themeData);
@@ -149,7 +150,8 @@ export class ThemesController {
   );
 
   /**
-   * Updates an existing theme (admin only).
+   * Updates an existing theme.
+   * Requires authentication. Users can only update their own themes. Admins can update any theme.
    * @route PUT /api/themes/:id
    * @param req - Express request object with theme update data
    * @param res - Express response object
@@ -157,11 +159,11 @@ export class ThemesController {
    * @returns HTTP response with updated theme data
    * @throws {ApiError} 400 - Invalid input data
    * @throws {ApiError} 401 - Authentication required
-   * @throws {ApiError} 403 - Admin access required
+   * @throws {ApiError} 403 - Forbidden if user is not theme owner or admin
    * @throws {ApiError} 404 - Theme not found
    * @example
    * PUT /api/themes/theme-uuid
-   * Authorization: Bearer <admin-token>
+   * Authorization: Bearer <token>
    * {
    *   "name": "Updated Theme Name",
    *   "description": "New description"
@@ -232,18 +234,19 @@ export class ThemesController {
   );
 
   /**
-   * Soft deletes a theme (admin only).
+   * Soft deletes a theme.
+   * Requires authentication. Users can only delete their own themes. Admins can delete any theme.
    * @route DELETE /api/themes/:id
    * @param req - Express request object with theme ID parameter
    * @param res - Express response object
    * @param next - Express next function
    * @returns HTTP response with deletion confirmation
    * @throws {ApiError} 401 - Authentication required
-   * @throws {ApiError} 403 - Admin access required
+   * @throws {ApiError} 403 - Forbidden if user is not theme owner or admin
    * @throws {ApiError} 404 - Theme not found
    * @example
    * DELETE /api/themes/theme-uuid
-   * Authorization: Bearer <admin-token>
+   * Authorization: Bearer <token>
    */
   deleteTheme = AsyncHandler(
     async (req: Request, res: Response, _next: NextFunction): Promise<void> => {

@@ -180,9 +180,6 @@ export class ThemesRepository extends BaseRepository<FormTheme> {
           updated_at as "updatedAt",
           is_custom as "isCustom",
           creator_id as "creatorId",
-          theme_definition as "themeDefinition",
-          is_custom as "isCustom",
-          creator_id as "creatorId",
           theme_definition as "themeDefinition"
       `;
 

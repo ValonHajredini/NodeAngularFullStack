@@ -114,7 +114,7 @@ router.get(
  * /api/themes:
  *   post:
  *     summary: Create new theme
- *     description: Create a new theme (admin only)
+ *     description: Create a new theme. Requires authentication. Any authenticated user can create themes.
  *     tags: [Themes]
  *     security:
  *       - bearerAuth: []
@@ -203,17 +203,10 @@ router.get(
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
- *       403:
- *         description: Admin access required
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
  */
 router.post(
   '/',
   AuthMiddleware.authenticate,
-  AuthMiddleware.requireAdmin,
   validateCreateTheme,
   themesController.createTheme
 );
@@ -223,7 +216,7 @@ router.post(
  * /api/themes/{id}:
  *   put:
  *     summary: Update existing theme
- *     description: Update an existing theme (admin only)
+ *     description: Update an existing theme. Requires authentication. Users can only update their own themes. Admins can update any theme.
  *     tags: [Themes]
  *     security:
  *       - bearerAuth: []
@@ -302,7 +295,7 @@ router.post(
  *             schema:
  *               $ref: '#/components/schemas/Error'
  *       403:
- *         description: Admin access required
+ *         description: Forbidden if user is not theme owner or admin
  *         content:
  *           application/json:
  *             schema:
@@ -317,7 +310,7 @@ router.post(
 router.put(
   '/:id',
   AuthMiddleware.authenticate,
-  AuthMiddleware.requireAdmin,
+  AuthMiddleware.requireThemeOwnerOrAdmin,
   validateThemeId,
   validateUpdateTheme,
   themesController.updateTheme
@@ -328,7 +321,7 @@ router.put(
  * /api/themes/{id}:
  *   delete:
  *     summary: Delete theme (soft delete)
- *     description: Soft delete a theme by setting is_active to false (admin only)
+ *     description: Soft delete a theme by setting is_active to false. Requires authentication. Users can only delete their own themes. Admins can delete any theme.
  *     tags: [Themes]
  *     security:
  *       - bearerAuth: []
@@ -365,7 +358,7 @@ router.put(
  *             schema:
  *               $ref: '#/components/schemas/Error'
  *       403:
- *         description: Admin access required
+ *         description: Forbidden if user is not theme owner or admin
  *         content:
  *           application/json:
  *             schema:
@@ -380,7 +373,7 @@ router.put(
 router.delete(
   '/:id',
   AuthMiddleware.authenticate,
-  AuthMiddleware.requireAdmin,
+  AuthMiddleware.requireThemeOwnerOrAdmin,
   validateThemeId,
   themesController.deleteTheme
 );

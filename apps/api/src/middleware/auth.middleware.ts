@@ -3,6 +3,7 @@ import { JwtUtils } from '../utils/jwt.utils';
 import { authService } from '../services/auth.service';
 import { apiTokenService } from '../services/api-token.service';
 import { tenantRepository, Tenant } from '../repositories/tenant.repository';
+import { themesRepository } from '../repositories/themes.repository';
 import { tenantConfig } from '../config/tenant.config';
 import { TenantContext } from '../utils/tenant.utils';
 
@@ -503,6 +504,83 @@ export class AuthMiddleware {
     }
 
     next();
+  };
+
+  /**
+   * Middleware to require user to be theme owner OR admin.
+   * Checks if user created the theme or has admin role.
+   * Must be called after authenticate middleware.
+   *
+   * @param req - AuthRequest with authenticated user
+   * @param res - Express response object
+   * @param next - Express next function
+   * @returns 403 if user is not owner or admin
+   * @returns 404 if theme not found
+   * @example
+   * app.put('/api/themes/:id',
+   *   AuthMiddleware.authenticate,
+   *   AuthMiddleware.requireThemeOwnerOrAdmin,
+   *   updateThemeController
+   * );
+   */
+  static requireThemeOwnerOrAdmin = async (
+    req: any,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          error: 'Unauthorized',
+          message: 'Authentication required',
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      const themeId = req.params.id;
+      const userId = req.user.id;
+      const userRole = req.user.role;
+
+      // Admin can edit any theme
+      if (userRole === 'admin') {
+        next();
+        return;
+      }
+
+      // Check ownership for non-admin users
+      const theme = await themesRepository.findById(themeId);
+
+      if (!theme) {
+        res.status(404).json({
+          error: {
+            code: 'NOT_FOUND',
+            message: 'Theme not found',
+          },
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      if (theme.createdBy !== userId) {
+        res.status(403).json({
+          error: {
+            code: 'FORBIDDEN',
+            message: 'You can only edit your own themes',
+          },
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      next();
+    } catch (error: any) {
+      res.status(500).json({
+        error: 'Internal Server Error',
+        message: 'Failed to verify theme ownership',
+        timestamp: new Date().toISOString(),
+      });
+    }
   };
 
   /**
