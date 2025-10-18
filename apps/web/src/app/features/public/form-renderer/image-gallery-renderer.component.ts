@@ -28,7 +28,7 @@ import {
   template: `
     <div class="form-field mb-4">
       <!-- Field Label -->
-      <label [for]="field.fieldName" class="block text-sm font-medium text-gray-700 mb-2">
+      <label [for]="field.fieldName" class="gallery-label">
         {{ field.label }}
         @if (field.required) {
           <span class="text-red-500 ml-1" aria-label="required">*</span>
@@ -37,7 +37,7 @@ import {
 
       <!-- Help Text -->
       @if (field.helpText) {
-        <p class="text-xs text-gray-500 mb-2">{{ field.helpText }}</p>
+        <p class="gallery-help-text">{{ field.helpText }}</p>
       }
 
       <!-- Image Gallery -->
@@ -74,6 +74,22 @@ import {
     `
       .form-field {
         width: 100%;
+      }
+
+      .gallery-label {
+        display: block;
+        color: var(--theme-label-color, #374151);
+        font-family: var(--theme-body-font, system-ui);
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+      }
+
+      .gallery-help-text {
+        color: var(--theme-text-secondary, #6b7280);
+        font-family: var(--theme-body-font, system-ui);
+        font-size: 0.75rem;
+        margin-bottom: 0.5rem;
       }
 
       .error-state {

@@ -16,7 +16,7 @@ import { ImageGallerySelectorComponent } from '../../../../../../shared/componen
   template: `
     <div class="field-preview">
       <!-- Field Label -->
-      <div class="block text-sm font-medium text-gray-700 mb-2" role="heading" aria-level="3">
+      <div class="preview-label" role="heading" aria-level="3">
         {{ field.label }}
       </div>
 
@@ -45,6 +45,15 @@ import { ImageGallerySelectorComponent } from '../../../../../../shared/componen
         pointer-events: none;
         opacity: 0.9;
         margin-bottom: 1rem;
+      }
+
+      .preview-label {
+        display: block;
+        color: var(--theme-label-color, #374151);
+        font-family: var(--theme-body-font, system-ui);
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
       }
 
       .empty-state {

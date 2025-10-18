@@ -31,6 +31,75 @@ import { FormField, FormFieldType } from '@nodeangularfullstack/shared';
       .field-preview {
         pointer-events: none;
       }
+
+      // PrimeNG DatePicker theme overrides for preview
+      :host ::ng-deep .p-datepicker {
+        background-color: var(--theme-input-background, #ffffff);
+        border: 1px solid var(--theme-input-border-color, #d1d5db);
+        border-radius: var(--theme-border-radius, 0.375rem);
+        font-family: var(--theme-body-font, system-ui);
+
+        .p-datepicker-header {
+          background-color: var(--theme-primary-color, #3b82f6);
+          color: white;
+
+          .p-datepicker-title {
+            color: white;
+          }
+
+          button {
+            color: white;
+
+            &:hover {
+              background-color: rgba(255, 255, 255, 0.1);
+            }
+          }
+        }
+
+        .p-datepicker-calendar {
+          td {
+            > span {
+              color: var(--theme-input-text-color, #1f2937);
+              border-radius: var(--theme-border-radius, 0.375rem);
+            }
+
+            &.p-datepicker-today > span {
+              background-color: var(--theme-secondary-color, #6b7280);
+              color: white;
+            }
+
+            > span.p-highlight {
+              background-color: var(--theme-primary-color, #3b82f6);
+              color: white;
+            }
+          }
+
+          th {
+            color: var(--theme-label-color, #374151);
+          }
+        }
+
+        .p-datepicker-time-picker {
+          border-top: 1px solid var(--theme-input-border-color, #d1d5db);
+
+          button {
+            color: var(--theme-primary-color, #3b82f6);
+          }
+
+          span {
+            color: var(--theme-input-text-color, #1f2937);
+          }
+        }
+      }
+
+      // DatePicker input field styling
+      :host ::ng-deep .p-datepicker-input {
+        background-color: var(--theme-input-background, #ffffff);
+        border: 1px solid var(--theme-input-border-color, #d1d5db);
+        color: var(--theme-input-text-color, #1f2937);
+        font-family: var(--theme-body-font, system-ui);
+        border-radius: var(--theme-border-radius, 0.375rem);
+      }
     `,
   ],
 })

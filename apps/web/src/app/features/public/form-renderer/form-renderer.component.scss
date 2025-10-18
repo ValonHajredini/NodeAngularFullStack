@@ -36,6 +36,154 @@
     }
   }
 
+  // PrimeNG DatePicker (Calendar) theme overrides
+  ::ng-deep .p-datepicker {
+    background-color: var(--theme-input-background, #ffffff);
+    border: 1px solid var(--theme-input-border-color, #d1d5db);
+    border-radius: var(--theme-border-radius, 0.375rem);
+    font-family: var(--theme-body-font, system-ui);
+
+    // Calendar header (month/year navigation)
+    .p-datepicker-header {
+      background-color: var(--theme-primary-color, #3b82f6);
+      color: white;
+      border-bottom: none;
+      padding: 0.5rem;
+      border-top-left-radius: var(--theme-border-radius, 0.375rem);
+      border-top-right-radius: var(--theme-border-radius, 0.375rem);
+
+      .p-datepicker-title {
+        color: white;
+      }
+
+      button {
+        color: white;
+
+        &:hover {
+          background-color: rgba(255, 255, 255, 0.1);
+        }
+      }
+    }
+
+    // Calendar body (date grid)
+    .p-datepicker-calendar {
+      td {
+        padding: 0.25rem;
+
+        // Regular dates
+        > span {
+          color: var(--theme-input-text-color, #1f2937);
+          border-radius: var(--theme-border-radius, 0.375rem);
+
+          &:hover {
+            background-color: rgba(var(--theme-primary-color-rgb, 59, 130, 246), 0.1);
+          }
+        }
+
+        // Today's date
+        &.p-datepicker-today > span {
+          background-color: var(--theme-secondary-color, #6b7280);
+          color: white;
+          font-weight: 500;
+        }
+
+        // Selected date
+        &.p-datepicker-today > span.p-highlight,
+        > span.p-highlight {
+          background-color: var(--theme-primary-color, #3b82f6);
+          color: white;
+        }
+      }
+
+      th {
+        color: var(--theme-label-color, #374151);
+        font-weight: 500;
+      }
+    }
+
+    // Time picker section (for datetime fields)
+    .p-datepicker-time-picker {
+      border-top: 1px solid var(--theme-input-border-color, #d1d5db);
+      padding: 0.5rem;
+
+      button {
+        color: var(--theme-primary-color, #3b82f6);
+
+        &:hover {
+          background-color: rgba(var(--theme-primary-color-rgb, 59, 130, 246), 0.1);
+        }
+      }
+
+      span {
+        color: var(--theme-input-text-color, #1f2937);
+      }
+    }
+  }
+
+  // PrimeNG ToggleSwitch theme overrides
+  ::ng-deep p-toggleswitch {
+    .p-toggleswitch {
+      .p-toggleswitch-slider {
+        background-color: var(--theme-input-border-color, #cbd5e0);
+        border-radius: 0.75rem;
+        transition: background-color 0.2s ease;
+
+        &::before {
+          background-color: white;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+      }
+
+      &.p-toggleswitch-checked .p-toggleswitch-slider {
+        background-color: var(--theme-primary-color, #3b82f6);
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--theme-primary-color, #3b82f6);
+        outline-offset: 2px;
+      }
+    }
+  }
+
+  // PrimeNG FileUpload theme overrides
+  ::ng-deep p-fileupload {
+    .p-fileupload-choose {
+      background-color: var(--theme-button-primary-background, #3b82f6);
+      color: var(--theme-button-primary-text, #ffffff);
+      border: none;
+      border-radius: var(--theme-border-radius, 0.375rem);
+      font-family: var(--theme-body-font, system-ui);
+      font-weight: 500;
+      padding: 0.5rem 1rem;
+      transition:
+        opacity 0.2s ease,
+        box-shadow 0.2s ease;
+
+      &:hover:not(:disabled) {
+        opacity: 0.9;
+        background-color: var(--theme-button-primary-background, #3b82f6);
+      }
+
+      &:focus {
+        outline: 2px solid var(--theme-primary-color, #3b82f6);
+        outline-offset: 2px;
+      }
+    }
+
+    .p-fileupload-content {
+      background-color: var(--theme-input-background, #ffffff);
+      border: 1px solid var(--theme-input-border-color, #d1d5db);
+      border-radius: var(--theme-border-radius, 0.375rem);
+      color: var(--theme-input-text-color, #1f2937);
+      font-family: var(--theme-body-font, system-ui);
+    }
+
+    .p-fileupload-file {
+      color: var(--theme-input-text-color, #1f2937);
+      font-family: var(--theme-body-font, system-ui);
+    }
+  }
+
   // Reduce outer container padding on mobile/tablet
   @media (max-width: 1024px) {
     padding-left: 0.5rem !important;
@@ -324,18 +472,51 @@ input[type='checkbox'] {
   gap: 2.5rem;
 }
 
+// DATE and DATETIME input styling with theme variables
+input[type='date'],
+input[type='datetime-local'] {
+  background-color: var(--theme-input-background, #ffffff);
+  border: 1px solid var(--theme-input-border-color, #d1d5db);
+  color: var(--theme-input-text-color, #1f2937);
+  font-family: var(--theme-body-font, system-ui);
+  border-radius: var(--theme-border-radius, 0.375rem);
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:focus {
+    outline: none;
+    border-color: var(--theme-primary-color, #3b82f6);
+    box-shadow: 0 0 0 3px rgba(var(--theme-primary-color-rgb, 59, 130, 246), 0.1);
+  }
+
+  // Browser-specific calendar picker indicator
+  &::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+}
+
+// TOGGLE switch styling with theme variables
 .toggle-switch {
   appearance: none;
   width: 3rem;
   height: 1.5rem;
-  background-color: #cbd5e0;
+  background-color: var(--theme-input-border-color, #cbd5e0);
   border-radius: 0.75rem;
   position: relative;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s ease;
 
   &:checked {
-    background-color: #3b82f6;
+    background-color: var(--theme-primary-color, #3b82f6);
   }
 
   &::before {
@@ -347,11 +528,87 @@ input[type='checkbox'] {
     background-color: white;
     top: 0.125rem;
     left: 0.125rem;
-    transition: transform 0.2s;
+    transition: transform 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   }
 
   &:checked::before {
     transform: translateX(1.5rem);
+  }
+
+  &:focus {
+    outline: 2px solid var(--theme-primary-color, #3b82f6);
+    outline-offset: 2px;
+  }
+
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+}
+
+// Toggle label styling
+.toggle-label {
+  color: var(--theme-label-color, #374151);
+  font-family: var(--theme-body-font, system-ui);
+  font-size: 0.875rem;
+  margin-left: 0.75rem;
+  cursor: pointer;
+}
+
+// FILE upload styling with theme variables
+.file-upload-container {
+  width: 100%;
+
+  .file-upload-button {
+    background-color: var(--theme-button-primary-background, #3b82f6);
+    color: var(--theme-button-primary-text, #ffffff);
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: var(--theme-border-radius, 0.375rem);
+    font-family: var(--theme-body-font, system-ui);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition:
+      opacity 0.2s ease,
+      box-shadow 0.2s ease;
+
+    &:hover:not(:disabled) {
+      opacity: 0.9;
+    }
+
+    &:focus {
+      outline: 2px solid var(--theme-primary-color, #3b82f6);
+      outline-offset: 2px;
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+
+  .file-name-display {
+    color: var(--theme-input-text-color, #1f2937);
+    font-family: var(--theme-body-font, system-ui);
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+  }
+
+  .file-upload-label {
+    color: var(--theme-label-color, #374151);
+    font-family: var(--theme-body-font, system-ui);
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+
+  .file-constraints {
+    color: var(--theme-help-text-color, #6b7280);
+    font-family: var(--theme-body-font, system-ui);
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
   }
 }
 
@@ -418,6 +675,74 @@ input[type='checkbox'] {
     // Ensure theme variables are inherited properly
     background-color: var(--theme-input-background, #ffffff);
     border-color: var(--theme-input-border-color, #d1d5db);
+  }
+
+  // Mobile theme overrides for date and datetime inputs
+  input[type='date'],
+  input[type='datetime-local'] {
+    // Touch target size for accessibility
+    min-height: 44px;
+
+    // Ensure theme variables work correctly on mobile
+    background-color: var(--theme-input-background, #ffffff);
+    border-color: var(--theme-input-border-color, #d1d5db);
+    color: var(--theme-input-text-color, #1f2937);
+    font-family: var(--theme-body-font, system-ui);
+
+    // Make calendar picker indicator larger for touch targets
+    &::-webkit-calendar-picker-indicator {
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+  }
+
+  // Mobile theme overrides for toggle switch
+  .toggle-switch {
+    // Ensure theme variables work correctly on mobile
+    background-color: var(--theme-input-border-color, #cbd5e0);
+
+    &:checked {
+      background-color: var(--theme-primary-color, #3b82f6);
+    }
+
+    // Increase touch target size
+    width: 3.5rem;
+    height: 2rem;
+
+    &::before {
+      width: 1.5rem;
+      height: 1.5rem;
+      top: 0.25rem;
+      left: 0.25rem;
+    }
+
+    &:checked::before {
+      transform: translateX(1.5rem);
+    }
+  }
+
+  .toggle-label {
+    font-size: 1rem; // Larger text on mobile for readability
+  }
+
+  // Mobile theme overrides for file upload
+  .file-upload-container {
+    .file-upload-button {
+      // Touch target size for accessibility
+      min-height: 44px;
+      padding: 0.75rem 1.25rem;
+      font-size: 1rem;
+
+      // Ensure theme variables work correctly on mobile
+      background-color: var(--theme-button-primary-background, #3b82f6);
+      color: var(--theme-button-primary-text, #ffffff);
+    }
+
+    .file-name-display,
+    .file-upload-label,
+    .file-constraints {
+      font-size: 1rem; // Larger text on mobile for readability
+    }
   }
 
   // Ensure form fields don't have restrictive containers

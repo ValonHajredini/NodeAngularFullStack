@@ -38,6 +38,43 @@ import { FormField } from '@nodeangularfullstack/shared';
       .field-preview {
         pointer-events: none;
       }
+
+      // PrimeNG ToggleSwitch theme overrides for preview
+      :host ::ng-deep p-toggleswitch {
+        .p-toggleswitch {
+          .p-toggleswitch-slider {
+            background-color: var(--theme-input-border-color, #cbd5e0);
+            border-radius: 0.75rem;
+            transition: background-color 0.2s ease;
+
+            &::before {
+              background-color: white;
+              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            }
+          }
+
+          &.p-toggleswitch-checked .p-toggleswitch-slider {
+            background-color: var(--theme-primary-color, #3b82f6);
+          }
+
+          &:focus-visible {
+            outline: 2px solid var(--theme-primary-color, #3b82f6);
+            outline-offset: 2px;
+          }
+        }
+      }
+
+      // Toggle label styling
+      label {
+        color: var(--theme-label-color, #374151);
+        font-family: var(--theme-body-font, system-ui);
+        font-size: 0.875rem;
+      }
+
+      small {
+        color: var(--theme-help-text-color, #6b7280);
+        font-family: var(--theme-body-font, system-ui);
+      }
     `,
   ],
 })
