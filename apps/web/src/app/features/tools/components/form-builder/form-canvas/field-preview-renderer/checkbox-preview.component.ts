@@ -65,6 +65,43 @@ import { FormField } from '@nodeangularfullstack/shared';
       .field-preview {
         pointer-events: none;
       }
+
+      /* Apply theme colors to checkboxes */
+      ::ng-deep .field-preview p-checkbox.theme-checkbox {
+        .p-checkbox {
+          .p-checkbox-box {
+            background-color: var(--theme-input-background, #ffffff);
+            border: 2px solid var(--theme-input-border-color, #d1d5db);
+            border-radius: var(--theme-border-radius, 0.375rem);
+            width: 1.25rem;
+            height: 1.25rem;
+            transition:
+              border-color 0.2s ease,
+              background-color 0.2s ease;
+
+            &:hover {
+              border-color: var(--theme-primary-color, #3b82f6);
+            }
+
+            &.p-highlight {
+              border-color: var(--theme-primary-color, #3b82f6);
+              background-color: var(--theme-primary-color, #3b82f6);
+
+              .p-checkbox-icon {
+                color: white;
+                font-size: 1rem;
+                font-weight: bold;
+              }
+            }
+          }
+        }
+      }
+
+      .theme-label {
+        color: var(--theme-label-color, #374151);
+        font-family: var(--theme-body-font, system-ui);
+        font-size: 0.875rem;
+      }
     `,
   ],
 })

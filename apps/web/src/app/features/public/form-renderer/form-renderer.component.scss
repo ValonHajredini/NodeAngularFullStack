@@ -107,6 +107,128 @@ textarea {
   }
 }
 
+// SELECT dropdown styling with theme variables
+select {
+  background-color: var(--theme-input-background, #ffffff);
+  border: 1px solid var(--theme-input-border-color, #d1d5db);
+  color: var(--theme-input-text-color, #1f2937);
+  font-family: var(--theme-body-font, system-ui);
+  border-radius: var(--theme-border-radius, 0.375rem);
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: var(--theme-primary-color, #3b82f6);
+    box-shadow: 0 0 0 3px rgba(var(--theme-primary-color-rgb, 59, 130, 246), 0.1);
+  }
+
+  &:hover {
+    border-color: var(--theme-primary-color, #3b82f6);
+  }
+
+  option {
+    background-color: var(--theme-input-background, #ffffff);
+    color: var(--theme-input-text-color, #1f2937);
+    padding: 0.5rem;
+  }
+}
+
+// Custom RADIO button styling with theme variables
+input[type='radio'] {
+  appearance: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid var(--theme-input-border-color, #d1d5db);
+  border-radius: 50%;
+  position: relative;
+  cursor: pointer;
+  background-color: var(--theme-input-background, #ffffff);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:hover {
+    border-color: var(--theme-primary-color, #3b82f6);
+  }
+
+  &:checked {
+    border-color: var(--theme-primary-color, #3b82f6);
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 0.625rem;
+      height: 0.625rem;
+      border-radius: 50%;
+      background-color: var(--theme-primary-color, #3b82f6);
+    }
+  }
+
+  &:focus {
+    outline: 2px solid var(--theme-primary-color, #3b82f6);
+    outline-offset: 2px;
+  }
+}
+
+// Custom CHECKBOX styling with theme variables
+input[type='checkbox'] {
+  appearance: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid var(--theme-input-border-color, #d1d5db);
+  border-radius: var(--theme-border-radius, 0.375rem);
+  position: relative;
+  cursor: pointer;
+  background-color: var(--theme-input-background, #ffffff);
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:hover {
+    border-color: var(--theme-primary-color, #3b82f6);
+  }
+
+  &:checked {
+    background-color: var(--theme-primary-color, #3b82f6);
+    border-color: var(--theme-primary-color, #3b82f6);
+
+    &::after {
+      content: '✓';
+      position: absolute;
+      color: white;
+      font-size: 1rem;
+      font-weight: bold;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+  }
+
+  &:focus {
+    outline: 2px solid var(--theme-primary-color, #3b82f6);
+    outline-offset: 2px;
+  }
+}
+
+// Radio and checkbox label styling
+.radio-label,
+.checkbox-label {
+  color: var(--theme-label-color, #374151);
+  font-family: var(--theme-body-font, system-ui);
+  font-size: 0.875rem;
+  margin-left: 0.5rem;
+  cursor: pointer;
+}
+
 // Help text styling
 .field-help-text {
   color: var(--theme-help-text-color, #6b7280);
@@ -271,6 +393,31 @@ textarea {
     border-color: var(--theme-input-border-color, #d1d5db);
     color: var(--theme-input-text-color, #1f2937);
     font-family: var(--theme-body-font, system-ui);
+  }
+
+  // Mobile theme overrides for selection fields
+  select {
+    // Ensure theme variables work correctly on mobile
+    min-height: 44px; // Touch target size for accessibility
+
+    // Ensure theme variables are inherited properly
+    background-color: var(--theme-input-background, #ffffff);
+    border-color: var(--theme-input-border-color, #d1d5db);
+    color: var(--theme-input-text-color, #1f2937);
+    font-family: var(--theme-body-font, system-ui);
+  }
+
+  // Mobile theme overrides for radio and checkbox
+  input[type='radio'],
+  input[type='checkbox'] {
+    // Ensure minimum touch target size for accessibility
+    min-width: 44px;
+    min-height: 44px;
+    margin: 0.5rem 0;
+
+    // Ensure theme variables are inherited properly
+    background-color: var(--theme-input-background, #ffffff);
+    border-color: var(--theme-input-border-color, #d1d5db);
   }
 
   // Ensure form fields don't have restrictive containers

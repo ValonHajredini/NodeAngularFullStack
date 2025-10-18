@@ -54,11 +54,32 @@ import { FormField } from '@nodeangularfullstack/shared';
 
       /* Apply theme colors to select component */
       ::ng-deep .field-preview p-select.theme-select {
-        border: 2px solid var(--theme-primary-color, #3b82f6);
-        border-radius: var(--theme-field-radius, 4px);
-        font-family: var(--theme-font-body, inherit);
-        color: var(--theme-text-primary, #111827);
-        transition: border-color 0.2s ease;
+        .p-select {
+          background-color: var(--theme-input-background, #ffffff);
+          border: 1px solid var(--theme-input-border-color, #d1d5db);
+          border-radius: var(--theme-border-radius, 0.375rem);
+          color: var(--theme-input-text-color, #1f2937);
+          font-family: var(--theme-body-font, system-ui);
+          transition: border-color 0.2s ease;
+
+          &:hover {
+            border-color: var(--theme-primary-color, #3b82f6);
+          }
+
+          &:focus-within {
+            border-color: var(--theme-primary-color, #3b82f6);
+            box-shadow: 0 0 0 3px rgba(var(--theme-primary-color-rgb, 59, 130, 246), 0.1);
+          }
+        }
+
+        .p-select-label {
+          color: var(--theme-input-text-color, #1f2937);
+          font-family: var(--theme-body-font, system-ui);
+        }
+
+        .p-select-dropdown {
+          color: var(--theme-input-text-color, #1f2937);
+        }
       }
     `,
   ],
