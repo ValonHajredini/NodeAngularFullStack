@@ -33,6 +33,38 @@ import { FormField } from '@nodeangularfullstack/shared';
       .field-preview {
         pointer-events: none;
       }
+
+      ::ng-deep .field-preview textarea.theme-textarea {
+        background-color: var(--theme-input-background, #ffffff);
+        border: 1px solid var(--theme-input-border-color, #d1d5db);
+        color: var(--theme-input-text-color, #1f2937);
+        font-family: var(--theme-body-font, system-ui);
+        border-radius: var(--theme-border-radius, 0.375rem);
+        padding: 0.5rem 0.75rem;
+        width: 100%;
+        min-height: 100px;
+        resize: vertical;
+        transition:
+          border-color 0.2s ease,
+          box-shadow 0.2s ease;
+
+        &:focus {
+          outline: none;
+          border-color: var(--theme-primary-color, #3b82f6);
+          box-shadow: 0 0 0 3px rgba(var(--theme-primary-color-rgb, 59, 130, 246), 0.1);
+        }
+
+        &::placeholder {
+          color: var(--theme-help-text-color, #9ca3af);
+        }
+      }
+
+      ::ng-deep .field-preview .theme-help-text {
+        color: var(--theme-help-text-color, #6b7280);
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+        font-family: var(--theme-body-font, system-ui);
+      }
     `,
   ],
 })

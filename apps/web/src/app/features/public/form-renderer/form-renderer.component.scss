@@ -74,9 +74,45 @@
 }
 
 .field-label {
-  font-weight: 600;
-  color: #374151;
+  font-weight: 500;
+  color: var(--theme-label-color, #374151);
   font-size: 0.875rem;
+  font-family: var(--theme-body-font, system-ui);
+}
+
+// Basic input field styling with theme variables
+input[type='text'],
+input[type='email'],
+input[type='number'],
+textarea {
+  background-color: var(--theme-input-background, #ffffff);
+  border: 1px solid var(--theme-input-border-color, #d1d5db);
+  color: var(--theme-input-text-color, #1f2937);
+  font-family: var(--theme-body-font, system-ui);
+  border-radius: var(--theme-border-radius, 0.375rem);
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:focus {
+    outline: none;
+    border-color: var(--theme-primary-color, #3b82f6);
+    box-shadow: 0 0 0 3px rgba(var(--theme-primary-color-rgb, 59, 130, 246), 0.1);
+  }
+
+  &::placeholder {
+    color: var(--theme-help-text-color, #9ca3af);
+  }
+}
+
+// Help text styling
+.field-help-text {
+  color: var(--theme-help-text-color, #6b7280);
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  font-family: var(--theme-body-font, system-ui);
 }
 
 // Row-based layout styles (Story 14.2)
@@ -219,6 +255,22 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     overflow: hidden;
+  }
+
+  // Mobile theme overrides for basic input fields
+  input[type='text'],
+  input[type='email'],
+  input[type='number'],
+  textarea {
+    // Ensure theme variables work correctly on mobile
+    // Mobile-specific adjustments if needed
+    min-height: 44px; // Touch target size for accessibility
+
+    // Ensure theme variables are inherited properly
+    background-color: var(--theme-input-background, #ffffff);
+    border-color: var(--theme-input-border-color, #d1d5db);
+    color: var(--theme-input-text-color, #1f2937);
+    font-family: var(--theme-body-font, system-ui);
   }
 
   // Ensure form fields don't have restrictive containers

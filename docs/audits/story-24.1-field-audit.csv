@@ -1,0 +1,17 @@
+Field Type,Component Path,Uses Theme Variables,Variables Used,Hardcoded Styles,Priority,PrimeNG Component,Estimated Hours
+TEXT,form-builder/form-canvas/field-preview-renderer/text-input-preview.component.ts,Partial,"--theme-primary-color, --theme-field-radius, --theme-font-body, --theme-text-primary","None visible in component",High,Yes (InputText),2
+EMAIL,form-builder/form-canvas/field-preview-renderer/text-input-preview.component.ts,Partial,"--theme-primary-color, --theme-field-radius, --theme-font-body, --theme-text-primary","None visible in component",High,Yes (InputText),2
+NUMBER,form-builder/form-canvas/field-preview-renderer/text-input-preview.component.ts,Partial,"--theme-primary-color, --theme-field-radius, --theme-font-body, --theme-text-primary","None visible in component",High,Yes (InputText),2
+SELECT,form-builder/form-canvas/field-preview-renderer/select-preview.component.ts,Partial,"--theme-primary-color, --theme-field-radius, --theme-font-body, --theme-text-primary","None visible in component",High,Yes (Select),3
+TEXTAREA,form-builder/form-canvas/field-preview-renderer/textarea-preview.component.ts,No (uses Tailwind classes),None,"Tailwind: disabled:bg-gray-50 disabled:cursor-not-allowed theme-textarea theme-help-text",High,No (native textarea),3
+CHECKBOX,form-builder/form-canvas/field-preview-renderer/checkbox-preview.component.ts,No (uses Tailwind classes),None,"Tailwind: text-sm font-medium theme-label text-red-500",Medium,Yes (Checkbox),3
+RADIO,form-builder/form-canvas/field-preview-renderer/radio-preview.component.ts,No (uses Tailwind classes),None,"Tailwind: text-sm theme-label text-gray-400",Medium,Yes (RadioButton),3
+DATE,form-builder/form-canvas/field-preview-renderer/date-preview.component.ts,No,None,"None visible but PrimeNG DatePicker likely has defaults",Medium,Yes (DatePicker),4
+DATETIME,form-builder/form-canvas/field-preview-renderer/date-preview.component.ts,No,None,"None visible but PrimeNG DatePicker likely has defaults",Medium,Yes (DatePicker),4
+FILE,form-builder/form-canvas/field-preview-renderer/file-preview.component.ts,No (uses Tailwind classes),None,"Tailwind: text-xs text-gray-400",Medium,Yes (FileUpload),3
+TOGGLE,form-builder/form-canvas/field-preview-renderer/toggle-preview.component.ts,No (uses Tailwind classes),None,"Tailwind: text-gray-700 text-gray-500 text-red-500 text-sm font-medium ml-3 ml-14",Medium,Yes (ToggleSwitch),2
+IMAGE_GALLERY,form-builder/form-canvas/field-preview-renderer/image-gallery-preview.component.ts,No (hardcoded colors),None,"Hardcoded: #f9fafb (bg) #d1d5db (border) text-gray-700 text-gray-500 text-gray-400",Low,Yes (Custom),4
+HEADING,form-builder/form-canvas/field-preview-renderer/heading-preview.component.ts,No,None,"Inline styles: color fontWeight (from metadata); Uses custom HeadingMetadata",Low,No,2
+IMAGE,form-builder/form-canvas/field-preview-renderer/image-preview.component.ts,No (uses Tailwind classes),None,"Tailwind: text-gray-600 bg-gray-100 border-gray-300 hover:bg-gray-200 hover:border-gray-400 text-gray-400 text-gray-500",Low,No,2
+TEXT_BLOCK,form-builder/form-canvas/field-preview-renderer/text-block-preview.component.ts,No,None,"No styles (delegates to InlineTextBlockEditorComponent)",Low,No,2
+DIVIDER,form-builder/form-canvas/field-preview-renderer/divider-preview.component.ts,No (uses Tailwind classes),None,"Tailwind: text-sm font-medium text-gray-700 text-gray-500",Low,Yes (Divider),1
