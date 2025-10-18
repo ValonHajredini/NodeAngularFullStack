@@ -2,6 +2,8 @@ import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from 
 import { CommonModule } from '@angular/common';
 import { SkeletonModule } from 'primeng/skeleton';
 import { BadgeModule } from 'primeng/badge';
+import { ButtonModule } from 'primeng/button';
+import { TooltipModule } from 'primeng/tooltip';
 import { FormTheme } from '@nodeangularfullstack/shared';
 
 /**
@@ -11,7 +13,7 @@ import { FormTheme } from '@nodeangularfullstack/shared';
 @Component({
   selector: 'app-theme-card',
   standalone: true,
-  imports: [CommonModule, SkeletonModule, BadgeModule],
+  imports: [CommonModule, SkeletonModule, BadgeModule, ButtonModule, TooltipModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
@@ -42,6 +44,30 @@ import { FormTheme } from '@nodeangularfullstack/shared';
         <!-- Custom theme indicator -->
         <div *ngIf="theme.isCustom" class="custom-indicator" title="Created by admin">
           <i class="pi pi-cog"></i>
+        </div>
+
+        <!-- Edit/Delete action buttons (shown only for editable themes) -->
+        <div *ngIf="canEditOrDelete" class="action-buttons">
+          <button
+            pButton
+            type="button"
+            icon="pi pi-pencil"
+            class="p-button-sm p-button-rounded p-button-secondary"
+            [pTooltip]="'Edit theme'"
+            tooltipPosition="top"
+            (click)="onEditClick($event)"
+            aria-label="Edit theme"
+          ></button>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-trash"
+            class="p-button-sm p-button-rounded p-button-danger"
+            [pTooltip]="'Delete theme'"
+            tooltipPosition="top"
+            (click)="onDeleteClick($event)"
+            aria-label="Delete theme"
+          ></button>
         </div>
       </div>
       <div class="theme-info">
@@ -112,6 +138,29 @@ import { FormTheme } from '@nodeangularfullstack/shared';
       .theme-usage {
         @apply text-xs text-gray-600 flex items-center gap-1;
       }
+      .action-buttons {
+        @apply absolute bottom-2 right-2 flex gap-1.5;
+        opacity: 0;
+        transition: opacity 0.2s ease-in-out;
+        z-index: 3;
+      }
+      .theme-card:hover .action-buttons {
+        opacity: 1;
+      }
+      /* Always show action buttons on mobile */
+      @media (max-width: 767px) {
+        .action-buttons {
+          opacity: 1;
+        }
+      }
+      .action-buttons button {
+        @apply shadow-lg;
+        width: 2rem;
+        height: 2rem;
+      }
+      .action-buttons button i {
+        font-size: 0.85rem;
+      }
     `,
   ],
 })
@@ -122,9 +171,61 @@ export class ThemeCardComponent {
   /** Whether this theme is currently active/selected */
   @Input() isActive = false;
 
+  /** Current user ID for ownership checks */
+  @Input() currentUserId?: string;
+
+  /** Current user role for permission checks */
+  @Input() currentUserRole?: 'admin' | 'user' | 'readonly';
+
   /** Event emitted when theme card is clicked */
   @Output() selected = new EventEmitter<FormTheme>();
 
+  /** Event emitted when edit button is clicked */
+  @Output() edit = new EventEmitter<FormTheme>();
+
+  /** Event emitted when delete button is clicked */
+  @Output() delete = new EventEmitter<FormTheme>();
+
   /** Flag to track if image has loaded */
   imageLoaded = false;
+
+  /**
+   * Determines if the current user can edit/delete this theme.
+   * Returns true if:
+   * - User is an admin (admins can edit/delete all themes), OR
+   * - Theme is custom and owned by the current user
+   */
+  get canEditOrDelete(): boolean {
+    // Admins can edit/delete all themes
+    if (this.currentUserRole === 'admin') {
+      return true;
+    }
+
+    // Regular users can only edit/delete their own custom themes
+    return !!(
+      this.theme.isCustom &&
+      this.currentUserId &&
+      this.theme.createdBy === this.currentUserId
+    );
+  }
+
+  /**
+   * Handles edit button click.
+   * Stops event propagation to prevent card selection.
+   * @param event - Mouse event
+   */
+  onEditClick(event: Event): void {
+    event.stopPropagation();
+    this.edit.emit(this.theme);
+  }
+
+  /**
+   * Handles delete button click.
+   * Stops event propagation to prevent card selection.
+   * @param event - Mouse event
+   */
+  onDeleteClick(event: Event): void {
+    event.stopPropagation();
+    this.delete.emit(this.theme);
+  }
 }

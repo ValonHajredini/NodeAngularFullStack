@@ -5,6 +5,7 @@ import {
   EventEmitter,
   ChangeDetectionStrategy,
   signal,
+  computed,
   inject,
   OnInit,
   OnDestroy,
@@ -67,7 +68,7 @@ import { FormTheme } from '@nodeangularfullstack/shared';
       [resizable]="false"
       [style]="{ width: '900px' }"
       [breakpoints]="{ '1024px': '900px', '768px': '700px', '0px': '100vw' }"
-      header="Create Custom Theme"
+      [header]="modalHeader()"
       styleClass="theme-designer-dialog"
     >
       <div class="theme-designer-content">
@@ -264,6 +265,15 @@ export class ThemeDesignerModalComponent implements OnInit, OnDestroy {
   /** Signal for tracking active step index (0-4 for 5 steps) */
   protected readonly activeStepIndex = signal<number>(0);
 
+  /** Computed signal for modal header text */
+  protected readonly modalHeader = computed(() => {
+    if (this.modalService.isEditMode()) {
+      const themeName = this.modalService.getThemeName();
+      return `Edit Theme: ${themeName || 'Untitled'}`;
+    }
+    return 'Create Custom Theme';
+  });
+
   /** Subject for theme updates to enable debouncing */
   private readonly themeUpdate$ = new Subject<void>();
 
@@ -345,31 +355,27 @@ export class ThemeDesignerModalComponent implements OnInit, OnDestroy {
    */
   private applyThemePreview(): void {
     try {
+      const currentTheme = this.modalService.currentTheme();
+      const desktopConfig = {
+        ...currentTheme.themeConfig.desktop,
+        backgroundColor: this.getBackgroundCss(),
+        labelColor: this.modalService.getLabelColor(),
+        inputBackgroundColor: this.modalService.getInputBackgroundColor(),
+        inputTextColor: this.modalService.getInputTextColor(),
+      };
+
       // Build theme object from current state
       const theme: FormTheme = {
         id: 'preview',
-        name: this.modalService.getThemeName() || 'Preview',
-        thumbnailUrl: '', // Preview doesn't need a thumbnail
+        name: currentTheme.name || 'Preview',
+        thumbnailUrl: currentTheme.thumbnailUrl || '',
         isCustom: true,
         usageCount: 0,
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date(),
         themeConfig: {
-          desktop: {
-            primaryColor: this.modalService.getPrimaryColor(),
-            secondaryColor: this.modalService.getSecondaryColor(),
-            backgroundColor: this.getBackgroundCss(),
-            textColorPrimary: '#1f2937', // Dark gray for readability
-            textColorSecondary: '#6b7280', // Medium gray
-            fontFamilyHeading: this.modalService.getHeadingFont(),
-            fontFamilyBody: this.modalService.getBodyFont(),
-            fieldBorderRadius: `${this.modalService.getBorderRadius()}px`,
-            fieldSpacing: `${this.modalService.getFieldSpacing()}px`,
-            containerBackground: 'rgba(255, 255, 255, 0.95)',
-            containerOpacity: 0.95,
-            containerPosition: 'center', // Default position
-          },
+          desktop: desktopConfig,
         },
       };
 
@@ -510,5 +516,26 @@ export class ThemeDesignerModalComponent implements OnInit, OnDestroy {
       this.activeStepIndex.update((i) => i - 1);
       this.modalService.previousStep();
     }
+  }
+
+  /**
+   * Opens the modal in edit mode with the specified theme.
+   * Loads theme data into wizard and sets edit mode flag.
+   * @param theme - Theme to edit
+   */
+  public openInEditMode(theme: FormTheme): void {
+    this.modalService.loadTheme(theme);
+    this.modalService.setEditMode(theme.id);
+    this.visibleSignal.set(true);
+    this.visibleChange.emit(true);
+    this.themeUpdate$.next();
+  }
+
+  /**
+   * Checks if the modal is currently in edit mode.
+   * @returns True if editing an existing theme, false if creating new theme
+   */
+  public isInEditMode(): boolean {
+    return this.modalService.isEditMode();
   }
 }

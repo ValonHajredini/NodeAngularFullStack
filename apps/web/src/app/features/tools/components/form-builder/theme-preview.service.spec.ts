@@ -35,6 +35,9 @@ describe('ThemePreviewService', () => {
             containerBackground: '#F5F5F5',
             containerOpacity: 0.9,
             containerPosition: 'center',
+            inputBackgroundColor: '#FAFAFA',
+            inputTextColor: '#222222',
+            labelColor: '#444444',
           },
         },
         usageCount: 0,
@@ -57,6 +60,9 @@ describe('ThemePreviewService', () => {
       expect(root.style.getPropertyValue('--theme-field-spacing')).toBe('12px');
       expect(root.style.getPropertyValue('--theme-container-bg')).toBe('#F5F5F5');
       expect(root.style.getPropertyValue('--theme-container-opacity')).toBe('0.9');
+      expect(root.style.getPropertyValue('--theme-input-background')).toBe('#FAFAFA');
+      expect(root.style.getPropertyValue('--theme-input-text-color')).toBe('#222222');
+      expect(root.style.getPropertyValue('--theme-label-color')).toBe('#444444');
     });
 
     it('should apply mobile overrides when mobile config exists', () => {
@@ -85,6 +91,9 @@ describe('ThemePreviewService', () => {
             secondaryColor: '#00FF00',
             fieldBorderRadius: '4px',
             fieldSpacing: '8px',
+            inputBackgroundColor: '#EFEFEF',
+            inputTextColor: '#123456',
+            labelColor: '#654321',
           },
         },
         usageCount: 0,
@@ -103,6 +112,9 @@ describe('ThemePreviewService', () => {
       expect(mobileStyle?.textContent).toContain('--theme-secondary-color: #00FF00');
       expect(mobileStyle?.textContent).toContain('--theme-field-radius: 4px');
       expect(mobileStyle?.textContent).toContain('--theme-field-spacing: 8px');
+      expect(mobileStyle?.textContent).toContain('--theme-input-background: #EFEFEF');
+      expect(mobileStyle?.textContent).toContain('--theme-input-text-color: #123456');
+      expect(mobileStyle?.textContent).toContain('--theme-label-color: #654321');
     });
 
     it('should not create mobile style element when mobile config is undefined', () => {

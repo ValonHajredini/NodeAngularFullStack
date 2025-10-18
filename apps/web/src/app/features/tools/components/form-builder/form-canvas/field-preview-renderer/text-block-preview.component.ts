@@ -29,7 +29,7 @@ import { InlineTextBlockEditorComponent } from './inline-text-block-editor.compo
       />
     </div>
   `,
-  styles: [],
+  styleUrls: ['./text-block-preview.component.scss'],
 })
 export class TextBlockPreviewComponent {
   @Input({ required: true }) field!: FormField;
@@ -40,7 +40,7 @@ export class TextBlockPreviewComponent {
    */
   get metadata(): TextBlockMetadata {
     return (
-      (this.field.metadata as TextBlockMetadata) || {
+      (this.field.metadata as TextBlockMetadata | undefined) ?? {
         content: '<p>Add your instructions here...</p>',
         alignment: 'left',
         padding: 'medium',
@@ -54,7 +54,7 @@ export class TextBlockPreviewComponent {
    * Get HTML content for rendering
    */
   get htmlContent(): string {
-    return this.metadata.content || '<p>Add your instructions here...</p>';
+    return this.metadata.content ?? '<p>Add your instructions here...</p>';
   }
 
   /**

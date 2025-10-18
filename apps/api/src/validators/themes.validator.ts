@@ -178,11 +178,18 @@ export const validateCreateTheme = [
       'Secondary color must be a valid hex color code (e.g., #FF5733)'
     ),
 
-  body('themeConfig.desktop.backgroundColor')
-    .matches(HEX_COLOR_REGEX)
-    .withMessage(
-      'Background color must be a valid hex color code (e.g., #FF5733)'
-    ),
+  body('themeConfig.desktop.backgroundColor').custom((value) => {
+    if (HEX_COLOR_REGEX.test(value)) {
+      return true; // Valid hex color
+    }
+    if (SAFE_CSS_BACKGROUND_REGEX.test(value)) {
+      validateCSSSecurity(value);
+      return true; // Valid CSS gradient/color
+    }
+    throw new Error(
+      'Background color must be a valid hex color or safe CSS gradient/rgba'
+    );
+  }),
 
   body('themeConfig.desktop.textColorPrimary')
     .matches(HEX_COLOR_REGEX)
@@ -194,6 +201,25 @@ export const validateCreateTheme = [
     .matches(HEX_COLOR_REGEX)
     .withMessage(
       'Secondary text color must be a valid hex color code (e.g., #FF5733)'
+    ),
+
+  body('themeConfig.desktop.labelColor')
+    .optional()
+    .matches(HEX_COLOR_REGEX)
+    .withMessage('Label color must be a valid hex color code (e.g., #FF5733)'),
+
+  body('themeConfig.desktop.inputBackgroundColor')
+    .optional()
+    .matches(HEX_COLOR_REGEX)
+    .withMessage(
+      'Input background color must be a valid hex color code (e.g., #FF5733)'
+    ),
+
+  body('themeConfig.desktop.inputTextColor')
+    .optional()
+    .matches(HEX_COLOR_REGEX)
+    .withMessage(
+      'Input text color must be a valid hex color code (e.g., #FF5733)'
     ),
 
   body('themeConfig.desktop.fontFamilyHeading')
@@ -218,11 +244,18 @@ export const validateCreateTheme = [
     .isLength({ min: 1, max: 50 })
     .withMessage('Field spacing must be between 1 and 50 characters'),
 
-  body('themeConfig.desktop.containerBackground')
-    .matches(HEX_COLOR_REGEX)
-    .withMessage(
-      'Container background must be a valid hex color code (e.g., #FF5733)'
-    ),
+  body('themeConfig.desktop.containerBackground').custom((value) => {
+    if (HEX_COLOR_REGEX.test(value)) {
+      return true; // Valid hex color
+    }
+    if (SAFE_CSS_BACKGROUND_REGEX.test(value)) {
+      validateCSSSecurity(value);
+      return true; // Valid CSS gradient/color
+    }
+    throw new Error(
+      'Container background must be a valid hex color or safe CSS gradient/rgba'
+    );
+  }),
 
   body('themeConfig.desktop.containerOpacity')
     .isFloat({ min: 0, max: 1 })
@@ -263,10 +296,18 @@ export const validateCreateTheme = [
 
   body('themeConfig.mobile.backgroundColor')
     .optional()
-    .matches(HEX_COLOR_REGEX)
-    .withMessage(
-      'Mobile background color must be a valid hex color code (e.g., #FF5733)'
-    ),
+    .custom((value) => {
+      if (HEX_COLOR_REGEX.test(value)) {
+        return true; // Valid hex color
+      }
+      if (SAFE_CSS_BACKGROUND_REGEX.test(value)) {
+        validateCSSSecurity(value);
+        return true; // Valid CSS gradient/color
+      }
+      throw new Error(
+        'Mobile background color must be a valid hex color or safe CSS gradient/rgba'
+      );
+    }),
 
   body('themeConfig.mobile.textColorPrimary')
     .optional()
@@ -280,6 +321,27 @@ export const validateCreateTheme = [
     .matches(HEX_COLOR_REGEX)
     .withMessage(
       'Mobile secondary text color must be a valid hex color code (e.g., #FF5733)'
+    ),
+
+  body('themeConfig.mobile.labelColor')
+    .optional()
+    .matches(HEX_COLOR_REGEX)
+    .withMessage(
+      'Mobile label color must be a valid hex color code (e.g., #FF5733)'
+    ),
+
+  body('themeConfig.mobile.inputBackgroundColor')
+    .optional()
+    .matches(HEX_COLOR_REGEX)
+    .withMessage(
+      'Mobile input background color must be a valid hex color code (e.g., #FF5733)'
+    ),
+
+  body('themeConfig.mobile.inputTextColor')
+    .optional()
+    .matches(HEX_COLOR_REGEX)
+    .withMessage(
+      'Mobile input text color must be a valid hex color code (e.g., #FF5733)'
     ),
 
   body('themeConfig.mobile.fontFamilyHeading')
@@ -314,10 +376,18 @@ export const validateCreateTheme = [
 
   body('themeConfig.mobile.containerBackground')
     .optional()
-    .matches(HEX_COLOR_REGEX)
-    .withMessage(
-      'Mobile container background must be a valid hex color code (e.g., #FF5733)'
-    ),
+    .custom((value) => {
+      if (HEX_COLOR_REGEX.test(value)) {
+        return true; // Valid hex color
+      }
+      if (SAFE_CSS_BACKGROUND_REGEX.test(value)) {
+        validateCSSSecurity(value);
+        return true; // Valid CSS gradient/color
+      }
+      throw new Error(
+        'Mobile container background must be a valid hex color or safe CSS gradient/rgba'
+      );
+    }),
 
   body('themeConfig.mobile.containerOpacity')
     .optional()
@@ -410,10 +480,18 @@ export const validateUpdateTheme = [
 
   body('themeConfig.desktop.backgroundColor')
     .optional()
-    .matches(HEX_COLOR_REGEX)
-    .withMessage(
-      'Background color must be a valid hex color code (e.g., #FF5733)'
-    ),
+    .custom((value) => {
+      if (HEX_COLOR_REGEX.test(value)) {
+        return true; // Valid hex color
+      }
+      if (SAFE_CSS_BACKGROUND_REGEX.test(value)) {
+        validateCSSSecurity(value);
+        return true; // Valid CSS gradient/color
+      }
+      throw new Error(
+        'Background color must be a valid hex color or safe CSS gradient/rgba'
+      );
+    }),
 
   body('themeConfig.desktop.textColorPrimary')
     .optional()
@@ -427,6 +505,25 @@ export const validateUpdateTheme = [
     .matches(HEX_COLOR_REGEX)
     .withMessage(
       'Secondary text color must be a valid hex color code (e.g., #FF5733)'
+    ),
+
+  body('themeConfig.desktop.labelColor')
+    .optional()
+    .matches(HEX_COLOR_REGEX)
+    .withMessage('Label color must be a valid hex color code (e.g., #FF5733)'),
+
+  body('themeConfig.desktop.inputBackgroundColor')
+    .optional()
+    .matches(HEX_COLOR_REGEX)
+    .withMessage(
+      'Input background color must be a valid hex color code (e.g., #FF5733)'
+    ),
+
+  body('themeConfig.desktop.inputTextColor')
+    .optional()
+    .matches(HEX_COLOR_REGEX)
+    .withMessage(
+      'Input text color must be a valid hex color code (e.g., #FF5733)'
     ),
 
   body('themeConfig.desktop.fontFamilyHeading')
@@ -457,10 +554,18 @@ export const validateUpdateTheme = [
 
   body('themeConfig.desktop.containerBackground')
     .optional()
-    .matches(HEX_COLOR_REGEX)
-    .withMessage(
-      'Container background must be a valid hex color code (e.g., #FF5733)'
-    ),
+    .custom((value) => {
+      if (HEX_COLOR_REGEX.test(value)) {
+        return true; // Valid hex color
+      }
+      if (SAFE_CSS_BACKGROUND_REGEX.test(value)) {
+        validateCSSSecurity(value);
+        return true; // Valid CSS gradient/color
+      }
+      throw new Error(
+        'Container background must be a valid hex color or safe CSS gradient/rgba'
+      );
+    }),
 
   body('themeConfig.desktop.containerOpacity')
     .optional()
@@ -503,10 +608,18 @@ export const validateUpdateTheme = [
 
   body('themeConfig.mobile.backgroundColor')
     .optional()
-    .matches(HEX_COLOR_REGEX)
-    .withMessage(
-      'Mobile background color must be a valid hex color code (e.g., #FF5733)'
-    ),
+    .custom((value) => {
+      if (HEX_COLOR_REGEX.test(value)) {
+        return true; // Valid hex color
+      }
+      if (SAFE_CSS_BACKGROUND_REGEX.test(value)) {
+        validateCSSSecurity(value);
+        return true; // Valid CSS gradient/color
+      }
+      throw new Error(
+        'Mobile background color must be a valid hex color or safe CSS gradient/rgba'
+      );
+    }),
 
   body('themeConfig.mobile.textColorPrimary')
     .optional()
@@ -520,6 +633,27 @@ export const validateUpdateTheme = [
     .matches(HEX_COLOR_REGEX)
     .withMessage(
       'Mobile secondary text color must be a valid hex color code (e.g., #FF5733)'
+    ),
+
+  body('themeConfig.mobile.labelColor')
+    .optional()
+    .matches(HEX_COLOR_REGEX)
+    .withMessage(
+      'Mobile label color must be a valid hex color code (e.g., #FF5733)'
+    ),
+
+  body('themeConfig.mobile.inputBackgroundColor')
+    .optional()
+    .matches(HEX_COLOR_REGEX)
+    .withMessage(
+      'Mobile input background color must be a valid hex color code (e.g., #FF5733)'
+    ),
+
+  body('themeConfig.mobile.inputTextColor')
+    .optional()
+    .matches(HEX_COLOR_REGEX)
+    .withMessage(
+      'Mobile input text color must be a valid hex color code (e.g., #FF5733)'
     ),
 
   body('themeConfig.mobile.fontFamilyHeading')
@@ -554,10 +688,18 @@ export const validateUpdateTheme = [
 
   body('themeConfig.mobile.containerBackground')
     .optional()
-    .matches(HEX_COLOR_REGEX)
-    .withMessage(
-      'Mobile container background must be a valid hex color code (e.g., #FF5733)'
-    ),
+    .custom((value) => {
+      if (HEX_COLOR_REGEX.test(value)) {
+        return true; // Valid hex color
+      }
+      if (SAFE_CSS_BACKGROUND_REGEX.test(value)) {
+        validateCSSSecurity(value);
+        return true; // Valid CSS gradient/color
+      }
+      throw new Error(
+        'Mobile container background must be a valid hex color or safe CSS gradient/rgba'
+      );
+    }),
 
   body('themeConfig.mobile.containerOpacity')
     .optional()

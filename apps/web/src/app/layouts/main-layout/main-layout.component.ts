@@ -415,18 +415,6 @@ export class MainLayoutComponent implements OnInit {
       icon: 'pi pi-cog',
       roles: ['admin'],
     },
-    {
-      label: 'Theme Management',
-      route: '/app/admin/themes',
-      icon: 'pi pi-palette',
-      roles: ['admin'],
-    },
-    {
-      label: 'Theme Designer',
-      route: '/app/admin/themes/designer',
-      icon: 'pi pi-brush',
-      roles: ['admin'],
-    },
   ];
 
   ngOnInit(): void {

@@ -28,13 +28,7 @@ import { FormField } from '@nodeangularfullstack/shared';
       }
     </div>
   `,
-  styles: [
-    `
-      .field-preview {
-        pointer-events: none;
-      }
-    `,
-  ],
+  styleUrls: ['./divider-preview.component.scss'],
 })
 export class DividerPreviewComponent {
   @Input({ required: true }) field!: FormField;

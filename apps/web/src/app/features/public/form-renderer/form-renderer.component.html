@@ -1,5 +1,5 @@
 <div
-  class="form-renderer-container min-h-screen py-8 px-4 relative"
+  class="form-renderer-container min-h-screen py-8 px-4 relative theme-transition"
   [ngClass]="{ 'theme-form-outer-background': !hasBackgroundImage() }"
 >
   @if (hasBackgroundImage()) {
@@ -81,7 +81,7 @@
                 type="button"
                 pButton
                 (click)="submitAnother()"
-                class="px-6 py-2 theme-button-primary rounded-md"
+                class="theme-button-primary theme-transition"
               >
                 <i class="pi pi-plus mr-2"></i>
                 Submit Another Response
@@ -125,8 +125,8 @@
         }
 
         <p-card
-          class="theme-form-container-wrapper"
-          [ngStyle]="{ background: 'white', position: 'relative', 'z-index': '10' }"
+          class="theme-form-container-wrapper theme-transition"
+          [ngStyle]="{ position: 'relative', 'z-index': '10' }"
         >
           <div class="form-content-wrapper">
             <!-- Step Progress Indicator -->
@@ -144,16 +144,16 @@
               <!-- Form Fields: Row-Based Layout or Global Grid -->
               @if (isRowLayoutEnabled()) {
                 <!-- Row-Based Layout Mode -->
-                <div class="row-layout-container space-y-6">
+                <div class="row-layout-container">
                   @for (row of getRowConfigs(); track row.rowId) {
                     <div class="row-wrapper">
                       <!-- Row columns grid -->
                       <div
-                        class="row-grid grid gap-4"
+                        class="row-grid theme-row-container theme-transition"
                         [style.grid-template-columns]="getGridColumns(row.columnCount)"
                       >
                         @for (columnIndex of getColumnIndices(row.columnCount); track columnIndex) {
-                          <div class="column-container space-y-3">
+                          <div class="column-container theme-column-container theme-transition">
                             <!-- Multiple fields in column (Story 14.1) -->
                             @for (
                               field of getFieldsInColumn(row.rowId, columnIndex);
@@ -186,7 +186,7 @@
                                         [id]="field.fieldName"
                                         [formControlName]="field.fieldName"
                                         [placeholder]="field.placeholder || ''"
-                                        class="w-full px-3 py-2 theme-input rounded-md"
+                                        class="w-full theme-input theme-transition"
                                       />
                                     }
 
@@ -197,7 +197,7 @@
                                         [id]="field.fieldName"
                                         [formControlName]="field.fieldName"
                                         [placeholder]="field.placeholder || ''"
-                                        class="w-full px-3 py-2 theme-input rounded-md"
+                                        class="w-full theme-input theme-transition"
                                       />
                                     }
 
@@ -210,7 +210,7 @@
                                         [placeholder]="field.placeholder || ''"
                                         [min]="field.validation?.min ?? null"
                                         [max]="field.validation?.max ?? null"
-                                        class="w-full px-3 py-2 theme-input rounded-md"
+                                        class="w-full theme-input theme-transition"
                                       />
                                     }
 
@@ -221,7 +221,7 @@
                                         [formControlName]="field.fieldName"
                                         [placeholder]="field.placeholder || ''"
                                         rows="5"
-                                        class="w-full px-3 py-2 theme-textarea rounded-md"
+                                        class="w-full theme-textarea theme-transition"
                                       ></textarea>
                                     }
 
@@ -230,7 +230,7 @@
                                       <select
                                         [id]="field.fieldName"
                                         [formControlName]="field.fieldName"
-                                        class="w-full px-3 py-2 theme-input rounded-md"
+                                        class="w-full theme-select theme-transition"
                                       >
                                         <option value="">
                                           {{ field.placeholder || 'Select an option' }}
@@ -323,7 +323,7 @@
                                         type="date"
                                         [id]="field.fieldName"
                                         [formControlName]="field.fieldName"
-                                        class="w-full px-3 py-2 theme-input rounded-md"
+                                        class="w-full theme-input theme-transition"
                                       />
                                     }
 
@@ -333,7 +333,7 @@
                                         type="datetime-local"
                                         [id]="field.fieldName"
                                         [formControlName]="field.fieldName"
-                                        class="w-full px-3 py-2 theme-input rounded-md"
+                                        class="w-full theme-input theme-transition"
                                       />
                                     }
 
@@ -345,7 +345,7 @@
                                         [accept]="
                                           field.validation?.acceptedFileTypes?.join(',') || '*'
                                         "
-                                        class="w-full px-3 py-2 theme-input rounded-md"
+                                        class="w-full theme-input theme-transition"
                                       />
                                     }
 
@@ -513,7 +513,7 @@
                                           ) {
                                             <button
                                               type="button"
-                                              class="read-more-btn theme-button-primary mt-2 text-sm"
+                                              class="read-more-btn theme-button-primary theme-transition mt-2 text-sm"
                                               (click)="toggleTextBlockCollapse(field.id)"
                                             >
                                               {{
@@ -646,7 +646,7 @@
                               [id]="field.fieldName"
                               [formControlName]="field.fieldName"
                               [placeholder]="field.placeholder || ''"
-                              class="w-full px-3 py-2 theme-input rounded-md"
+                              class="w-full theme-input theme-transition"
                             />
                           }
 
@@ -657,7 +657,7 @@
                               [id]="field.fieldName"
                               [formControlName]="field.fieldName"
                               [placeholder]="field.placeholder || ''"
-                              class="w-full px-3 py-2 theme-input rounded-md"
+                              class="w-full theme-input theme-transition"
                             />
                           }
 
@@ -670,7 +670,7 @@
                               [placeholder]="field.placeholder || ''"
                               [min]="field.validation?.min ?? null"
                               [max]="field.validation?.max ?? null"
-                              class="w-full px-3 py-2 theme-input rounded-md"
+                              class="w-full theme-input theme-transition"
                             />
                           }
 
@@ -681,7 +681,7 @@
                               [formControlName]="field.fieldName"
                               [placeholder]="field.placeholder || ''"
                               rows="5"
-                              class="w-full px-3 py-2 theme-input rounded-md"
+                              class="w-full theme-textarea theme-transition"
                             ></textarea>
                           }
 
@@ -690,7 +690,7 @@
                             <select
                               [id]="field.fieldName"
                               [formControlName]="field.fieldName"
-                              class="w-full px-3 py-2 theme-input rounded-md"
+                              class="w-full theme-select theme-transition"
                             >
                               <option value="">
                                 {{ field.placeholder || 'Select an option' }}
@@ -776,7 +776,7 @@
                               type="date"
                               [id]="field.fieldName"
                               [formControlName]="field.fieldName"
-                              class="w-full px-3 py-2 theme-input rounded-md"
+                              class="w-full theme-input theme-transition"
                             />
                           }
 
@@ -786,7 +786,7 @@
                               type="datetime-local"
                               [id]="field.fieldName"
                               [formControlName]="field.fieldName"
-                              class="w-full px-3 py-2 theme-input rounded-md"
+                              class="w-full theme-input theme-transition"
                             />
                           }
 
@@ -796,7 +796,7 @@
                               type="file"
                               [id]="field.fieldName"
                               [accept]="field.validation?.acceptedFileTypes?.join(',') || '*'"
-                              class="w-full px-3 py-2 theme-input rounded-md"
+                              class="w-full theme-input theme-transition"
                             />
                           }
 
@@ -1045,7 +1045,7 @@
                       type="submit"
                       pButton
                       [disabled]="formGroup.invalid || state.submitting"
-                      class="px-6 py-2 theme-button-primary rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                      class="theme-button-primary theme-transition disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       @if (state.submitting) {
                         <i class="pi pi-spin pi-spinner mr-2"></i>

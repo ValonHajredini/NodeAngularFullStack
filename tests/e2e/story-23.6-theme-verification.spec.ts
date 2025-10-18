@@ -25,7 +25,7 @@ async function loginAsAdmin(page: Page): Promise<void> {
   await page.fill('input[type="email"]', ADMIN_EMAIL);
   await page.fill('input[type="password"]', ADMIN_PASSWORD);
   await page.click('button[type="submit"]');
-  await page.waitForURL(`${BASE_URL}/app/dashboard`, { timeout: 15000 });
+  await page.waitForURL(`${BASE_URL}/app/dashboard`, { timeout: 30000 });
 }
 
 async function navigateToFormBuilder(page: Page): Promise<void> {

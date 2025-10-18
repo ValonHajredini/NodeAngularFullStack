@@ -69,25 +69,7 @@ import { ImageUploadComponent } from '../../field-properties/panels/image-upload
       </div>
     </div>
   `,
-  styles: [
-    `
-      .image-preview {
-        padding: 0.5rem 0;
-      }
-
-      .image-placeholder {
-        user-select: none;
-      }
-
-      .hidden {
-        display: none !important;
-      }
-
-      img {
-        display: inline-block;
-      }
-    `,
-  ],
+  styleUrls: ['./image-preview.component.scss'],
 })
 export class ImagePreviewComponent {
   @Input({ required: true }) field!: FormField;
@@ -103,7 +85,7 @@ export class ImagePreviewComponent {
    */
   get metadata(): ImageMetadata {
     return (
-      (this.field.metadata as ImageMetadata) || {
+      (this.field.metadata as ImageMetadata | undefined) ?? {
         altText: 'Image',
         alignment: 'center',
         width: '100%',
@@ -145,7 +127,8 @@ export class ImagePreviewComponent {
    * Programmatically trigger the hidden ImageUploadComponent's file input.
    */
   protected triggerImageUpload(): void {
-    if (!this.formId) {
+    if (this.formId === null || this.formId === '') {
+      // eslint-disable-next-line no-console
       console.warn('Cannot upload image: form not saved yet. Please save the form first.');
       alert('Please save the form before uploading images.');
       return;
@@ -156,9 +139,10 @@ export class ImagePreviewComponent {
       const fileInput = document.querySelector(
         '.image-preview .hidden app-image-upload input[type="file"]',
       ) as HTMLInputElement;
-      if (fileInput) {
+      if (fileInput !== null) {
         fileInput.click();
       } else {
+        // eslint-disable-next-line no-console
         console.error('File input not found in ImageUploadComponent');
       }
     }, 0);
@@ -175,6 +159,7 @@ export class ImagePreviewComponent {
    * Handle upload error from ImageUploadComponent
    */
   protected onUploadError(error: string): void {
+    // eslint-disable-next-line no-console
     console.error('Image upload error:', error);
     // Error is already displayed by ImageUploadComponent
   }

@@ -321,6 +321,40 @@ export class FormsApiService {
   }
 
   /**
+   * Updates an existing custom theme.
+   * @param themeId - ID of the theme to update
+   * @param themeData - Partial theme data to update
+   * @returns Observable containing the updated theme
+   * @throws {HttpErrorResponse} When update fails, theme not found, or forbidden
+   * @example
+   * formsApiService.updateTheme('theme-123', {
+   *   name: 'Updated Theme Name',
+   *   themeConfig: { desktop: {...} }
+   * }).subscribe(theme => console.log('Theme updated:', theme));
+   */
+  updateTheme(themeId: string, themeData: Partial<CreateThemeRequest>): Observable<FormTheme> {
+    return this.apiClient.put<ApiResponse<FormTheme>>(`/themes/${themeId}`, themeData).pipe(
+      map((response) => this.convertThemeDates(response.data!)),
+      catchError((error) => throwError(() => error)),
+    );
+  }
+
+  /**
+   * Deletes a custom theme (soft delete).
+   * @param themeId - ID of the theme to delete
+   * @returns Observable that completes on success
+   * @throws {HttpErrorResponse} When deletion fails, theme not found, or forbidden
+   * @example
+   * formsApiService.deleteTheme('theme-123')
+   *   .subscribe(() => console.log('Theme deleted successfully'));
+   */
+  deleteTheme(themeId: string): Observable<void> {
+    return this.apiClient
+      .delete<void>(`/themes/${themeId}`)
+      .pipe(catchError((error) => throwError(() => error)));
+  }
+
+  /**
    * Converts theme date strings to Date objects.
    * @param theme - Theme with string dates
    * @returns Theme with Date objects

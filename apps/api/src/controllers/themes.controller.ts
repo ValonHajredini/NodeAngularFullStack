@@ -264,6 +264,9 @@ export class ThemesController {
         thumbnailUrl: req.body.thumbnailUrl,
         themeConfig: req.body.themeConfig,
         createdBy: userId,
+        isCustom: true, // User-created themes are always custom
+        creatorId: userId, // Set creator ID to satisfy constraint
+        themeDefinition: {}, // Empty definition for standard custom themes
       };
 
       const theme = await themesService.create(themeData);

@@ -31,6 +31,12 @@ export interface ThemeProperties {
   containerOpacity: number;
   /** Container position within form */
   containerPosition: 'center' | 'top' | 'left' | 'full-width';
+  /** Input field background color (hex format) */
+  inputBackgroundColor?: string;
+  /** Input field text color (hex format) */
+  inputTextColor?: string;
+  /** Field label text color (hex format) */
+  labelColor?: string;
   /** Optional background image URL */
   backgroundImageUrl?: string;
   /** Background image positioning */

@@ -61,10 +61,14 @@ export class ThemePreviewService {
     this.setCssVar(root, '--theme-column-gap', desktop.fieldSpacing);
 
     // Field element variables (new for Epic 23)
-    this.setCssVar(root, '--theme-input-background', '#ffffff');
+    const inputBackground = desktop.inputBackgroundColor ?? '#ffffff';
+    const inputTextColor = desktop.inputTextColor ?? desktop.textColorPrimary;
+    const labelColor = desktop.labelColor ?? desktop.textColorPrimary;
+
+    this.setCssVar(root, '--theme-input-background', inputBackground);
     this.setCssVar(root, '--theme-input-border-color', '#d1d5db');
-    this.setCssVar(root, '--theme-input-text-color', desktop.textColorPrimary);
-    this.setCssVar(root, '--theme-label-color', desktop.textColorPrimary);
+    this.setCssVar(root, '--theme-input-text-color', inputTextColor);
+    this.setCssVar(root, '--theme-label-color', labelColor);
     this.setCssVar(root, '--theme-heading-color', desktop.textColorPrimary);
     this.setCssVar(root, '--theme-help-text-color', desktop.textColorSecondary);
 
@@ -227,6 +231,15 @@ export class ThemePreviewService {
     if (mobile.textColorSecondary) {
       overrides.push(`--theme-text-secondary: ${mobile.textColorSecondary};`);
       overrides.push(`--theme-help-text-color: ${mobile.textColorSecondary};`);
+    }
+    if (mobile.inputBackgroundColor) {
+      overrides.push(`--theme-input-background: ${mobile.inputBackgroundColor};`);
+    }
+    if (mobile.inputTextColor) {
+      overrides.push(`--theme-input-text-color: ${mobile.inputTextColor};`);
+    }
+    if (mobile.labelColor) {
+      overrides.push(`--theme-label-color: ${mobile.labelColor};`);
     }
     if (mobile.fontFamilyHeading) {
       overrides.push(`--theme-font-heading: ${mobile.fontFamilyHeading};`);

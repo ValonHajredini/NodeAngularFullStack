@@ -389,7 +389,7 @@ input[type='checkbox'] {
 .row-layout-container {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem; // 24px gap between rows
+  gap: var(--theme-row-spacing, var(--theme-field-spacing, 1.5rem));
 }
 
 .row-wrapper {
@@ -398,20 +398,20 @@ input[type='checkbox'] {
 
 .row-grid {
   display: grid;
-  gap: 1rem; // 16px gap between columns
+  gap: var(--theme-row-spacing, var(--theme-field-spacing, 1rem));
   width: 100%;
 
   // Responsive: stack columns on mobile
   @media (max-width: 767px) {
     grid-template-columns: 1fr !important; // Override inline style
-    gap: 0.75rem; // 12px gap between stacked columns
+    gap: var(--theme-row-spacing, var(--theme-field-spacing, 0.75rem));
   }
 }
 
 .column-container {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem; // 12px gap between fields in column (Story 14.1 multi-field support)
+  gap: var(--theme-column-gap, var(--theme-field-spacing, 0.75rem));
   width: 100%;
 
   .form-field {
@@ -427,7 +427,7 @@ input[type='checkbox'] {
 // Global grid layout styles (backward compatibility)
 .form-fields-grid {
   display: grid;
-  gap: 1.5rem;
+  gap: var(--theme-field-spacing, 1.5rem);
 }
 
 .grid-cols-1 {
@@ -754,4 +754,125 @@ input[type='datetime-local'] {
   .form-fields-grid {
     overflow: visible !important;
   }
+}
+
+// ============================================================================
+// Display Element Styling with Theme Variables (Story 24.6)
+// ============================================================================
+
+// HEADING elements - all heading levels use theme font and color
+.heading-field {
+  font-family: var(--theme-heading-font, system-ui);
+  color: var(--theme-heading-color, #1f2937);
+  line-height: 1.2;
+  margin-bottom: var(--theme-field-spacing, 1rem);
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    margin: 0;
+    font-family: var(--theme-heading-font, system-ui);
+    color: var(--theme-heading-color, #1f2937);
+    line-height: 1.2;
+  }
+
+  h1 {
+    font-size: 2.25rem;
+    font-weight: 700;
+  }
+
+  h2 {
+    font-size: 1.875rem;
+    font-weight: 600;
+  }
+
+  h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+
+  h4 {
+    font-size: 1.25rem;
+    font-weight: 500;
+  }
+
+  h5 {
+    font-size: 1.125rem;
+    font-weight: 500;
+  }
+
+  h6 {
+    font-size: 1rem;
+    font-weight: 500;
+  }
+
+  // Responsive font scaling for mobile viewports
+  @media (max-width: 767px) {
+    h1 {
+      font-size: 1.875rem;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+    }
+
+    h3 {
+      font-size: 1.25rem;
+    }
+  }
+}
+
+// TEXT_BLOCK elements - use theme body font and text color
+.text-block-field {
+  font-family: var(--theme-body-font, system-ui);
+  color: var(--theme-text-primary, #1f2937);
+  line-height: 1.6;
+  margin-bottom: var(--theme-field-spacing, 1rem);
+
+  p {
+    margin-bottom: 0.75rem;
+    font-family: var(--theme-body-font, system-ui);
+    color: var(--theme-text-primary, #1f2937);
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  // Optional background padding (when backgroundColor is set in metadata)
+  &.has-background {
+    background-color: var(--theme-container-background, #f9fafb);
+    padding: 1rem;
+    border-radius: var(--theme-border-radius, 0.375rem);
+  }
+}
+
+// IMAGE elements - captions use theme secondary text color
+.image-field {
+  margin-bottom: var(--theme-field-spacing, 1rem);
+
+  img {
+    border-radius: var(--theme-border-radius, 0.375rem);
+    max-width: 100%;
+    height: auto;
+  }
+
+  p {
+    margin-top: 0.5rem;
+    margin-bottom: 0;
+    color: var(--theme-text-secondary, #6b7280);
+    font-size: 0.875rem;
+    font-family: var(--theme-body-font, system-ui);
+    text-align: center;
+  }
+}
+
+// DIVIDER elements - use theme border color
+hr {
+  border: none;
+  border-top: 1px solid var(--theme-input-border-color, #d1d5db);
+  margin: var(--theme-field-spacing, 1rem) 0;
 }

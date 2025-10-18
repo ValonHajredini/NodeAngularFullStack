@@ -11,8 +11,11 @@ import { CommonModule } from '@angular/common';
 import { Overlay } from 'primeng/overlay';
 import { SkeletonModule } from 'primeng/skeleton';
 import { ButtonModule } from 'primeng/button';
+import { ConfirmDialog } from 'primeng/confirmdialog';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { FormTheme } from '@nodeangularfullstack/shared';
 import { ThemesApiService } from '../themes-api.service';
+import { FormsApiService } from '../forms-api.service';
 import { ThemeCardComponent } from './theme-card/theme-card.component';
 
 /**
@@ -22,9 +25,17 @@ import { ThemeCardComponent } from './theme-card/theme-card.component';
 @Component({
   selector: 'app-theme-dropdown',
   standalone: true,
-  imports: [CommonModule, Overlay, SkeletonModule, ButtonModule, ThemeCardComponent],
+  imports: [CommonModule, Overlay, SkeletonModule, ButtonModule, ThemeCardComponent, ConfirmDialog],
+  providers: [ConfirmationService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
+    <!-- Confirmation Dialog for Delete -->
+    <p-confirmDialog
+      [closable]="false"
+      [dismissableMask]="false"
+      styleClass="theme-delete-confirm-dialog"
+    ></p-confirmDialog>
+
     <button
       id="themeDropdownToggle"
       pButton
@@ -73,7 +84,11 @@ import { ThemeCardComponent } from './theme-card/theme-card.component';
             *ngFor="let theme of themes()"
             [theme]="theme"
             [isActive]="theme.id === currentThemeIdValue()"
+            [currentUserId]="currentUserId"
+            [currentUserRole]="currentUserRole"
             (selected)="onThemeSelect($event)"
+            (edit)="onEditTheme($event)"
+            (delete)="onDeleteTheme($event)"
           />
         </div>
       </ng-template>
@@ -186,13 +201,25 @@ export class ThemeDropdownComponent {
     return this._currentThemeIdSignal();
   }
 
+  /** Current user ID for ownership checks */
+  @Input() currentUserId?: string;
+
+  /** Current user role for permission checks */
+  @Input() currentUserRole?: 'admin' | 'user' | 'readonly';
+
   /** Event emitted when a theme is selected */
   @Output() themeSelected = new EventEmitter<FormTheme>();
 
   /** Event emitted when user clicks "Build Your Own Custom Color Theme" button */
   @Output() openThemeDesigner = new EventEmitter<void>();
 
+  /** Event emitted when user clicks edit on a theme */
+  @Output() editTheme = new EventEmitter<FormTheme>();
+
   private readonly themesApi = inject(ThemesApiService);
+  private readonly formsApi = inject(FormsApiService);
+  private readonly confirmationService = inject(ConfirmationService);
+  private readonly messageService = inject(MessageService);
 
   /** Signal for themes list */
   readonly themes = signal<FormTheme[]>([]);
@@ -239,12 +266,77 @@ export class ThemeDropdownComponent {
   }
 
   /**
+   * Public method to refresh themes list.
+   * Called after theme create, update, or delete operations.
+   */
+  refreshThemes(): void {
+    this.fetchThemes();
+  }
+
+  /**
    * Handles theme selection and closes the dropdown.
    * @param theme - Selected theme
    */
   onThemeSelect(theme: FormTheme): void {
     this.themeSelected.emit(theme);
     this.panelVisible = false;
+  }
+
+  /**
+   * Handles edit theme button click.
+   * Emits the theme to parent component for editing.
+   * @param theme - Theme to edit
+   */
+  onEditTheme(theme: FormTheme): void {
+    this.editTheme.emit(theme);
+  }
+
+  /**
+   * Handles delete theme button click.
+   * Shows confirmation dialog before deleting.
+   * @param theme - Theme to delete
+   */
+  onDeleteTheme(theme: FormTheme): void {
+    this.confirmationService.confirm({
+      header: 'Delete Theme',
+      message: `Are you sure you want to delete '${theme.name}'? This action cannot be undone. Forms using this theme will revert to the default theme.`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Delete',
+      rejectLabel: 'Cancel',
+      acceptButtonStyleClass: 'p-button-danger',
+      rejectButtonStyleClass: 'p-button-secondary',
+      accept: () => {
+        this.deleteThemeConfirmed(theme);
+      },
+    });
+  }
+
+  /**
+   * Deletes the theme after user confirmation.
+   * Refreshes the theme list after successful deletion.
+   * @param theme - Theme to delete
+   */
+  private deleteThemeConfirmed(theme: FormTheme): void {
+    this.formsApi.deleteTheme(theme.id).subscribe({
+      next: () => {
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Theme Deleted',
+          detail: `Theme '${theme.name}' has been deleted successfully.`,
+          life: 3000,
+        });
+        this.refreshThemes();
+      },
+      error: (err) => {
+        console.error('Failed to delete theme:', err);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Delete Failed',
+          detail: err.error?.error?.message || 'Failed to delete theme. Please try again.',
+          life: 5000,
+        });
+      },
+    });
   }
 
   /**

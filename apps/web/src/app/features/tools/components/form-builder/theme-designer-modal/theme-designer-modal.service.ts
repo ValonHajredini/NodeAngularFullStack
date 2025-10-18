@@ -17,6 +17,10 @@ export class ThemeDesignerModalService {
   /** Observable for theme save events (theme ID) */
   readonly themeSaved$ = this.themeSavedSubject.asObservable();
 
+  // Edit mode state
+  private readonly editModeSignal = signal(false);
+  private readonly editThemeIdSignal = signal<string | undefined>(undefined);
+
   // Wizard state
   private readonly step = signal(0);
   private readonly themeName = signal('');
@@ -24,6 +28,9 @@ export class ThemeDesignerModalService {
   // Step 1: Colors
   private readonly primaryColor = signal('#3B82F6');
   private readonly secondaryColor = signal('#10B981');
+  private readonly labelColor = signal('#374151');
+  private readonly inputBackgroundColor = signal('#FFFFFF');
+  private readonly inputTextColor = signal('#1F2937');
 
   // Step 2: Background
   private readonly backgroundType = signal<'solid' | 'linear' | 'radial' | 'image'>('solid');
@@ -49,8 +56,8 @@ export class ThemeDesignerModalService {
   private readonly focusBorderWidth = signal(2);
 
   // Additional required fields for API
-  private readonly textColorPrimary = signal('#000000');
-  private readonly textColorSecondary = signal('#666666');
+  private readonly textColorPrimary = signal('#1F2937');
+  private readonly textColorSecondary = signal('#6B7280');
   private readonly containerBackground = signal('#FFFFFF');
   private readonly containerOpacity = signal(1.0);
   private readonly containerPosition = signal<'center' | 'top' | 'left' | 'full-width'>('center');
@@ -84,6 +91,9 @@ export class ThemeDesignerModalService {
           backgroundColor: bgValue,
           textColorPrimary: this.textColorPrimary(),
           textColorSecondary: this.textColorSecondary(),
+          labelColor: this.labelColor(),
+          inputBackgroundColor: this.inputBackgroundColor(),
+          inputTextColor: this.inputTextColor(),
           fontFamilyHeading: this.headingFont(),
           fontFamilyBody: this.bodyFont(),
           fieldBorderRadius: `${this.borderRadius()}px`,
@@ -130,6 +140,9 @@ export class ThemeDesignerModalService {
       this.themeName() !== '' ||
       this.primaryColor() !== '#3B82F6' ||
       this.secondaryColor() !== '#10B981' ||
+      this.labelColor() !== '#374151' ||
+      this.inputBackgroundColor() !== '#FFFFFF' ||
+      this.inputTextColor() !== '#1F2937' ||
       this.backgroundType() !== 'solid' ||
       this.backgroundColor() !== '#FFFFFF' ||
       this.headingFont() !== 'Roboto' ||
@@ -146,6 +159,18 @@ export class ThemeDesignerModalService {
 
   getSecondaryColor = () => this.secondaryColor();
   setSecondaryColor = (value: string) => this.secondaryColor.set(value);
+
+  getLabelColor = () => this.labelColor();
+  setLabelColor = (value: string) => this.labelColor.set(value);
+
+  getInputBackgroundColor = () => this.inputBackgroundColor();
+  setInputBackgroundColor = (value: string) => this.inputBackgroundColor.set(value);
+
+  getInputTextColor = () => this.inputTextColor();
+  setInputTextColor = (value: string) => {
+    this.inputTextColor.set(value);
+    this.textColorPrimary.set(value);
+  };
 
   // Background getters/setters
   getBackgroundType = () => this.backgroundType();
@@ -226,10 +251,20 @@ export class ThemeDesignerModalService {
 
   /**
    * Saves the current theme via API.
-   * @returns Observable of the created theme
+   * Calls update if in edit mode, otherwise creates new theme.
+   * @returns Observable of the created or updated theme
    */
   saveTheme(): Observable<FormTheme> {
     const theme = this.currentTheme();
+
+    if (this.editModeSignal()) {
+      const themeId = this.editThemeIdSignal();
+      if (!themeId) {
+        throw new Error('Edit mode requires a theme ID');
+      }
+      return this.formsApiService.updateTheme(themeId, theme);
+    }
+
     return this.formsApiService.createTheme(theme);
   }
 
@@ -243,14 +278,122 @@ export class ThemeDesignerModalService {
   }
 
   /**
+   * Loads an existing theme into the wizard for editing.
+   * Populates all wizard signals from the theme's configuration.
+   * @param theme - The theme to load for editing
+   */
+  loadTheme(theme: FormTheme): void {
+    this.themeName.set(theme.name);
+
+    const desktop = theme.themeConfig.desktop;
+
+    // Step 1: Colors
+    this.primaryColor.set(desktop.primaryColor);
+    this.secondaryColor.set(desktop.secondaryColor);
+
+    // Step 2: Background
+    // Detect background type from backgroundColor value
+    const bgColor = desktop.backgroundColor;
+    if (bgColor.startsWith('linear-gradient')) {
+      this.backgroundType.set('linear');
+      // Extract gradient values (simplified - could be improved with regex)
+      const angleMatch = bgColor.match(/(\d+)deg/);
+      if (angleMatch) {
+        this.gradientAngle.set(parseInt(angleMatch[1], 10));
+      }
+      // Extract colors from gradient (simplified)
+      const colorMatch = bgColor.match(/#[0-9A-Fa-f]{6}/g);
+      if (colorMatch && colorMatch.length >= 2) {
+        this.gradientColor1.set(colorMatch[0]);
+        this.gradientColor2.set(colorMatch[1]);
+      }
+    } else if (bgColor.startsWith('radial-gradient')) {
+      this.backgroundType.set('radial');
+      // Extract position and colors (simplified)
+      const positionMatch = bgColor.match(/circle at (\w+)/);
+      if (positionMatch) {
+        this.gradientPosition.set(positionMatch[1]);
+      }
+      const colorMatch = bgColor.match(/#[0-9A-Fa-f]{6}/g);
+      if (colorMatch && colorMatch.length >= 2) {
+        this.gradientColor1.set(colorMatch[0]);
+        this.gradientColor2.set(colorMatch[1]);
+      }
+    } else if (desktop.backgroundImageUrl) {
+      this.backgroundType.set('image');
+      this.backgroundImageUrl.set(desktop.backgroundImageUrl);
+    } else {
+      this.backgroundType.set('solid');
+      this.backgroundColor.set(bgColor);
+    }
+
+    // Step 3: Typography
+    this.headingFont.set(desktop.fontFamilyHeading);
+    this.bodyFont.set(desktop.fontFamilyBody);
+    // Font sizes are in the config but not currently exposed in the wizard
+    // Could be added in future enhancement
+
+    // Step 4: Styling
+    const borderRadius = parseInt(desktop.fieldBorderRadius.replace('px', ''), 10);
+    const fieldSpacing = parseInt(desktop.fieldSpacing.replace('px', ''), 10);
+    this.borderRadius.set(borderRadius);
+    this.fieldSpacing.set(fieldSpacing);
+
+    // Additional fields
+    const resolvedTextPrimary = desktop.textColorPrimary ?? '#1F2937';
+    this.textColorPrimary.set(resolvedTextPrimary);
+    this.textColorSecondary.set(desktop.textColorSecondary ?? '#6B7280');
+    this.labelColor.set(desktop.labelColor ?? resolvedTextPrimary ?? '#374151');
+    this.inputBackgroundColor.set(desktop.inputBackgroundColor ?? '#FFFFFF');
+    this.inputTextColor.set(desktop.inputTextColor ?? resolvedTextPrimary ?? '#1F2937');
+    this.containerBackground.set(desktop.containerBackground);
+    this.containerOpacity.set(desktop.containerOpacity);
+    this.containerPosition.set(desktop.containerPosition);
+    this.thumbnailUrl.set(theme.thumbnailUrl);
+  }
+
+  /**
+   * Sets the modal to edit mode for a specific theme.
+   * @param themeId - ID of the theme to edit
+   */
+  setEditMode(themeId: string): void {
+    this.editModeSignal.set(true);
+    this.editThemeIdSignal.set(themeId);
+  }
+
+  /**
+   * Returns whether the modal is in edit mode.
+   * @returns True if editing an existing theme, false if creating new
+   */
+  isEditMode(): boolean {
+    return this.editModeSignal();
+  }
+
+  /**
+   * Returns the current edit theme ID (undefined if in create mode).
+   * @returns Theme ID being edited, or undefined
+   */
+  getEditThemeId(): string | undefined {
+    return this.editThemeIdSignal();
+  }
+
+  /**
    * Resets all wizard state to default values.
    * Called when modal is closed or after successful save.
    */
   reset(): void {
+    // Reset edit mode state
+    this.editModeSignal.set(false);
+    this.editThemeIdSignal.set(undefined);
+
+    // Reset wizard step and values
     this.step.set(0);
     this.themeName.set('');
     this.primaryColor.set('#3B82F6');
     this.secondaryColor.set('#10B981');
+    this.labelColor.set('#374151');
+    this.inputBackgroundColor.set('#FFFFFF');
+    this.inputTextColor.set('#1F2937');
     this.backgroundType.set('solid');
     this.backgroundColor.set('#FFFFFF');
     this.gradientColor1.set('#3B82F6');
@@ -268,8 +411,8 @@ export class ThemeDesignerModalService {
     this.borderWidth.set(1);
     this.labelSpacing.set(8);
     this.focusBorderWidth.set(2);
-    this.textColorPrimary.set('#000000');
-    this.textColorSecondary.set('#666666');
+    this.textColorPrimary.set('#1F2937');
+    this.textColorSecondary.set('#6B7280');
     this.containerBackground.set('#FFFFFF');
     this.containerOpacity.set(1.0);
     this.containerPosition.set('center');

@@ -1,0 +1,83 @@
+[
+  {
+    "name": "Story 24.8 - Light Theme",
+    "description": "Light theme for Story 24.8 testing: White background, dark text, blue primary (#3b82f6)",
+    "thumbnailUrl": "https://nodeangularfullstack.nyc3.digitaloceanspaces.com/themes/thumbnails/story-24-8-light.webp",
+    "themeConfig": {
+      "desktop": {
+        "primaryColor": "#3b82f6",
+        "secondaryColor": "#60a5fa",
+        "backgroundColor": "#ffffff",
+        "textColorPrimary": "#1a1a1a",
+        "textColorSecondary": "#4b5563",
+        "fontFamilyHeading": "'Inter', sans-serif",
+        "fontFamilyBody": "'Inter', sans-serif",
+        "fieldBorderRadius": "6px",
+        "fieldSpacing": "16px",
+        "containerBackground": "rgba(255, 255, 255, 0.98)",
+        "containerOpacity": 1.0,
+        "containerPosition": "center",
+        "backgroundImageUrl": null,
+        "backgroundImagePosition": null
+      },
+      "mobile": {
+        "fieldSpacing": "12px",
+        "containerPosition": "top"
+      }
+    }
+  },
+  {
+    "name": "Story 24.8 - Dark Theme",
+    "description": "Dark theme for Story 24.8 testing: Dark background, light text, purple primary (#8b5cf6)",
+    "thumbnailUrl": "https://nodeangularfullstack.nyc3.digitaloceanspaces.com/themes/thumbnails/story-24-8-dark.webp",
+    "themeConfig": {
+      "desktop": {
+        "primaryColor": "#8b5cf6",
+        "secondaryColor": "#a78bfa",
+        "backgroundColor": "linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%)",
+        "textColorPrimary": "#e0e0e0",
+        "textColorSecondary": "#d1d5db",
+        "fontFamilyHeading": "'Inter', sans-serif",
+        "fontFamilyBody": "'Inter', sans-serif",
+        "fieldBorderRadius": "6px",
+        "fieldSpacing": "16px",
+        "containerBackground": "rgba(139, 92, 246, 0.08)",
+        "containerOpacity": 0.95,
+        "containerPosition": "center",
+        "backgroundImageUrl": null,
+        "backgroundImagePosition": null
+      },
+      "mobile": {
+        "fieldSpacing": "12px",
+        "containerPosition": "top"
+      }
+    }
+  },
+  {
+    "name": "Story 24.8 - Custom Theme",
+    "description": "Custom theme for Story 24.8 edge case testing: Unusual colors, fonts, and spacing",
+    "thumbnailUrl": "https://nodeangularfullstack.nyc3.digitaloceanspaces.com/themes/thumbnails/story-24-8-custom.webp",
+    "themeConfig": {
+      "desktop": {
+        "primaryColor": "#ec4899",
+        "secondaryColor": "#fb923c",
+        "backgroundColor": "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)",
+        "textColorPrimary": "#451a03",
+        "textColorSecondary": "#78350f",
+        "fontFamilyHeading": "'Playfair Display', serif",
+        "fontFamilyBody": "'Merriweather', serif",
+        "fieldBorderRadius": "14px",
+        "fieldSpacing": "20px",
+        "containerBackground": "rgba(251, 146, 60, 0.12)",
+        "containerOpacity": 0.92,
+        "containerPosition": "center",
+        "backgroundImageUrl": null,
+        "backgroundImagePosition": null
+      },
+      "mobile": {
+        "fieldSpacing": "16px",
+        "containerPosition": "top"
+      }
+    }
+  }
+]

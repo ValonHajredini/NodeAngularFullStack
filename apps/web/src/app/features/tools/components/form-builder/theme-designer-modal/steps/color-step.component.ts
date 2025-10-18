@@ -63,6 +63,75 @@ import { ThemeDesignerModalService } from '../theme-designer-modal.service';
           </div>
           <small class="field-hint">Used for accents, highlights, and secondary actions</small>
         </div>
+
+        <!-- Label Color -->
+        <div class="color-field-group">
+          <label for="labelColor" class="color-label">
+            <i class="pi pi-tag"></i>
+            Label Color
+          </label>
+          <div class="color-input-wrapper">
+            <p-colorPicker
+              [(ngModel)]="labelColorValue"
+              inputId="labelColor"
+              [inline]="false"
+              [format]="'hex'"
+              appendTo="body"
+            ></p-colorPicker>
+            <div class="color-preview" [style.background-color]="labelColorValue">
+              <span class="color-hex">{{ labelColorValue }}</span>
+            </div>
+          </div>
+          <small class="field-hint">Applied to field labels and helper headings</small>
+        </div>
+
+        <!-- Input Background Color -->
+        <div class="color-field-group">
+          <label for="inputBackgroundColor" class="color-label">
+            <i class="pi pi-clone"></i>
+            Input Background
+          </label>
+          <div class="color-input-wrapper">
+            <p-colorPicker
+              [(ngModel)]="inputBackgroundColorValue"
+              inputId="inputBackgroundColor"
+              [inline]="false"
+              [format]="'hex'"
+              appendTo="body"
+            ></p-colorPicker>
+            <div class="color-preview" [style.background-color]="inputBackgroundColorValue">
+              <span class="color-hex">{{ inputBackgroundColorValue }}</span>
+            </div>
+          </div>
+          <small class="field-hint"
+            >Background fill for text inputs, textareas, and dropdowns</small
+          >
+        </div>
+
+        <!-- Input Text Color -->
+        <div class="color-field-group">
+          <label for="inputTextColor" class="color-label">
+            <i class="pi pi-pencil"></i>
+            Input Text Color
+          </label>
+          <div class="color-input-wrapper">
+            <p-colorPicker
+              [(ngModel)]="inputTextColorValue"
+              inputId="inputTextColor"
+              [inline]="false"
+              [format]="'hex'"
+              appendTo="body"
+            ></p-colorPicker>
+            <div
+              class="color-preview color-preview--text"
+              [style.background-color]="inputBackgroundColorValue"
+              [style.color]="inputTextColorValue"
+            >
+              <span class="color-hex">{{ inputTextColorValue }}</span>
+            </div>
+          </div>
+          <small class="field-hint">Text color inside inputs, textareas, and dropdowns</small>
+        </div>
       </div>
 
       <!-- Color Preview Swatches -->
@@ -89,6 +158,20 @@ import { ThemeDesignerModalService } from '../theme-designer-modal.service';
               "
             ></div>
             <span class="swatch-label">Combined</span>
+          </div>
+          <div class="swatch-item">
+            <div class="swatch" [style.background-color]="labelColorValue"></div>
+            <span class="swatch-label">Label</span>
+          </div>
+          <div class="swatch-item">
+            <div
+              class="swatch swatch-input-preview"
+              [style.background-color]="inputBackgroundColorValue"
+              [style.color]="inputTextColorValue"
+            >
+              Aa
+            </div>
+            <span class="swatch-label">Input</span>
           </div>
         </div>
       </div>
@@ -127,7 +210,7 @@ import { ThemeDesignerModalService } from '../theme-designer-modal.service';
 
       .color-fields {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
         gap: 1.5rem;
         margin-bottom: 2rem;
       }
@@ -174,6 +257,11 @@ import { ThemeDesignerModalService } from '../theme-designer-modal.service';
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
       }
 
+      .color-preview--text {
+        justify-content: flex-start;
+        padding: 0 1rem;
+      }
+
       .color-hex {
         font-family: 'Courier New', monospace;
         font-size: 0.875rem;
@@ -207,7 +295,7 @@ import { ThemeDesignerModalService } from '../theme-designer-modal.service';
 
       .swatches-grid {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
         gap: 1rem;
       }
 
@@ -233,6 +321,15 @@ import { ThemeDesignerModalService } from '../theme-designer-modal.service';
 
       .swatch-combined {
         border: 2px solid #d1d5db;
+      }
+
+      .swatch-input-preview {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-family: 'Inter', system-ui;
+        letter-spacing: 0.02em;
       }
 
       .swatch-label {
@@ -270,7 +367,7 @@ import { ThemeDesignerModalService } from '../theme-designer-modal.service';
         }
 
         .swatches-grid {
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(2, 1fr);
           gap: 0.75rem;
         }
 
@@ -315,5 +412,29 @@ export class ColorStepComponent {
 
   set secondaryColorValue(value: string) {
     this.modalService.setSecondaryColor(value);
+  }
+
+  get labelColorValue(): string {
+    return this.modalService.getLabelColor();
+  }
+
+  set labelColorValue(value: string) {
+    this.modalService.setLabelColor(value);
+  }
+
+  get inputBackgroundColorValue(): string {
+    return this.modalService.getInputBackgroundColor();
+  }
+
+  set inputBackgroundColorValue(value: string) {
+    this.modalService.setInputBackgroundColor(value);
+  }
+
+  get inputTextColorValue(): string {
+    return this.modalService.getInputTextColor();
+  }
+
+  set inputTextColorValue(value: string) {
+    this.modalService.setInputTextColor(value);
   }
 }

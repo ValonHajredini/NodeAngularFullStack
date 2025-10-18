@@ -85,6 +85,39 @@ import { ThemeDesignerModalService } from '../theme-designer-modal.service';
                   <span class="item-value">{{ modalService.getSecondaryColor() }}</span>
                 </div>
               </div>
+              <div class="summary-item">
+                <span class="item-label">Label:</span>
+                <div class="color-chip-wrapper">
+                  <div
+                    class="color-chip"
+                    [style.background-color]="modalService.getLabelColor()"
+                  ></div>
+                  <span class="item-value">{{ modalService.getLabelColor() }}</span>
+                </div>
+              </div>
+              <div class="summary-item">
+                <span class="item-label">Input BG:</span>
+                <div class="color-chip-wrapper">
+                  <div
+                    class="color-chip"
+                    [style.background-color]="modalService.getInputBackgroundColor()"
+                  ></div>
+                  <span class="item-value">{{ modalService.getInputBackgroundColor() }}</span>
+                </div>
+              </div>
+              <div class="summary-item">
+                <span class="item-label">Input Text:</span>
+                <div class="color-chip-wrapper color-chip-wrapper--text">
+                  <div
+                    class="color-chip color-chip--input-text"
+                    [style.background-color]="modalService.getInputBackgroundColor()"
+                    [style.color]="modalService.getInputTextColor()"
+                  >
+                    Aa
+                  </div>
+                  <span class="item-value">{{ modalService.getInputTextColor() }}</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -189,6 +222,7 @@ import { ThemeDesignerModalService } from '../theme-designer-modal.service';
                 [style.font-family]="modalService.getBodyFont()"
                 [style.font-size.px]="modalService.getBodyFontSize()"
                 [style.margin-bottom.px]="modalService.getLabelSpacing()"
+                [style.color]="modalService.getLabelColor()"
               >
                 Full Name
               </label>
@@ -201,6 +235,8 @@ import { ThemeDesignerModalService } from '../theme-designer-modal.service';
                 [style.border-radius.px]="modalService.getBorderRadius()"
                 [style.padding.px]="modalService.getFieldPadding()"
                 [style.border-width.px]="modalService.getBorderWidth()"
+                [style.background-color]="modalService.getInputBackgroundColor()"
+                [style.color]="modalService.getInputTextColor()"
               />
             </div>
 
@@ -210,6 +246,7 @@ import { ThemeDesignerModalService } from '../theme-designer-modal.service';
                 [style.font-family]="modalService.getBodyFont()"
                 [style.font-size.px]="modalService.getBodyFontSize()"
                 [style.margin-bottom.px]="modalService.getLabelSpacing()"
+                [style.color]="modalService.getLabelColor()"
               >
                 Email Address
               </label>
@@ -222,6 +259,8 @@ import { ThemeDesignerModalService } from '../theme-designer-modal.service';
                 [style.border-radius.px]="modalService.getBorderRadius()"
                 [style.padding.px]="modalService.getFieldPadding()"
                 [style.border-width.px]="modalService.getBorderWidth()"
+                [style.background-color]="modalService.getInputBackgroundColor()"
+                [style.color]="modalService.getInputTextColor()"
               />
             </div>
 
@@ -422,6 +461,23 @@ import { ThemeDesignerModalService } from '../theme-designer-modal.service';
         height: 20px;
         border-radius: 4px;
         border: 1px solid #e5e7eb;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      }
+
+      .color-chip-wrapper--text {
+        gap: 0.75rem;
+      }
+
+      .color-chip--input-text {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 24px;
+        border-radius: 4px;
+        border: 1px solid #e5e7eb;
+        font-weight: 600;
+        font-size: 0.75rem;
         box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
       }
 

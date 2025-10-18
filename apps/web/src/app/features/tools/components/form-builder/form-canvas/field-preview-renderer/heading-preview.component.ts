@@ -30,23 +30,7 @@ import { InlineHeadingEditorComponent } from './inline-heading-editor.component'
       />
     </div>
   `,
-  styles: [
-    `
-      .heading-preview {
-        padding: 0.5rem 0;
-      }
-
-      h1,
-      h2,
-      h3,
-      h4,
-      h5,
-      h6 {
-        margin: 0;
-        line-height: 1.2;
-      }
-    `,
-  ],
+  styleUrls: ['./heading-preview.component.scss'],
 })
 export class HeadingPreviewComponent {
   @Input({ required: true }) field!: FormField;
@@ -57,7 +41,7 @@ export class HeadingPreviewComponent {
    */
   get metadata(): HeadingMetadata {
     return (
-      (this.field.metadata as HeadingMetadata) || {
+      (this.field.metadata as HeadingMetadata | undefined) ?? {
         headingLevel: 'h2',
         alignment: 'left',
         fontWeight: 'bold',

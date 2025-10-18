@@ -6,6 +6,7 @@ import {
   computed,
   OnInit,
   OnDestroy,
+  ViewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -32,6 +33,7 @@ import { ThemeDesignerModalComponent } from './theme-designer-modal/theme-design
 import { Dialog } from 'primeng/dialog';
 import { FormSchema, FormTheme } from '@nodeangularfullstack/shared';
 import { trigger, transition, style, animate } from '@angular/animations';
+import { AuthService } from '@core/auth/auth.service';
 
 /**
  * Form Builder main component.
@@ -129,8 +131,11 @@ import { trigger, transition, style, animate } from '@angular/animations';
         <div class="flex items-center gap-2">
           <app-theme-dropdown
             [currentThemeId]="formBuilderService.currentForm()?.schema?.settings?.themeId"
+            [currentUserId]="currentUserId()"
+            [currentUserRole]="currentUserRole()"
             (themeSelected)="onThemeSelected($event)"
             (openThemeDesigner)="openThemeDesigner()"
+            (editTheme)="onEditTheme($event)"
           />
 
           @if (formBuilderService.isPublished()) {
@@ -510,6 +515,13 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
   private readonly messageService = inject(MessageService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly authService = inject(AuthService);
+
+  /** Reference to ThemeDropdownComponent for refreshing themes */
+  @ViewChild(ThemeDropdownComponent) themeDropdown?: ThemeDropdownComponent;
+
+  /** Reference to ThemeDesignerModalComponent for edit mode */
+  @ViewChild(ThemeDesignerModalComponent) themeDesignerModal?: ThemeDesignerModalComponent;
 
   readonly settingsDialogVisible = signal<boolean>(false);
   readonly publishDialogVisible = signal<boolean>(false);
@@ -561,6 +573,12 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
   readonly isThemeLoading = computed(() => this.formBuilderService.isThemeLoading());
   readonly availableThemes = computed(() => this.formBuilderService.availableThemes());
   readonly currentTheme = computed(() => this.formBuilderService.currentTheme());
+
+  /** Current user ID for theme ownership checks */
+  readonly currentUserId = computed(() => this.authService.user()?.id);
+
+  /** Current user role for permission checks */
+  readonly currentUserRole = computed(() => this.authService.user()?.role);
 
   private fieldCounter = 0;
   private autoSaveInterval?: number;
@@ -1065,23 +1083,47 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
   }
 
   /**
-   * Handles successful theme creation from Theme Designer Modal (Story 23.5).
-   * Applies the newly created theme to the current form and closes the modal.
-   * @param newThemeId - ID of the newly created theme
+   * Handles edit theme button click from theme dropdown (Story 24.9).
+   * Opens theme designer modal in edit mode with the selected theme.
+   * @param theme - Theme to edit
+   */
+  onEditTheme(theme: FormTheme): void {
+    if (!this.themeDesignerModal) {
+      console.error('ThemeDesignerModalComponent not available');
+      return;
+    }
+
+    // Use the public method to open modal in edit mode
+    this.themeDesignerModal.openInEditMode(theme);
+  }
+
+  /**
+   * Handles successful theme creation/update from Theme Designer Modal (Story 23.5 + 24.9).
+   * Applies the newly created/updated theme to the current form and closes the modal.
+   * Refreshes the theme dropdown to show the latest themes.
+   * @param newThemeId - ID of the newly created/updated theme
    */
   onThemeSaved(newThemeId: string): void {
-    // Load and apply the newly created theme
+    // Check if modal is in edit mode using public method
+    const isEditMode = this.themeDesignerModal?.isInEditMode() ?? false;
+
+    // Load and apply the newly created/updated theme
     // This will fetch all themes, update the available themes list, and apply the selected theme
     this.formBuilderService.loadTheme(newThemeId);
 
     // Close the modal
     this.themeDesignerVisible.set(false);
 
+    // Refresh the theme dropdown to show updated list
+    this.themeDropdown?.refreshThemes();
+
     // Show success message
     this.messageService.add({
       severity: 'success',
-      summary: 'Theme Created',
-      detail: 'Your custom theme has been created and applied successfully!',
+      summary: isEditMode ? 'Theme Updated' : 'Theme Created',
+      detail: isEditMode
+        ? 'Your custom theme has been updated and applied successfully!'
+        : 'Your custom theme has been created and applied successfully!',
       life: 3000,
     });
   }
