@@ -41,6 +41,10 @@ export interface ThemeProperties {
   backgroundImageUrl?: string;
   /** Background image positioning */
   backgroundImagePosition?: 'cover' | 'contain' | 'repeat';
+  /** Background image opacity (0-1, default 1) */
+  backgroundImageOpacity?: number;
+  /** Background image blur in pixels (0-20, default 0) */
+  backgroundImageBlur?: number;
 }
 
 /**

@@ -71,142 +71,119 @@ import { FormTheme } from '@nodeangularfullstack/shared';
       [header]="modalHeader()"
       styleClass="theme-designer-dialog"
     >
-      <div class="theme-designer-content">
-        <p-stepper [(value)]="activeStepIndex" [linear]="true">
-          <p-step-list>
-            <p-step [value]="0">
-              <ng-template pStepHeader>Colors</ng-template>
-            </p-step>
-            <p-step [value]="1">
-              <ng-template pStepHeader>Background</ng-template>
-            </p-step>
-            <p-step [value]="2">
-              <ng-template pStepHeader>Typography</ng-template>
-            </p-step>
-            <p-step [value]="3">
-              <ng-template pStepHeader>Styling</ng-template>
-            </p-step>
-            <p-step [value]="4">
-              <ng-template pStepHeader>Preview</ng-template>
-            </p-step>
-          </p-step-list>
+      <div class="theme-designer-wrapper">
+        <!-- Scrollable Content Area -->
+        <div class="theme-designer-content">
+          <p-stepper [(value)]="activeStepIndex" [linear]="true">
+            <!-- Hide default step headers with CSS -->
+            <p-step-list style="display: none;">
+              <p-step [value]="0"></p-step>
+              <p-step [value]="1"></p-step>
+              <p-step [value]="2"></p-step>
+              <p-step [value]="3"></p-step>
+              <p-step [value]="4"></p-step>
+              <p-step [value]="5"></p-step>
+            </p-step-list>
 
-          <p-step-panels>
-            <!-- Step 1: Colors -->
-            <p-step-panel [value]="0">
-              <ng-template #content>
-                <app-color-step />
-                <div class="step-navigation">
-                  <button
-                    pButton
-                    type="button"
-                    label="Next"
-                    icon="pi pi-arrow-right"
-                    iconPos="right"
-                    [disabled]="!modalService.canProceedToNextStep()"
-                    (click)="onNext()"
-                  ></button>
-                </div>
-              </ng-template>
-            </p-step-panel>
+            <p-step-panels>
+              <!-- Step 1: Colors -->
+              <p-step-panel [value]="0">
+                <ng-template #content>
+                  <app-color-step />
+                </ng-template>
+              </p-step-panel>
 
-            <!-- Step 2: Background -->
-            <p-step-panel [value]="1">
-              <ng-template #content>
-                <app-background-step />
-                <div class="step-navigation">
-                  <button
-                    pButton
-                    type="button"
-                    label="Previous"
-                    icon="pi pi-arrow-left"
-                    severity="secondary"
-                    (click)="onPrevious()"
-                  ></button>
-                  <button
-                    pButton
-                    type="button"
-                    label="Next"
-                    icon="pi pi-arrow-right"
-                    iconPos="right"
-                    [disabled]="!modalService.canProceedToNextStep()"
-                    (click)="onNext()"
-                  ></button>
-                </div>
-              </ng-template>
-            </p-step-panel>
+              <!-- Step 2: Background -->
+              <p-step-panel [value]="1">
+                <ng-template #content>
+                  <app-background-step />
+                </ng-template>
+              </p-step-panel>
 
-            <!-- Step 3: Typography -->
-            <p-step-panel [value]="2">
-              <ng-template #content>
-                <app-typography-step />
-                <div class="step-navigation">
-                  <button
-                    pButton
-                    type="button"
-                    label="Previous"
-                    icon="pi pi-arrow-left"
-                    severity="secondary"
-                    (click)="onPrevious()"
-                  ></button>
-                  <button
-                    pButton
-                    type="button"
-                    label="Next"
-                    icon="pi pi-arrow-right"
-                    iconPos="right"
-                    [disabled]="!modalService.canProceedToNextStep()"
-                    (click)="onNext()"
-                  ></button>
-                </div>
-              </ng-template>
-            </p-step-panel>
+              <!-- Step 3: Typography -->
+              <p-step-panel [value]="2">
+                <ng-template #content>
+                  <app-typography-step />
+                </ng-template>
+              </p-step-panel>
 
-            <!-- Step 4: Styling -->
-            <p-step-panel [value]="3">
-              <ng-template #content>
-                <app-styling-step />
-                <div class="step-navigation">
-                  <button
-                    pButton
-                    type="button"
-                    label="Previous"
-                    icon="pi pi-arrow-left"
-                    severity="secondary"
-                    (click)="onPrevious()"
-                  ></button>
-                  <button
-                    pButton
-                    type="button"
-                    label="Next"
-                    icon="pi pi-arrow-right"
-                    iconPos="right"
-                    [disabled]="!modalService.canProceedToNextStep()"
-                    (click)="onNext()"
-                  ></button>
-                </div>
-              </ng-template>
-            </p-step-panel>
+              <!-- Step 4: Styling -->
+              <p-step-panel [value]="3">
+                <ng-template #content>
+                  <app-styling-step />
+                </ng-template>
+              </p-step-panel>
 
-            <!-- Step 5: Preview & Save -->
-            <p-step-panel [value]="4">
-              <ng-template #content>
-                <app-preview-step />
-                <div class="step-navigation">
-                  <button
-                    pButton
-                    type="button"
-                    label="Previous"
-                    icon="pi pi-arrow-left"
-                    severity="secondary"
-                    (click)="onPrevious()"
-                  ></button>
-                  <!-- Save button will be in PreviewStepComponent -->
-                </div>
-              </ng-template>
-            </p-step-panel>
-          </p-step-panels>
-        </p-stepper>
+              <!-- Step 5: Visual Preview -->
+              <p-step-panel [value]="4">
+                <ng-template #content>
+                  <app-preview-step [visualPreviewOnly]="true" />
+                </ng-template>
+              </p-step-panel>
+
+              <!-- Step 6: Summary & Save -->
+              <p-step-panel [value]="5">
+                <ng-template #content>
+                  <app-preview-step />
+                </ng-template>
+              </p-step-panel>
+            </p-step-panels>
+          </p-stepper>
+        </div>
+
+        <!-- Fixed Footer with Dots and Navigation Buttons -->
+        <div class="theme-designer-footer">
+          <!-- Left side: Previous button -->
+          <div class="nav-left">
+            @if (activeStepIndex() > 0) {
+              <button
+                pButton
+                type="button"
+                label="Previous"
+                icon="pi pi-arrow-left"
+                severity="secondary"
+                (click)="onPrevious()"
+              ></button>
+            }
+          </div>
+
+          <!-- Center: Dot Indicators -->
+          <div class="step-indicators">
+            @for (step of [0, 1, 2, 3, 4, 5]; track step) {
+              <div
+                class="step-dot"
+                [class.active]="activeStepIndex() === step"
+                [class.completed]="activeStepIndex() > step"
+                (click)="goToStep(step)"
+              ></div>
+            }
+          </div>
+
+          <!-- Right side: Next or Save button -->
+          <div class="nav-right">
+            @if (activeStepIndex() < 5) {
+              <button
+                pButton
+                type="button"
+                label="Next"
+                icon="pi pi-arrow-right"
+                iconPos="right"
+                [disabled]="!modalService.canProceedToNextStep()"
+                (click)="onNext()"
+              ></button>
+            } @else {
+              <button
+                pButton
+                type="button"
+                label="Save Theme"
+                icon="pi pi-check"
+                iconPos="right"
+                [disabled]="!modalService.canProceedToNextStep()"
+                (click)="onSave()"
+              ></button>
+            }
+          </div>
+        </div>
       </div>
     </p-dialog>
   `,
@@ -215,20 +192,86 @@ import { FormTheme } from '@nodeangularfullstack/shared';
       :host ::ng-deep .theme-designer-dialog {
         .p-dialog-content {
           padding: 0;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          height: 600px;
         }
       }
 
-      .theme-designer-content {
-        min-height: 500px;
+      .theme-designer-wrapper {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        overflow: hidden;
       }
 
-      .step-navigation {
-        display: flex;
-        justify-content: flex-end;
-        gap: 0.75rem;
+      .theme-designer-content {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
         padding: 1.5rem;
-        margin-top: 1.5rem;
+        min-height: 0;
+      }
+
+      .theme-designer-footer {
+        flex-shrink: 0;
         border-top: 1px solid var(--surface-border, #e5e7eb);
+        padding: 0.75rem 1.5rem;
+        background: var(--surface-0, #ffffff);
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        min-height: 60px;
+      }
+
+      .nav-left,
+      .nav-right {
+        display: flex;
+        align-items: center;
+        flex: 0 0 auto;
+        min-width: 100px;
+      }
+
+      .nav-left {
+        justify-content: flex-start;
+      }
+
+      .nav-right {
+        justify-content: flex-end;
+      }
+
+      .step-indicators {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        flex: 0 0 auto;
+      }
+
+      .step-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: var(--surface-300, #cbd5e1);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+
+        &:hover {
+          transform: scale(1.2);
+        }
+
+        &.active {
+          background-color: var(--primary-color, #0555a6);
+          transform: scale(1.3);
+        }
+
+        &.completed {
+          background-color: var(--primary-color, #0555a6);
+        }
       }
 
       /* Responsive modal sizing */
@@ -241,14 +284,29 @@ import { FormTheme } from '@nodeangularfullstack/shared';
             margin: 0;
             border-radius: 0;
           }
+
+          .p-dialog-content {
+            height: calc(100vh - 60px);
+          }
         }
 
-        .step-navigation {
-          flex-direction: column;
+        .theme-designer-footer {
+          padding: 0.5rem 0.75rem;
+          min-height: 50px;
+        }
 
-          button {
-            width: 100%;
-          }
+        .nav-left,
+        .nav-right {
+          min-width: 80px;
+        }
+
+        .step-indicators {
+          gap: 0.4rem;
+        }
+
+        .step-dot {
+          width: 6px;
+          height: 6px;
         }
       }
     `,
@@ -510,7 +568,7 @@ export class ThemeDesignerModalComponent implements OnInit, OnDestroy {
    * Updates both the stepper index and modal service state.
    */
   protected onNext(): void {
-    if (this.activeStepIndex() < 4) {
+    if (this.activeStepIndex() < 5) {
       this.activeStepIndex.update((i) => i + 1);
       this.modalService.nextStep();
     }
@@ -525,6 +583,52 @@ export class ThemeDesignerModalComponent implements OnInit, OnDestroy {
       this.activeStepIndex.update((i) => i - 1);
       this.modalService.previousStep();
     }
+  }
+
+  /**
+   * Navigates to a specific step by clicking on the dot indicator.
+   * Only allows navigation to completed steps or the current step.
+   * @param stepIndex - Target step index (0-4)
+   */
+  protected goToStep(stepIndex: number): void {
+    const currentStep = this.activeStepIndex();
+
+    // Allow navigation to any previous step or current step
+    if (stepIndex < currentStep) {
+      // Going backward - always allowed
+      this.activeStepIndex.set(stepIndex);
+      this.modalService.goToStep(stepIndex);
+    } else if (stepIndex === currentStep) {
+      // Clicking on current step - do nothing
+      return;
+    } else {
+      // Going forward - check if we can proceed
+      // User must use Next button to proceed forward (validation required)
+      return;
+    }
+  }
+
+  /**
+   * Handles the Save Theme button click on the final step.
+   * Triggers theme save via modal service and closes modal on success.
+   */
+  protected onSave(): void {
+    if (!this.modalService.canProceedToNextStep()) {
+      return;
+    }
+
+    // Call the modal service to save the theme
+    this.modalService.saveTheme().subscribe({
+      next: (savedTheme) => {
+        console.log('Theme saved successfully:', savedTheme);
+        // Notify subscribers that theme was saved (triggers modal close)
+        this.modalService.notifyThemeSaved(savedTheme.id);
+      },
+      error: (error) => {
+        console.error('Failed to save theme:', error);
+        // Error handling is done in the modal service
+      },
+    });
   }
 
   /**

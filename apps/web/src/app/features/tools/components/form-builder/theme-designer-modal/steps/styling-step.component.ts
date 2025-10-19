@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SliderModule } from 'primeng/slider';
 import { InputNumberModule } from 'primeng/inputnumber';
+import { ColorPickerModule } from 'primeng/colorpicker';
+import { SelectModule } from 'primeng/select';
 import { ThemeDesignerModalService } from '../theme-designer-modal.service';
 
 /**
@@ -13,7 +15,14 @@ import { ThemeDesignerModalService } from '../theme-designer-modal.service';
 @Component({
   selector: 'app-styling-step',
   standalone: true,
-  imports: [CommonModule, FormsModule, SliderModule, InputNumberModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    SliderModule,
+    InputNumberModule,
+    ColorPickerModule,
+    SelectModule,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="styling-step">
@@ -152,6 +161,64 @@ import { ThemeDesignerModalService } from '../theme-designer-modal.service';
                 decrementButtonIcon="pi pi-minus"
                 [style]="{ width: '100%' }"
               ></p-inputNumber>
+            </div>
+          </div>
+        </div>
+
+        <!-- Container Controls -->
+        <div class="advanced-controls">
+          <h4 class="advanced-title">
+            <i class="pi pi-box"></i>
+            Form Container
+          </h4>
+          <div class="advanced-grid">
+            <!-- Container Background -->
+            <div class="advanced-field">
+              <label for="containerBackground" class="advanced-label">Background Color</label>
+              <p-colorPicker
+                [(ngModel)]="containerBackgroundValue"
+                inputId="containerBackground"
+                format="hex"
+                [inline]="false"
+                [showTransitionOptions]="'0ms'"
+                appendTo="body"
+              ></p-colorPicker>
+            </div>
+
+            <!-- Container Position -->
+            <div class="advanced-field">
+              <label for="containerPosition" class="advanced-label">Position</label>
+              <p-select
+                [(ngModel)]="containerPositionValue"
+                inputId="containerPosition"
+                [options]="containerPositionOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select position"
+                [style]="{ width: '100%' }"
+              ></p-select>
+            </div>
+          </div>
+
+          <!-- Container Opacity Slider -->
+          <div class="styling-field-group" style="margin-top: 1rem;">
+            <label for="containerOpacity" class="styling-label">
+              <i class="pi pi-circle"></i>
+              Container Opacity
+              <span class="value-badge">{{ (containerOpacityValue * 100).toFixed(0) }}%</span>
+            </label>
+            <p-slider
+              [(ngModel)]="containerOpacityValue"
+              inputId="containerOpacity"
+              [min]="0"
+              [max]="1"
+              [step]="0.05"
+              class="field-slider"
+            ></p-slider>
+            <div class="slider-markers">
+              <span class="marker">0% (Transparent)</span>
+              <span class="marker">50% (Semi)</span>
+              <span class="marker">100% (Solid)</span>
             </div>
           </div>
         </div>
@@ -500,6 +567,15 @@ export class StylingStepComponent {
   protected readonly modalService = inject(ThemeDesignerModalService);
 
   /**
+   * Container position options for dropdown
+   */
+  containerPositionOptions = [
+    { label: 'Center', value: 'center' },
+    { label: 'Left', value: 'left' },
+    { label: 'Full Width', value: 'full-width' },
+  ];
+
+  /**
    * Border radius value with two-way binding to service.
    * Controls the roundness of field corners (0-24px).
    */
@@ -569,5 +645,41 @@ export class StylingStepComponent {
 
   set focusBorderWidthValue(value: number) {
     this.modalService.setFocusBorderWidth(value);
+  }
+
+  /**
+   * Container background color value with two-way binding to service.
+   * Controls the background color of the form container.
+   */
+  get containerBackgroundValue(): string {
+    return this.modalService.getContainerBackground();
+  }
+
+  set containerBackgroundValue(value: string) {
+    this.modalService.setContainerBackground(value);
+  }
+
+  /**
+   * Container opacity value with two-way binding to service.
+   * Controls the transparency of the form container (0-1).
+   */
+  get containerOpacityValue(): number {
+    return this.modalService.getContainerOpacity();
+  }
+
+  set containerOpacityValue(value: number) {
+    this.modalService.setContainerOpacity(value);
+  }
+
+  /**
+   * Container position value with two-way binding to service.
+   * Controls the alignment of the form container.
+   */
+  get containerPositionValue(): 'center' | 'top' | 'left' | 'full-width' {
+    return this.modalService.getContainerPosition();
+  }
+
+  set containerPositionValue(value: 'center' | 'top' | 'left' | 'full-width') {
+    this.modalService.setContainerPosition(value);
   }
 }

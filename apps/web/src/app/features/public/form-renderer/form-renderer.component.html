@@ -110,7 +110,7 @@
 
     <!-- Form Content -->
     @else if (formGroup && schema) {
-      <div class="max-w-6xl mx-auto">
+      <div [class]="containerPositionClass()">
         <!-- Preview Mode Banner -->
         @if (isPreview) {
           <div

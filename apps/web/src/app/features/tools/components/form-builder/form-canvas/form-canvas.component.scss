@@ -1,19 +1,19 @@
 // Form Canvas Container Styles with Theme Support (Story 24.7)
 
 .form-canvas {
+  position: relative;
   min-height: 400px;
-  // Apply theme container background and opacity (AC #3)
-  background-color: var(--theme-container-background, transparent);
-  opacity: var(--theme-container-opacity, 1);
-  transition:
-    background-color 0.2s ease,
-    opacity 0.2s ease;
+  // Form builder canvas should have neutral background for editing
+  // Background image should NOT appear in the builder, only in preview/published form
+  background-color: transparent;
+  transition: background-color 0.2s ease;
 }
 
 // Canvas background theming class
+// Background image should NOT appear in builder, only in preview/published form
 .theme-form-canvas-background {
+  position: relative;
   background-color: var(--theme-container-background, #f9fafb);
-  opacity: var(--theme-container-opacity, 1);
 }
 
 .drop-zone {

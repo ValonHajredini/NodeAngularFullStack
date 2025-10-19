@@ -355,6 +355,29 @@ export class FormsApiService {
   }
 
   /**
+   * Uploads a theme thumbnail image to DigitalOcean Spaces.
+   * Returns the public URL of the uploaded thumbnail.
+   * @param file - Image file to upload (PNG, JPG, WebP)
+   * @returns Observable containing the thumbnail URL
+   * @throws {HttpErrorResponse} When upload fails or file validation fails
+   * @example
+   * const file = event.target.files[0];
+   * formsApiService.uploadThumbnail(file)
+   *   .subscribe(url => console.log('Thumbnail URL:', url));
+   */
+  uploadThumbnail(file: File): Observable<string> {
+    const formData = new FormData();
+    formData.append('thumbnail', file);
+
+    return this.apiClient
+      .post<ApiResponse<{ thumbnailUrl: string }>>('/themes/upload-thumbnail', formData)
+      .pipe(
+        map((response) => response.data!.thumbnailUrl),
+        catchError((error) => throwError(() => error)),
+      );
+  }
+
+  /**
    * Converts theme date strings to Date objects.
    * @param theme - Theme with string dates
    * @returns Theme with Date objects

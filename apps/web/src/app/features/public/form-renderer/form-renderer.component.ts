@@ -108,6 +108,28 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   private readonly _themeLoaded = signal<boolean>(false);
   readonly themeLoaded = this._themeLoaded.asReadonly();
 
+  // Current theme signal (Story 24.9)
+  private readonly _currentTheme = signal<FormTheme | null>(null);
+
+  // Computed container position class based on theme (Story 24.9)
+  readonly containerPositionClass = computed(() => {
+    const theme = this._currentTheme();
+    if (!theme) {
+      return 'form-container-center'; // Default to center when no theme
+    }
+
+    const position = theme.themeConfig.desktop.containerPosition;
+    switch (position) {
+      case 'left':
+        return 'form-container-left';
+      case 'full-width':
+        return 'form-container-full-width';
+      case 'center':
+      default:
+        return 'form-container-center';
+    }
+  });
+
   // Step Form Navigation Signals
   private readonly _formSchemaSignal = signal<FormSchema | null>(null);
   protected readonly isStepFormEnabled = computed(
@@ -296,6 +318,7 @@ export class FormRendererComponent implements OnInit, OnDestroy {
    * Applies theme CSS if theme is provided, otherwise clears theme CSS.
    * Handles deleted/missing themes gracefully (AC: 5).
    * Story 20.7: Public Form Rendering with Themes
+   * Story 24.9: Store theme in signal for container position class
    * @param theme - Optional theme object to apply
    * @param themeIdFromSettings - Optional theme ID from form settings (for deleted theme detection)
    */
@@ -305,11 +328,13 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   ): void {
     // If theme is provided, apply it
     if (theme) {
+      this._currentTheme.set(theme); // Store theme in signal (Story 24.9)
       this.themePreviewService.applyThemeCss(theme);
       this._themeLoaded.set(true);
       console.log('[Theme] Applied theme:', theme.name);
     } else {
       // No theme available - clear any existing theme CSS
+      this._currentTheme.set(null); // Clear theme signal (Story 24.9)
       this.themePreviewService.clearThemeCss();
       this._themeLoaded.set(false);
 

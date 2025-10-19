@@ -40,6 +40,8 @@ export class ThemeDesignerModalService {
   private readonly gradientAngle = signal(45);
   private readonly gradientPosition = signal('center');
   private readonly backgroundImageUrl = signal('');
+  private readonly backgroundImageOpacity = signal(1);
+  private readonly backgroundImageBlur = signal(0);
 
   // Step 3: Typography
   private readonly headingFont = signal('Roboto');
@@ -96,6 +98,8 @@ export class ThemeDesignerModalService {
           backgroundColor: bgValue,
           backgroundImageUrl,
           backgroundImagePosition,
+          backgroundImageOpacity: this.backgroundImageOpacity(),
+          backgroundImageBlur: this.backgroundImageBlur(),
           textColorPrimary: this.textColorPrimary(),
           textColorSecondary: this.textColorSecondary(),
           labelColor: this.labelColor(),
@@ -129,7 +133,9 @@ export class ThemeDesignerModalService {
         return !!this.headingFont() && !!this.bodyFont();
       case 3: // Step 4: Styling
         return true; // Styling defaults are valid
-      case 4: // Step 5: Preview & Save
+      case 4: // Step 5: Visual Preview
+        return true; // Visual preview is always valid (no user input required)
+      case 5: // Step 6: Preview & Save
         return this.themeName().trim().length > 0 && this.themeName().length <= 50;
       default:
         return false;
@@ -200,6 +206,12 @@ export class ThemeDesignerModalService {
   getBackgroundImageUrl = () => this.backgroundImageUrl();
   setBackgroundImageUrl = (value: string) => this.backgroundImageUrl.set(value);
 
+  getBackgroundImageOpacity = () => this.backgroundImageOpacity();
+  setBackgroundImageOpacity = (value: number) => this.backgroundImageOpacity.set(value);
+
+  getBackgroundImageBlur = () => this.backgroundImageBlur();
+  setBackgroundImageBlur = (value: number) => this.backgroundImageBlur.set(value);
+
   // Typography getters/setters
   getHeadingFont = () => this.headingFont();
   setHeadingFont = (value: string) => this.headingFont.set(value);
@@ -232,9 +244,24 @@ export class ThemeDesignerModalService {
   getFocusBorderWidth = () => this.focusBorderWidth();
   setFocusBorderWidth = (value: number) => this.focusBorderWidth.set(value);
 
+  // Container getters/setters
+  getContainerBackground = () => this.containerBackground();
+  setContainerBackground = (value: string) => this.containerBackground.set(value);
+
+  getContainerOpacity = () => this.containerOpacity();
+  setContainerOpacity = (value: number) => this.containerOpacity.set(value);
+
+  getContainerPosition = () => this.containerPosition();
+  setContainerPosition = (value: 'center' | 'top' | 'left' | 'full-width') =>
+    this.containerPosition.set(value);
+
   // Theme name getters/setters
   getThemeName = () => this.themeName();
   setThemeName = (value: string) => this.themeName.set(value);
+
+  // Thumbnail getters/setters
+  getThumbnailUrl = () => this.thumbnailUrl();
+  setThumbnailUrl = (value: string) => this.thumbnailUrl.set(value);
 
   /**
    * Advances to the next wizard step.
@@ -242,7 +269,7 @@ export class ThemeDesignerModalService {
    */
   nextStep(): void {
     if (this.canProceedToNextStep()) {
-      this.step.update((s) => Math.min(s + 1, 4));
+      this.step.update((s) => Math.min(s + 1, 5));
     }
   }
 
@@ -252,6 +279,17 @@ export class ThemeDesignerModalService {
    */
   previousStep(): void {
     this.step.update((s) => Math.max(0, s - 1));
+  }
+
+  /**
+   * Navigates to a specific step.
+   * Used for dot indicator navigation (allows going back to previous steps).
+   * @param stepIndex - Target step index (0-5)
+   */
+  goToStep(stepIndex: number): void {
+    if (stepIndex >= 0 && stepIndex <= 5) {
+      this.step.set(stepIndex);
+    }
   }
 
   /**
@@ -327,6 +365,8 @@ export class ThemeDesignerModalService {
     } else if (desktop.backgroundImageUrl) {
       this.backgroundType.set('image');
       this.backgroundImageUrl.set(desktop.backgroundImageUrl);
+      this.backgroundImageOpacity.set(desktop.backgroundImageOpacity ?? 1);
+      this.backgroundImageBlur.set(desktop.backgroundImageBlur ?? 0);
     } else {
       this.backgroundType.set('solid');
       this.backgroundColor.set(bgColor);
@@ -406,6 +446,8 @@ export class ThemeDesignerModalService {
     this.gradientAngle.set(45);
     this.gradientPosition.set('center');
     this.backgroundImageUrl.set('');
+    this.backgroundImageOpacity.set(1);
+    this.backgroundImageBlur.set(0);
     this.headingFont.set('Roboto');
     this.bodyFont.set('Open Sans');
     this.headingFontSize.set(24);

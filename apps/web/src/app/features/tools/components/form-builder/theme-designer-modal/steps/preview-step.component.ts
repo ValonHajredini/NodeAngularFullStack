@@ -1,4 +1,13 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  inject,
+  signal,
+  computed,
+  ElementRef,
+  ViewChild,
+  Input,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
@@ -6,6 +15,7 @@ import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { firstValueFrom } from 'rxjs';
 import { ThemeDesignerModalService } from '../theme-designer-modal.service';
+import { FormsApiService } from '../../forms-api.service';
 
 /**
  * Step 5: Preview & Save
@@ -19,284 +29,338 @@ import { ThemeDesignerModalService } from '../theme-designer-modal.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="preview-step">
-      <div class="step-header">
-        <h3 class="step-title">Preview & Save Theme</h3>
-        <p class="step-description">Review your theme and save it for use in your forms.</p>
-      </div>
+      @if (!visualPreviewOnly) {
+        <div class="step-header">
+          <h3 class="step-title">Preview & Save Theme</h3>
+          <p class="step-description">Review your theme and save it for use in your forms.</p>
+        </div>
+      } @else {
+        <div class="step-header">
+          <h3 class="step-title">Visual Preview</h3>
+          <p class="step-description">See how your theme looks in a sample form.</p>
+        </div>
+      }
 
-      <!-- Theme Name Input -->
-      <div class="theme-name-section">
-        <label for="themeName" class="theme-name-label">
-          <i class="pi pi-tag"></i>
-          Theme Name
-        </label>
-        <input
-          pInputText
-          [(ngModel)]="themeNameValue"
-          inputId="themeName"
-          placeholder="e.g., Ocean Blue, Sunset Orange, Professional Gray"
-          [maxlength]="50"
-          class="theme-name-input"
-        />
-        <small class="theme-name-hint"
-          >Give your theme a memorable name ({{ themeNameValue.length }}/50 characters)</small
-        >
+      @if (!visualPreviewOnly) {
+        <!-- Theme Name Input -->
+        <div class="theme-name-section">
+          <label for="themeName" class="theme-name-label">
+            <i class="pi pi-tag"></i>
+            Theme Name
+          </label>
+          <input
+            pInputText
+            [(ngModel)]="themeNameValue"
+            inputId="themeName"
+            placeholder="e.g., Ocean Blue, Sunset Orange, Professional Gray"
+            [maxlength]="50"
+            class="theme-name-input"
+          />
+          <small class="theme-name-hint"
+            >Give your theme a memorable name ({{ themeNameValue.length }}/50 characters)</small
+          >
 
-        @if (showNameError()) {
-          <div class="error-message">
-            <i class="pi pi-exclamation-circle"></i>
-            <span>Theme name is required (minimum 3 characters)</span>
-          </div>
-        }
-      </div>
-
-      <!-- Theme Summary -->
-      <div class="theme-summary">
-        <h4 class="summary-title">
-          <i class="pi pi-list"></i>
-          Theme Summary
-        </h4>
-
-        <div class="summary-grid">
-          <!-- Colors -->
-          <div class="summary-card">
-            <div class="summary-header">
-              <i class="pi pi-palette"></i>
-              <span>Colors</span>
+          @if (showNameError()) {
+            <div class="error-message">
+              <i class="pi pi-exclamation-circle"></i>
+              <span>Theme name is required (minimum 3 characters)</span>
             </div>
-            <div class="summary-items">
-              <div class="summary-item">
-                <span class="item-label">Primary:</span>
-                <div class="color-chip-wrapper">
-                  <div
-                    class="color-chip"
-                    [style.background-color]="modalService.getPrimaryColor()"
-                  ></div>
-                  <span class="item-value">{{ modalService.getPrimaryColor() }}</span>
-                </div>
-              </div>
-              <div class="summary-item">
-                <span class="item-label">Secondary:</span>
-                <div class="color-chip-wrapper">
-                  <div
-                    class="color-chip"
-                    [style.background-color]="modalService.getSecondaryColor()"
-                  ></div>
-                  <span class="item-value">{{ modalService.getSecondaryColor() }}</span>
-                </div>
-              </div>
-              <div class="summary-item">
-                <span class="item-label">Label:</span>
-                <div class="color-chip-wrapper">
-                  <div
-                    class="color-chip"
-                    [style.background-color]="modalService.getLabelColor()"
-                  ></div>
-                  <span class="item-value">{{ modalService.getLabelColor() }}</span>
-                </div>
-              </div>
-              <div class="summary-item">
-                <span class="item-label">Input BG:</span>
-                <div class="color-chip-wrapper">
-                  <div
-                    class="color-chip"
-                    [style.background-color]="modalService.getInputBackgroundColor()"
-                  ></div>
-                  <span class="item-value">{{ modalService.getInputBackgroundColor() }}</span>
-                </div>
-              </div>
-              <div class="summary-item">
-                <span class="item-label">Input Text:</span>
-                <div class="color-chip-wrapper color-chip-wrapper--text">
-                  <div
-                    class="color-chip color-chip--input-text"
-                    [style.background-color]="modalService.getInputBackgroundColor()"
-                    [style.color]="modalService.getInputTextColor()"
-                  >
-                    Aa
-                  </div>
-                  <span class="item-value">{{ modalService.getInputTextColor() }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          }
+        </div>
 
-          <!-- Background -->
-          <div class="summary-card">
-            <div class="summary-header">
-              <i class="pi pi-image"></i>
-              <span>Background</span>
-            </div>
-            <div class="summary-items">
-              <div class="summary-item">
-                <span class="item-label">Type:</span>
-                <span class="item-value">{{ formatBackgroundType() }}</span>
-              </div>
-              @if (modalService.getBackgroundType() !== 'solid') {
-                <div class="summary-item">
-                  <span class="item-label">Preview:</span>
-                  <div class="background-preview" [style.background]="getBackgroundPreview()"></div>
+        <!-- Thumbnail Upload Section -->
+        <div class="thumbnail-upload-section">
+          <label class="thumbnail-label">
+            <i class="pi pi-image"></i>
+            Theme Thumbnail
+          </label>
+
+          <div class="thumbnail-upload-container">
+            <!-- Thumbnail Preview -->
+            <div class="thumbnail-preview">
+              @if (thumbnailPreview()) {
+                <img [src]="thumbnailPreview()" alt="Theme thumbnail preview" />
+                <button
+                  type="button"
+                  class="remove-thumbnail-btn"
+                  (click)="removeThumbnail()"
+                  title="Remove thumbnail"
+                >
+                  <i class="pi pi-times"></i>
+                </button>
+              } @else {
+                <div class="thumbnail-placeholder">
+                  <i class="pi pi-image"></i>
+                  <span>No thumbnail</span>
                 </div>
               }
             </div>
-          </div>
 
-          <!-- Typography -->
-          <div class="summary-card">
-            <div class="summary-header">
-              <i class="pi pi-book"></i>
-              <span>Typography</span>
-            </div>
-            <div class="summary-items">
-              <div class="summary-item">
-                <span class="item-label">Heading:</span>
-                <span class="item-value"
-                  >{{ extractFontName(modalService.getHeadingFont()) }} ({{
-                    modalService.getHeadingFontSize()
-                  }}px)</span
-                >
-              </div>
-              <div class="summary-item">
-                <span class="item-label">Body:</span>
-                <span class="item-value"
-                  >{{ extractFontName(modalService.getBodyFont()) }} ({{
-                    modalService.getBodyFontSize()
-                  }}px)</span
-                >
-              </div>
+            <!-- Upload Button -->
+            <div class="thumbnail-upload-actions">
+              <input
+                #fileInput
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                (change)="onThumbnailSelect($event)"
+                style="display: none"
+              />
+              <button
+                pButton
+                type="button"
+                [label]="isUploadingThumbnail() ? 'Uploading...' : 'Upload Thumbnail'"
+                [icon]="isUploadingThumbnail() ? 'pi pi-spin pi-spinner' : 'pi pi-upload'"
+                class="p-button-outlined"
+                [disabled]="isUploadingThumbnail()"
+                (click)="fileInput.click()"
+              ></button>
+              <small class="upload-hint">
+                PNG, JPG, or WebP (max 2MB, recommended 300x200px)
+              </small>
             </div>
           </div>
 
-          <!-- Field Styling -->
-          <div class="summary-card">
-            <div class="summary-header">
-              <i class="pi pi-stop"></i>
-              <span>Field Styling</span>
+          @if (thumbnailError()) {
+            <div class="error-message">
+              <i class="pi pi-exclamation-circle"></i>
+              <span>{{ thumbnailError() }}</span>
             </div>
-            <div class="summary-items">
-              <div class="summary-item">
-                <span class="item-label">Border Radius:</span>
-                <span class="item-value">{{ modalService.getBorderRadius() }}px</span>
+          }
+        </div>
+
+        <!-- Theme Summary -->
+        <div class="theme-summary">
+          <h4 class="summary-title">
+            <i class="pi pi-list"></i>
+            Theme Summary
+          </h4>
+
+          <div class="summary-grid">
+            <!-- Colors -->
+            <div class="summary-card">
+              <div class="summary-header">
+                <i class="pi pi-palette"></i>
+                <span>Colors</span>
               </div>
-              <div class="summary-item">
-                <span class="item-label">Padding:</span>
-                <span class="item-value">{{ modalService.getFieldPadding() }}px</span>
+              <div class="summary-items">
+                <div class="summary-item">
+                  <span class="item-label">Primary:</span>
+                  <div class="color-chip-wrapper">
+                    <div
+                      class="color-chip"
+                      [style.background-color]="modalService.getPrimaryColor()"
+                    ></div>
+                    <span class="item-value">{{ modalService.getPrimaryColor() }}</span>
+                  </div>
+                </div>
+                <div class="summary-item">
+                  <span class="item-label">Secondary:</span>
+                  <div class="color-chip-wrapper">
+                    <div
+                      class="color-chip"
+                      [style.background-color]="modalService.getSecondaryColor()"
+                    ></div>
+                    <span class="item-value">{{ modalService.getSecondaryColor() }}</span>
+                  </div>
+                </div>
+                <div class="summary-item">
+                  <span class="item-label">Label:</span>
+                  <div class="color-chip-wrapper">
+                    <div
+                      class="color-chip"
+                      [style.background-color]="modalService.getLabelColor()"
+                    ></div>
+                    <span class="item-value">{{ modalService.getLabelColor() }}</span>
+                  </div>
+                </div>
+                <div class="summary-item">
+                  <span class="item-label">Input BG:</span>
+                  <div class="color-chip-wrapper">
+                    <div
+                      class="color-chip"
+                      [style.background-color]="modalService.getInputBackgroundColor()"
+                    ></div>
+                    <span class="item-value">{{ modalService.getInputBackgroundColor() }}</span>
+                  </div>
+                </div>
+                <div class="summary-item">
+                  <span class="item-label">Input Text:</span>
+                  <div class="color-chip-wrapper color-chip-wrapper--text">
+                    <div
+                      class="color-chip color-chip--input-text"
+                      [style.background-color]="modalService.getInputBackgroundColor()"
+                      [style.color]="modalService.getInputTextColor()"
+                    >
+                      Aa
+                    </div>
+                    <span class="item-value">{{ modalService.getInputTextColor() }}</span>
+                  </div>
+                </div>
               </div>
-              <div class="summary-item">
-                <span class="item-label">Spacing:</span>
-                <span class="item-value">{{ modalService.getFieldSpacing() }}px</span>
+            </div>
+
+            <!-- Background -->
+            <div class="summary-card">
+              <div class="summary-header">
+                <i class="pi pi-image"></i>
+                <span>Background</span>
               </div>
-              <div class="summary-item">
-                <span class="item-label">Border Width:</span>
-                <span class="item-value">{{ modalService.getBorderWidth() }}px</span>
+              <div class="summary-items">
+                <div class="summary-item">
+                  <span class="item-label">Type:</span>
+                  <span class="item-value">{{ formatBackgroundType() }}</span>
+                </div>
+                @if (modalService.getBackgroundType() !== 'solid') {
+                  <div class="summary-item">
+                    <span class="item-label">Preview:</span>
+                    <div
+                      class="background-preview"
+                      [style.background]="getBackgroundPreview()"
+                    ></div>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- Typography -->
+            <div class="summary-card">
+              <div class="summary-header">
+                <i class="pi pi-book"></i>
+                <span>Typography</span>
+              </div>
+              <div class="summary-items">
+                <div class="summary-item">
+                  <span class="item-label">Heading:</span>
+                  <span class="item-value"
+                    >{{ extractFontName(modalService.getHeadingFont()) }} ({{
+                      modalService.getHeadingFontSize()
+                    }}px)</span
+                  >
+                </div>
+                <div class="summary-item">
+                  <span class="item-label">Body:</span>
+                  <span class="item-value"
+                    >{{ extractFontName(modalService.getBodyFont()) }} ({{
+                      modalService.getBodyFontSize()
+                    }}px)</span
+                  >
+                </div>
+              </div>
+            </div>
+
+            <!-- Field Styling -->
+            <div class="summary-card">
+              <div class="summary-header">
+                <i class="pi pi-stop"></i>
+                <span>Field Styling</span>
+              </div>
+              <div class="summary-items">
+                <div class="summary-item">
+                  <span class="item-label">Border Radius:</span>
+                  <span class="item-value">{{ modalService.getBorderRadius() }}px</span>
+                </div>
+                <div class="summary-item">
+                  <span class="item-label">Padding:</span>
+                  <span class="item-value">{{ modalService.getFieldPadding() }}px</span>
+                </div>
+                <div class="summary-item">
+                  <span class="item-label">Spacing:</span>
+                  <span class="item-value">{{ modalService.getFieldSpacing() }}px</span>
+                </div>
+                <div class="summary-item">
+                  <span class="item-label">Border Width:</span>
+                  <span class="item-value">{{ modalService.getBorderWidth() }}px</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      }
 
-      <!-- Visual Theme Preview -->
-      <div class="visual-preview">
-        <h4 class="preview-title">
-          <i class="pi pi-eye"></i>
-          Visual Preview
-        </h4>
+      @if (visualPreviewOnly) {
+        <!-- Visual Theme Preview -->
+        <div class="visual-preview">
+          <h4 class="preview-title">
+            <i class="pi pi-eye"></i>
+            Visual Preview
+          </h4>
 
-        <div class="preview-container" [style.background]="getBackgroundPreview()">
-          <div class="preview-form">
-            <h2
-              class="preview-form-title"
-              [style.font-family]="modalService.getHeadingFont()"
-              [style.font-size.px]="modalService.getHeadingFontSize()"
-              [style.color]="modalService.getPrimaryColor()"
-            >
-              Sample Form Title
-            </h2>
-
-            <div
-              class="preview-form-field"
-              [style.margin-bottom.px]="modalService.getFieldSpacing()"
-            >
-              <label
-                class="preview-form-label"
-                [style.font-family]="modalService.getBodyFont()"
-                [style.font-size.px]="modalService.getBodyFontSize()"
-                [style.margin-bottom.px]="modalService.getLabelSpacing()"
-                [style.color]="modalService.getLabelColor()"
+          <div class="preview-container" [style.background]="getBackgroundPreview()">
+            <div class="preview-form">
+              <h2
+                class="preview-form-title"
+                [style.font-family]="modalService.getHeadingFont()"
+                [style.font-size.px]="modalService.getHeadingFontSize()"
+                [style.color]="modalService.getPrimaryColor()"
               >
-                Full Name
-              </label>
-              <input
-                type="text"
-                class="preview-form-input"
-                placeholder="John Doe"
+                Sample Form Title
+              </h2>
+
+              <div
+                class="preview-form-field"
+                [style.margin-bottom.px]="modalService.getFieldSpacing()"
+              >
+                <label
+                  class="preview-form-label"
+                  [style.font-family]="modalService.getBodyFont()"
+                  [style.font-size.px]="modalService.getBodyFontSize()"
+                  [style.margin-bottom.px]="modalService.getLabelSpacing()"
+                  [style.color]="modalService.getLabelColor()"
+                >
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  class="preview-form-input"
+                  placeholder="John Doe"
+                  [style.font-family]="modalService.getBodyFont()"
+                  [style.font-size.px]="modalService.getBodyFontSize()"
+                  [style.border-radius.px]="modalService.getBorderRadius()"
+                  [style.padding.px]="modalService.getFieldPadding()"
+                  [style.border-width.px]="modalService.getBorderWidth()"
+                  [style.background-color]="modalService.getInputBackgroundColor()"
+                  [style.color]="modalService.getInputTextColor()"
+                />
+              </div>
+
+              <div class="preview-form-field">
+                <label
+                  class="preview-form-label"
+                  [style.font-family]="modalService.getBodyFont()"
+                  [style.font-size.px]="modalService.getBodyFontSize()"
+                  [style.margin-bottom.px]="modalService.getLabelSpacing()"
+                  [style.color]="modalService.getLabelColor()"
+                >
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  class="preview-form-input"
+                  placeholder="john@example.com"
+                  [style.font-family]="modalService.getBodyFont()"
+                  [style.font-size.px]="modalService.getBodyFontSize()"
+                  [style.border-radius.px]="modalService.getBorderRadius()"
+                  [style.padding.px]="modalService.getFieldPadding()"
+                  [style.border-width.px]="modalService.getBorderWidth()"
+                  [style.background-color]="modalService.getInputBackgroundColor()"
+                  [style.color]="modalService.getInputTextColor()"
+                />
+              </div>
+
+              <button
+                class="preview-form-button"
+                [style.background-color]="modalService.getPrimaryColor()"
                 [style.font-family]="modalService.getBodyFont()"
                 [style.font-size.px]="modalService.getBodyFontSize()"
                 [style.border-radius.px]="modalService.getBorderRadius()"
                 [style.padding.px]="modalService.getFieldPadding()"
-                [style.border-width.px]="modalService.getBorderWidth()"
-                [style.background-color]="modalService.getInputBackgroundColor()"
-                [style.color]="modalService.getInputTextColor()"
-              />
-            </div>
-
-            <div class="preview-form-field">
-              <label
-                class="preview-form-label"
-                [style.font-family]="modalService.getBodyFont()"
-                [style.font-size.px]="modalService.getBodyFontSize()"
-                [style.margin-bottom.px]="modalService.getLabelSpacing()"
-                [style.color]="modalService.getLabelColor()"
               >
-                Email Address
-              </label>
-              <input
-                type="email"
-                class="preview-form-input"
-                placeholder="john@example.com"
-                [style.font-family]="modalService.getBodyFont()"
-                [style.font-size.px]="modalService.getBodyFontSize()"
-                [style.border-radius.px]="modalService.getBorderRadius()"
-                [style.padding.px]="modalService.getFieldPadding()"
-                [style.border-width.px]="modalService.getBorderWidth()"
-                [style.background-color]="modalService.getInputBackgroundColor()"
-                [style.color]="modalService.getInputTextColor()"
-              />
+                Submit
+              </button>
             </div>
-
-            <button
-              class="preview-form-button"
-              [style.background-color]="modalService.getPrimaryColor()"
-              [style.font-family]="modalService.getBodyFont()"
-              [style.font-size.px]="modalService.getBodyFontSize()"
-              [style.border-radius.px]="modalService.getBorderRadius()"
-              [style.padding.px]="modalService.getFieldPadding()"
-            >
-              Submit
-            </button>
           </div>
         </div>
-      </div>
-
-      <!-- Save Actions -->
-      <div class="save-actions">
-        <button
-          pButton
-          label="Save Theme"
-          icon="pi pi-save"
-          class="save-button"
-          [disabled]="!canSave() || isSaving()"
-          [loading]="isSaving()"
-          (click)="handleSave()"
-        ></button>
-
-        @if (saveError()) {
-          <div class="save-error">
-            <i class="pi pi-exclamation-triangle"></i>
-            <span>{{ saveError() }}</span>
-          </div>
-        }
-      </div>
+      }
     </div>
   `,
   styles: [
@@ -375,6 +439,108 @@ import { ThemeDesignerModalService } from '../theme-designer-modal.service';
 
       .error-message i {
         color: #dc2626;
+      }
+
+      /* Thumbnail Upload Section */
+      .thumbnail-upload-section {
+        margin-bottom: 2rem;
+        padding: 1.5rem;
+        background: #f9fafb;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+      }
+
+      .thumbnail-label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 500;
+        font-size: 0.875rem;
+        color: #374151;
+        margin-bottom: 1rem;
+      }
+
+      .thumbnail-label i {
+        color: #6366f1;
+      }
+
+      .thumbnail-upload-container {
+        display: flex;
+        gap: 1.5rem;
+        align-items: flex-start;
+      }
+
+      .thumbnail-preview {
+        width: 200px;
+        height: 133px;
+        border-radius: 8px;
+        border: 2px dashed #d1d5db;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: white;
+        position: relative;
+        flex-shrink: 0;
+      }
+
+      .thumbnail-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .thumbnail-placeholder {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        color: #9ca3af;
+      }
+
+      .thumbnail-placeholder i {
+        font-size: 2rem;
+      }
+
+      .thumbnail-placeholder span {
+        font-size: 0.875rem;
+      }
+
+      .remove-thumbnail-btn {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        width: 1.75rem;
+        height: 1.75rem;
+        border-radius: 50%;
+        background: rgba(220, 38, 38, 0.9);
+        color: white;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s ease;
+      }
+
+      .remove-thumbnail-btn:hover {
+        background: rgba(185, 28, 28, 0.95);
+      }
+
+      .remove-thumbnail-btn i {
+        font-size: 0.875rem;
+      }
+
+      .thumbnail-upload-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        flex: 1;
+      }
+
+      .upload-hint {
+        font-size: 0.75rem;
+        color: #9ca3af;
       }
 
       /* Theme Summary */
@@ -636,6 +802,15 @@ import { ThemeDesignerModalService } from '../theme-designer-modal.service';
           padding: 1.5rem;
         }
 
+        .thumbnail-upload-container {
+          flex-direction: column;
+        }
+
+        .thumbnail-preview {
+          width: 100%;
+          height: 200px;
+        }
+
         .summary-grid {
           grid-template-columns: 1fr;
         }
@@ -653,10 +828,35 @@ import { ThemeDesignerModalService } from '../theme-designer-modal.service';
 })
 export class PreviewStepComponent {
   protected readonly modalService = inject(ThemeDesignerModalService);
+  private readonly formsApiService = inject(FormsApiService);
+
+  /**
+   * When true, only show the visual preview section (for step 4).
+   * When false, show all sections including save functionality (for step 5).
+   */
+  @Input() visualPreviewOnly = false;
+
+  /** ViewChild reference to hidden file input */
+  @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 
   protected readonly isSaving = signal(false);
   protected readonly saveError = signal<string | null>(null);
   protected readonly showNameError = signal(false);
+  protected readonly isUploadingThumbnail = signal(false);
+  protected readonly thumbnailPreview = computed(() => {
+    const thumbnailUrl = this.modalService.getThumbnailUrl();
+    // Only show preview if it's not the placeholder
+    return thumbnailUrl && thumbnailUrl !== 'https://via.placeholder.com/300x200'
+      ? thumbnailUrl
+      : null;
+  });
+  protected readonly thumbnailError = signal<string | null>(null);
+
+  /** Maximum file size in bytes (2MB) */
+  private readonly MAX_FILE_SIZE = 2 * 1024 * 1024;
+
+  /** Allowed image MIME types */
+  private readonly ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
 
   /**
    * Theme name value with two-way binding to service.
@@ -725,6 +925,64 @@ export class PreviewStepComponent {
     }
 
     return '#f3f4f6';
+  }
+
+  /**
+   * Handles thumbnail file selection.
+   * Validates file type and size, uploads to backend, and updates preview with returned URL.
+   * @param event - File input change event
+   */
+  protected async onThumbnailSelect(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    // Reset error state
+    this.thumbnailError.set(null);
+
+    // Validate file type
+    if (!this.ALLOWED_TYPES.includes(file.type)) {
+      this.thumbnailError.set('Invalid file type. Please upload a PNG, JPG, or WebP image.');
+      input.value = '';
+      return;
+    }
+
+    // Validate file size
+    if (file.size > this.MAX_FILE_SIZE) {
+      this.thumbnailError.set('File size exceeds 2MB. Please upload a smaller image.');
+      input.value = '';
+      return;
+    }
+
+    try {
+      // Upload thumbnail to backend
+      this.isUploadingThumbnail.set(true);
+      const thumbnailUrl = await firstValueFrom(this.formsApiService.uploadThumbnail(file));
+
+      // Update service with the returned URL (preview will update automatically via computed signal)
+      this.modalService.setThumbnailUrl(thumbnailUrl);
+
+      console.log('Thumbnail uploaded successfully:', thumbnailUrl);
+    } catch (error) {
+      console.error('Failed to upload thumbnail:', error);
+      this.thumbnailError.set('Failed to upload image. Please try again.');
+    } finally {
+      this.isUploadingThumbnail.set(false);
+      // Clear input to allow re-uploading same file
+      input.value = '';
+    }
+  }
+
+  /**
+   * Removes the current thumbnail.
+   * Resets thumbnail URL to default placeholder (preview will update automatically).
+   */
+  protected removeThumbnail(): void {
+    this.thumbnailError.set(null);
+    this.modalService.setThumbnailUrl('https://via.placeholder.com/300x200');
   }
 
   /**

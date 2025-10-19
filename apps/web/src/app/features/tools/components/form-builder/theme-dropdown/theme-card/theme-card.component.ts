@@ -25,16 +25,26 @@ import { FormTheme } from '@nodeangularfullstack/shared';
       [attr.aria-label]="'Select ' + theme.name + ' theme'"
     >
       <div class="theme-thumbnail">
+        <!-- Always render img, show skeleton overlay while loading -->
         <img
-          *ngIf="imageLoaded; else skeleton"
           [src]="theme.thumbnailUrl"
           [alt]="theme.name"
+          [class.loading]="!imageLoaded"
           (load)="imageLoaded = true"
+          (error)="imageLoadError = true"
           loading="lazy"
         />
-        <ng-template #skeleton>
+
+        <!-- Skeleton overlay shown while image is loading -->
+        <div *ngIf="!imageLoaded && !imageLoadError" class="skeleton-overlay">
           <p-skeleton width="100%" height="112px" />
-        </ng-template>
+        </div>
+
+        <!-- Fallback placeholder for failed images -->
+        <div *ngIf="imageLoadError" class="image-error-placeholder">
+          <i class="pi pi-image"></i>
+          <span>No thumbnail</span>
+        </div>
 
         <!-- Active theme indicator -->
         <div *ngIf="isActive" class="active-indicator">
@@ -101,6 +111,25 @@ import { FormTheme } from '@nodeangularfullstack/shared';
         @apply rounded-md overflow-hidden mb-1.5 relative;
         height: 112px;
       }
+      .theme-thumbnail img {
+        @apply w-full h-full object-cover;
+      }
+      .theme-thumbnail img.loading {
+        opacity: 0;
+      }
+      .skeleton-overlay {
+        @apply absolute inset-0 z-0;
+      }
+      .image-error-placeholder {
+        @apply absolute inset-0 flex flex-col items-center justify-center bg-gray-100 text-gray-400;
+      }
+      .image-error-placeholder i {
+        font-size: 2rem;
+        margin-bottom: 0.25rem;
+      }
+      .image-error-placeholder span {
+        font-size: 0.75rem;
+      }
       .active-indicator {
         @apply absolute top-2 right-2 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg;
         background-color: var(--theme-primary-color, #3b82f6);
@@ -125,9 +154,6 @@ import { FormTheme } from '@nodeangularfullstack/shared';
         to {
           transform: scale(1);
         }
-      }
-      .theme-thumbnail img {
-        @apply w-full h-full object-cover;
       }
       .theme-header {
         @apply flex items-center justify-between mb-1;
@@ -188,6 +214,9 @@ export class ThemeCardComponent {
 
   /** Flag to track if image has loaded */
   imageLoaded = false;
+
+  /** Flag to track if image failed to load */
+  imageLoadError = false;
 
   /**
    * Determines if the current user can edit/delete this theme.

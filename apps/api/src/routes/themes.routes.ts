@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { themesController } from '../controllers/themes.controller';
 import { AuthMiddleware } from '../middleware/auth.middleware';
 import {
@@ -12,6 +13,100 @@ import {
  * Defines all CRUD endpoints for theme management with proper validation and middleware.
  */
 const router = Router();
+
+/**
+ * Multer configuration for theme thumbnail uploads.
+ * Handles multipart/form-data file uploads with validation.
+ */
+const thumbnailUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 2 * 1024 * 1024, // 2MB limit (smaller than avatars)
+    files: 1, // Single file only
+  },
+  fileFilter: (
+    _req: Express.Request,
+    file: Express.Multer.File,
+    cb: multer.FileFilterCallback
+  ) => {
+    // Accept only image files
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (allowedMimeTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(
+        new Error(
+          'Invalid file type. Only jpg, png, and webp files are allowed.'
+        )
+      );
+    }
+  },
+});
+
+/**
+ * @swagger
+ * /api/themes/upload-thumbnail:
+ *   post:
+ *     summary: Upload theme thumbnail
+ *     description: Upload a thumbnail image for a theme to DigitalOcean Spaces
+ *     tags: [Themes]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [thumbnail]
+ *             properties:
+ *               thumbnail:
+ *                 type: string
+ *                 format: binary
+ *                 description: Thumbnail image file (JPEG, PNG, or WebP, max 2MB)
+ *     responses:
+ *       200:
+ *         description: Thumbnail uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Thumbnail uploaded successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     thumbnailUrl:
+ *                       type: string
+ *                       format: uri
+ *                       example: "https://bucket.region.digitaloceanspaces.com/1234567890-abcd1234.jpg"
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *       400:
+ *         description: Invalid file or validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.post(
+  '/upload-thumbnail',
+  AuthMiddleware.authenticate,
+  thumbnailUpload.single('thumbnail'),
+  themesController.uploadThumbnail
+);
 
 /**
  * @swagger

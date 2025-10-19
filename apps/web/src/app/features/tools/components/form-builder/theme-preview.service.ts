@@ -4,6 +4,7 @@ import { FormTheme, ResponsiveThemeConfig, ThemeProperties } from '@nodeangularf
 /**
  * Service for applying theme CSS variables to the document.
  * Handles dynamic CSS variable injection for real-time theme preview.
+ * Story 24.9: Added container background transparency support
  */
 @Injectable({
   providedIn: 'root',
@@ -41,6 +42,12 @@ export class ThemePreviewService {
     this.setCssVar(root, '--theme-background-color', backgroundColorValue); // New variable name
     this.setCssVar(root, '--theme-background-image', backgroundImageValue);
 
+    // Background image opacity and blur (Story 24.9)
+    const bgImageOpacity = desktop.backgroundImageOpacity ?? 1;
+    const bgImageBlur = desktop.backgroundImageBlur ?? 0;
+    this.setCssVar(root, '--theme-background-image-opacity', bgImageOpacity.toString());
+    this.setCssVar(root, '--theme-background-image-blur', `${bgImageBlur}px`);
+
     // Text colors
     this.setCssVar(root, '--theme-text-primary', desktop.textColorPrimary);
     this.setCssVar(root, '--theme-text-secondary', desktop.textColorSecondary);
@@ -63,6 +70,15 @@ export class ThemePreviewService {
     this.setCssVar(root, '--theme-container-border-radius', desktop.fieldBorderRadius);
     this.setCssVar(root, '--theme-container-padding', '24px');
     this.setCssVar(root, '--theme-container-opacity', desktop.containerOpacity.toString());
+    this.setCssVar(root, '--theme-container-position', desktop.containerPosition);
+
+    // Container background with alpha transparency (Story 24.9)
+    // Convert hex color to rgba with opacity for proper transparency
+    const containerBgWithAlpha = this.hexToRgba(
+      desktop.containerBackground,
+      desktop.containerOpacity,
+    );
+    this.setCssVar(root, '--theme-container-background-rgba', containerBgWithAlpha);
 
     // Layout variables (new for Epic 23)
     this.setCssVar(root, '--theme-row-spacing', desktop.fieldSpacing);
@@ -117,6 +133,8 @@ export class ThemePreviewService {
       '--theme-bg-color',
       '--theme-background-color',
       '--theme-background-image',
+      '--theme-background-image-opacity',
+      '--theme-background-image-blur',
       // Text colors
       '--theme-text-primary',
       '--theme-text-secondary',
@@ -133,9 +151,11 @@ export class ThemePreviewService {
       // Container variables
       '--theme-container-bg',
       '--theme-container-background',
+      '--theme-container-background-rgba',
       '--theme-container-border-radius',
       '--theme-container-padding',
       '--theme-container-opacity',
+      '--theme-container-position',
       // Layout variables
       '--theme-row-spacing',
       '--theme-row-background',
@@ -175,6 +195,39 @@ export class ThemePreviewService {
    */
   private setCssVar(element: HTMLElement, varName: string, value: string): void {
     element.style.setProperty(varName, value);
+  }
+
+  /**
+   * Converts a hex color to rgba format with specified opacity.
+   * Supports 3-digit (#RGB) and 6-digit (#RRGGBB) hex colors.
+   * @private
+   * @param hex - Hex color string (e.g., '#FF5733' or '#F53')
+   * @param opacity - Opacity value between 0 and 1
+   * @returns RGBA color string (e.g., 'rgba(255, 87, 51, 0.5)')
+   */
+  private hexToRgba(hex: string, opacity: number): string {
+    // Remove # if present
+    const cleanHex = hex.replace('#', '');
+
+    let r: number, g: number, b: number;
+
+    if (cleanHex.length === 3) {
+      // 3-digit hex (#RGB)
+      r = parseInt(cleanHex[0] + cleanHex[0], 16);
+      g = parseInt(cleanHex[1] + cleanHex[1], 16);
+      b = parseInt(cleanHex[2] + cleanHex[2], 16);
+    } else if (cleanHex.length === 6) {
+      // 6-digit hex (#RRGGBB)
+      r = parseInt(cleanHex.substring(0, 2), 16);
+      g = parseInt(cleanHex.substring(2, 4), 16);
+      b = parseInt(cleanHex.substring(4, 6), 16);
+    } else {
+      // Invalid hex, return white with opacity
+      console.warn(`Invalid hex color: ${hex}, using white as fallback`);
+      return `rgba(255, 255, 255, ${opacity})`;
+    }
+
+    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
   }
 
   /**

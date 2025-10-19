@@ -1,7 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 import { themesService } from '../services/themes.service';
+import { storageService } from '../services/storage.service';
 import { AsyncHandler } from '../utils/async-handler.utils';
+
+/**
+ * Extended Request interface for multer file uploads.
+ */
+interface MulterRequest extends Request {
+  file?: Express.Multer.File;
+}
 
 /**
  * Themes controller handling HTTP requests for theme management operations.
@@ -596,6 +604,112 @@ export class ThemesController {
       }
     }
   );
+
+  /**
+   * Uploads a thumbnail image to DigitalOcean Spaces and returns the public URL.
+   * This endpoint is called before theme creation to get the thumbnail URL.
+   * @route POST /api/themes/upload-thumbnail
+   * @param req - Express request object with multer file
+   * @param res - Express response object
+   * @param next - Express next function
+   * @returns HTTP response with thumbnail URL
+   * @throws {ApiError} 400 - No file uploaded or invalid file type
+   * @throws {ApiError} 401 - Authentication required
+   * @example
+   * POST /api/themes/upload-thumbnail
+   * Authorization: Bearer <token>
+   * Content-Type: multipart/form-data
+   * Form field: thumbnail (file)
+   */
+  uploadThumbnail = async (
+    req: MulterRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const userId = (req.user as any)?.id;
+
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Authentication required',
+          },
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      // Check if file was uploaded
+      const file = req.file;
+      if (!file) {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: 'BAD_REQUEST',
+            message: 'No file uploaded',
+          },
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      // Validate file type (multer middleware handles this, but double-check)
+      const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+      if (!allowedMimeTypes.includes(file.mimetype)) {
+        res.status(415).json({
+          success: false,
+          error: {
+            code: 'UNSUPPORTED_MEDIA_TYPE',
+            message: 'File type not allowed. Allowed types: jpg, png, webp',
+          },
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      // Generate unique filename for thumbnail
+      const timestamp = Date.now();
+      const extension = file.originalname.split('.').pop() || 'jpg';
+      const fileName = `theme-thumbnails/${userId}/${timestamp}-${userId}.${extension}`;
+
+      // Upload file to DigitalOcean Spaces
+      const thumbnailUrl = await storageService.uploadFile(
+        file.buffer,
+        fileName,
+        file.mimetype
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Thumbnail uploaded successfully',
+        data: {
+          thumbnailUrl,
+        },
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      if (
+        error.message.includes('File validation failed') ||
+        error.message.includes('File type not allowed') ||
+        error.message.includes('File size exceeds')
+      ) {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: 'FILE_VALIDATION_ERROR',
+            message: error.message,
+          },
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      // Pass unexpected errors to error handler
+      next(error);
+    }
+  };
 }
 
 // Export singleton instance

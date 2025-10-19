@@ -228,6 +228,8 @@ interface GradientPosition {
                   [src]="backgroundImageUrlValue"
                   alt="Background preview"
                   class="image-preview"
+                  [style.opacity]="backgroundImageOpacityValue"
+                  [style.filter]="'blur(' + backgroundImageBlurValue + 'px)'"
                 />
                 <button
                   type="button"
@@ -237,6 +239,36 @@ interface GradientPosition {
                 >
                   <i class="pi pi-times"></i>
                 </button>
+              </div>
+
+              <!-- Image Opacity Control -->
+              <div class="image-control">
+                <label class="config-label">
+                  <i class="pi pi-eye"></i>
+                  Image Opacity: {{ (backgroundImageOpacityValue * 100).toFixed(0) }}%
+                </label>
+                <p-slider
+                  [(ngModel)]="backgroundImageOpacityValue"
+                  [min]="0"
+                  [max]="1"
+                  [step]="0.05"
+                  styleClass="w-full"
+                ></p-slider>
+              </div>
+
+              <!-- Image Blur Control -->
+              <div class="image-control">
+                <label class="config-label">
+                  <i class="pi pi-filter"></i>
+                  Image Blur: {{ backgroundImageBlurValue }}px
+                </label>
+                <p-slider
+                  [(ngModel)]="backgroundImageBlurValue"
+                  [min]="0"
+                  [max]="20"
+                  [step]="1"
+                  styleClass="w-full"
+                ></p-slider>
               </div>
             }
             <small class="field-hint"
@@ -249,7 +281,14 @@ interface GradientPosition {
       <!-- Live Preview -->
       <div class="background-preview">
         <h4 class="preview-title">Background Preview</h4>
-        <div class="preview-box" [style.background]="getBackgroundPreview()">
+        <div
+          class="preview-box"
+          [style.background]="getBackgroundPreview()"
+          [style.opacity]="backgroundTypeValue === 'image' ? backgroundImageOpacityValue : 1"
+          [style.filter]="
+            backgroundTypeValue === 'image' ? 'blur(' + backgroundImageBlurValue + 'px)' : 'none'
+          "
+        >
           <div class="preview-content">
             <i class="pi pi-eye preview-icon"></i>
             <span class="preview-text">Form Background</span>
@@ -457,6 +496,13 @@ interface GradientPosition {
         display: block;
       }
 
+      .image-control {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        padding-top: 1rem;
+      }
+
       .background-preview {
         padding: 1.5rem;
         background: #ffffff;
@@ -595,6 +641,22 @@ export class BackgroundStepComponent {
 
   set backgroundImageUrlValue(value: string) {
     this.modalService.setBackgroundImageUrl(value);
+  }
+
+  get backgroundImageOpacityValue(): number {
+    return this.modalService.getBackgroundImageOpacity();
+  }
+
+  set backgroundImageOpacityValue(value: number) {
+    this.modalService.setBackgroundImageOpacity(value);
+  }
+
+  get backgroundImageBlurValue(): number {
+    return this.modalService.getBackgroundImageBlur();
+  }
+
+  set backgroundImageBlurValue(value: number) {
+    this.modalService.setBackgroundImageBlur(value);
   }
 
   /**
