@@ -203,43 +203,6 @@ interface GradientPosition {
             </div>
           </div>
         }
-
-        <!-- Image Upload Controls (shown only when image type selected) -->
-        @if (backgroundTypeValue === 'image' && backgroundImageUrlValue) {
-          <div class="config-section">
-            <div class="image-controls-inline">
-              <!-- Image Blur Control -->
-              <div class="image-control">
-                <label class="config-label">
-                  <i class="pi pi-filter"></i>
-                  Image Blur: {{ backgroundImageBlurValue }}px
-                </label>
-                <p-slider
-                  [(ngModel)]="backgroundImageBlurValue"
-                  [min]="0"
-                  [max]="20"
-                  [step]="1"
-                  styleClass="w-full"
-                ></p-slider>
-              </div>
-
-              <!-- Image Opacity Control -->
-              <div class="image-control">
-                <label class="config-label">
-                  <i class="pi pi-eye"></i>
-                  Image Opacity: {{ (backgroundImageOpacityValue * 100).toFixed(0) }}%
-                </label>
-                <p-slider
-                  [(ngModel)]="backgroundImageOpacityValue"
-                  [min]="0"
-                  [max]="1"
-                  [step]="0.05"
-                  styleClass="w-full"
-                ></p-slider>
-              </div>
-            </div>
-          </div>
-        }
       </div>
 
       <!-- Live Preview -->
@@ -250,7 +213,7 @@ interface GradientPosition {
           @if (backgroundTypeValue === 'image') {
             <div
               class="image-dropzone"
-              [class.dragover]="isDragOverImage"
+              [class.dragover]="isDragOverImage()"
               (click)="fileInputImage.click()"
               (dragover)="onImageDragOver($event)"
               (dragleave)="onImageDragLeave($event)"
@@ -272,6 +235,41 @@ interface GradientPosition {
                 </div>
               }
             </div>
+
+            @if (backgroundImageUrlValue) {
+              <!-- Image Controls: Blur and Opacity inside preview -->
+              <div class="image-controls-inline">
+                <!-- Image Blur Control -->
+                <div class="image-control">
+                  <label class="config-label">
+                    <i class="pi pi-filter"></i>
+                    Image Blur: {{ backgroundImageBlurValue }}px
+                  </label>
+                  <p-slider
+                    [(ngModel)]="backgroundImageBlurValue"
+                    [min]="0"
+                    [max]="20"
+                    [step]="1"
+                    styleClass="w-full"
+                  ></p-slider>
+                </div>
+
+                <!-- Image Opacity Control -->
+                <div class="image-control">
+                  <label class="config-label">
+                    <i class="pi pi-eye"></i>
+                    Image Opacity: {{ (backgroundImageOpacityValue * 100).toFixed(0) }}%
+                  </label>
+                  <p-slider
+                    [(ngModel)]="backgroundImageOpacityValue"
+                    [min]="0"
+                    [max]="1"
+                    [step]="0.05"
+                    styleClass="w-full"
+                  ></p-slider>
+                </div>
+              </div>
+            }
           } @else {
             <!-- Regular preview for non-image types -->
             <div
@@ -523,7 +521,11 @@ interface GradientPosition {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
         gap: 1.5rem;
-        padding-top: 1rem;
+        margin-top: 1rem;
+        padding: 1rem;
+        background: #f9fafb;
+        border-radius: 8px;
+        border-top: 1px solid #e5e7eb;
       }
 
       .image-control {
