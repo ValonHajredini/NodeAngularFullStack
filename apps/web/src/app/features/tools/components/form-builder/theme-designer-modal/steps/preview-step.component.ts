@@ -42,62 +42,72 @@ import { FormsApiService } from '../../forms-api.service';
       }
 
       @if (!visualPreviewOnly) {
-        <!-- Theme Name Input -->
-        <div class="theme-name-section">
-          <label for="themeName" class="theme-name-label">
-            <i class="pi pi-tag"></i>
-            Theme Name
-          </label>
-          <input
-            pInputText
-            [(ngModel)]="themeNameValue"
-            inputId="themeName"
-            placeholder="e.g., Ocean Blue, Sunset Orange, Professional Gray"
-            [maxlength]="50"
-            class="theme-name-input"
-          />
-          <small class="theme-name-hint"
-            >Give your theme a memorable name ({{ themeNameValue.length }}/50 characters)</small
-          >
+        <!-- Horizontal Layout: Theme Name (Left) and Thumbnail (Right) -->
+        <div class="theme-config-section">
+          <!-- Left Column: Theme Name Input -->
+          <div class="theme-name-section">
+            <label for="themeName" class="theme-name-label">
+              <i class="pi pi-tag"></i>
+              Theme Name
+            </label>
+            <input
+              pInputText
+              [(ngModel)]="themeNameValue"
+              inputId="themeName"
+              placeholder="e.g., Ocean Blue, Sunset Orange, Professional Gray"
+              [maxlength]="50"
+              class="theme-name-input"
+            />
+            <small class="theme-name-hint"
+              >Give your theme a memorable name ({{ themeNameValue.length }}/50 characters)</small
+            >
 
-          @if (showNameError()) {
-            <div class="error-message">
-              <i class="pi pi-exclamation-circle"></i>
-              <span>Theme name is required (minimum 3 characters)</span>
-            </div>
-          }
-        </div>
+            @if (showNameError()) {
+              <div class="error-message">
+                <i class="pi pi-exclamation-circle"></i>
+                <span>Theme name is required (minimum 3 characters)</span>
+              </div>
+            }
+          </div>
 
-        <!-- Thumbnail Upload Section -->
-        <div class="thumbnail-upload-section">
-          <label class="thumbnail-label">
-            <i class="pi pi-image"></i>
-            Theme Thumbnail
-          </label>
+          <!-- Right Column: Thumbnail Upload Section -->
+          <div class="thumbnail-upload-section">
+            <label class="thumbnail-label">
+              <i class="pi pi-image"></i>
+              Theme Thumbnail
+            </label>
 
-          <div class="thumbnail-upload-container">
-            <!-- Thumbnail Preview -->
-            <div class="thumbnail-preview">
-              @if (thumbnailPreview()) {
-                <img [src]="thumbnailPreview()" alt="Theme thumbnail preview" />
-                <button
-                  type="button"
-                  class="remove-thumbnail-btn"
-                  (click)="removeThumbnail()"
-                  title="Remove thumbnail"
-                >
-                  <i class="pi pi-times"></i>
-                </button>
-              } @else {
-                <div class="thumbnail-placeholder">
-                  <i class="pi pi-image"></i>
-                  <span>No thumbnail</span>
-                </div>
-              }
-            </div>
+            <!-- Drag and Drop Thumbnail Area -->
+            <div class="thumbnail-centered-column">
+              <!-- Drag and Drop Zone -->
+              <div
+                class="thumbnail-dropzone"
+                [class.dragover]="isDragOver"
+                (click)="fileInput.click()"
+                (dragover)="onDragOver($event)"
+                (dragleave)="onDragLeave($event)"
+                (drop)="onDrop($event)"
+              >
+                @if (thumbnailPreview()) {
+                  <img [src]="thumbnailPreview()" alt="Theme thumbnail preview" />
+                  <button
+                    type="button"
+                    class="remove-thumbnail-btn"
+                    (click)="removeThumbnail(); $event.stopPropagation()"
+                    title="Remove thumbnail"
+                  >
+                    <i class="pi pi-times"></i>
+                  </button>
+                } @else {
+                  <div class="thumbnail-placeholder">
+                    <i class="pi pi-image"></i>
+                    <span>Drop image here or click to browse</span>
+                    <small class="upload-hint">PNG, JPG, or WebP (max 2MB)</small>
+                  </div>
+                }
+              </div>
 
-            <!-- Upload Button -->
-            <div class="thumbnail-upload-actions">
+              <!-- Hidden file input -->
               <input
                 #fileInput
                 type="file"
@@ -105,27 +115,15 @@ import { FormsApiService } from '../../forms-api.service';
                 (change)="onThumbnailSelect($event)"
                 style="display: none"
               />
-              <button
-                pButton
-                type="button"
-                [label]="isUploadingThumbnail() ? 'Uploading...' : 'Upload Thumbnail'"
-                [icon]="isUploadingThumbnail() ? 'pi pi-spin pi-spinner' : 'pi pi-upload'"
-                class="p-button-outlined"
-                [disabled]="isUploadingThumbnail()"
-                (click)="fileInput.click()"
-              ></button>
-              <small class="upload-hint">
-                PNG, JPG, or WebP (max 2MB, recommended 300x200px)
-              </small>
             </div>
-          </div>
 
-          @if (thumbnailError()) {
-            <div class="error-message">
-              <i class="pi pi-exclamation-circle"></i>
-              <span>{{ thumbnailError() }}</span>
-            </div>
-          }
+            @if (thumbnailError()) {
+              <div class="error-message">
+                <i class="pi pi-exclamation-circle"></i>
+                <span>{{ thumbnailError() }}</span>
+              </div>
+            }
+          </div>
         </div>
 
         <!-- Theme Summary -->
@@ -441,13 +439,35 @@ import { FormsApiService } from '../../forms-api.service';
         color: #dc2626;
       }
 
-      /* Thumbnail Upload Section */
-      .thumbnail-upload-section {
+      /* Horizontal Layout Container */
+      .theme-config-section {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
         margin-bottom: 2rem;
+      }
+
+      /* Theme Name Section */
+      .theme-name-section {
         padding: 1.5rem;
         background: #f9fafb;
         border-radius: 8px;
         border: 1px solid #e5e7eb;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      /* Thumbnail Upload Section */
+      .thumbnail-upload-section {
+        padding: 1.5rem;
+        background: #f9fafb;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
       }
 
       .thumbnail-label {
@@ -457,24 +477,28 @@ import { FormsApiService } from '../../forms-api.service';
         font-weight: 500;
         font-size: 0.875rem;
         color: #374151;
-        margin-bottom: 1rem;
+        margin-bottom: 0;
+        width: 100%;
       }
 
       .thumbnail-label i {
         color: #6366f1;
       }
 
-      .thumbnail-upload-container {
+      .thumbnail-centered-column {
         display: flex;
-        gap: 1.5rem;
-        align-items: flex-start;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+        width: 100%;
       }
 
-      .thumbnail-preview {
-        width: 200px;
-        height: 133px;
+      .thumbnail-dropzone {
+        width: 100%;
+        max-width: 300px;
+        height: 200px;
         border-radius: 8px;
-        border: 2px dashed #d1d5db;
+        border: 3px dashed #d1d5db;
         overflow: hidden;
         display: flex;
         align-items: center;
@@ -482,9 +506,22 @@ import { FormsApiService } from '../../forms-api.service';
         background: white;
         position: relative;
         flex-shrink: 0;
+        cursor: pointer;
+        transition: all 0.2s ease;
       }
 
-      .thumbnail-preview img {
+      .thumbnail-dropzone:hover {
+        border-color: #6366f1;
+        background: #f5f3ff;
+      }
+
+      .thumbnail-dropzone.dragover {
+        border-color: #6366f1;
+        background: #eef2ff;
+        transform: scale(1.02);
+      }
+
+      .thumbnail-dropzone img {
         width: 100%;
         height: 100%;
         object-fit: cover;
@@ -496,6 +533,8 @@ import { FormsApiService } from '../../forms-api.service';
         align-items: center;
         gap: 0.5rem;
         color: #9ca3af;
+        padding: 1rem;
+        text-align: center;
       }
 
       .thumbnail-placeholder i {
@@ -504,6 +543,7 @@ import { FormsApiService } from '../../forms-api.service';
 
       .thumbnail-placeholder span {
         font-size: 0.875rem;
+        font-weight: 500;
       }
 
       .remove-thumbnail-btn {
@@ -535,7 +575,12 @@ import { FormsApiService } from '../../forms-api.service';
         display: flex;
         flex-direction: column;
         gap: 0.75rem;
-        flex: 1;
+        width: 100%;
+        align-items: center;
+      }
+
+      .thumbnail-upload-actions button {
+        width: 100%;
       }
 
       .upload-hint {
@@ -843,6 +888,7 @@ export class PreviewStepComponent {
   protected readonly saveError = signal<string | null>(null);
   protected readonly showNameError = signal(false);
   protected readonly isUploadingThumbnail = signal(false);
+  protected readonly isDragOver = signal(false);
   protected readonly thumbnailPreview = computed(() => {
     const thumbnailUrl = this.modalService.getThumbnailUrl();
     // Only show preview if it's not the placeholder
@@ -983,6 +1029,48 @@ export class PreviewStepComponent {
   protected removeThumbnail(): void {
     this.thumbnailError.set(null);
     this.modalService.setThumbnailUrl('https://via.placeholder.com/300x200');
+  }
+
+  /**
+   * Handles drag over event for the dropzone.
+   * Prevents default behavior and shows visual feedback.
+   */
+  protected onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragOver.set(true);
+  }
+
+  /**
+   * Handles drag leave event for the dropzone.
+   * Removes visual feedback.
+   */
+  protected onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragOver.set(false);
+  }
+
+  /**
+   * Handles drop event for the dropzone.
+   * Extracts dropped files and processes the first image file.
+   */
+  protected onDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragOver.set(false);
+
+    const files = event.dataTransfer?.files;
+    if (files && files.length > 0) {
+      // Process the first file
+      const file = files[0];
+      const fakeEvent = {
+        target: {
+          files: files,
+        },
+      } as any;
+      this.onThumbnailSelect(fakeEvent);
+    }
   }
 
   /**

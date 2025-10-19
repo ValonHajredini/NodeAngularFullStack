@@ -343,8 +343,8 @@ interface GradientPosition {
 
       .radio-group {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1rem;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.75rem;
       }
 
       .radio-item {
