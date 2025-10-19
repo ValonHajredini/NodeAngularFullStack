@@ -63,6 +63,7 @@ describe('ThemePreviewService', () => {
       expect(root.style.getPropertyValue('--theme-input-background')).toBe('#FAFAFA');
       expect(root.style.getPropertyValue('--theme-input-text-color')).toBe('#222222');
       expect(root.style.getPropertyValue('--theme-label-color')).toBe('#444444');
+      expect(root.style.getPropertyValue('--theme-background-image')).toBe('none');
     });
 
     it('should apply mobile overrides when mobile config exists', () => {
@@ -150,6 +151,43 @@ describe('ThemePreviewService', () => {
       // Check that no mobile style element was created
       const mobileStyle = document.getElementById('theme-mobile-overrides');
       expect(mobileStyle).toBeFalsy();
+    });
+
+    it('should apply background image when provided', () => {
+      const mockTheme: FormTheme = {
+        id: '1',
+        name: 'Image Theme',
+        description: 'Theme with background image',
+        thumbnailUrl: 'https://example.com/thumb.jpg',
+        themeConfig: {
+          desktop: {
+            primaryColor: '#FF5733',
+            secondaryColor: '#33FF57',
+            backgroundColor: '#FFFFFF',
+            backgroundImageUrl: 'https://example.com/bg.jpg',
+            textColorPrimary: '#000000',
+            textColorSecondary: '#666666',
+            fontFamilyHeading: 'Arial, sans-serif',
+            fontFamilyBody: 'Helvetica, sans-serif',
+            fieldBorderRadius: '8px',
+            fieldSpacing: '12px',
+            containerBackground: '#F5F5F5',
+            containerOpacity: 0.9,
+            containerPosition: 'center',
+          },
+        },
+        usageCount: 0,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      service.applyThemeCss(mockTheme);
+
+      const root = document.documentElement;
+      expect(root.style.getPropertyValue('--theme-background-image')).toBe(
+        'url(https://example.com/bg.jpg)',
+      );
     });
   });
 

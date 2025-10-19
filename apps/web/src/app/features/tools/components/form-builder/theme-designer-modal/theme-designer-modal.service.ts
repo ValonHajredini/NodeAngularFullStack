@@ -70,7 +70,10 @@ export class ThemeDesignerModalService {
    */
   readonly currentTheme = computed(() => {
     const bgType = this.backgroundType();
-    let bgValue = this.backgroundColor();
+    const solidBackground = this.backgroundColor();
+    let bgValue = solidBackground;
+    let backgroundImageUrl: string | undefined;
+    let backgroundImagePosition: 'cover' | 'contain' | 'repeat' | undefined;
 
     // Calculate background CSS based on type
     if (bgType === 'linear') {
@@ -78,7 +81,9 @@ export class ThemeDesignerModalService {
     } else if (bgType === 'radial') {
       bgValue = `radial-gradient(circle at ${this.gradientPosition()}, ${this.gradientColor1()}, ${this.gradientColor2()})`;
     } else if (bgType === 'image') {
-      bgValue = this.backgroundImageUrl();
+      bgValue = solidBackground || '#FFFFFF';
+      backgroundImageUrl = this.backgroundImageUrl();
+      backgroundImagePosition = 'cover';
     }
 
     return {
@@ -89,6 +94,8 @@ export class ThemeDesignerModalService {
           primaryColor: this.primaryColor(),
           secondaryColor: this.secondaryColor(),
           backgroundColor: bgValue,
+          backgroundImageUrl,
+          backgroundImagePosition,
           textColorPrimary: this.textColorPrimary(),
           textColorSecondary: this.textColorSecondary(),
           labelColor: this.labelColor(),
@@ -101,8 +108,6 @@ export class ThemeDesignerModalService {
           containerBackground: this.containerBackground(),
           containerOpacity: this.containerOpacity(),
           containerPosition: this.containerPosition(),
-          backgroundImageUrl: bgType === 'image' ? this.backgroundImageUrl() : undefined,
-          backgroundImagePosition: bgType === 'image' ? ('cover' as const) : undefined,
         },
       },
     };

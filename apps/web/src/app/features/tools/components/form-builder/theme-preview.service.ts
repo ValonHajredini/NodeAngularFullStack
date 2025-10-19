@@ -27,9 +27,19 @@ export class ThemePreviewService {
     this.setCssVar(root, '--theme-secondary-color', desktop.secondaryColor);
 
     // Background variables (legacy and new)
-    this.setCssVar(root, '--theme-bg-color', desktop.backgroundColor);
-    this.setCssVar(root, '--theme-background-color', desktop.backgroundColor); // New variable name
-    this.setCssVar(root, '--theme-background-image', 'none'); // No image by default
+    const rawBackground = desktop.backgroundColor || '#ffffff';
+    const isGradient =
+      rawBackground.startsWith('linear-gradient') || rawBackground.startsWith('radial-gradient');
+    const backgroundColorValue = isGradient ? '#ffffff' : rawBackground;
+    const backgroundImageValue = desktop.backgroundImageUrl
+      ? `url(${desktop.backgroundImageUrl})`
+      : isGradient
+        ? rawBackground
+        : 'none';
+
+    this.setCssVar(root, '--theme-bg-color', backgroundColorValue);
+    this.setCssVar(root, '--theme-background-color', backgroundColorValue); // New variable name
+    this.setCssVar(root, '--theme-background-image', backgroundImageValue);
 
     // Text colors
     this.setCssVar(root, '--theme-text-primary', desktop.textColorPrimary);

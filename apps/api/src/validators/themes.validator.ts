@@ -13,6 +13,13 @@ const HEX_COLOR_REGEX = /^#[0-9A-Fa-f]{6}$/;
 const URL_REGEX = /^https?:\/\/.+/;
 
 /**
+ * Background image URL regex pattern.
+ * Allows HTTP/HTTPS URLs or data URI images (base64).
+ */
+const IMAGE_URL_REGEX =
+  /^(https?:\/\/.+|data:image\/[a-zA-Z0-9.+-]+;base64,[\w+/=+-]+)$/i;
+
+/**
  * Safe CSS background validation regex.
  * Allows hex colors, rgb/rgba, hsl/hsla, and safe gradients.
  * Blocks javascript:, @import, and other potentially malicious CSS.
@@ -269,8 +276,10 @@ export const validateCreateTheme = [
 
   body('themeConfig.desktop.backgroundImageUrl')
     .optional()
-    .matches(URL_REGEX)
-    .withMessage('Background image URL must be a valid HTTP/HTTPS URL'),
+    .matches(IMAGE_URL_REGEX)
+    .withMessage(
+      'Background image URL must be a valid HTTP/HTTPS URL or data URI'
+    ),
 
   body('themeConfig.desktop.backgroundImagePosition')
     .optional()
@@ -405,8 +414,10 @@ export const validateCreateTheme = [
 
   body('themeConfig.mobile.backgroundImageUrl')
     .optional()
-    .matches(URL_REGEX)
-    .withMessage('Mobile background image URL must be a valid HTTP/HTTPS URL'),
+    .matches(IMAGE_URL_REGEX)
+    .withMessage(
+      'Mobile background image URL must be a valid HTTP/HTTPS URL or data URI'
+    ),
 
   body('themeConfig.mobile.backgroundImagePosition')
     .optional()
@@ -581,8 +592,10 @@ export const validateUpdateTheme = [
 
   body('themeConfig.desktop.backgroundImageUrl')
     .optional()
-    .matches(URL_REGEX)
-    .withMessage('Background image URL must be a valid HTTP/HTTPS URL'),
+    .matches(IMAGE_URL_REGEX)
+    .withMessage(
+      'Background image URL must be a valid HTTP/HTTPS URL or data URI'
+    ),
 
   body('themeConfig.desktop.backgroundImagePosition')
     .optional()
@@ -717,8 +730,10 @@ export const validateUpdateTheme = [
 
   body('themeConfig.mobile.backgroundImageUrl')
     .optional()
-    .matches(URL_REGEX)
-    .withMessage('Mobile background image URL must be a valid HTTP/HTTPS URL'),
+    .matches(IMAGE_URL_REGEX)
+    .withMessage(
+      'Mobile background image URL must be a valid HTTP/HTTPS URL or data URI'
+    ),
 
   body('themeConfig.mobile.backgroundImagePosition')
     .optional()

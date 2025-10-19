@@ -356,9 +356,18 @@ export class ThemeDesignerModalComponent implements OnInit, OnDestroy {
   private applyThemePreview(): void {
     try {
       const currentTheme = this.modalService.currentTheme();
+      const backgroundType = this.modalService.getBackgroundType();
+      const previewBackgroundColor =
+        backgroundType === 'image'
+          ? currentTheme.themeConfig.desktop.backgroundColor
+          : this.getBackgroundCss();
+      const previewBackgroundImageUrl =
+        backgroundType === 'image' ? this.modalService.getBackgroundImageUrl() : undefined;
+
       const desktopConfig = {
         ...currentTheme.themeConfig.desktop,
-        backgroundColor: this.getBackgroundCss(),
+        backgroundColor: previewBackgroundColor,
+        backgroundImageUrl: previewBackgroundImageUrl,
         labelColor: this.modalService.getLabelColor(),
         inputBackgroundColor: this.modalService.getInputBackgroundColor(),
         inputTextColor: this.modalService.getInputTextColor(),
