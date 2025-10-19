@@ -88,20 +88,38 @@ interface GradientPosition {
       <div class="background-config">
         <!-- Solid Color -->
         @if (backgroundTypeValue === 'solid') {
-          <div class="config-section">
-            <label class="config-label">
-              <i class="pi pi-palette"></i>
-              Background Color
-            </label>
-            <div class="color-input-wrapper">
-              <p-colorPicker
-                [(ngModel)]="backgroundColorValue"
-                [inline]="false"
-                [format]="'hex'"
-                appendTo="body"
-              ></p-colorPicker>
-              <div class="color-preview-box" [style.background-color]="backgroundColorValue">
-                <span class="color-hex">{{ backgroundColorValue }}</span>
+          <!-- Preview with Controls Inside -->
+          <div class="background-preview">
+            <h4 class="preview-title">Background Preview</h4>
+            <div class="preview-box-wrapper">
+              <div
+                class="preview-box"
+                [attr.data-background]="getBackgroundPreview()"
+                [style.--bg-image]="getBackgroundPreview()"
+              >
+                <div class="preview-content">
+                  <i class="pi pi-eye preview-icon"></i>
+                  <span class="preview-text">Form Background</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Controls Below Image, Inside Preview Section -->
+            <div class="solid-color-control">
+              <label class="config-label">
+                <i class="pi pi-palette"></i>
+                Background Color
+              </label>
+              <div class="color-input-wrapper">
+                <p-colorPicker
+                  [(ngModel)]="backgroundColorValue"
+                  [inline]="false"
+                  [format]="'hex'"
+                  appendTo="body"
+                ></p-colorPicker>
+                <div class="color-preview-box" [style.background-color]="backgroundColorValue">
+                  <span class="color-hex">{{ backgroundColorValue }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -109,135 +127,190 @@ interface GradientPosition {
 
         <!-- Linear Gradient -->
         @if (backgroundTypeValue === 'linear') {
-          <div class="config-section">
-            <div class="gradient-colors">
-              <div class="gradient-color-input">
-                <label class="config-label">
-                  <i class="pi pi-palette"></i>
-                  Start Color
-                </label>
-                <p-colorPicker
-                  [(ngModel)]="gradientColor1Value"
-                  [inline]="false"
-                  [format]="'hex'"
-                  appendTo="body"
-                ></p-colorPicker>
-                <span class="color-code">{{ gradientColor1Value }}</span>
-              </div>
-              <div class="gradient-color-input">
-                <label class="config-label">
-                  <i class="pi pi-palette"></i>
-                  End Color
-                </label>
-                <p-colorPicker
-                  [(ngModel)]="gradientColor2Value"
-                  [inline]="false"
-                  [format]="'hex'"
-                  appendTo="body"
-                ></p-colorPicker>
-                <span class="color-code">{{ gradientColor2Value }}</span>
+          <!-- Preview with Controls Inside -->
+          <div class="background-preview">
+            <h4 class="preview-title">Background Preview</h4>
+            <div class="preview-box-wrapper">
+              <div
+                class="preview-box"
+                [attr.data-background]="getBackgroundPreview()"
+                [style.--bg-image]="getBackgroundPreview()"
+              >
+                <div class="preview-content">
+                  <i class="pi pi-eye preview-icon"></i>
+                  <span class="preview-text">Form Background</span>
+                </div>
               </div>
             </div>
 
-            <div class="gradient-angle">
-              <label class="config-label">
-                <i class="pi pi-replay"></i>
-                Gradient Angle: {{ gradientAngleValue }}°
-              </label>
-              <p-slider
-                [(ngModel)]="gradientAngleValue"
-                [min]="0"
-                [max]="360"
-                [step]="15"
-                styleClass="w-full"
-              ></p-slider>
+            <!-- Controls Below Image, Inside Preview Section -->
+            <div class="gradient-controls-inline">
+              <div class="gradient-colors-row">
+                <div class="gradient-color-input">
+                  <label class="config-label">
+                    <i class="pi pi-palette"></i>
+                    Start Color
+                  </label>
+                  <div class="color-input-row">
+                    <p-colorPicker
+                      [(ngModel)]="gradientColor1Value"
+                      [inline]="false"
+                      [format]="'hex'"
+                      appendTo="body"
+                    ></p-colorPicker>
+                    <span class="color-code">{{ gradientColor1Value }}</span>
+                  </div>
+                </div>
+                <div class="gradient-color-input">
+                  <label class="config-label">
+                    <i class="pi pi-palette"></i>
+                    End Color
+                  </label>
+                  <div class="color-input-row">
+                    <p-colorPicker
+                      [(ngModel)]="gradientColor2Value"
+                      [inline]="false"
+                      [format]="'hex'"
+                      appendTo="body"
+                    ></p-colorPicker>
+                    <span class="color-code">{{ gradientColor2Value }}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="gradient-angle">
+                <label class="config-label">
+                  <i class="pi pi-replay"></i>
+                  Gradient Angle: {{ gradientAngleValue }}°
+                </label>
+                <p-slider
+                  [(ngModel)]="gradientAngleValue"
+                  [min]="0"
+                  [max]="360"
+                  [step]="15"
+                  styleClass="w-full"
+                ></p-slider>
+              </div>
             </div>
           </div>
         }
 
         <!-- Radial Gradient -->
         @if (backgroundTypeValue === 'radial') {
-          <div class="config-section">
-            <div class="gradient-colors">
-              <div class="gradient-color-input">
-                <label class="config-label">
-                  <i class="pi pi-palette"></i>
-                  Center Color
-                </label>
-                <p-colorPicker
-                  [(ngModel)]="gradientColor1Value"
-                  [inline]="false"
-                  [format]="'hex'"
-                  appendTo="body"
-                ></p-colorPicker>
-                <span class="color-code">{{ gradientColor1Value }}</span>
-              </div>
-              <div class="gradient-color-input">
-                <label class="config-label">
-                  <i class="pi pi-palette"></i>
-                  Outer Color
-                </label>
-                <p-colorPicker
-                  [(ngModel)]="gradientColor2Value"
-                  [inline]="false"
-                  [format]="'hex'"
-                  appendTo="body"
-                ></p-colorPicker>
-                <span class="color-code">{{ gradientColor2Value }}</span>
-              </div>
-            </div>
-
-            <div class="gradient-position">
-              <label class="config-label">
-                <i class="pi pi-map-marker"></i>
-                Gradient Position
-              </label>
-              <p-select
-                [(ngModel)]="gradientPositionValue"
-                [options]="gradientPositions"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="Select position"
-                styleClass="w-full"
-              ></p-select>
-            </div>
-          </div>
-        }
-      </div>
-
-      <!-- Live Preview -->
-      <div class="background-preview">
-        <h4 class="preview-title">Background Preview</h4>
-        <div class="preview-box-wrapper">
-          <!-- Drag and Drop Zone (only for image type) -->
-          @if (backgroundTypeValue === 'image') {
-            <div
-              class="image-dropzone"
-              [class.dragover]="isDragOverImage()"
-              (click)="fileInputImage.click()"
-              (dragover)="onImageDragOver($event)"
-              (dragleave)="onImageDragLeave($event)"
-              (drop)="onImageDrop($event)"
-              [style.--bg-image]="getBackgroundPreview()"
-              [style.--bg-opacity]="backgroundImageOpacityValue"
-              [style.--bg-blur]="backgroundImageBlurValue + 'px'"
-            >
-              @if (backgroundImageUrlValue) {
+          <!-- Preview with Controls Inside -->
+          <div class="background-preview">
+            <h4 class="preview-title">Background Preview</h4>
+            <div class="preview-box-wrapper">
+              <div
+                class="preview-box"
+                [attr.data-background]="getBackgroundPreview()"
+                [style.--bg-image]="getBackgroundPreview()"
+              >
                 <div class="preview-content">
                   <i class="pi pi-eye preview-icon"></i>
                   <span class="preview-text">Form Background</span>
                 </div>
-              } @else {
-                <div class="upload-placeholder">
-                  <i class="pi pi-image"></i>
-                  <span>Drop image here or click to browse</span>
-                  <small>JPG, PNG, GIF (max 2MB)</small>
+              </div>
+            </div>
+
+            <!-- Controls Below Image, Inside Preview Section -->
+            <div class="radial-controls-inline">
+              <div class="gradient-colors-row">
+                <div class="gradient-color-input">
+                  <label class="config-label">
+                    <i class="pi pi-palette"></i>
+                    Center Color
+                  </label>
+                  <div class="color-input-row">
+                    <p-colorPicker
+                      [(ngModel)]="gradientColor1Value"
+                      [inline]="false"
+                      [format]="'hex'"
+                      appendTo="body"
+                    ></p-colorPicker>
+                    <span class="color-code">{{ gradientColor1Value }}</span>
+                  </div>
                 </div>
+                <div class="gradient-color-input">
+                  <label class="config-label">
+                    <i class="pi pi-palette"></i>
+                    Outer Color
+                  </label>
+                  <div class="color-input-row">
+                    <p-colorPicker
+                      [(ngModel)]="gradientColor2Value"
+                      [inline]="false"
+                      [format]="'hex'"
+                      appendTo="body"
+                    ></p-colorPicker>
+                    <span class="color-code">{{ gradientColor2Value }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="gradient-position">
+                <label class="config-label">
+                  <i class="pi pi-map-marker"></i>
+                  Gradient Position
+                </label>
+                <p-select
+                  [(ngModel)]="gradientPositionValue"
+                  [options]="gradientPositions"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Select position"
+                  styleClass="w-full"
+                ></p-select>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Image Upload -->
+        @if (backgroundTypeValue === 'image') {
+          <!-- Preview with Drag-Drop -->
+          <div class="background-preview">
+            <h4 class="preview-title">Background Preview</h4>
+            <div class="preview-box-wrapper">
+              <div
+                class="image-dropzone"
+                [class.has-image]="backgroundImageUrlValue"
+                [class.dragover]="isDragOverImage()"
+                (click)="fileInputImage.click()"
+                (dragover)="onImageDragOver($event)"
+                (dragleave)="onImageDragLeave($event)"
+                (drop)="onImageDrop($event)"
+                [style.--bg-image]="getBackgroundPreview()"
+                [style.--bg-opacity]="backgroundImageOpacityValue"
+                [style.--bg-blur]="backgroundImageBlurValue + 'px'"
+              >
+                @if (backgroundImageUrlValue) {
+                  <div class="preview-content">
+                    <i class="pi pi-eye preview-icon"></i>
+                    <span class="preview-text">Form Background</span>
+                  </div>
+                } @else {
+                  <div class="upload-placeholder">
+                    <i class="pi pi-image"></i>
+                    <span>Drop image here or click to browse</span>
+                    <small>JPG, PNG, GIF (max 2MB)</small>
+                  </div>
+                }
+              </div>
+
+              @if (backgroundImageUrlValue) {
+                <button
+                  type="button"
+                  class="remove-image-btn"
+                  (click)="removeImage(); $event.stopPropagation()"
+                  title="Remove image"
+                >
+                  <i class="pi pi-times"></i>
+                </button>
               }
             </div>
 
+            <!-- Image Controls (blur & opacity) -->
             @if (backgroundImageUrlValue) {
-              <!-- Image Controls: Blur and Opacity inside preview -->
               <div class="image-controls-inline">
                 <!-- Image Blur Control -->
                 <div class="image-control">
@@ -270,31 +343,8 @@ interface GradientPosition {
                 </div>
               </div>
             }
-          } @else {
-            <!-- Regular preview for non-image types -->
-            <div
-              class="preview-box"
-              [attr.data-background]="getBackgroundPreview()"
-              [style.--bg-image]="getBackgroundPreview()"
-            >
-              <div class="preview-content">
-                <i class="pi pi-eye preview-icon"></i>
-                <span class="preview-text">Form Background</span>
-              </div>
-            </div>
-          }
-
-          @if (backgroundTypeValue === 'image' && backgroundImageUrlValue) {
-            <button
-              type="button"
-              class="remove-image-btn"
-              (click)="removeImage()"
-              title="Remove image"
-            >
-              <i class="pi pi-times"></i>
-            </button>
-          }
-        </div>
+          </div>
+        }
       </div>
 
       <!-- Hidden file input -->
@@ -490,9 +540,45 @@ interface GradientPosition {
         gap: 1rem;
       }
 
+      .background-preview .gradient-controls-inline {
+        display: flex;
+        align-items: flex-end;
+        gap: 1.5rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e5e7eb;
+      }
+
+      .background-preview .radial-controls-inline {
+        display: flex;
+        align-items: flex-end;
+        gap: 1.5rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e5e7eb;
+      }
+
+      .background-preview .solid-color-control {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e5e7eb;
+      }
+
+      .gradient-colors-row {
+        display: flex;
+        gap: 1rem;
+        flex-shrink: 0;
+      }
+
       .gradient-color-input {
         display: flex;
         flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .color-input-row {
+        display: flex;
+        align-items: center;
         gap: 0.5rem;
       }
 
@@ -500,7 +586,7 @@ interface GradientPosition {
         font-family: 'Courier New', monospace;
         font-size: 0.75rem;
         color: #6b7280;
-        text-align: center;
+        white-space: nowrap;
       }
 
       .gradient-angle,
@@ -508,6 +594,7 @@ interface GradientPosition {
         display: flex;
         flex-direction: column;
         gap: 0.75rem;
+        flex: 1;
       }
 
       .field-hint {
@@ -711,6 +798,18 @@ interface GradientPosition {
 
         .gradient-colors {
           grid-template-columns: 1fr;
+        }
+
+        .gradient-controls-inline,
+        .radial-controls-inline {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 1rem;
+        }
+
+        .gradient-colors-row {
+          flex-direction: column;
+          gap: 1rem;
         }
 
         .color-input-wrapper {

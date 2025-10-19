@@ -29,106 +29,112 @@ interface FontOption {
       </div>
 
       <div class="typography-fields">
-        <!-- Heading Font Selection -->
-        <div class="font-field-group">
-          <label for="headingFont" class="font-label">
-            <i class="pi pi-book"></i>
-            Heading Font
-          </label>
-          <p-select
-            [(ngModel)]="headingFontValue"
-            [options]="fontOptions"
-            inputId="headingFont"
-            optionLabel="label"
-            optionValue="value"
-            [filter]="true"
-            filterBy="label"
-            placeholder="Select heading font"
-            appendTo="body"
-            [style]="{ width: '100%' }"
-          >
-            <ng-template let-option pTemplate="item">
-              <div class="font-dropdown-item" [style.font-family]="option.value">
-                {{ option.label }}
-              </div>
-            </ng-template>
-          </p-select>
-          <small class="field-hint">Used for form titles and section headings</small>
-        </div>
-
-        <!-- Heading Font Size -->
-        <div class="font-field-group">
-          <label for="headingFontSize" class="font-label">
-            <i class="pi pi-hashtag"></i>
-            Heading Font Size
-          </label>
-          <div class="size-input-wrapper">
-            <p-inputNumber
-              [(ngModel)]="headingFontSizeValue"
-              inputId="headingFontSize"
-              [min]="16"
-              [max]="48"
-              [step]="1"
-              suffix=" px"
-              [showButtons]="true"
-              buttonLayout="horizontal"
-              incrementButtonIcon="pi pi-plus"
-              decrementButtonIcon="pi pi-minus"
+        <!-- Font Selection Row -->
+        <div class="font-selection-row">
+          <!-- Heading Font Selection -->
+          <div class="font-field-group">
+            <label for="headingFont" class="font-label">
+              <i class="pi pi-book"></i>
+              Heading Font
+            </label>
+            <p-select
+              [(ngModel)]="headingFontValue"
+              [options]="fontOptions"
+              inputId="headingFont"
+              optionLabel="label"
+              optionValue="value"
+              [filter]="true"
+              filterBy="label"
+              placeholder="Select heading font"
+              appendTo="body"
               [style]="{ width: '100%' }"
-            ></p-inputNumber>
+            >
+              <ng-template let-option pTemplate="item">
+                <div class="font-dropdown-item" [style.font-family]="option.value">
+                  {{ option.label }}
+                </div>
+              </ng-template>
+            </p-select>
+            <small class="field-hint">Used for form titles and section headings</small>
           </div>
-          <small class="field-hint">Range: 16px - 48px</small>
-        </div>
 
-        <!-- Body Font Selection -->
-        <div class="font-field-group">
-          <label for="bodyFont" class="font-label">
-            <i class="pi pi-align-left"></i>
-            Body Font
-          </label>
-          <p-select
-            [(ngModel)]="bodyFontValue"
-            [options]="fontOptions"
-            inputId="bodyFont"
-            optionLabel="label"
-            optionValue="value"
-            [filter]="true"
-            filterBy="label"
-            placeholder="Select body font"
-            appendTo="body"
-            [style]="{ width: '100%' }"
-          >
-            <ng-template let-option pTemplate="item">
-              <div class="font-dropdown-item" [style.font-family]="option.value">
-                {{ option.label }}
-              </div>
-            </ng-template>
-          </p-select>
-          <small class="field-hint">Used for form fields, labels, and descriptions</small>
-        </div>
-
-        <!-- Body Font Size -->
-        <div class="font-field-group">
-          <label for="bodyFontSize" class="font-label">
-            <i class="pi pi-hashtag"></i>
-            Body Font Size
-          </label>
-          <div class="size-input-wrapper">
-            <p-inputNumber
-              [(ngModel)]="bodyFontSizeValue"
-              inputId="bodyFontSize"
-              [min]="12"
-              [max]="24"
-              [step]="1"
-              suffix=" px"
-              [showButtons]="true"
-              buttonLayout="horizontal"
-              incrementButtonIcon="pi pi-plus"
-              decrementButtonIcon="pi pi-minus"
+          <!-- Body Font Selection -->
+          <div class="font-field-group">
+            <label for="bodyFont" class="font-label">
+              <i class="pi pi-align-left"></i>
+              Body Font
+            </label>
+            <p-select
+              [(ngModel)]="bodyFontValue"
+              [options]="fontOptions"
+              inputId="bodyFont"
+              optionLabel="label"
+              optionValue="value"
+              [filter]="true"
+              filterBy="label"
+              placeholder="Select body font"
+              appendTo="body"
               [style]="{ width: '100%' }"
-            ></p-inputNumber>
+            >
+              <ng-template let-option pTemplate="item">
+                <div class="font-dropdown-item" [style.font-family]="option.value">
+                  {{ option.label }}
+                </div>
+              </ng-template>
+            </p-select>
+            <small class="field-hint">Used for form fields, labels, and descriptions</small>
           </div>
-          <small class="field-hint">Range: 12px - 24px</small>
+        </div>
+
+        <!-- Font Size Row -->
+        <div class="font-size-row">
+          <!-- Heading Font Size -->
+          <div class="font-field-group">
+            <label for="headingFontSize" class="font-label">
+              <i class="pi pi-hashtag"></i>
+              Heading Font Size
+            </label>
+            <div class="size-input-wrapper">
+              <p-inputNumber
+                [(ngModel)]="headingFontSizeValue"
+                inputId="headingFontSize"
+                [min]="16"
+                [max]="48"
+                [step]="1"
+                suffix=" px"
+                [showButtons]="true"
+                buttonLayout="horizontal"
+                incrementButtonIcon="pi pi-plus"
+                decrementButtonIcon="pi pi-minus"
+                [style]="{ width: '100%' }"
+              ></p-inputNumber>
+            </div>
+            <small class="field-hint">Range: 16px - 48px</small>
+          </div>
+
+          <!-- Body Font Size -->
+          <div class="font-field-group">
+            <label for="bodyFontSize" class="font-label">
+              <i class="pi pi-hashtag"></i>
+              Body Font Size
+            </label>
+            <div class="size-input-wrapper">
+              <p-inputNumber
+                [(ngModel)]="bodyFontSizeValue"
+                inputId="bodyFontSize"
+                [min]="12"
+                [max]="24"
+                [step]="1"
+                suffix=" px"
+                [showButtons]="true"
+                buttonLayout="horizontal"
+                incrementButtonIcon="pi pi-plus"
+                decrementButtonIcon="pi pi-minus"
+                [style]="{ width: '100%' }"
+              ></p-inputNumber>
+            </div>
+            <small class="field-hint">Range: 12px - 24px</small>
+          </div>
         </div>
       </div>
 
@@ -218,6 +224,20 @@ interface FontOption {
         flex-direction: column;
         gap: 1.5rem;
         margin-bottom: 2rem;
+      }
+
+      .font-selection-row,
+      .font-size-row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+      }
+
+      @media (max-width: 767px) {
+        .font-selection-row,
+        .font-size-row {
+          grid-template-columns: 1fr;
+        }
       }
 
       .font-field-group {

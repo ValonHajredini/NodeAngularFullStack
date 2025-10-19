@@ -113,6 +113,7 @@ import { FormTheme } from '@nodeangularfullstack/shared';
                 <ng-template #content>
                   <app-styling-step />
                   <app-preview-elements-step />
+                  <app-preview-step [visualPreviewOnly]="true" />
                 </ng-template>
               </p-step-panel>
 

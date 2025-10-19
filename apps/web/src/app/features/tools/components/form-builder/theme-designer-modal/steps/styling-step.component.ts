@@ -325,10 +325,16 @@ import { ThemeDesignerModalService } from '../theme-designer-modal.service';
       }
 
       .styling-fields {
-        display: flex;
-        flex-direction: column;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
         gap: 2rem;
         margin-bottom: 2rem;
+      }
+
+      @media (max-width: 767px) {
+        .styling-fields {
+          grid-template-columns: 1fr;
+        }
       }
 
       .styling-field-group {

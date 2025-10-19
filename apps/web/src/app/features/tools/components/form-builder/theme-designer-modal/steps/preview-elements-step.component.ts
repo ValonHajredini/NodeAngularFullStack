@@ -25,72 +25,75 @@ import { ThemeDesignerModalService } from '../theme-designer-modal.service';
       </div>
 
       <div class="preview-elements-fields">
-        <!-- Preview Text Color -->
-        <div class="preview-field-group">
-          <label for="previewTextColor" class="preview-label">
-            <i class="pi pi-palette"></i>
-            Text Color
-          </label>
-          <div class="preview-input-wrapper">
-            <p-colorPicker
-              [(ngModel)]="previewTextColorValue"
-              inputId="previewTextColor"
-              [inline]="false"
-              [format]="'hex'"
-              appendTo="body"
-            ></p-colorPicker>
-            <div class="color-preview" [style.background-color]="previewTextColorValue">
-              <span class="color-hex">{{ previewTextColorValue }}</span>
+        <!-- Color Fields Row (2 columns) -->
+        <div class="color-fields-row">
+          <!-- Preview Text Color -->
+          <div class="preview-field-group">
+            <label for="previewTextColor" class="preview-label">
+              <i class="pi pi-palette"></i>
+              Text Color
+            </label>
+            <div class="preview-input-wrapper">
+              <p-colorPicker
+                [(ngModel)]="previewTextColorValue"
+                inputId="previewTextColor"
+                [inline]="false"
+                [format]="'hex'"
+                appendTo="body"
+              ></p-colorPicker>
+              <div class="color-preview" [style.background-color]="previewTextColorValue">
+                <span class="color-hex">{{ previewTextColorValue }}</span>
+              </div>
             </div>
+            <small class="field-hint">Text color for preview elements in the form builder</small>
           </div>
-          <small class="field-hint">Text color for preview elements in the form builder</small>
+
+          <!-- Preview Background Color -->
+          <div class="preview-field-group">
+            <label for="previewBackgroundColor" class="preview-label">
+              <i class="pi pi-clone"></i>
+              Background Color
+            </label>
+            <div class="preview-input-wrapper">
+              <p-colorPicker
+                [(ngModel)]="previewBackgroundColorValue"
+                inputId="previewBackgroundColor"
+                [inline]="false"
+                [format]="'hex'"
+                appendTo="body"
+              ></p-colorPicker>
+              <div class="color-preview" [style.background-color]="previewBackgroundColorValue">
+                <span class="color-hex">{{ previewBackgroundColorValue }}</span>
+              </div>
+            </div>
+            <small class="field-hint"
+              >Background color for preview elements in the form builder</small
+            >
+          </div>
+
+          <!-- Preview Border Color -->
+          <div class="preview-field-group">
+            <label for="previewBorderColor" class="preview-label">
+              <i class="pi pi-stop"></i>
+              Border Color
+            </label>
+            <div class="preview-input-wrapper">
+              <p-colorPicker
+                [(ngModel)]="previewBorderColorValue"
+                inputId="previewBorderColor"
+                [inline]="false"
+                [format]="'hex'"
+                appendTo="body"
+              ></p-colorPicker>
+              <div class="color-preview" [style.background-color]="previewBorderColorValue">
+                <span class="color-hex">{{ previewBorderColorValue }}</span>
+              </div>
+            </div>
+            <small class="field-hint">Border color for preview elements in the form builder</small>
+          </div>
         </div>
 
-        <!-- Preview Background Color -->
-        <div class="preview-field-group">
-          <label for="previewBackgroundColor" class="preview-label">
-            <i class="pi pi-clone"></i>
-            Background Color
-          </label>
-          <div class="preview-input-wrapper">
-            <p-colorPicker
-              [(ngModel)]="previewBackgroundColorValue"
-              inputId="previewBackgroundColor"
-              [inline]="false"
-              [format]="'hex'"
-              appendTo="body"
-            ></p-colorPicker>
-            <div class="color-preview" [style.background-color]="previewBackgroundColorValue">
-              <span class="color-hex">{{ previewBackgroundColorValue }}</span>
-            </div>
-          </div>
-          <small class="field-hint"
-            >Background color for preview elements in the form builder</small
-          >
-        </div>
-
-        <!-- Preview Border Color -->
-        <div class="preview-field-group">
-          <label for="previewBorderColor" class="preview-label">
-            <i class="pi pi-stop"></i>
-            Border Color
-          </label>
-          <div class="preview-input-wrapper">
-            <p-colorPicker
-              [(ngModel)]="previewBorderColorValue"
-              inputId="previewBorderColor"
-              [inline]="false"
-              [format]="'hex'"
-              appendTo="body"
-            ></p-colorPicker>
-            <div class="color-preview" [style.background-color]="previewBorderColorValue">
-              <span class="color-hex">{{ previewBorderColorValue }}</span>
-            </div>
-          </div>
-          <small class="field-hint">Border color for preview elements in the form builder</small>
-        </div>
-
-        <!-- Preview Border Radius -->
+        <!-- Border Radius Row -->
         <div class="preview-field-group">
           <label for="previewBorderRadius" class="preview-label">
             <i class="pi pi-stop"></i>
@@ -181,6 +184,18 @@ import { ThemeDesignerModalService } from '../theme-designer-modal.service';
         flex-direction: column;
         gap: 2rem;
         margin-bottom: 2rem;
+      }
+
+      .color-fields-row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+      }
+
+      @media (max-width: 767px) {
+        .color-fields-row {
+          grid-template-columns: 1fr;
+        }
       }
 
       .preview-field-group {
