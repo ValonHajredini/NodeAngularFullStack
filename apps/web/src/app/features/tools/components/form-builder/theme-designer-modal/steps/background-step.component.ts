@@ -854,7 +854,7 @@ export class BackgroundStepComponent {
    * @param event - File upload event containing the selected file
    */
   onImageUpload(event: any): void {
-    const file = event.files[0];
+    const file = event.target?.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
