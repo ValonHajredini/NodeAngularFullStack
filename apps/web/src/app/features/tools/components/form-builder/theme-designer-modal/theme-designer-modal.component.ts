@@ -220,8 +220,26 @@ import { FormTheme } from '@nodeangularfullstack/shared';
         flex: 1;
         overflow-y: auto;
         overflow-x: hidden;
-        padding: 1.5rem;
+        padding: 0;
         min-height: 0;
+      }
+
+      /* Remove PrimeNG Stepper default spacing */
+      :host ::ng-deep .theme-designer-dialog {
+        .p-stepper {
+          padding: 0;
+          margin: 0;
+        }
+
+        .p-stepper-panels {
+          padding: 0;
+          margin: 0;
+        }
+
+        .p-step-panel {
+          padding: 0;
+          margin: 0;
+        }
       }
 
       .theme-designer-footer {

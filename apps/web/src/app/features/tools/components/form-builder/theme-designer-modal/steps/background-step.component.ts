@@ -1,9 +1,8 @@
-import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RadioButton } from 'primeng/radiobutton';
 import { ColorPicker } from 'primeng/colorpicker';
-import { FileUpload } from 'primeng/fileupload';
 import { Slider } from 'primeng/slider';
 import { Select } from 'primeng/select';
 import { ThemeDesignerModalService } from '../theme-designer-modal.service';
@@ -21,7 +20,7 @@ interface GradientPosition {
 @Component({
   selector: 'app-background-step',
   standalone: true,
-  imports: [CommonModule, FormsModule, RadioButton, ColorPicker, FileUpload, Slider, Select],
+  imports: [CommonModule, FormsModule, RadioButton, ColorPicker, Slider, Select],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="background-step">
@@ -205,61 +204,40 @@ interface GradientPosition {
           </div>
         }
 
-        <!-- Image Upload -->
-        @if (backgroundTypeValue === 'image') {
+        <!-- Image Upload Controls (shown only when image type selected) -->
+        @if (backgroundTypeValue === 'image' && backgroundImageUrlValue) {
           <div class="config-section">
-            <label class="config-label">
-              <i class="pi pi-upload"></i>
-              Upload Background Image
-            </label>
-            <p-fileUpload
-              mode="basic"
-              name="backgroundImage"
-              accept="image/*"
-              [maxFileSize]="2000000"
-              (onSelect)="onImageUpload($event)"
-              chooseLabel="Choose Image"
-              [auto]="true"
-              styleClass="w-full"
-            />
-            <small class="field-hint"
-              >Maximum file size: 2MB. Supported formats: JPG, PNG, GIF</small
-            >
-
-            @if (backgroundImageUrlValue) {
-              <!-- Image Controls: Blur and Opacity -->
-              <div class="image-controls-inline">
-                <!-- Image Blur Control -->
-                <div class="image-control">
-                  <label class="config-label">
-                    <i class="pi pi-filter"></i>
-                    Image Blur: {{ backgroundImageBlurValue }}px
-                  </label>
-                  <p-slider
-                    [(ngModel)]="backgroundImageBlurValue"
-                    [min]="0"
-                    [max]="20"
-                    [step]="1"
-                    styleClass="w-full"
-                  ></p-slider>
-                </div>
-
-                <!-- Image Opacity Control -->
-                <div class="image-control">
-                  <label class="config-label">
-                    <i class="pi pi-eye"></i>
-                    Image Opacity: {{ (backgroundImageOpacityValue * 100).toFixed(0) }}%
-                  </label>
-                  <p-slider
-                    [(ngModel)]="backgroundImageOpacityValue"
-                    [min]="0"
-                    [max]="1"
-                    [step]="0.05"
-                    styleClass="w-full"
-                  ></p-slider>
-                </div>
+            <div class="image-controls-inline">
+              <!-- Image Blur Control -->
+              <div class="image-control">
+                <label class="config-label">
+                  <i class="pi pi-filter"></i>
+                  Image Blur: {{ backgroundImageBlurValue }}px
+                </label>
+                <p-slider
+                  [(ngModel)]="backgroundImageBlurValue"
+                  [min]="0"
+                  [max]="20"
+                  [step]="1"
+                  styleClass="w-full"
+                ></p-slider>
               </div>
-            }
+
+              <!-- Image Opacity Control -->
+              <div class="image-control">
+                <label class="config-label">
+                  <i class="pi pi-eye"></i>
+                  Image Opacity: {{ (backgroundImageOpacityValue * 100).toFixed(0) }}%
+                </label>
+                <p-slider
+                  [(ngModel)]="backgroundImageOpacityValue"
+                  [min]="0"
+                  [max]="1"
+                  [step]="0.05"
+                  styleClass="w-full"
+                ></p-slider>
+              </div>
+            </div>
           </div>
         }
       </div>
@@ -268,24 +246,46 @@ interface GradientPosition {
       <div class="background-preview">
         <h4 class="preview-title">Background Preview</h4>
         <div class="preview-box-wrapper">
-          <div
-            class="preview-box"
-            [attr.data-background]="getBackgroundPreview()"
-            [attr.data-opacity]="backgroundTypeValue === 'image' ? backgroundImageOpacityValue : 1"
-            [attr.data-blur]="
-              backgroundTypeValue === 'image' ? backgroundImageBlurValue + 'px' : '0px'
-            "
-            [style.--bg-image]="getBackgroundPreview()"
-            [style.--bg-opacity]="backgroundTypeValue === 'image' ? backgroundImageOpacityValue : 1"
-            [style.--bg-blur]="
-              backgroundTypeValue === 'image' ? backgroundImageBlurValue + 'px' : '0px'
-            "
-          >
-            <div class="preview-content">
-              <i class="pi pi-eye preview-icon"></i>
-              <span class="preview-text">Form Background</span>
+          <!-- Drag and Drop Zone (only for image type) -->
+          @if (backgroundTypeValue === 'image') {
+            <div
+              class="image-dropzone"
+              [class.dragover]="isDragOverImage"
+              (click)="fileInputImage.click()"
+              (dragover)="onImageDragOver($event)"
+              (dragleave)="onImageDragLeave($event)"
+              (drop)="onImageDrop($event)"
+              [style.--bg-image]="getBackgroundPreview()"
+              [style.--bg-opacity]="backgroundImageOpacityValue"
+              [style.--bg-blur]="backgroundImageBlurValue + 'px'"
+            >
+              @if (backgroundImageUrlValue) {
+                <div class="preview-content">
+                  <i class="pi pi-eye preview-icon"></i>
+                  <span class="preview-text">Form Background</span>
+                </div>
+              } @else {
+                <div class="upload-placeholder">
+                  <i class="pi pi-image"></i>
+                  <span>Drop image here or click to browse</span>
+                  <small>JPG, PNG, GIF (max 2MB)</small>
+                </div>
+              }
             </div>
-          </div>
+          } @else {
+            <!-- Regular preview for non-image types -->
+            <div
+              class="preview-box"
+              [attr.data-background]="getBackgroundPreview()"
+              [style.--bg-image]="getBackgroundPreview()"
+            >
+              <div class="preview-content">
+                <i class="pi pi-eye preview-icon"></i>
+                <span class="preview-text">Form Background</span>
+              </div>
+            </div>
+          }
+
           @if (backgroundTypeValue === 'image' && backgroundImageUrlValue) {
             <button
               type="button"
@@ -298,6 +298,15 @@ interface GradientPosition {
           }
         </div>
       </div>
+
+      <!-- Hidden file input -->
+      <input
+        #fileInputImage
+        type="file"
+        accept="image/*"
+        (change)="onImageUpload($event)"
+        style="display: none"
+      />
     </div>
   `,
   styles: [
@@ -615,6 +624,79 @@ interface GradientPosition {
         color: #374151;
       }
 
+      /* Image Dropzone Styling */
+      .image-dropzone {
+        width: 100%;
+        height: 150px;
+        border-radius: 8px;
+        border: 2px solid #e5e7eb;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #ffffff;
+        position: relative;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      /* Background layer with blur and opacity */
+      .image-dropzone::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--bg-image, #f3f4f6);
+        opacity: var(--bg-opacity, 1);
+        filter: blur(var(--bg-blur, 0px));
+        z-index: 0;
+      }
+
+      .image-dropzone:hover {
+        border-color: #6366f1;
+        background: #f5f3ff;
+      }
+
+      .image-dropzone.dragover {
+        border-color: #6366f1;
+        background: #eef2ff;
+        transform: scale(1.02);
+      }
+
+      .image-dropzone .preview-content {
+        position: relative;
+        z-index: 1;
+      }
+
+      .upload-placeholder {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        color: #9ca3af;
+        padding: 1rem;
+        text-align: center;
+      }
+
+      .upload-placeholder i {
+        font-size: 2rem;
+        color: #d1d5db;
+      }
+
+      .upload-placeholder span {
+        font-size: 0.875rem;
+        font-weight: 500;
+      }
+
+      .upload-placeholder small {
+        font-size: 0.75rem;
+        color: #d1d5db;
+      }
+
       /* Responsive adjustments */
       @media (max-width: 767px) {
         .background-step {
@@ -644,6 +726,7 @@ interface GradientPosition {
 })
 export class BackgroundStepComponent {
   protected readonly modalService = inject(ThemeDesignerModalService);
+  protected readonly isDragOverImage = signal(false);
 
   protected readonly gradientPositions: GradientPosition[] = [
     { label: 'Center', value: 'center' },
@@ -727,6 +810,43 @@ export class BackgroundStepComponent {
 
   set backgroundImageBlurValue(value: number) {
     this.modalService.setBackgroundImageBlur(value);
+  }
+
+  /**
+   * Handles drag over event for image dropzone.
+   */
+  protected onImageDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragOverImage.set(true);
+  }
+
+  /**
+   * Handles drag leave event for image dropzone.
+   */
+  protected onImageDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragOverImage.set(false);
+  }
+
+  /**
+   * Handles drop event for image dropzone.
+   */
+  protected onImageDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragOverImage.set(false);
+
+    const files = event.dataTransfer?.files;
+    if (files && files.length > 0) {
+      const fakeEvent = {
+        target: {
+          files: files,
+        },
+      } as any;
+      this.onImageUpload(fakeEvent);
+    }
   }
 
   /**
