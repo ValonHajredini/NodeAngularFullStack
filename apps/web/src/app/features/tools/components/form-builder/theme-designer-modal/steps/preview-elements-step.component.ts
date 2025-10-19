@@ -156,7 +156,7 @@ import { ThemeDesignerModalService } from '../theme-designer-modal.service';
   styles: [
     `
       .preview-elements-step {
-        padding: 2rem;
+        padding: 0 2rem 1rem 2rem;
       }
 
       .step-header {

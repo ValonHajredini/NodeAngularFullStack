@@ -364,7 +364,7 @@ import { FormsApiService } from '../../forms-api.service';
   styles: [
     `
       .preview-step {
-        padding: 2rem;
+        padding: 0 2rem 1rem 2rem;
         overflow-y: auto;
         max-height: calc(100vh - 250px);
       }

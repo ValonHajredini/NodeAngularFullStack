@@ -310,7 +310,7 @@ interface GradientPosition {
   styles: [
     `
       .background-step {
-        padding: 2rem;
+        padding: 0rem 2rem 1rem 2rem;
       }
 
       .step-header {

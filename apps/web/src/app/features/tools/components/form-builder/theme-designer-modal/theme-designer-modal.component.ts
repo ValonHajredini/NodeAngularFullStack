@@ -30,7 +30,7 @@ import { PreviewStepComponent } from './steps/preview-step.component';
 import { FormTheme } from '@nodeangularfullstack/shared';
 
 /**
- * Modal component for creating custom themes with a 7-step wizard.
+ * Modal component for creating custom themes with a 5-step wizard.
  * Allows users to design themes without leaving the Form Builder workflow.
  * Integrates with ThemePreviewService for real-time CSS variable updates.
  */
@@ -84,8 +84,6 @@ import { FormTheme } from '@nodeangularfullstack/shared';
               <p-step [value]="2"></p-step>
               <p-step [value]="3"></p-step>
               <p-step [value]="4"></p-step>
-              <p-step [value]="5"></p-step>
-              <p-step [value]="6"></p-step>
             </p-step-list>
 
             <p-step-panels>
@@ -110,29 +108,16 @@ import { FormTheme } from '@nodeangularfullstack/shared';
                 </ng-template>
               </p-step-panel>
 
-              <!-- Step 4: Styling -->
+              <!-- Step 4: Styling & Preview Elements -->
               <p-step-panel [value]="3">
                 <ng-template #content>
                   <app-styling-step />
-                </ng-template>
-              </p-step-panel>
-
-              <!-- Step 5: Preview Elements -->
-              <p-step-panel [value]="4">
-                <ng-template #content>
                   <app-preview-elements-step />
                 </ng-template>
               </p-step-panel>
 
-              <!-- Step 6: Visual Preview -->
-              <p-step-panel [value]="5">
-                <ng-template #content>
-                  <app-preview-step [visualPreviewOnly]="true" />
-                </ng-template>
-              </p-step-panel>
-
-              <!-- Step 7: Summary & Save -->
-              <p-step-panel [value]="6">
+              <!-- Step 5: Preview & Save -->
+              <p-step-panel [value]="4">
                 <ng-template #content>
                   <app-preview-step />
                 </ng-template>
@@ -159,7 +144,7 @@ import { FormTheme } from '@nodeangularfullstack/shared';
 
           <!-- Center: Dot Indicators -->
           <div class="step-indicators">
-            @for (step of [0, 1, 2, 3, 4, 5, 6]; track step) {
+            @for (step of [0, 1, 2, 3, 4]; track step) {
               <div
                 class="step-dot"
                 [class.active]="activeStepIndex() === step"
@@ -171,7 +156,7 @@ import { FormTheme } from '@nodeangularfullstack/shared';
 
           <!-- Right side: Next or Save button -->
           <div class="nav-right">
-            @if (activeStepIndex() < 6) {
+            @if (activeStepIndex() < 4) {
               <button
                 pButton
                 type="button"

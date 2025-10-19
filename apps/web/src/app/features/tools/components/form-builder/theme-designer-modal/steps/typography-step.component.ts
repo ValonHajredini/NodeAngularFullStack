@@ -193,7 +193,7 @@ interface FontOption {
   styles: [
     `
       .typography-step {
-        padding: 2rem;
+        padding: 0 2rem 1rem 2rem;
       }
 
       .step-header {
