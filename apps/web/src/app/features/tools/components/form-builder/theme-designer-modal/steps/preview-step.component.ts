@@ -34,6 +34,89 @@ import { FormsApiService } from '../../forms-api.service';
           <h3 class="step-title">Preview & Save Theme</h3>
           <p class="step-description">Review your theme and save it for use in your forms.</p>
         </div>
+
+        <!-- Visual Theme Preview (always shown in final step) -->
+        <div class="visual-preview">
+          <h4 class="preview-title">
+            <i class="pi pi-eye"></i>
+            Visual Preview
+          </h4>
+
+          <div class="preview-container" [style.background]="getBackgroundPreview()">
+            <div class="preview-form">
+              <h2
+                class="preview-form-title"
+                [style.font-family]="modalService.getHeadingFont()"
+                [style.font-size.px]="modalService.getHeadingFontSize()"
+                [style.color]="modalService.getPrimaryColor()"
+              >
+                Sample Form Title
+              </h2>
+
+              <div
+                class="preview-form-field"
+                [style.margin-bottom.px]="modalService.getFieldSpacing()"
+              >
+                <label
+                  class="preview-form-label"
+                  [style.font-family]="modalService.getBodyFont()"
+                  [style.font-size.px]="modalService.getBodyFontSize()"
+                  [style.margin-bottom.px]="modalService.getLabelSpacing()"
+                  [style.color]="modalService.getLabelColor()"
+                >
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  class="preview-form-input"
+                  placeholder="John Doe"
+                  [style.font-family]="modalService.getBodyFont()"
+                  [style.font-size.px]="modalService.getBodyFontSize()"
+                  [style.border-radius.px]="modalService.getBorderRadius()"
+                  [style.padding.px]="modalService.getFieldPadding()"
+                  [style.border-width.px]="modalService.getBorderWidth()"
+                  [style.background-color]="modalService.getInputBackgroundColor()"
+                  [style.color]="modalService.getInputTextColor()"
+                />
+              </div>
+
+              <div class="preview-form-field">
+                <label
+                  class="preview-form-label"
+                  [style.font-family]="modalService.getBodyFont()"
+                  [style.font-size.px]="modalService.getBodyFontSize()"
+                  [style.margin-bottom.px]="modalService.getLabelSpacing()"
+                  [style.color]="modalService.getLabelColor()"
+                >
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  class="preview-form-input"
+                  placeholder="john@example.com"
+                  [style.font-family]="modalService.getBodyFont()"
+                  [style.font-size.px]="modalService.getBodyFontSize()"
+                  [style.border-radius.px]="modalService.getBorderRadius()"
+                  [style.padding.px]="modalService.getFieldPadding()"
+                  [style.border-width.px]="modalService.getBorderWidth()"
+                  [style.background-color]="modalService.getInputBackgroundColor()"
+                  [style.color]="modalService.getInputTextColor()"
+                />
+              </div>
+
+              <button
+                class="preview-form-button"
+                [style.background-color]="modalService.getPrimaryColor()"
+                [style.font-family]="modalService.getBodyFont()"
+                [style.font-size.px]="modalService.getBodyFontSize()"
+                [style.border-radius.px]="modalService.getBorderRadius()"
+                [style.padding.px]="modalService.getFieldPadding()"
+              >
+                Submit
+              </button>
+            </div>
+          </div>
+        </div>
       } @else {
         <div class="step-header">
           <h3 class="step-title">Visual Preview</h3>
