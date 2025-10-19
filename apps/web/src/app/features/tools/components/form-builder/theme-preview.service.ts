@@ -32,15 +32,14 @@ export class ThemePreviewService {
     const isGradient =
       rawBackground.startsWith('linear-gradient') || rawBackground.startsWith('radial-gradient');
     const backgroundColorValue = isGradient ? '#ffffff' : rawBackground;
-    const backgroundImageValue = desktop.backgroundImageUrl
-      ? `url(${desktop.backgroundImageUrl})`
-      : isGradient
-        ? rawBackground
-        : 'none';
 
     this.setCssVar(root, '--theme-bg-color', backgroundColorValue);
     this.setCssVar(root, '--theme-background-color', backgroundColorValue); // New variable name
-    this.setCssVar(root, '--theme-background-image', backgroundImageValue);
+
+    // IMPORTANT: Background images (especially large base64 data URIs) cannot be set via
+    // inline CSS variables due to browser length limitations. Instead, inject via <style> tag.
+    // This is critical for Story 24.9 (background image with opacity and blur).
+    this.applyBackgroundImageStyle(desktop.backgroundImageUrl, isGradient ? rawBackground : null);
 
     // Background image opacity and blur (Story 24.9)
     const bgImageOpacity = desktop.backgroundImageOpacity ?? 1;
@@ -182,7 +181,8 @@ export class ThemePreviewService {
       root.style.removeProperty(varName);
     });
 
-    // Remove mobile media query styles
+    // Remove injected style elements
+    this.removeBackgroundImageStyle();
     this.removeMobileOverrides();
   }
 
@@ -249,6 +249,58 @@ export class ThemePreviewService {
     styleElement.textContent = mobileCss;
 
     document.head.appendChild(styleElement);
+  }
+
+  /**
+   * Injects background image CSS via <style> tag to bypass inline style length limitations.
+   * Large base64 data URIs cannot be set via CSS custom properties due to browser CSSOM limits.
+   * Instead, we directly target the ::before pseudo-element that displays the background.
+   * @private
+   * @param backgroundImageUrl - The background image URL (can be base64 data URI)
+   * @param gradientFallback - Optional gradient string to use if no background image
+   */
+  private applyBackgroundImageStyle(
+    backgroundImageUrl: string | undefined,
+    gradientFallback: string | null,
+  ): void {
+    // Remove existing background image style
+    this.removeBackgroundImageStyle();
+
+    // Determine background image value
+    const backgroundImageValue = backgroundImageUrl
+      ? `url(${backgroundImageUrl})`
+      : gradientFallback
+        ? gradientFallback
+        : 'none';
+
+    // IMPORTANT: We cannot use CSS custom properties for large base64 images because
+    // browsers have CSSOM value length limits. Instead, directly target the pseudo-element.
+    // This targets both form-renderer-container (published forms) and form-canvas (builder preview)
+    const backgroundCss = `
+.form-renderer-container::before,
+.form-canvas::before {
+  background-image: ${backgroundImageValue} !important;
+}`;
+
+    // Create and inject style element
+    const styleElement = document.createElement('style');
+    styleElement.id = 'theme-background-image-style';
+    styleElement.textContent = backgroundCss;
+
+    document.head.appendChild(styleElement);
+
+    console.log('[ThemePreviewService] Background image injected via <style> tag');
+  }
+
+  /**
+   * Removes background image style element.
+   * @private
+   */
+  private removeBackgroundImageStyle(): void {
+    const existingStyle = document.getElementById('theme-background-image-style');
+    if (existingStyle) {
+      existingStyle.remove();
+    }
   }
 
   /**
