@@ -351,7 +351,7 @@ interface GradientPosition {
         display: flex;
         align-items: center;
         gap: 0.75rem;
-        padding: 0.75rem;
+        padding: 0.75rem 0.75rem 0.75rem 0.375rem;
         border: 2px solid #e5e7eb;
         border-radius: 8px;
         cursor: pointer;
