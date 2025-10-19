@@ -3,14 +3,14 @@
 .form-canvas {
   position: relative;
   min-height: 400px;
-  // Form builder canvas should have neutral background for editing
-  // Background image should NOT appear in the builder, only in preview/published form
+  // Background image now appears in the builder for better WYSIWYG editing
   background-color: transparent;
   transition: background-color 0.2s ease;
+  overflow: hidden; // Prevent background from overflowing
 }
 
 // Canvas background theming class
-// Background image should NOT appear in builder, only in preview/published form
+// Background image now appears in both builder and preview/published form
 .theme-form-canvas-background {
   position: relative;
   background-color: var(--theme-container-background, #f9fafb);

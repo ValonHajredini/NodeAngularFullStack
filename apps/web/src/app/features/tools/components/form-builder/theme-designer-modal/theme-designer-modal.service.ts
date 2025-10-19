@@ -65,6 +65,12 @@ export class ThemeDesignerModalService {
   private readonly containerPosition = signal<'center' | 'top' | 'left' | 'full-width'>('center');
   private readonly thumbnailUrl = signal('https://via.placeholder.com/300x200');
 
+  // Step 5: Preview Elements
+  private readonly previewTextColor = signal('#1F2937');
+  private readonly previewBackgroundColor = signal('#FFFFFF');
+  private readonly previewBorderColor = signal('#D1D5DB');
+  private readonly previewBorderRadius = signal(8);
+
   /**
    * Computed theme object containing all current theme values.
    * Updates reactively when any theme property changes.
@@ -112,6 +118,10 @@ export class ThemeDesignerModalService {
           containerBackground: this.containerBackground(),
           containerOpacity: this.containerOpacity(),
           containerPosition: this.containerPosition(),
+          previewTextColor: this.previewTextColor(),
+          previewBackgroundColor: this.previewBackgroundColor(),
+          previewBorderColor: this.previewBorderColor(),
+          previewBorderRadius: `${this.previewBorderRadius()}px`,
         },
       },
     };
@@ -133,9 +143,11 @@ export class ThemeDesignerModalService {
         return !!this.headingFont() && !!this.bodyFont();
       case 3: // Step 4: Styling
         return true; // Styling defaults are valid
-      case 4: // Step 5: Visual Preview
+      case 4: // Step 5: Preview Elements
+        return true; // Preview elements defaults are valid
+      case 5: // Step 6: Visual Preview
         return true; // Visual preview is always valid (no user input required)
-      case 5: // Step 6: Preview & Save
+      case 6: // Step 7: Preview & Save
         return this.themeName().trim().length > 0 && this.themeName().length <= 50;
       default:
         return false;
@@ -263,13 +275,26 @@ export class ThemeDesignerModalService {
   getThumbnailUrl = () => this.thumbnailUrl();
   setThumbnailUrl = (value: string) => this.thumbnailUrl.set(value);
 
+  // Preview Elements getters/setters
+  getPreviewTextColor = () => this.previewTextColor();
+  setPreviewTextColor = (value: string) => this.previewTextColor.set(value);
+
+  getPreviewBackgroundColor = () => this.previewBackgroundColor();
+  setPreviewBackgroundColor = (value: string) => this.previewBackgroundColor.set(value);
+
+  getPreviewBorderColor = () => this.previewBorderColor();
+  setPreviewBorderColor = (value: string) => this.previewBorderColor.set(value);
+
+  getPreviewBorderRadius = () => this.previewBorderRadius();
+  setPreviewBorderRadius = (value: number) => this.previewBorderRadius.set(value);
+
   /**
    * Advances to the next wizard step.
    * Only proceeds if current step validation passes.
    */
   nextStep(): void {
     if (this.canProceedToNextStep()) {
-      this.step.update((s) => Math.min(s + 1, 5));
+      this.step.update((s) => Math.min(s + 1, 6));
     }
   }
 
@@ -284,10 +309,10 @@ export class ThemeDesignerModalService {
   /**
    * Navigates to a specific step.
    * Used for dot indicator navigation (allows going back to previous steps).
-   * @param stepIndex - Target step index (0-5)
+   * @param stepIndex - Target step index (0-6)
    */
   goToStep(stepIndex: number): void {
-    if (stepIndex >= 0 && stepIndex <= 5) {
+    if (stepIndex >= 0 && stepIndex <= 6) {
       this.step.set(stepIndex);
     }
   }
@@ -395,6 +420,15 @@ export class ThemeDesignerModalService {
     this.containerOpacity.set(desktop.containerOpacity);
     this.containerPosition.set(desktop.containerPosition);
     this.thumbnailUrl.set(theme.thumbnailUrl);
+
+    // Step 5: Preview Elements
+    this.previewTextColor.set(desktop.previewTextColor ?? '#1F2937');
+    this.previewBackgroundColor.set(desktop.previewBackgroundColor ?? '#FFFFFF');
+    this.previewBorderColor.set(desktop.previewBorderColor ?? '#D1D5DB');
+    const previewBorderRadius = desktop.previewBorderRadius
+      ? parseInt(desktop.previewBorderRadius.replace('px', ''), 10)
+      : 8;
+    this.previewBorderRadius.set(previewBorderRadius);
   }
 
   /**
@@ -464,5 +498,9 @@ export class ThemeDesignerModalService {
     this.containerOpacity.set(1.0);
     this.containerPosition.set('center');
     this.thumbnailUrl.set('https://via.placeholder.com/300x200');
+    this.previewTextColor.set('#1F2937');
+    this.previewBackgroundColor.set('#FFFFFF');
+    this.previewBorderColor.set('#D1D5DB');
+    this.previewBorderRadius.set(8);
   }
 }

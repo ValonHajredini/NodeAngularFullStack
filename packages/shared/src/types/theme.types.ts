@@ -45,6 +45,14 @@ export interface ThemeProperties {
   backgroundImageOpacity?: number;
   /** Background image blur in pixels (0-20, default 0) */
   backgroundImageBlur?: number;
+  /** Preview element text color (hex format) */
+  previewTextColor?: string;
+  /** Preview element background color (hex format) */
+  previewBackgroundColor?: string;
+  /** Preview element border color (hex format) */
+  previewBorderColor?: string;
+  /** Preview element border radius (CSS value) */
+  previewBorderRadius?: string;
 }
 
 /**

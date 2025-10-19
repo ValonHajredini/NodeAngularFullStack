@@ -25,11 +25,12 @@ import { ColorStepComponent } from './steps/color-step.component';
 import { BackgroundStepComponent } from './steps/background-step.component';
 import { TypographyStepComponent } from './steps/typography-step.component';
 import { StylingStepComponent } from './steps/styling-step.component';
+import { PreviewElementsStepComponent } from './steps/preview-elements-step.component';
 import { PreviewStepComponent } from './steps/preview-step.component';
 import { FormTheme } from '@nodeangularfullstack/shared';
 
 /**
- * Modal component for creating custom themes with a 5-step wizard.
+ * Modal component for creating custom themes with a 7-step wizard.
  * Allows users to design themes without leaving the Form Builder workflow.
  * Integrates with ThemePreviewService for real-time CSS variable updates.
  */
@@ -46,6 +47,7 @@ import { FormTheme } from '@nodeangularfullstack/shared';
     BackgroundStepComponent,
     TypographyStepComponent,
     StylingStepComponent,
+    PreviewElementsStepComponent,
     PreviewStepComponent,
   ],
   providers: [ThemeDesignerModalService, ConfirmationService],
@@ -83,6 +85,7 @@ import { FormTheme } from '@nodeangularfullstack/shared';
               <p-step [value]="3"></p-step>
               <p-step [value]="4"></p-step>
               <p-step [value]="5"></p-step>
+              <p-step [value]="6"></p-step>
             </p-step-list>
 
             <p-step-panels>
@@ -114,15 +117,22 @@ import { FormTheme } from '@nodeangularfullstack/shared';
                 </ng-template>
               </p-step-panel>
 
-              <!-- Step 5: Visual Preview -->
+              <!-- Step 5: Preview Elements -->
               <p-step-panel [value]="4">
+                <ng-template #content>
+                  <app-preview-elements-step />
+                </ng-template>
+              </p-step-panel>
+
+              <!-- Step 6: Visual Preview -->
+              <p-step-panel [value]="5">
                 <ng-template #content>
                   <app-preview-step [visualPreviewOnly]="true" />
                 </ng-template>
               </p-step-panel>
 
-              <!-- Step 6: Summary & Save -->
-              <p-step-panel [value]="5">
+              <!-- Step 7: Summary & Save -->
+              <p-step-panel [value]="6">
                 <ng-template #content>
                   <app-preview-step />
                 </ng-template>
@@ -149,7 +159,7 @@ import { FormTheme } from '@nodeangularfullstack/shared';
 
           <!-- Center: Dot Indicators -->
           <div class="step-indicators">
-            @for (step of [0, 1, 2, 3, 4, 5]; track step) {
+            @for (step of [0, 1, 2, 3, 4, 5, 6]; track step) {
               <div
                 class="step-dot"
                 [class.active]="activeStepIndex() === step"
@@ -161,7 +171,7 @@ import { FormTheme } from '@nodeangularfullstack/shared';
 
           <!-- Right side: Next or Save button -->
           <div class="nav-right">
-            @if (activeStepIndex() < 5) {
+            @if (activeStepIndex() < 6) {
               <button
                 pButton
                 type="button"
@@ -320,7 +330,7 @@ export class ThemeDesignerModalComponent implements OnInit, OnDestroy {
   /** Internal signal for modal visibility */
   protected readonly visibleSignal = signal<boolean>(false);
 
-  /** Signal for tracking active step index (0-4 for 5 steps) */
+  /** Signal for tracking active step index (0-6 for 7 steps) */
   protected readonly activeStepIndex = signal<number>(0);
 
   /** Computed signal for modal header text */
@@ -568,7 +578,7 @@ export class ThemeDesignerModalComponent implements OnInit, OnDestroy {
    * Updates both the stepper index and modal service state.
    */
   protected onNext(): void {
-    if (this.activeStepIndex() < 5) {
+    if (this.activeStepIndex() < 6) {
       this.activeStepIndex.update((i) => i + 1);
       this.modalService.nextStep();
     }
@@ -588,7 +598,7 @@ export class ThemeDesignerModalComponent implements OnInit, OnDestroy {
   /**
    * Navigates to a specific step by clicking on the dot indicator.
    * Only allows navigation to completed steps or the current step.
-   * @param stepIndex - Target step index (0-4)
+   * @param stepIndex - Target step index (0-6)
    */
   protected goToStep(stepIndex: number): void {
     const currentStep = this.activeStepIndex();

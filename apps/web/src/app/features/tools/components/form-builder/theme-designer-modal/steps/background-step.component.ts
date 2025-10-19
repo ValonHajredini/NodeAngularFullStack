@@ -222,58 +222,44 @@ interface GradientPosition {
               [auto]="true"
               styleClass="w-full"
             />
-            @if (backgroundImageUrlValue) {
-              <div class="image-preview-container">
-                <img
-                  [src]="backgroundImageUrlValue"
-                  alt="Background preview"
-                  class="image-preview"
-                  [style.opacity]="backgroundImageOpacityValue"
-                  [style.filter]="'blur(' + backgroundImageBlurValue + 'px)'"
-                />
-                <button
-                  type="button"
-                  class="remove-image-btn"
-                  (click)="removeImage()"
-                  title="Remove image"
-                >
-                  <i class="pi pi-times"></i>
-                </button>
-              </div>
-
-              <!-- Image Opacity Control -->
-              <div class="image-control">
-                <label class="config-label">
-                  <i class="pi pi-eye"></i>
-                  Image Opacity: {{ (backgroundImageOpacityValue * 100).toFixed(0) }}%
-                </label>
-                <p-slider
-                  [(ngModel)]="backgroundImageOpacityValue"
-                  [min]="0"
-                  [max]="1"
-                  [step]="0.05"
-                  styleClass="w-full"
-                ></p-slider>
-              </div>
-
-              <!-- Image Blur Control -->
-              <div class="image-control">
-                <label class="config-label">
-                  <i class="pi pi-filter"></i>
-                  Image Blur: {{ backgroundImageBlurValue }}px
-                </label>
-                <p-slider
-                  [(ngModel)]="backgroundImageBlurValue"
-                  [min]="0"
-                  [max]="20"
-                  [step]="1"
-                  styleClass="w-full"
-                ></p-slider>
-              </div>
-            }
             <small class="field-hint"
               >Maximum file size: 2MB. Supported formats: JPG, PNG, GIF</small
             >
+
+            @if (backgroundImageUrlValue) {
+              <!-- Image Controls: Blur and Opacity -->
+              <div class="image-controls-inline">
+                <!-- Image Blur Control -->
+                <div class="image-control">
+                  <label class="config-label">
+                    <i class="pi pi-filter"></i>
+                    Image Blur: {{ backgroundImageBlurValue }}px
+                  </label>
+                  <p-slider
+                    [(ngModel)]="backgroundImageBlurValue"
+                    [min]="0"
+                    [max]="20"
+                    [step]="1"
+                    styleClass="w-full"
+                  ></p-slider>
+                </div>
+
+                <!-- Image Opacity Control -->
+                <div class="image-control">
+                  <label class="config-label">
+                    <i class="pi pi-eye"></i>
+                    Image Opacity: {{ (backgroundImageOpacityValue * 100).toFixed(0) }}%
+                  </label>
+                  <p-slider
+                    [(ngModel)]="backgroundImageOpacityValue"
+                    [min]="0"
+                    [max]="1"
+                    [step]="0.05"
+                    styleClass="w-full"
+                  ></p-slider>
+                </div>
+              </div>
+            }
           </div>
         }
       </div>
@@ -281,18 +267,35 @@ interface GradientPosition {
       <!-- Live Preview -->
       <div class="background-preview">
         <h4 class="preview-title">Background Preview</h4>
-        <div
-          class="preview-box"
-          [style.background]="getBackgroundPreview()"
-          [style.opacity]="backgroundTypeValue === 'image' ? backgroundImageOpacityValue : 1"
-          [style.filter]="
-            backgroundTypeValue === 'image' ? 'blur(' + backgroundImageBlurValue + 'px)' : 'none'
-          "
-        >
-          <div class="preview-content">
-            <i class="pi pi-eye preview-icon"></i>
-            <span class="preview-text">Form Background</span>
+        <div class="preview-box-wrapper">
+          <div
+            class="preview-box"
+            [attr.data-background]="getBackgroundPreview()"
+            [attr.data-opacity]="backgroundTypeValue === 'image' ? backgroundImageOpacityValue : 1"
+            [attr.data-blur]="
+              backgroundTypeValue === 'image' ? backgroundImageBlurValue + 'px' : '0px'
+            "
+            [style.--bg-image]="getBackgroundPreview()"
+            [style.--bg-opacity]="backgroundTypeValue === 'image' ? backgroundImageOpacityValue : 1"
+            [style.--bg-blur]="
+              backgroundTypeValue === 'image' ? backgroundImageBlurValue + 'px' : '0px'
+            "
+          >
+            <div class="preview-content">
+              <i class="pi pi-eye preview-icon"></i>
+              <span class="preview-text">Form Background</span>
+            </div>
           </div>
+          @if (backgroundTypeValue === 'image' && backgroundImageUrlValue) {
+            <button
+              type="button"
+              class="remove-image-btn"
+              (click)="removeImage()"
+              title="Remove image"
+            >
+              <i class="pi pi-times"></i>
+            </button>
+          }
         </div>
       </div>
     </div>
@@ -358,6 +361,50 @@ interface GradientPosition {
         background: #eef2ff;
       }
 
+      /* Fix PrimeNG radio button alignment and shape */
+      .radio-item ::ng-deep .p-radiobutton {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+      }
+
+      .radio-item ::ng-deep .p-radiobutton .p-radiobutton-box {
+        width: 20px !important;
+        height: 20px !important;
+        min-width: 20px !important;
+        min-height: 20px !important;
+        max-width: 20px !important;
+        max-height: 20px !important;
+        border-radius: 50% !important;
+        border: 2px solid #d1d5db;
+        background: #ffffff;
+        transition: all 0.2s ease;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 0 !important;
+        aspect-ratio: 1 / 1;
+      }
+
+      .radio-item ::ng-deep .p-radiobutton .p-radiobutton-box .p-radiobutton-icon {
+        width: 10px !important;
+        height: 10px !important;
+        min-width: 10px !important;
+        min-height: 10px !important;
+        border-radius: 50% !important;
+        background-color: #6366f1;
+        aspect-ratio: 1 / 1;
+      }
+
+      .radio-item ::ng-deep .p-radiobutton:hover .p-radiobutton-box {
+        border-color: #6366f1;
+      }
+
+      .radio-item ::ng-deep .p-radiobutton .p-radiobutton-box.p-highlight {
+        border-color: #6366f1;
+        background: #ffffff;
+      }
+
       .radio-label {
         display: flex;
         align-items: center;
@@ -367,10 +414,12 @@ interface GradientPosition {
         color: #374151;
         cursor: pointer;
         flex: 1;
+        margin: 0;
       }
 
       .radio-label i {
         color: #6366f1;
+        font-size: 1rem;
       }
 
       .background-config {
@@ -454,17 +503,69 @@ interface GradientPosition {
         gap: 0.75rem;
       }
 
-      .image-preview-container {
-        position: relative;
-        margin-top: 1rem;
+      .field-hint {
+        font-size: 0.75rem;
+        color: #9ca3af;
+        margin-top: 0.5rem;
+        display: block;
       }
 
-      .image-preview {
+      .image-controls-inline {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+        padding-top: 1rem;
+      }
+
+      .image-control {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .background-preview {
+        padding: 1.5rem;
+        background: #ffffff;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+      }
+
+      .preview-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #374151;
+        margin: 0 0 1rem 0;
+      }
+
+      .preview-box-wrapper {
+        position: relative;
+      }
+
+      .preview-box {
+        position: relative;
         width: 100%;
-        height: 200px;
-        object-fit: cover;
+        height: 150px;
         border-radius: 8px;
         border: 2px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        transition: all 0.3s ease;
+      }
+
+      /* Background layer with blur and opacity */
+      .preview-box::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--bg-image, #f3f4f6);
+        opacity: var(--bg-opacity, 1);
+        filter: blur(var(--bg-blur, 0px));
+        z-index: 0;
       }
 
       .remove-image-btn {
@@ -482,6 +583,7 @@ interface GradientPosition {
         align-items: center;
         justify-content: center;
         transition: all 0.2s ease;
+        z-index: 10;
       }
 
       .remove-image-btn:hover {
@@ -489,46 +591,9 @@ interface GradientPosition {
         transform: scale(1.1);
       }
 
-      .field-hint {
-        font-size: 0.75rem;
-        color: #9ca3af;
-        margin-top: 0.5rem;
-        display: block;
-      }
-
-      .image-control {
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-        padding-top: 1rem;
-      }
-
-      .background-preview {
-        padding: 1.5rem;
-        background: #ffffff;
-        border-radius: 8px;
-        border: 1px solid #e5e7eb;
-      }
-
-      .preview-title {
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: #374151;
-        margin: 0 0 1rem 0;
-      }
-
-      .preview-box {
-        width: 100%;
-        height: 150px;
-        border-radius: 8px;
-        border: 2px solid #e5e7eb;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.3s ease;
-      }
-
       .preview-content {
+        position: relative;
+        z-index: 1;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -567,6 +632,11 @@ interface GradientPosition {
         .color-input-wrapper {
           flex-direction: column;
           align-items: stretch;
+        }
+
+        .image-controls-inline {
+          grid-template-columns: 1fr;
+          gap: 1rem;
         }
       }
     `,
