@@ -4,6 +4,31 @@
  */
 
 /**
+ * Border style options for container borders
+ */
+export type BorderStyle = 'solid' | 'dashed' | 'dotted' | 'double' | 'groove' | 'ridge' | 'inset' | 'outset';
+
+/**
+ * Background size/repeat options for container background images
+ */
+export type BackgroundSize = 'cover' | 'contain' | 'repeat' | 'no-repeat';
+
+/**
+ * Predefined shadow presets for container shadows
+ */
+export type ShadowPreset = 'subtle' | 'medium' | 'strong' | 'custom' | 'none';
+
+/**
+ * Horizontal alignment options for container positioning
+ */
+export type AlignmentHorizontal = 'left' | 'center' | 'right' | 'stretch';
+
+/**
+ * Vertical alignment options for container positioning
+ */
+export type AlignmentVertical = 'top' | 'center' | 'bottom' | 'stretch';
+
+/**
  * Theme properties for desktop and mobile configurations
  */
 export interface ThemeProperties {
@@ -27,8 +52,6 @@ export interface ThemeProperties {
   fieldSpacing: string;
   /** Container background color (hex format) */
   containerBackground: string;
-  /** Container opacity (0-1) */
-  containerOpacity: number;
   /** Container position within form */
   containerPosition: 'center' | 'top' | 'left' | 'full-width';
   /** Input field background color (hex format) */
@@ -53,6 +76,66 @@ export interface ThemeProperties {
   previewBorderColor?: string;
   /** Preview element border radius (CSS value) */
   previewBorderRadius?: string;
+
+  // ===== Container Styling Properties (Epic 25) =====
+
+  // Background Properties
+  /** Container background color in hex format (e.g., '#FFFFFF'), default '#FFFFFF' */
+  containerBackgroundColor?: string;
+  /** Container background image URL (base64 data URI or external URL) */
+  containerBackgroundImageUrl?: string;
+  /** Container background image size/repeat mode, default 'cover' */
+  containerBackgroundSize?: BackgroundSize;
+  /** Container background image horizontal position as percentage (0-100), default 50 */
+  containerBackgroundPositionX?: number;
+  /** Container background image vertical position as percentage (0-100), default 50 */
+  containerBackgroundPositionY?: number;
+
+  // Border Properties
+  /** Whether container border is enabled, default false */
+  containerBorderEnabled?: boolean;
+  /** Container border width in pixels (valid range: 0-10), default 1 */
+  containerBorderWidth?: number;
+  /** Container border color in hex format (e.g., '#D1D5DB'), default '#D1D5DB' */
+  containerBorderColor?: string;
+  /** Container border radius in pixels (valid range: 0-50), default 8 */
+  containerBorderRadius?: number;
+  /** Container border style (solid, dashed, dotted, etc.), default 'solid' */
+  containerBorderStyle?: BorderStyle;
+
+  // Shadow Properties
+  /** Whether container box shadow is enabled, default false */
+  containerShadowEnabled?: boolean;
+  /** Predefined shadow preset (subtle, medium, strong, custom, none), default 'medium' */
+  containerShadowPreset?: ShadowPreset;
+  /** Shadow intensity in pixels (valid range: 0-30), default 10 */
+  containerShadowIntensity?: number;
+  /** Shadow color in rgba format with alpha channel (e.g., 'rgba(0, 0, 0, 0.1)'), default 'rgba(0, 0, 0, 0.1)' */
+  containerShadowColor?: string;
+  /** Shadow horizontal offset in pixels, default 0 */
+  containerShadowOffsetX?: number;
+  /** Shadow vertical offset in pixels, default 4 */
+  containerShadowOffsetY?: number;
+  /** Shadow blur radius in pixels, default 6 */
+  containerShadowBlur?: number;
+  /** Shadow spread radius in pixels, default 0 */
+  containerShadowSpread?: number;
+
+  // Layout Properties
+  /** Container horizontal alignment (left, center, right, stretch), default 'center' */
+  containerAlignmentHorizontal?: AlignmentHorizontal;
+  /** Container vertical alignment (top, center, bottom, stretch), default 'center' */
+  containerAlignmentVertical?: AlignmentVertical;
+  /** Container maximum width in pixels (valid range: 300-1200), default 1024 */
+  containerMaxWidth?: number;
+
+  // Effects Properties
+  /** Container opacity as percentage (valid range: 0-100), default 100 */
+  containerOpacity?: number;
+  /** Whether backdrop blur effect is enabled, default false */
+  containerBackdropBlurEnabled?: boolean;
+  /** Backdrop blur intensity in pixels (valid range: 0-20), default 0 */
+  containerBackdropBlurIntensity?: number;
 }
 
 /**

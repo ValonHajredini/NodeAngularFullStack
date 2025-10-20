@@ -26,7 +26,7 @@ export class ApiError extends Error {
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB max file size
+    fileSize: 6 * 1024 * 1024, // 6MB to accommodate 5MB files + multipart overhead
   },
   fileFilter: (_req, file, cb) => {
     // Only allow image files

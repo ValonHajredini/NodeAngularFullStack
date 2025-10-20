@@ -11,6 +11,7 @@ import { ToolsService } from '../../../../core/services';
 import { ToolConfigService } from '../../../../core/services/tool-config.service';
 import { Tool, ToolConfig } from '@nodeangularfullstack/shared';
 import { ShortLinkComponent } from '../short-link/short-link.component';
+import { TestWithBrahaComponent } from '../test-with-braha/test-with-braha.component';
 import { LegoPdfComponent } from '../lego-pdf/lego-pdf.component';
 import { SvgDrawingComponent } from '../svg-drawing/svg-drawing.component';
 import { TodoAppComponent } from '../todo-app/todo-app.component';
@@ -33,6 +34,7 @@ import { FormBuilderComponent } from '../form-builder/form-builder.component';
     MessageModule,
     BreadcrumbModule,
     ShortLinkComponent,
+    TestWithBrahaComponent,
     LegoPdfComponent,
     SvgDrawingComponent,
     TodoAppComponent,
@@ -86,6 +88,9 @@ import { FormBuilderComponent } from '../form-builder/form-builder.component';
           @switch (tool()!.key) {
             @case ('short-link') {
               <app-short-link />
+            }
+            @case ('test-with-braha') {
+              <app-test-with-braha />
             }
             @case ('lego-pdf') {
               <app-lego-pdf />

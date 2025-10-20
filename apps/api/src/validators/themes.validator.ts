@@ -34,9 +34,11 @@ const SAFE_CSS_BACKGROUND_REGEX =
 const SAFE_FONT_REGEX = /^[a-zA-Z0-9\s,'-]+$/;
 
 /**
- * Maximum theme definition size in bytes (50KB as per story requirements).
+ * Maximum theme definition size in bytes.
+ * 8MB allows for base64-encoded images up to ~5-6MB plus theme configuration.
+ * Base64 encoding increases file size by approximately 33%.
  */
-const MAX_THEME_SIZE_BYTES = 50 * 1024;
+const MAX_THEME_SIZE_BYTES = 8 * 1024 * 1024; // 8MB
 
 /**
  * Calculates the color contrast ratio between two hex colors.

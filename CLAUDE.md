@@ -30,6 +30,8 @@ shareable via short links with QR codes.
 - `npm run test:web` - Frontend tests only
 - `npm run test:e2e` - Run Playwright E2E tests
 - `npm run test:e2e:ui` - Playwright E2E with UI mode
+- `npm run test:e2e:themes` - Run theme system E2E tests (headed mode)
+- `npm run test:e2e:themes:ui` - Theme E2E tests with Playwright UI
 
 **Backend-Specific Test Commands:**
 
@@ -200,6 +202,9 @@ packages/
 - Always import shared types from `@nodeangularfullstack/shared`
 - Run `npm run build:shared` after modifying shared types
 - Both frontend and backend must use the same type definitions
+- **Critical shared types**: `FormTheme`, `ThemeProperties`, `ResponsiveThemeConfig` (theme system),
+  `FormSchema`, `FormField`, `FieldPosition` (form builder)
+- Shared types located in `packages/shared/src/types/` (theme.types.ts, forms.types.ts, etc.)
 
 ### Database Development
 
@@ -242,6 +247,34 @@ packages/
 - Public form rendering at `/public/form/:shortCode` route
 - HTML sanitization middleware applied to all form submissions (uses DOMPurify)
 - Custom CSS validation for background styles
+
+### Theme System Development
+
+- **Theme Designer Modal**: 5-step wizard for creating custom themes (Colors → Typography → Styling
+  → Background → Preview)
+- **Predefined Themes**: 9 pre-built themes (Ocean Blue, Sunset Orange, Forest Green, etc.) stored
+  in `form_themes` table
+- **Custom Themes**: User-created themes with full customization (colors, fonts, backgrounds,
+  container styling)
+- **Signal-Based Architecture**: Theme designer uses Angular 20+ signals for reactive state
+  management
+- **Service Pattern**: `ThemeDesignerModalService` manages theme state with computed signals for
+  live preview
+- **CSS Variables**: Themes rendered via CSS custom properties (`--theme-form-*` prefix) for instant
+  switching
+- **Responsive Themes**: Desktop and mobile property overrides stored in `ResponsiveThemeConfig`
+  (JSONB column)
+- **Theme Persistence**: Theme configs stored as JSONB in PostgreSQL with 50KB size limit
+- **Image Uploads**: Background images converted to base64 data URIs, validated for size (5MB max)
+  and type (JPEG/PNG/WebP)
+- **Container Styling**: Border, shadow, alignment, opacity, and backdrop blur controls (Epic 25)
+- **Google Fonts Integration**: 1000+ fonts available via Google Fonts API
+- **Backend Validation**: Theme configs validated for CSS safety and size limits before storage
+- **Theme Application**: Forms reference themes via `formSchema.themeId` foreign key
+- **Location**: Frontend components in
+  `apps/web/src/app/features/tools/components/form-builder/theme-designer-modal/`
+- **Location**: Backend APIs in `apps/api/src/controllers/themes.controller.ts` and
+  `apps/api/src/services/themes.service.ts`
 - **Row-based layout system**: Enable/disable row layout mode, configure 1-4 columns per row,
   flexible multi-column forms
   - Row layout configuration stored in `FormSettings.rowLayout` (optional property)
@@ -340,6 +373,28 @@ packages/
 - Admin: admin@example.com / Admin123!@#
 - User: user@example.com / User123!@#
 - ReadOnly: readonly@example.com / Read123!@#
+
+## Documentation Structure
+
+The `docs/` directory contains comprehensive project documentation:
+
+**Story Documentation:**
+
+- `docs/stories/` - User stories organized by epic number (e.g.,
+  `docs/stories/25/25.1.container-styling-ui.md`)
+- Stories include acceptance criteria, tasks, dev notes, QA results, and gate status
+- Each story has corresponding gate file in `docs/qa/gates/` for quality validation
+
+**Architecture Documentation:**
+
+- `docs/architecture/` - System architecture, patterns, and technical design decisions
+- `docs/user-guide/` - End-user documentation for features (form analytics, theme creation)
+
+**Development Workflow:**
+
+- Stories progress through states: Draft → Ready for Review → In Progress → Done
+- QA gate files track quality scores, test coverage, and compliance checks
+- Always check story documentation before implementing new features
 
 ## Utility Scripts
 

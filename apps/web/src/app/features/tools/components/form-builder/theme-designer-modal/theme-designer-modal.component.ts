@@ -15,8 +15,9 @@ import { CommonModule } from '@angular/common';
 import { Dialog } from 'primeng/dialog';
 import { StepperModule } from 'primeng/stepper';
 import { ButtonDirective } from 'primeng/button';
-import { ConfirmationService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialog } from 'primeng/confirmdialog';
+import { Toast } from 'primeng/toast';
 import { Subject } from 'rxjs';
 import { debounceTime, takeUntil } from 'rxjs/operators';
 import { ThemeDesignerModalService } from './theme-designer-modal.service';
@@ -24,13 +25,14 @@ import { ThemePreviewService } from '../theme-preview.service';
 import { ColorStepComponent } from './steps/color-step.component';
 import { BackgroundStepComponent } from './steps/background-step.component';
 import { TypographyStepComponent } from './steps/typography-step.component';
+import { ContainerStylingStepComponent } from './steps/container-styling-step.component';
 import { StylingStepComponent } from './steps/styling-step.component';
 import { PreviewElementsStepComponent } from './steps/preview-elements-step.component';
 import { PreviewStepComponent } from './steps/preview-step.component';
 import { FormTheme } from '@nodeangularfullstack/shared';
 
 /**
- * Modal component for creating custom themes with a 5-step wizard.
+ * Modal component for creating custom themes with a 6-step wizard.
  * Allows users to design themes without leaving the Form Builder workflow.
  * Integrates with ThemePreviewService for real-time CSS variable updates.
  */
@@ -43,16 +45,21 @@ import { FormTheme } from '@nodeangularfullstack/shared';
     StepperModule,
     ButtonDirective,
     ConfirmDialog,
+    Toast,
     ColorStepComponent,
     BackgroundStepComponent,
     TypographyStepComponent,
+    ContainerStylingStepComponent,
     StylingStepComponent,
     PreviewElementsStepComponent,
     PreviewStepComponent,
   ],
-  providers: [ThemeDesignerModalService, ConfirmationService],
+  providers: [ThemeDesignerModalService, ConfirmationService, MessageService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
+    <!-- Toast for notifications -->
+    <p-toast />
+
     <!-- Confirmation Dialog for Unsaved Changes -->
     <p-confirmDialog
       [closable]="false"
@@ -84,6 +91,7 @@ import { FormTheme } from '@nodeangularfullstack/shared';
               <p-step [value]="2"></p-step>
               <p-step [value]="3"></p-step>
               <p-step [value]="4"></p-step>
+              <p-step [value]="5"></p-step>
             </p-step-list>
 
             <p-step-panels>
@@ -108,8 +116,15 @@ import { FormTheme } from '@nodeangularfullstack/shared';
                 </ng-template>
               </p-step-panel>
 
-              <!-- Step 4: Styling & Preview Elements -->
+              <!-- Step 4: Form Container Styling -->
               <p-step-panel [value]="3">
+                <ng-template #content>
+                  <app-container-styling-step />
+                </ng-template>
+              </p-step-panel>
+
+              <!-- Step 5: Styling & Preview Elements -->
+              <p-step-panel [value]="4">
                 <ng-template #content>
                   <app-styling-step />
                   <app-preview-elements-step />
@@ -117,8 +132,8 @@ import { FormTheme } from '@nodeangularfullstack/shared';
                 </ng-template>
               </p-step-panel>
 
-              <!-- Step 5: Preview & Save -->
-              <p-step-panel [value]="4">
+              <!-- Step 6: Preview & Save -->
+              <p-step-panel [value]="5">
                 <ng-template #content>
                   <app-preview-step />
                 </ng-template>
@@ -145,7 +160,7 @@ import { FormTheme } from '@nodeangularfullstack/shared';
 
           <!-- Center: Dot Indicators -->
           <div class="step-indicators">
-            @for (step of [0, 1, 2, 3, 4]; track step) {
+            @for (step of [0, 1, 2, 3, 4, 5]; track step) {
               <div
                 class="step-dot"
                 [class.active]="activeStepIndex() === step"
@@ -157,7 +172,7 @@ import { FormTheme } from '@nodeangularfullstack/shared';
 
           <!-- Right side: Next or Save button -->
           <div class="nav-right">
-            @if (activeStepIndex() < 4) {
+            @if (activeStepIndex() < 5) {
               <button
                 pButton
                 type="button"
@@ -334,7 +349,7 @@ export class ThemeDesignerModalComponent implements OnInit, OnDestroy {
   /** Internal signal for modal visibility */
   protected readonly visibleSignal = signal<boolean>(false);
 
-  /** Signal for tracking active step index (0-6 for 7 steps) */
+  /** Signal for tracking active step index (0-5 for 6 steps) */
   protected readonly activeStepIndex = signal<number>(0);
 
   /** Computed signal for modal header text */
@@ -582,7 +597,7 @@ export class ThemeDesignerModalComponent implements OnInit, OnDestroy {
    * Updates both the stepper index and modal service state.
    */
   protected onNext(): void {
-    if (this.activeStepIndex() < 6) {
+    if (this.activeStepIndex() < 5) {
       this.activeStepIndex.update((i) => i + 1);
       this.modalService.nextStep();
     }
@@ -602,7 +617,7 @@ export class ThemeDesignerModalComponent implements OnInit, OnDestroy {
   /**
    * Navigates to a specific step by clicking on the dot indicator.
    * Only allows navigation to completed steps or the current step.
-   * @param stepIndex - Target step index (0-6)
+   * @param stepIndex - Target step index (0-5)
    */
   protected goToStep(stepIndex: number): void {
     const currentStep = this.activeStepIndex();

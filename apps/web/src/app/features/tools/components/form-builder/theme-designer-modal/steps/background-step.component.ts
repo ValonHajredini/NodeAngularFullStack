@@ -5,6 +5,7 @@ import { RadioButton } from 'primeng/radiobutton';
 import { ColorPicker } from 'primeng/colorpicker';
 import { Slider } from 'primeng/slider';
 import { Select } from 'primeng/select';
+import { MessageService } from 'primeng/api';
 import { ThemeDesignerModalService } from '../theme-designer-modal.service';
 
 interface GradientPosition {
@@ -292,7 +293,7 @@ interface GradientPosition {
                   <div class="upload-placeholder">
                     <i class="pi pi-image"></i>
                     <span>Drop image here or click to browse</span>
-                    <small>JPG, PNG, GIF (max 2MB)</small>
+                    <small>JPG, PNG, GIF (max 5MB)</small>
                   </div>
                 }
               </div>
@@ -827,7 +828,11 @@ interface GradientPosition {
 })
 export class BackgroundStepComponent {
   protected readonly modalService = inject(ThemeDesignerModalService);
+  protected readonly messageService = inject(MessageService);
   protected readonly isDragOverImage = signal(false);
+
+  // Maximum file size in bytes (5MB)
+  private readonly MAX_FILE_SIZE = 5 * 1024 * 1024;
 
   protected readonly gradientPositions: GradientPosition[] = [
     { label: 'Center', value: 'center' },
@@ -952,11 +957,43 @@ export class BackgroundStepComponent {
 
   /**
    * Handles image file upload and converts to base64 data URL.
+   * Validates file size before processing (max 5MB).
    * @param event - File upload event containing the selected file
    */
   onImageUpload(event: any): void {
     const file = event.target?.files?.[0];
     if (!file) return;
+
+    // Validate file size (5MB limit)
+    if (file.size > this.MAX_FILE_SIZE) {
+      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      this.messageService.add({
+        severity: 'error',
+        summary: 'File Too Large',
+        detail: `The selected image is ${fileSizeMB}MB. Please choose an image smaller than 5MB.`,
+        life: 5000,
+      });
+      // Reset the file input
+      if (event.target) {
+        event.target.value = '';
+      }
+      return;
+    }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Invalid File Type',
+        detail: 'Please upload a valid image file (JPG, PNG, GIF, etc.).',
+        life: 5000,
+      });
+      // Reset the file input
+      if (event.target) {
+        event.target.value = '';
+      }
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = (e: any) => {

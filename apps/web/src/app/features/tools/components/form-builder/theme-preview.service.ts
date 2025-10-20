@@ -68,14 +68,15 @@ export class ThemePreviewService {
     this.setCssVar(root, '--theme-container-background', desktop.containerBackground); // New variable name
     this.setCssVar(root, '--theme-container-border-radius', desktop.fieldBorderRadius);
     this.setCssVar(root, '--theme-container-padding', '24px');
-    this.setCssVar(root, '--theme-container-opacity', desktop.containerOpacity.toString());
+    this.setCssVar(root, '--theme-container-opacity', (desktop.containerOpacity ?? 100).toString());
     this.setCssVar(root, '--theme-container-position', desktop.containerPosition);
 
     // Container background with alpha transparency (Story 24.9)
     // Convert hex color to rgba with opacity for proper transparency
+    // Note: containerOpacity is now 0-100 percentage (Epic 25), convert to 0-1 for hexToRgba
     const containerBgWithAlpha = this.hexToRgba(
       desktop.containerBackground,
-      desktop.containerOpacity,
+      (desktop.containerOpacity ?? 100) / 100,
     );
     this.setCssVar(root, '--theme-container-background-rgba', containerBgWithAlpha);
 
@@ -106,6 +107,114 @@ export class ThemePreviewService {
     // Step form navigation variables (new for Epic 23)
     this.setCssVar(root, '--theme-step-active-color', desktop.primaryColor);
     this.setCssVar(root, '--theme-step-inactive-color', '#9ca3af');
+
+    // ===== Container Styling CSS Variables (Epic 25, Story 25.3) =====
+
+    // Container background variables
+    this.setCssVar(
+      root,
+      '--theme-form-container-bg-color',
+      desktop.containerBackgroundColor ?? '#ffffff',
+    );
+    this.setCssVar(
+      root,
+      '--theme-form-container-bg-size',
+      desktop.containerBackgroundSize ?? 'cover',
+    );
+    this.setCssVar(
+      root,
+      '--theme-form-container-bg-pos-x',
+      (desktop.containerBackgroundPositionX ?? 50).toString(),
+    );
+    this.setCssVar(
+      root,
+      '--theme-form-container-bg-pos-y',
+      (desktop.containerBackgroundPositionY ?? 50).toString(),
+    );
+
+    // Container background image via style tag injection (handles large base64 URIs)
+    this.applyContainerBackgroundImage(
+      desktop.containerBackgroundImageUrl,
+      desktop.containerBackgroundSize,
+      desktop.containerBackgroundPositionX,
+      desktop.containerBackgroundPositionY,
+    );
+
+    // Container border variables
+    this.setCssVar(
+      root,
+      '--theme-form-container-border-enabled',
+      desktop.containerBorderEnabled ? '1' : '0',
+    );
+    this.setCssVar(
+      root,
+      '--theme-form-container-border-width',
+      `${desktop.containerBorderWidth ?? 1}px`,
+    );
+    this.setCssVar(
+      root,
+      '--theme-form-container-border-color',
+      desktop.containerBorderColor ?? '#d1d5db',
+    );
+    this.setCssVar(
+      root,
+      '--theme-form-container-border-radius',
+      `${desktop.containerBorderRadius ?? 8}px`,
+    );
+    this.setCssVar(
+      root,
+      '--theme-form-container-border-style',
+      desktop.containerBorderStyle ?? 'solid',
+    );
+
+    // Container shadow variables (computed from shadow properties)
+    const shadowCss = this.buildShadowCss({
+      enabled: desktop.containerShadowEnabled,
+      preset: desktop.containerShadowPreset,
+      offsetX: desktop.containerShadowOffsetX,
+      offsetY: desktop.containerShadowOffsetY,
+      blur: desktop.containerShadowBlur,
+      spread: desktop.containerShadowSpread,
+      color: desktop.containerShadowColor,
+      intensity: desktop.containerShadowIntensity,
+    });
+    this.setCssVar(
+      root,
+      '--theme-form-container-shadow-enabled',
+      desktop.containerShadowEnabled ? '1' : '0',
+    );
+    this.setCssVar(root, '--theme-form-container-shadow', shadowCss);
+
+    // Container layout variables
+    this.setCssVar(
+      root,
+      '--theme-form-container-align-horizontal',
+      desktop.containerAlignmentHorizontal ?? 'center',
+    );
+    this.setCssVar(
+      root,
+      '--theme-form-container-align-vertical',
+      desktop.containerAlignmentVertical ?? 'center',
+    );
+    this.setCssVar(
+      root,
+      '--theme-form-container-max-width',
+      `${desktop.containerMaxWidth ?? 1024}px`,
+    );
+
+    // Container effects variables
+    this.setCssVar(
+      root,
+      '--theme-form-container-opacity',
+      (desktop.containerOpacity ?? 100).toString(),
+    );
+    this.setCssVar(
+      root,
+      '--theme-form-container-backdrop-blur',
+      desktop.containerBackdropBlurEnabled
+        ? `${desktop.containerBackdropBlurIntensity ?? 0}px`
+        : '0px',
+    );
 
     // Apply mobile overrides via media query (if mobile config exists)
     if (mobile) {
@@ -175,6 +284,23 @@ export class ThemePreviewService {
       // Step form navigation variables
       '--theme-step-active-color',
       '--theme-step-inactive-color',
+      // Container styling variables (Epic 25, Story 25.3)
+      '--theme-form-container-bg-color',
+      '--theme-form-container-bg-size',
+      '--theme-form-container-bg-pos-x',
+      '--theme-form-container-bg-pos-y',
+      '--theme-form-container-border-enabled',
+      '--theme-form-container-border-width',
+      '--theme-form-container-border-color',
+      '--theme-form-container-border-radius',
+      '--theme-form-container-border-style',
+      '--theme-form-container-shadow-enabled',
+      '--theme-form-container-shadow',
+      '--theme-form-container-align-horizontal',
+      '--theme-form-container-align-vertical',
+      '--theme-form-container-max-width',
+      '--theme-form-container-opacity',
+      '--theme-form-container-backdrop-blur',
     ];
 
     themeVars.forEach((varName) => {
@@ -183,6 +309,7 @@ export class ThemePreviewService {
 
     // Remove injected style elements
     this.removeBackgroundImageStyle();
+    this.removeContainerBackgroundImageStyle(); // Epic 25, Story 25.3
     this.removeMobileOverrides();
   }
 
@@ -301,6 +428,129 @@ export class ThemePreviewService {
     if (existingStyle) {
       existingStyle.remove();
     }
+  }
+
+  /**
+   * Injects container background image CSS via <style> tag for form container wrapper.
+   * Large base64 data URIs cannot be set via CSS custom properties due to browser CSSOM limits.
+   * This method targets the .form-container-themed::before pseudo-element to avoid affecting content opacity.
+   * Story 25.3: Container styling for form renderer and preview.
+   * @private
+   * @param imageUrl - The background image URL (can be base64 data URI)
+   * @param bgSize - Background size mode (cover, contain, repeat, no-repeat)
+   * @param positionX - Horizontal position as percentage (0-100), default 50
+   * @param positionY - Vertical position as percentage (0-100), default 50
+   */
+  private applyContainerBackgroundImage(
+    imageUrl?: string,
+    bgSize?: string,
+    positionX?: number,
+    positionY?: number,
+  ): void {
+    // Remove existing container background image style
+    this.removeContainerBackgroundImageStyle();
+
+    if (!imageUrl) return;
+
+    // Calculate background position from percentages
+    const posX = positionX ?? 50;
+    const posY = positionY ?? 50;
+    const size = bgSize ?? 'cover';
+
+    // IMPORTANT: We cannot use CSS custom properties for large base64 images because
+    // browsers have CSSOM value length limits (typically 2KB-5KB per property).
+    // Target the ::before pseudo-element so background opacity doesn't affect form content.
+    const backgroundCss = `
+.form-container-themed::before {
+  background-image: url('${imageUrl}') !important;
+  background-size: ${size} !important;
+  background-position: ${posX}% ${posY}% !important;
+}`;
+
+    // Create and inject style element
+    const styleElement = document.createElement('style');
+    styleElement.id = 'theme-container-bg-image';
+    styleElement.textContent = backgroundCss;
+
+    document.head.appendChild(styleElement);
+
+    console.log('[ThemePreviewService] Container background image injected via <style> tag');
+  }
+
+  /**
+   * Removes container background image style element.
+   * Story 25.3: Container styling cleanup.
+   * @private
+   */
+  private removeContainerBackgroundImageStyle(): void {
+    const existingStyle = document.getElementById('theme-container-bg-image');
+    if (existingStyle) {
+      existingStyle.remove();
+    }
+  }
+
+  /**
+   * Constructs CSS box-shadow string from shadow properties.
+   * Supports both preset shadows (subtle, medium, strong) and custom shadow values.
+   * Story 25.3: Container shadow styling.
+   * @private
+   * @param shadowProps - Shadow properties object
+   * @returns CSS box-shadow string or 'none' if shadow disabled
+   * @example
+   * buildShadowCss({ enabled: true, preset: 'medium' })
+   * // Returns: "0px 4px 6px 0px rgba(0, 0, 0, 0.1)"
+   * @example
+   * buildShadowCss({ enabled: true, preset: 'custom', offsetX: 2, offsetY: 4, blur: 8, spread: 0, color: 'rgba(0,0,0,0.2)' })
+   * // Returns: "2px 4px 8px 0px rgba(0,0,0,0.2)"
+   */
+  private buildShadowCss(shadowProps: {
+    enabled?: boolean;
+    preset?: string;
+    offsetX?: number;
+    offsetY?: number;
+    blur?: number;
+    spread?: number;
+    color?: string;
+    intensity?: number;
+  }): string {
+    // Return 'none' if shadow disabled
+    if (!shadowProps.enabled) {
+      return 'none';
+    }
+
+    // Shadow presets (matching Epic 25 design specs)
+    const shadowPresets: Record<
+      string,
+      { offsetX: number; offsetY: number; blur: number; spread: number; color: string }
+    > = {
+      subtle: { offsetX: 0, offsetY: 1, blur: 3, spread: 0, color: 'rgba(0, 0, 0, 0.1)' },
+      medium: { offsetX: 0, offsetY: 4, blur: 6, spread: 0, color: 'rgba(0, 0, 0, 0.1)' },
+      strong: { offsetX: 0, offsetY: 10, blur: 15, spread: 0, color: 'rgba(0, 0, 0, 0.2)' },
+    };
+
+    const preset = shadowProps.preset ?? 'medium';
+
+    // Use preset values if preset is not 'custom', otherwise use individual properties
+    let offsetX: number, offsetY: number, blur: number, spread: number, color: string;
+
+    if (preset !== 'custom' && preset !== 'none' && shadowPresets[preset]) {
+      const presetValues = shadowPresets[preset];
+      offsetX = presetValues.offsetX;
+      offsetY = presetValues.offsetY;
+      blur = presetValues.blur;
+      spread = presetValues.spread;
+      color = presetValues.color;
+    } else {
+      // Custom shadow: use individual properties
+      offsetX = shadowProps.offsetX ?? 0;
+      offsetY = shadowProps.offsetY ?? 4;
+      blur = shadowProps.blur ?? 6;
+      spread = shadowProps.spread ?? 0;
+      color = shadowProps.color ?? 'rgba(0, 0, 0, 0.1)';
+    }
+
+    // Construct CSS shadow string: "offsetX offsetY blur spread color"
+    return `${offsetX}px ${offsetY}px ${blur}px ${spread}px ${color}`;
   }
 
   /**

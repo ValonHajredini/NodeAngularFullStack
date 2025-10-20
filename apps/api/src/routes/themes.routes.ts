@@ -21,7 +21,7 @@ const router = Router();
 const thumbnailUpload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 2 * 1024 * 1024, // 2MB limit (smaller than avatars)
+    fileSize: 6 * 1024 * 1024, // 6MB to accommodate 5MB files + multipart overhead
     files: 1, // Single file only
   },
   fileFilter: (

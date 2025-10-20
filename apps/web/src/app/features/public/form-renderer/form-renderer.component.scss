@@ -946,3 +946,68 @@ hr {
   border-top: 1px solid var(--theme-input-border-color, #d1d5db);
   margin: var(--theme-field-spacing, 1rem) 0;
 }
+
+// ============================================================================
+// Container Styling CSS Rules (Epic 25, Story 25.3)
+// ============================================================================
+
+::ng-deep .form-container-themed {
+  // Ensure container is visible and positioned correctly
+  position: relative !important;
+
+  // Container border styling (conditional via CSS calc)
+  border-width: calc(
+    var(--theme-form-container-border-enabled, 0) * var(--theme-form-container-border-width, 1px)
+  ) !important;
+  border-color: var(--theme-form-container-border-color, #d1d5db) !important;
+  border-style: var(--theme-form-container-border-style, solid) !important;
+  border-radius: var(--theme-form-container-border-radius, 8px) !important;
+
+  // Container box shadow (conditional via CSS variable)
+  box-shadow: var(--theme-form-container-shadow, none) !important;
+
+  // Container layout alignment
+  max-width: var(--theme-form-container-max-width, 1024px);
+  // Alignment handled by parent container positioning class
+
+  // IMPORTANT: Do NOT apply opacity to the entire container as it makes all children transparent
+  // Instead, use rgba background colors or apply opacity only to ::before pseudo-element
+
+  // Apply background with opacity via rgba conversion
+  // Background color with opacity applied via rgba (handled in ThemePreviewService)
+  background-color: var(--theme-form-container-bg-color, #ffffff) !important;
+
+  // Background image applied via pseudo-element to support opacity without affecting content
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1; // Place behind content
+    border-radius: inherit; // Match parent border-radius
+    pointer-events: none; // Allow clicks to pass through
+
+    // Background image styling (injected via style tag in ThemePreviewService)
+    background-size: var(--theme-form-container-bg-size, cover);
+    background-position: calc(var(--theme-form-container-bg-pos-x, 50) * 1%)
+      calc(var(--theme-form-container-bg-pos-y, 50) * 1%);
+    background-repeat: no-repeat;
+
+    // Apply opacity ONLY to background layer, not content
+    opacity: calc(var(--theme-form-container-opacity, 100) / 100);
+  }
+
+  // Backdrop blur with feature detection
+  @supports (backdrop-filter: blur(1px)) {
+    backdrop-filter: blur(var(--theme-form-container-backdrop-blur, 0px));
+  }
+
+  // Responsive behavior for mobile viewports
+  @media (max-width: 767px) {
+    max-width: 100% !important; // Full width on mobile
+    margin: 0 !important; // Remove centering margin
+    backdrop-filter: none !important; // Disable backdrop blur on mobile (performance)
+  }
+}

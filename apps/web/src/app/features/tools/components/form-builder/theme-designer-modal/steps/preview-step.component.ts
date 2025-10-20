@@ -43,7 +43,7 @@ import { FormsApiService } from '../../forms-api.service';
           </h4>
 
           <div class="preview-container" [style.background]="getBackgroundPreview()">
-            <div class="preview-form">
+            <div class="preview-form form-container-themed">
               <h2
                 class="preview-form-title"
                 [style.font-family]="modalService.getHeadingFont()"
@@ -165,7 +165,7 @@ import { FormsApiService } from '../../forms-api.service';
               <!-- Drag and Drop Zone -->
               <div
                 class="thumbnail-dropzone"
-                [class.dragover]="isDragOver"
+                [class.dragover]="isDragOver()"
                 (click)="fileInput.click()"
                 (dragover)="onDragOver($event)"
                 (dragleave)="onDragLeave($event)"
@@ -367,7 +367,7 @@ import { FormsApiService } from '../../forms-api.service';
           </h4>
 
           <div class="preview-container" [style.background]="getBackgroundPreview()">
-            <div class="preview-form">
+            <div class="preview-form form-container-themed">
               <h2
                 class="preview-form-title"
                 [style.font-family]="modalService.getHeadingFont()"
