@@ -213,41 +213,55 @@ export class FormsService {
       const baseUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
       const renderUrl = `${baseUrl}/forms/render/${renderToken}`;
 
-      // Generate short link for easy sharing
+      // Generate or reuse short link for easy sharing
       let shortCode = '';
       let shortUrl = renderUrl; // Fallback to JWT token URL
       let maxAttempts = 10;
       let attempts = 0;
 
       try {
-        // Generate unique short code
-        while (attempts < maxAttempts) {
-          shortCode = generateShortCode();
-          const exists = await shortLinksRepository.codeExists(shortCode);
-          if (!exists) {
-            break;
-          }
-          attempts++;
-        }
+        // Check if a short link already exists for this form schema
+        const existingShortLink = await shortLinksRepository.findByFormSchemaId(
+          latestSchema.id
+        );
 
-        if (attempts >= maxAttempts) {
-          throw new Error(
-            'Unable to generate unique short code after maximum attempts'
+        if (existingShortLink) {
+          // Reuse existing short link code
+          shortCode = existingShortLink.code;
+          shortUrl = `${baseUrl}/public/form/${shortCode}`;
+          console.log(
+            `♻️ Reusing existing short link for form ${formId}: ${shortUrl}`
           );
+        } else {
+          // Generate unique short code for new form
+          while (attempts < maxAttempts) {
+            shortCode = generateShortCode();
+            const exists = await shortLinksRepository.codeExists(shortCode);
+            if (!exists) {
+              break;
+            }
+            attempts++;
+          }
+
+          if (attempts >= maxAttempts) {
+            throw new Error(
+              'Unable to generate unique short code after maximum attempts'
+            );
+          }
+
+          // Create new short link in database
+          await shortLinksRepository.create({
+            code: shortCode,
+            originalUrl: renderUrl,
+            expiresAt,
+            createdBy: userId,
+            formSchemaId: latestSchema.id,
+          });
+
+          // Generate short URL
+          shortUrl = `${baseUrl}/public/form/${shortCode}`;
+          console.log(`✅ Short link created for form ${formId}: ${shortUrl}`);
         }
-
-        // Create short link in database
-        await shortLinksRepository.create({
-          code: shortCode,
-          originalUrl: renderUrl,
-          expiresAt,
-          createdBy: userId,
-          formSchemaId: latestSchema.id,
-        });
-
-        // Generate short URL
-        shortUrl = `${baseUrl}/public/form/${shortCode}`;
-        console.log(`✅ Short link created for form ${formId}: ${shortUrl}`);
       } catch (shortLinkError) {
         // Short link generation failure should not prevent successful publishing
         console.error(

@@ -415,6 +415,55 @@ export class ShortLinksRepository extends BaseRepository<ShortLinkEntity> {
   }
 
   /**
+   * Finds a short link by form schema ID.
+   * @param formSchemaId - Form schema ID to search for
+   * @returns Promise containing the short link or null if not found
+   * @throws {Error} When database query fails
+   * @example
+   * const shortLink = await shortLinksRepository.findByFormSchemaId('schema-id');
+   * if (shortLink) console.log(`Found existing link: ${shortLink.code}`);
+   */
+  async findByFormSchemaId(
+    formSchemaId: string
+  ): Promise<ShortLinkEntity | null> {
+    const client = await this.pool.connect();
+
+    try {
+      const query = `
+        SELECT
+          id,
+          code,
+          original_url as "originalUrl",
+          qr_code_url as "qrCodeUrl",
+          expires_at as "expiresAt",
+          created_by as "createdBy",
+          form_schema_id as "formSchemaId",
+          click_count as "clickCount",
+          last_accessed as "lastAccessedAt",
+          created_at as "createdAt",
+          updated_at as "updatedAt"
+        FROM short_links
+        WHERE form_schema_id = $1
+        ORDER BY created_at DESC
+        LIMIT 1
+      `;
+
+      const result = await client.query(query, [formSchemaId]);
+      return result.rows[0] || null;
+    } catch (error) {
+      console.error(
+        `Error finding short link by form schema ID ${formSchemaId}:`,
+        error
+      );
+      throw new Error(
+        'Failed to find short link by form schema ID in database'
+      );
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
    * Finds a form schema by short code with embedded theme data.
    * @param code - Short code to search for
    * @returns Promise containing form schema with theme or null if not found
