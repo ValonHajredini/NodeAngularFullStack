@@ -382,6 +382,8 @@ export interface FormSubmissionConfig {
   sendEmailNotification?: boolean;
   /** Email addresses to notify */
   notificationEmails?: string[];
+  /** Custom submit button text (default: "Submit") */
+  submitButtonText?: string;
 }
 
 /**
