@@ -538,10 +538,10 @@ export class FormsListComponent implements OnInit {
 
   /**
    * Copies the publish URL to clipboard.
+   * Note: renderToken now contains the full URL (prefers short URL over JWT token URL)
    */
-  private copyPublishUrl(renderToken: string): void {
-    const baseUrl = window.location.origin;
-    const url = `${baseUrl}/forms/render/${renderToken}`;
+  private copyPublishUrl(url: string): void {
+    // URL is already complete (either short URL or JWT token URL)
     navigator.clipboard.writeText(url).then(
       () => {
         this.messageService.add({

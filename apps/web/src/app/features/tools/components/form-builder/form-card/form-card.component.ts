@@ -206,13 +206,16 @@ export class FormCardComponent {
   }
 
   /**
-   * Emits copy URL action
+   * Emits copy URL action with the displayed URL (prefers short URL)
    */
   onCopyUrl(renderToken: string): void {
+    // Get the actual URL displayed in the input (prefers short URL over JWT token URL)
+    const urlToCopy = this.getPublishUrl(renderToken);
+
     this.action.emit({
       type: 'copy-url',
       formId: this.form.id,
-      renderToken,
+      renderToken: urlToCopy, // Send the full URL instead of just the token
     });
   }
 
