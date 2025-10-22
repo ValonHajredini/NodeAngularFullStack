@@ -10,6 +10,11 @@ import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import { config } from '../../src/utils/config.utils';
 import healthRoutes from '../../src/routes/health.routes';
+import authRoutes from '../../src/routes/auth.routes';
+import { usersRoutes } from '../../src/routes/users.routes';
+import { formsRoutes } from '../../src/routes/forms.routes';
+import { themesRoutes } from '../../src/routes/themes.routes';
+import { publicFormsRoutes } from '../../src/routes/public-forms.routes';
 
 /**
  * Creates an Express application configured for testing.
@@ -19,17 +24,19 @@ export function createTestApp(): express.Application {
   const app = express();
 
   // Security middleware
-  app.use(helmet({
-    crossOriginEmbedderPolicy: false,
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'"],
-        imgSrc: ["'self'", "data:", "https:"],
+  app.use(
+    helmet({
+      crossOriginEmbedderPolicy: false,
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'"],
+          imgSrc: ["'self'", 'data:', 'https:'],
+        },
       },
-    },
-  }));
+    })
+  );
 
   // Rate limiting (more lenient for testing)
   const limiter = rateLimit({
@@ -38,7 +45,7 @@ export function createTestApp(): express.Application {
     message: {
       success: false,
       error: 'Too many requests from this IP, please try again later.',
-      retryAfter: '15 minutes'
+      retryAfter: '15 minutes',
     },
     standardHeaders: true,
     legacyHeaders: false,
@@ -47,11 +54,13 @@ export function createTestApp(): express.Application {
   app.use(limiter);
 
   // CORS configuration
-  app.use(cors({
-    origin: config.FRONTEND_URL,
-    credentials: true,
-    optionsSuccessStatus: 200,
-  }));
+  app.use(
+    cors({
+      origin: config.FRONTEND_URL,
+      credentials: true,
+      optionsSuccessStatus: 200,
+    })
+  );
 
   // Request parsing middleware
   app.use(express.json({ limit: '10mb' }));
@@ -68,20 +77,43 @@ export function createTestApp(): express.Application {
   // Health routes
   app.use(healthRoutes);
 
+  // API v1 routes (matching server.ts structure)
+  app.use('/api/v1/auth', authRoutes);
+  app.use('/api/v1/users', usersRoutes);
+  app.use('/api/v1/forms', formsRoutes);
+  app.use('/api/v1/themes', themesRoutes);
+  app.use('/api/v1/public', publicFormsRoutes);
+
+  // Legacy routes for backward compatibility
+  app.use('/auth', authRoutes);
+  app.use('/api/forms', formsRoutes);
+  app.use('/api/themes', themesRoutes);
+  app.use('/api/public', publicFormsRoutes);
+
   // Global error handler
-  app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    console.error('❌ Test app error:', err);
+  app.use(
+    (
+      err: Error,
+      _req: express.Request,
+      res: express.Response,
+      _next: express.NextFunction
+    ) => {
+      console.error('❌ Test app error:', err);
 
-    const isDevelopment = config.NODE_ENV === 'development';
-    const statusCode = (err as any).statusCode || (err as any).status || 500;
+      const isDevelopment = config.NODE_ENV === 'development';
+      const statusCode = (err as any).statusCode || (err as any).status || 500;
 
-    res.status(statusCode).json({
-      success: false,
-      error: statusCode >= 500 ? 'Internal Server Error' : err.message || 'Bad Request',
-      timestamp: new Date().toISOString(),
-      ...(isDevelopment && { stack: err.stack }),
-    });
-  });
+      res.status(statusCode).json({
+        success: false,
+        error:
+          statusCode >= 500
+            ? 'Internal Server Error'
+            : err.message || 'Bad Request',
+        timestamp: new Date().toISOString(),
+        ...(isDevelopment && { stack: err.stack }),
+      });
+    }
+  );
 
   return app;
 }
@@ -97,7 +129,7 @@ export async function createServer() {
   const server = {
     listening: true,
     close: () => {},
-    address: () => ({ port: 3000 })
+    address: () => ({ port: 3000 }),
   };
 
   return { app, server };

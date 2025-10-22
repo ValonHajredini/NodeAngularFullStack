@@ -30,8 +30,9 @@ import { StepFormSidebarComponent } from './step-form-sidebar/step-form-sidebar.
 import { PreviewDialogComponent } from './preview-dialog/preview-dialog.component';
 import { ThemeDropdownComponent } from './theme-dropdown/theme-dropdown.component';
 import { ThemeDesignerModalComponent } from './theme-designer-modal/theme-designer-modal.component';
+import { TokenReuseConfirmationComponent } from './token-reuse-confirmation/token-reuse-confirmation.component';
 import { Dialog } from 'primeng/dialog';
-import { FormSchema, FormTheme } from '@nodeangularfullstack/shared';
+import { FormSchema, FormTheme, TokenStatusResponse } from '@nodeangularfullstack/shared';
 import { trigger, transition, style, animate } from '@angular/animations';
 import { AuthService } from '@core/auth/auth.service';
 
@@ -62,6 +63,7 @@ import { AuthService } from '@core/auth/auth.service';
     PreviewDialogComponent,
     ThemeDropdownComponent,
     ThemeDesignerModalComponent,
+    TokenReuseConfirmationComponent,
     Dialog,
   ],
   providers: [MessageService, ConfirmationService],
@@ -340,13 +342,28 @@ import { AuthService } from '@core/auth/auth.service';
       <!-- Publish Dialog -->
       <app-publish-dialog
         [visible]="publishDialogVisible()"
-        (visibleChange)="publishDialogVisible.set($event)"
+        (visibleChange)="onPublishDialogVisibleChange($event)"
         [loading]="isPublishing()"
         [validationErrors]="publishValidationErrors()"
         [renderUrl]="publishedRenderUrl()"
+        [qrCodeUrl]="publishedQrCodeUrl()"
+        [qrCodeGenerated]="qrCodeGenerated()"
+        [qrCodeLoading]="qrCodeLoading()"
+        [formTitle]="formBuilderService.currentForm()?.title"
+        [shortCode]="getShortCodeFromRenderUrl()"
         (publish)="onPublish($event)"
         (copyUrl)="onCopyRenderUrl()"
+        (downloadQrCode)="onDownloadQrCode()"
       ></app-publish-dialog>
+
+      <!-- Token Reuse Confirmation Dialog (Story 26.2) -->
+      <app-token-reuse-confirmation
+        [visible]="tokenReuseDialogVisible()"
+        [tokenStatus]="currentTokenStatus()"
+        (visibleChange)="onTokenReuseDialogVisibleChange($event)"
+        (reuseToken)="onReuseExistingToken()"
+        (generateNewToken)="onGenerateNewToken()"
+      ></app-token-reuse-confirmation>
 
       <!-- Preview Dialog (Story 14.3) -->
       <app-preview-dialog
@@ -526,6 +543,8 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
   readonly settingsDialogVisible = signal<boolean>(false);
   readonly publishDialogVisible = signal<boolean>(false);
   readonly fieldPropertiesModalVisible = signal<boolean>(false);
+  readonly tokenReuseDialogVisible = signal<boolean>(false);
+  readonly currentTokenStatus = signal<TokenStatusResponse | null>(null);
   readonly selectedFieldForModal = signal<FormField | null>(null);
   readonly formSettings = signal<FormSettings>({
     title: 'Untitled Form',
@@ -549,6 +568,9 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
   readonly isPublishing = signal<boolean>(false);
   readonly publishValidationErrors = signal<string[]>([]);
   readonly publishedRenderUrl = signal<string | undefined>(undefined);
+  readonly publishedQrCodeUrl = signal<string | undefined>(undefined);
+  readonly qrCodeGenerated = signal<boolean>(false);
+  readonly qrCodeLoading = signal<boolean>(false);
   readonly formsListDialogVisible = signal<boolean>(false);
   readonly formsListLoading = signal<boolean>(false);
   readonly availableForms = signal<FormMetadata[]>([]);
@@ -1362,7 +1384,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
 
   /**
    * Handles publish button click.
-   * Validates form schema before showing publish dialog.
+   * Checks for existing tokens first, then validates form schema.
    */
   onPublishClick(): void {
     const currentForm = this.formBuilderService.currentForm();
@@ -1397,6 +1419,38 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
       return;
     }
 
+    // Check for existing tokens (Story 26.2: Smart Token Management)
+    this.checkExistingTokensAndProceed(currentForm.id);
+  }
+
+  /**
+   * Checks for existing valid tokens and shows appropriate dialog.
+   * @param formId - Form ID to check tokens for
+   */
+  private checkExistingTokensAndProceed(formId: string): void {
+    this.formsApiService.checkTokenStatus(formId).subscribe({
+      next: (tokenStatus) => {
+        if (tokenStatus.hasValidToken) {
+          // Show token reuse confirmation dialog
+          this.currentTokenStatus.set(tokenStatus);
+          this.tokenReuseDialogVisible.set(true);
+        } else {
+          // No valid tokens, proceed with normal publishing
+          this.proceedWithPublishing();
+        }
+      },
+      error: (error) => {
+        console.warn('Token status check failed, proceeding with normal publish:', error);
+        // Fallback to normal publishing if token check fails
+        this.proceedWithPublishing();
+      },
+    });
+  }
+
+  /**
+   * Proceeds with normal publishing workflow (shows publish dialog).
+   */
+  private proceedWithPublishing(): void {
     // Clear validation errors and show publish dialog
     this.publishValidationErrors.set([]);
     this.publishedRenderUrl.set(undefined);
@@ -1404,14 +1458,16 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
   }
 
   /**
-   * Handles form publish with expiration date.
-   * @param expiresAt - Expiration date for the render token
+   * Handles form publish with optional expiration date.
+   * @param expiresAt - Expiration date for the render token (null for no expiration)
    */
-  onPublish(expiresAt: Date): void {
+  onPublish(expiresAt: Date | null): void {
     const currentForm = this.formBuilderService.currentForm();
     if (!currentForm?.id) return;
 
     this.isPublishing.set(true);
+    // Story 26.3: Set QR code loading state
+    this.qrCodeLoading.set(true);
 
     this.formsApiService.publishForm(currentForm.id, expiresAt).subscribe({
       next: (result) => {
@@ -1419,7 +1475,18 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
         this.formBuilderService.setCurrentForm(result.form);
 
         // Set the render URL for display
-        this.publishedRenderUrl.set(`${window.location.origin}${result.renderUrl}`);
+        // Check if renderUrl already contains the full URL (with protocol)
+        const renderUrl = result.renderUrl.startsWith('http')
+          ? result.renderUrl
+          : `${window.location.origin}${result.renderUrl}`;
+        this.publishedRenderUrl.set(renderUrl);
+
+        // Story 26.3: Handle QR code response
+        if (result.qrCodeUrl) {
+          this.publishedQrCodeUrl.set(result.qrCodeUrl);
+        }
+        this.qrCodeGenerated.set(result.qrCodeGenerated);
+        this.qrCodeLoading.set(false);
 
         this.isPublishing.set(false);
         this.messageService.add({
@@ -1431,6 +1498,8 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
       },
       error: (error) => {
         this.isPublishing.set(false);
+        // Story 26.3: Reset QR code loading state on error
+        this.qrCodeLoading.set(false);
         this.messageService.add({
           severity: 'error',
           summary: 'Publish Failed',
@@ -1471,6 +1540,57 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
         });
       },
     });
+  }
+
+  /**
+   * Handles token reuse confirmation dialog visibility change.
+   */
+  onTokenReuseDialogVisibleChange(visible: boolean): void {
+    this.tokenReuseDialogVisible.set(visible);
+    if (!visible) {
+      this.currentTokenStatus.set(null);
+    }
+  }
+
+  /**
+   * Handles user choosing to reuse existing token.
+   */
+  onReuseExistingToken(): void {
+    const tokenStatus = this.currentTokenStatus();
+    if (!tokenStatus) return;
+
+    const currentForm = this.formBuilderService.currentForm();
+    if (!currentForm) return;
+
+    // Set the existing form URL as the render URL
+    this.publishedRenderUrl.set(tokenStatus.formUrl);
+
+    // Close token reuse dialog
+    this.tokenReuseDialogVisible.set(false);
+    this.currentTokenStatus.set(null);
+
+    // Show success message
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Using Existing Token',
+      detail: 'Form is already published with the existing token',
+      life: 3000,
+    });
+
+    // Optionally show the publish dialog to display the URL
+    this.publishDialogVisible.set(true);
+  }
+
+  /**
+   * Handles user choosing to generate new token.
+   */
+  onGenerateNewToken(): void {
+    // Close token reuse dialog
+    this.tokenReuseDialogVisible.set(false);
+    this.currentTokenStatus.set(null);
+
+    // Proceed with normal publishing workflow
+    this.proceedWithPublishing();
   }
 
   /**
@@ -1529,6 +1649,78 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
       });
     } finally {
       document.body.removeChild(textArea);
+    }
+  }
+
+  /**
+   * Handles publish dialog visibility changes.
+   * Story 26.3: Reset QR code state when dialog is closed.
+   */
+  onPublishDialogVisibleChange(visible: boolean): void {
+    this.publishDialogVisible.set(visible);
+
+    // Reset QR code state when dialog is closed
+    if (!visible) {
+      this.publishedRenderUrl.set(undefined);
+      this.publishedQrCodeUrl.set(undefined);
+      this.qrCodeGenerated.set(false);
+      this.qrCodeLoading.set(false);
+      this.publishValidationErrors.set([]);
+    }
+  }
+
+  /**
+   * Extracts the short code from the published render URL.
+   * Story 26.4: Iframe Embed Code Generator
+   * @returns The short code extracted from the render URL, or undefined if not available
+   */
+  getShortCodeFromRenderUrl(): string | undefined {
+    const renderUrl = this.publishedRenderUrl();
+    if (!renderUrl) return undefined;
+
+    // Extract short code from URL pattern: /forms/render/{shortCode}
+    const match = renderUrl.match(/\/forms\/render\/([^\/\?]+)/);
+    return match ? match[1] : undefined;
+  }
+
+  /**
+   * Downloads the QR code image for the published form.
+   * Story 26.3: Integrated QR Code Generation and Display
+   */
+  onDownloadQrCode(): void {
+    const qrCodeUrl = this.publishedQrCodeUrl();
+    if (!qrCodeUrl) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Download Failed',
+        detail: 'QR code is not available for download',
+        life: 3000,
+      });
+      return;
+    }
+
+    try {
+      // Create a temporary anchor element to trigger download
+      const link = document.createElement('a');
+      link.href = qrCodeUrl;
+      link.download = `form-qr-code-${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      this.messageService.add({
+        severity: 'success',
+        summary: 'QR Code Downloaded',
+        detail: 'QR code image has been downloaded',
+        life: 2000,
+      });
+    } catch (error) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Download Failed',
+        detail: 'Failed to download QR code. Please try again.',
+        life: 3000,
+      });
     }
   }
 

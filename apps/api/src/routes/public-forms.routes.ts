@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { PublicFormsController } from '../controllers/public-forms.controller';
 import { RateLimitMiddleware } from '../middleware/rate-limit.middleware';
 
@@ -8,6 +9,27 @@ import { RateLimitMiddleware } from '../middleware/rate-limit.middleware';
  */
 const router = Router();
 const publicFormsController = new PublicFormsController();
+
+/**
+ * Middleware to allow iframe embedding for public forms.
+ * Story 26.4: Iframe Embed Code Generator
+ * Sets security headers to permit external website embedding.
+ */
+const allowIframeEmbedding = (
+  _req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  // Allow all origins to embed this content in iframes
+  res.setHeader('X-Frame-Options', 'ALLOWALL');
+  res.setHeader('Content-Security-Policy', "frame-ancestors 'self' *");
+
+  // Additional security headers for iframe embedding
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+  next();
+};
 
 /**
  * @swagger
@@ -91,6 +113,7 @@ const publicFormsController = new PublicFormsController();
  */
 router.get(
   '/forms/render/:token',
+  allowIframeEmbedding,
   RateLimitMiddleware.publicFormRenderLimit(),
   publicFormsController.renderForm
 );
@@ -249,6 +272,7 @@ router.post(
  */
 router.get(
   '/forms/:shortCode',
+  allowIframeEmbedding,
   RateLimitMiddleware.publicFormRenderLimit(),
   publicFormsController.getPublicFormByShortCode
 );

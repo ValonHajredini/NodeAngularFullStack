@@ -492,6 +492,8 @@ export interface FormMetadata {
   status: FormStatus;
   /** Form schema containing fields and settings */
   schema?: FormSchema;
+  /** QR code storage URL for form sharing (Story 26.3) */
+  qrCodeUrl?: string;
   /** Form creation timestamp */
   createdAt: Date;
   /** Form last update timestamp */
@@ -715,5 +717,69 @@ export interface StepFormAnalytics {
   stepStats: StepCompletionStats[];
   /** Funnel visualization data (step progression) */
   funnelData: { step: string; count: number }[];
+}
+
+/**
+ * Response from token status API for smart token management
+ * Used to determine if a form has existing valid tokens before publishing
+ */
+export interface TokenStatusResponse {
+  /** Whether the form has at least one valid (unexpired) token */
+  hasValidToken: boolean;
+  /** Token expiration date (null if permanent token) */
+  tokenExpiration: Date | null;
+  /** When the token was created */
+  tokenCreatedAt: Date;
+  /** The public form URL for the existing token */
+  formUrl: string;
+}
+
+/**
+ * Enhanced publishing response with QR code information
+ * Story 26.3: Integrated QR Code Generation and Display
+ */
+export interface PublishFormResponse {
+  /** Published form metadata */
+  form: FormMetadata;
+  /** Published form schema */
+  formSchema: FormSchema;
+  /** Public render URL for the form */
+  renderUrl: string;
+  /** QR code storage URL (optional, may be null if generation fails) */
+  qrCodeUrl?: string;
+  /** Whether QR code generation was successful */
+  qrCodeGenerated: boolean;
+}
+
+/**
+ * Iframe embed options for customizing generated iframe code
+ * Story 26.4: Iframe Embed Code Generator
+ */
+export interface IframeEmbedOptions {
+  /** Iframe width (px, %, or custom value) */
+  width: string;
+  /** Iframe height (px, %, or custom value) */
+  height: string;
+  /** Whether to use responsive width (percentage-based) */
+  responsive: boolean;
+  /** Whether to show iframe border (frameborder attribute) */
+  showBorder: boolean;
+  /** Whether to allow scrolling within iframe */
+  allowScrolling: boolean;
+  /** Title attribute for accessibility */
+  title: string;
+}
+
+/**
+ * Generated iframe embed code with metadata
+ * Story 26.4: Iframe Embed Code Generator
+ */
+export interface IframeEmbedCode {
+  /** Complete HTML iframe code ready for embedding */
+  htmlCode: string;
+  /** Preview URL for the embedded form */
+  previewUrl: string;
+  /** Embed options used to generate this code */
+  options: IframeEmbedOptions;
 }
 

@@ -8,6 +8,8 @@ import {
   FormStatus,
   ApiResponse,
   PaginatedResponse,
+  PublishFormResponse,
+  FormSchema,
 } from '@nodeangularfullstack/shared';
 
 describe('FormsApiService', () => {
@@ -18,11 +20,13 @@ describe('FormsApiService', () => {
   const mockForm: FormMetadata = {
     id: 'form-123',
     userId: 'user-456',
+    tenantId: null,
     title: 'Test Form',
     description: 'Test Description',
     status: FormStatus.DRAFT,
     createdAt: new Date('2025-01-01'),
     updatedAt: new Date('2025-01-02'),
+    qrCodeUrl: null,
   };
 
   beforeEach(() => {
@@ -273,6 +277,241 @@ describe('FormsApiService', () => {
       service.getFormById('form-123').subscribe((result) => {
         expect(result.createdAt instanceof Date).toBe(true);
         expect(result.updatedAt instanceof Date).toBe(true);
+        done();
+      });
+    });
+  });
+
+  // QR Code Integration Tests (Story 26.3)
+  describe('publishForm with QR code', () => {
+    const mockFormId = 'test-form-123';
+    const mockRenderUrl = 'https://example.com/public/form/abc123';
+    const mockQrCodeUrl = 'https://cdn.example.com/form-qr-codes/form-qr-test-123.png';
+
+    const mockFormSchema: FormSchema = {
+      id: 'schema-456',
+      formId: mockFormId,
+      version: 1,
+      fields: [],
+      settings: {},
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      expiresAt: new Date('2025-12-31'),
+    };
+
+    it('should publish form and return QR code information', (done) => {
+      const expirationDate = new Date('2025-12-31');
+      const mockPublishResponse: PublishFormResponse = {
+        form: { ...mockForm, qrCodeUrl: mockQrCodeUrl },
+        formSchema: mockFormSchema,
+        renderUrl: mockRenderUrl,
+        qrCodeUrl: mockQrCodeUrl,
+        qrCodeGenerated: true,
+      };
+
+      const mockApiResponse: ApiResponse<PublishFormResponse> = {
+        success: true,
+        message: 'Form published successfully',
+        data: mockPublishResponse,
+        timestamp: new Date().toISOString(),
+      };
+
+      apiClientSpy.post.and.returnValue(of(mockApiResponse));
+
+      service.publishForm(mockFormId, expirationDate).subscribe((result) => {
+        expect(result.qrCodeUrl).toBe(mockQrCodeUrl);
+        expect(result.qrCodeGenerated).toBe(true);
+        expect(result.renderUrl).toBe(mockRenderUrl);
+        expect(result.form.qrCodeUrl).toBe(mockQrCodeUrl);
+
+        // Verify API call was made with correct parameters
+        expect(apiClientSpy.post).toHaveBeenCalledWith(`/forms/${mockFormId}/publish`, {
+          expiresInDays: jasmine.any(Number),
+        });
+
+        done();
+      });
+    });
+
+    it('should handle publish response when QR generation fails', (done) => {
+      const expirationDate = new Date('2025-12-31');
+      const mockPublishResponse: PublishFormResponse = {
+        form: { ...mockForm, qrCodeUrl: null },
+        formSchema: mockFormSchema,
+        renderUrl: mockRenderUrl,
+        qrCodeUrl: undefined,
+        qrCodeGenerated: false,
+      };
+
+      const mockApiResponse: ApiResponse<PublishFormResponse> = {
+        success: true,
+        message: 'Form published successfully',
+        data: mockPublishResponse,
+        timestamp: new Date().toISOString(),
+      };
+
+      apiClientSpy.post.and.returnValue(of(mockApiResponse));
+
+      service.publishForm(mockFormId, expirationDate).subscribe((result) => {
+        expect(result.qrCodeUrl).toBeUndefined();
+        expect(result.qrCodeGenerated).toBe(false);
+        expect(result.renderUrl).toBe(mockRenderUrl);
+        expect(result.form.qrCodeUrl).toBeNull();
+        done();
+      });
+    });
+
+    it('should publish form without expiration and handle QR code response', (done) => {
+      const mockPublishResponse: PublishFormResponse = {
+        form: { ...mockForm, qrCodeUrl: mockQrCodeUrl },
+        formSchema: mockFormSchema,
+        renderUrl: mockRenderUrl,
+        qrCodeUrl: mockQrCodeUrl,
+        qrCodeGenerated: true,
+      };
+
+      const mockApiResponse: ApiResponse<PublishFormResponse> = {
+        success: true,
+        message: 'Form published successfully',
+        data: mockPublishResponse,
+        timestamp: new Date().toISOString(),
+      };
+
+      apiClientSpy.post.and.returnValue(of(mockApiResponse));
+
+      service.publishForm(mockFormId, null).subscribe((result) => {
+        expect(result.qrCodeUrl).toBe(mockQrCodeUrl);
+        expect(result.qrCodeGenerated).toBe(true);
+
+        // Verify API call was made without expiration
+        expect(apiClientSpy.post).toHaveBeenCalledWith(`/forms/${mockFormId}/publish`, {});
+
+        done();
+      });
+    });
+
+    it('should handle missing QR code data in response gracefully', (done) => {
+      const mockPublishResponse = {
+        form: { ...mockForm },
+        formSchema: mockFormSchema,
+        renderUrl: mockRenderUrl,
+        // Missing qrCodeUrl and qrCodeGenerated properties
+      } as PublishFormResponse;
+
+      const mockApiResponse: ApiResponse<PublishFormResponse> = {
+        success: true,
+        message: 'Form published successfully',
+        data: mockPublishResponse,
+        timestamp: new Date().toISOString(),
+      };
+
+      apiClientSpy.post.and.returnValue(of(mockApiResponse));
+
+      service.publishForm(mockFormId, null).subscribe((result) => {
+        expect(result.qrCodeUrl).toBeUndefined();
+        expect(result.qrCodeGenerated).toBeUndefined();
+        expect(result.renderUrl).toBe(mockRenderUrl);
+        done();
+      });
+    });
+
+    it('should convert date strings to Date objects in publish response', (done) => {
+      const mockPublishResponse = {
+        form: {
+          ...mockForm,
+          createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-02T00:00:00.000Z',
+          qrCodeUrl: mockQrCodeUrl,
+        },
+        formSchema: {
+          ...mockFormSchema,
+          createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-02T00:00:00.000Z',
+          expiresAt: '2025-12-31T23:59:59.000Z',
+        },
+        renderUrl: mockRenderUrl,
+        qrCodeUrl: mockQrCodeUrl,
+        qrCodeGenerated: true,
+      };
+
+      const mockApiResponse: ApiResponse<PublishFormResponse> = {
+        success: true,
+        message: 'Form published successfully',
+        data: mockPublishResponse as any,
+        timestamp: new Date().toISOString(),
+      };
+
+      apiClientSpy.post.and.returnValue(of(mockApiResponse));
+
+      service.publishForm(mockFormId, null).subscribe((result) => {
+        expect(result.form.createdAt).toBeInstanceOf(Date);
+        expect(result.form.updatedAt).toBeInstanceOf(Date);
+        expect(result.formSchema.createdAt).toBeInstanceOf(Date);
+        expect(result.formSchema.updatedAt).toBeInstanceOf(Date);
+        expect(result.formSchema.expiresAt).toBeInstanceOf(Date);
+
+        // QR code data should be preserved
+        expect(result.qrCodeUrl).toBe(mockQrCodeUrl);
+        expect(result.qrCodeGenerated).toBe(true);
+
+        done();
+      });
+    });
+  });
+
+  describe('unpublishForm with QR cleanup', () => {
+    it('should unpublish form and clear QR code URL', (done) => {
+      const unpublishedForm = { ...mockForm, qrCodeUrl: null, status: FormStatus.DRAFT };
+      const mockApiResponse: ApiResponse<FormMetadata> = {
+        success: true,
+        message: 'Form unpublished successfully',
+        data: unpublishedForm,
+        timestamp: new Date().toISOString(),
+      };
+
+      apiClientSpy.post.and.returnValue(of(mockApiResponse));
+
+      service.unpublishForm('form-123').subscribe((result) => {
+        expect(result.qrCodeUrl).toBeNull();
+        expect(result.status).toBe(FormStatus.DRAFT);
+        expect(apiClientSpy.post).toHaveBeenCalledWith('/forms/form-123/unpublish', {});
+        done();
+      });
+    });
+  });
+
+  describe('form retrieval with QR code URL', () => {
+    it('should include QR code URL in form details', (done) => {
+      const formWithQR = { ...mockForm, qrCodeUrl: 'https://cdn.example.com/qr-codes/test.png' };
+      const mockApiResponse: ApiResponse<FormMetadata> = {
+        success: true,
+        message: 'Form retrieved successfully',
+        data: formWithQR,
+        timestamp: new Date().toISOString(),
+      };
+
+      apiClientSpy.get.and.returnValue(of(mockApiResponse));
+
+      service.getFormById('form-123').subscribe((result) => {
+        expect(result.qrCodeUrl).toBe('https://cdn.example.com/qr-codes/test.png');
+        expect(apiClientSpy.get).toHaveBeenCalledWith('/forms/form-123');
+        done();
+      });
+    });
+
+    it('should handle forms without QR code URL', (done) => {
+      const formWithoutQR = { ...mockForm, qrCodeUrl: null };
+      const mockApiResponse: ApiResponse<FormMetadata> = {
+        success: true,
+        message: 'Form retrieved successfully',
+        data: formWithoutQR,
+        timestamp: new Date().toISOString(),
+      };
+
+      apiClientSpy.get.and.returnValue(of(mockApiResponse));
+
+      service.getFormById('form-123').subscribe((result) => {
+        expect(result.qrCodeUrl).toBeNull();
         done();
       });
     });

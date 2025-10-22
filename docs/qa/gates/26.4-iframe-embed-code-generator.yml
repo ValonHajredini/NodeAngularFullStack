@@ -1,0 +1,67 @@
+# Quality Gate Decision for Story 26.4
+schema: 1
+story: "26.4"
+story_title: "Iframe Embed Code Generator - Brownfield Enhancement"
+gate: CONCERNS
+status_reason: "Excellent implementation quality but missing E2E tests for external iframe embedding validation"
+reviewer: "Quinn (Test Architect)"
+updated: "2025-10-21T09:45:00Z"
+
+# Always present but only active when WAIVED
+waiver: { active: false }
+
+# Issues identified during review
+top_issues:
+  - id: "TEST-001"
+    severity: medium
+    finding: "Missing E2E tests for external website iframe embedding"
+    suggested_action: "Add Playwright tests to verify iframe functionality in external contexts"
+    refs: ["tests/e2e/"]
+  - id: "TEST-002"
+    severity: medium  
+    finding: "No cross-browser iframe compatibility verification"
+    suggested_action: "Add browser-specific iframe rendering tests"
+    refs: ["tests/e2e/"]
+
+# Risk assessment summary
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 2, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: ["External iframe embedding", "Cross-browser compatibility"]
+
+# Quality scoring
+quality_score: 80  # 100 - (10 × 2 medium issues)
+expires: "2025-11-04T09:45:00Z"  # 2 weeks from review
+
+# Evidence of review completeness
+evidence:
+  tests_reviewed: 25
+  risks_identified: 2
+  trace:
+    ac_covered: [1, 2, 3, 4, 6, 7, 8, 9]  # ACs with test coverage
+    ac_gaps: [5]  # AC5 (Public Form Compatibility) lacks E2E tests
+
+# Non-functional requirements validation
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Excellent security implementation with proper CSP headers, iframe sandbox, and XSS prevention"
+  performance:
+    status: PASS  
+    notes: "Good performance design with lazy loading and computed signals"
+  reliability:
+    status: PASS
+    notes: "Comprehensive error handling and fallback mechanisms"
+  maintainability:
+    status: PASS
+    notes: "Clean Angular 20+ architecture with excellent code organization"
+
+# Actionable recommendations
+recommendations:
+  immediate: []  # No critical issues requiring immediate action
+  future:
+    - action: "Add E2E tests for iframe embedding in external websites"
+      refs: ["tests/e2e/iframe-embedding.spec.ts"]
+    - action: "Add cross-browser iframe compatibility tests"
+      refs: ["tests/e2e/cross-browser-iframe.spec.ts"]

@@ -1,0 +1,59 @@
+schema: 1
+story: "26.1"
+story_title: "No-Expiration Default and Enhanced Publishing Modal - Brownfield Enhancement"
+gate: CONCERNS
+status_reason: "Implementation is solid with good code quality, but missing comprehensive test coverage for new no-expiration functionality which is critical for production readiness."
+reviewer: "Quinn (Test Architect)"
+updated: "2025-01-12T21:45:00Z"
+
+waiver: { active: false }
+
+top_issues:
+  - id: "TEST-001"
+    severity: medium
+    finding: "Missing unit tests for no-expiration mode in PublishDialogComponent"
+    suggested_action: "Add test cases for useCustomExpiration toggle behavior and null expiration handling"
+  - id: "TEST-002"  
+    severity: medium
+    finding: "Integration tests do not cover optional expiresInDays parameter scenarios"
+    suggested_action: "Add test cases for publishing with undefined/null expiration parameter"
+  - id: "TEST-003"
+    severity: medium
+    finding: "No test validation for permanent token generation and validation logic"
+    suggested_action: "Verify JWT tokens generated without expiration work correctly end-to-end"
+
+quality_score: 75
+expires: "2025-01-26T21:45:00Z"
+
+evidence:
+  tests_reviewed: 20
+  risks_identified: 3
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "JWT token generation properly handles permanent tokens, no security vulnerabilities identified"
+  performance:
+    status: PASS  
+    notes: "No performance degradation, changes are additive and efficient"
+  reliability:
+    status: CONCERNS
+    notes: "Missing test coverage creates reliability risk for production deployment"
+  maintainability:
+    status: PASS
+    notes: "Clean code with comprehensive documentation following project standards"
+
+recommendations:
+  immediate:
+    - action: "Add comprehensive unit tests for no-expiration toggle functionality"
+      refs: ["apps/web/src/app/features/tools/components/form-builder/publish-dialog/publish-dialog.component.spec.ts"]
+    - action: "Add integration tests for optional expiration parameter handling"
+      refs: ["apps/api/tests/integration/forms-publish.test.ts"]
+    - action: "Verify permanent token end-to-end functionality with test scenarios"
+      refs: ["apps/api/src/services/forms.service.ts:433-471"]
+  future:
+    - action: "Consider adding E2E tests for complete no-expiration publishing workflow"
+      refs: ["tests/e2e/"]

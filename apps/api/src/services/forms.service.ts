@@ -5,10 +5,13 @@ import {
   FormField,
   FormStatus,
   FormBackgroundSettings,
+  TokenStatusResponse,
+  PublishFormResponse,
 } from '@nodeangularfullstack/shared';
 import { formsRepository } from '../repositories/forms.repository';
 import { formSchemasRepository } from '../repositories/form-schemas.repository';
 import { themesRepository } from '../repositories/themes.repository';
+import { formQrCodeService } from './form-qr-code.service';
 
 /**
  * API Error class for form-related errors.
@@ -119,24 +122,22 @@ export class FormsService {
    * Publishes a form with generated render token.
    * @param formId - Form ID to publish
    * @param userId - User ID requesting publish (must be owner)
-   * @param expiresInDays - Number of days until token expires
+   * @param expirationDate - Optional expiration date for token (null for permanent)
    * @returns Promise containing form, schema, and render URL
    * @throws {ApiError} 400 - When validation fails
    * @throws {ApiError} 404 - When form or schema not found
    * @throws {ApiError} 403 - When user is not the owner
    * @throws {ApiError} 500 - When publish fails
    * @example
-   * const result = await formsService.publishForm('form-uuid', 'user-uuid', 30);
+   * const result = await formsService.publishForm('form-uuid', 'user-uuid', new Date('2025-12-31'));
+   * @example
+   * const result = await formsService.publishForm('form-uuid', 'user-uuid', null);
    */
   async publishForm(
     formId: string,
     userId: string,
-    expiresInDays: number
-  ): Promise<{
-    form: FormMetadata;
-    schema: FormSchema;
-    renderUrl: string;
-  }> {
+    expirationDate: Date | null
+  ): Promise<PublishFormResponse> {
     try {
       // Find the form
       const form = await this.formsRepo.findFormById(formId);
@@ -175,9 +176,8 @@ export class FormsService {
         );
       }
 
-      // Calculate expiration date
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+      // Use provided expiration date or null for no expiration
+      const expiresAt = expirationDate;
 
       // Generate render token
       const renderToken = this.generateRenderToken(latestSchema.id, expiresAt);
@@ -194,13 +194,48 @@ export class FormsService {
         status: FormStatus.PUBLISHED,
       });
 
-      // Generate render URL (base URL would come from config in production)
-      const renderUrl = `/forms/render/${renderToken}`;
+      // Generate full render URL (use frontend URL for public forms)
+      // Public forms are rendered by the Angular frontend, not the API backend
+      const baseUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
+      const renderUrl = `${baseUrl}/forms/render/${renderToken}`;
+
+      // Story 26.3: Generate QR code asynchronously (non-blocking)
+      let qrCodeUrl: string | undefined;
+      let qrCodeGenerated = false;
+
+      try {
+        // Generate and store QR code
+        qrCodeUrl = await formQrCodeService.generateAndStoreQRCode(
+          formId,
+          renderUrl
+        );
+
+        // Update form with QR code URL
+        const formWithQRCode = await this.formsRepo.updateQRCodeUrl(
+          formId,
+          qrCodeUrl
+        );
+        if (formWithQRCode) {
+          updatedForm.qrCodeUrl = qrCodeUrl;
+        }
+
+        qrCodeGenerated = true;
+        console.log(`✅ QR code generated for form ${formId}: ${qrCodeUrl}`);
+      } catch (qrError) {
+        // QR code generation failure should not prevent successful publishing
+        console.error(
+          `⚠️ QR code generation failed for form ${formId}:`,
+          qrError
+        );
+        qrCodeGenerated = false;
+      }
 
       return {
         form: updatedForm,
-        schema: publishedSchema,
+        formSchema: publishedSchema,
         renderUrl,
+        qrCodeUrl,
+        qrCodeGenerated,
       };
     } catch (error: any) {
       if (error instanceof ApiError) {
@@ -396,6 +431,93 @@ export class FormsService {
   }
 
   /**
+   * Checks for existing valid tokens for a form.
+   * @param formId - Form ID to check tokens for
+   * @param userId - User ID requesting the check (must be owner)
+   * @returns Promise containing token status information
+   * @throws {ApiError} 404 - When form not found
+   * @throws {ApiError} 403 - When user is not the owner
+   * @throws {ApiError} 500 - When check fails
+   * @example
+   * const tokenStatus = await formsService.checkExistingTokens('form-uuid', 'user-uuid');
+   */
+  async checkExistingTokens(
+    formId: string,
+    userId: string
+  ): Promise<TokenStatusResponse> {
+    try {
+      // Find the form and verify ownership
+      const form = await this.formsRepo.findFormById(formId);
+      if (!form) {
+        throw new ApiError('Form not found', 404, 'FORM_NOT_FOUND');
+      }
+
+      // Verify ownership
+      if (form.userId !== userId) {
+        throw new ApiError(
+          'You do not have permission to check tokens for this form',
+          403,
+          'FORBIDDEN'
+        );
+      }
+
+      // Get form schemas for this form
+      const schemas = await this.formSchemasRepo.findByFormId(formId);
+      if (schemas.length === 0) {
+        // No schemas exist, no valid tokens
+        return {
+          hasValidToken: false,
+          tokenExpiration: null,
+          tokenCreatedAt: new Date(),
+          formUrl: '',
+        };
+      }
+
+      // Find the most recent published schema with valid token
+      const now = new Date();
+      const validSchema = schemas.find((schema) => {
+        return (
+          schema.isPublished &&
+          schema.renderToken &&
+          (schema.expiresAt === null ||
+            schema.expiresAt === undefined ||
+            schema.expiresAt > now)
+        );
+      });
+
+      if (!validSchema) {
+        // No valid tokens found
+        return {
+          hasValidToken: false,
+          tokenExpiration: null,
+          tokenCreatedAt: new Date(),
+          formUrl: '',
+        };
+      }
+
+      // Return valid token information
+      const baseUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
+      const formUrl = `${baseUrl}/forms/render/${validSchema.renderToken}`;
+
+      return {
+        hasValidToken: true,
+        tokenExpiration: validSchema.expiresAt || null,
+        tokenCreatedAt: validSchema.createdAt,
+        formUrl,
+      };
+    } catch (error: any) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError(
+        `Failed to check existing tokens: ${error.message}`,
+        500,
+        'CHECK_TOKENS_ERROR'
+      );
+    }
+  }
+
+  /**
    * Validates a theme ID and ensures the theme exists and is active.
    * @param themeId - Theme ID to validate
    * @returns Promise containing validation result
@@ -421,13 +543,15 @@ export class FormsService {
   /**
    * Generates a JWT render token for public form access.
    * @param formSchemaId - Form schema ID to embed in token
-   * @param expiresAt - Token expiration date
+   * @param expiresAt - Token expiration date (null for permanent token)
    * @returns JWT token string
    * @throws {ApiError} 500 - When token generation fails or secret not configured
    * @example
    * const token = formsService.generateRenderToken('schema-uuid', new Date('2025-12-31'));
+   * @example
+   * const token = formsService.generateRenderToken('schema-uuid', null);
    */
-  generateRenderToken(formSchemaId: string, expiresAt: Date): string {
+  generateRenderToken(formSchemaId: string, expiresAt: Date | null): string {
     try {
       const secret = process.env.FORM_RENDER_TOKEN_SECRET;
 
@@ -439,16 +563,22 @@ export class FormsService {
         );
       }
 
-      const payload = {
+      const payload: any = {
         formSchemaId,
-        expiresAt: expiresAt.toISOString(),
         iss: 'form-builder',
         iat: Math.floor(Date.now() / 1000),
       };
 
-      const token = jwt.sign(payload, secret, {
-        expiresIn: Math.floor((expiresAt.getTime() - Date.now()) / 1000),
-      });
+      // Add expiration to payload and JWT options only if date is provided
+      const jwtOptions: any = {};
+      if (expiresAt) {
+        payload.expiresAt = expiresAt.toISOString();
+        jwtOptions.expiresIn = Math.floor(
+          (expiresAt.getTime() - Date.now()) / 1000
+        );
+      }
+
+      const token = jwt.sign(payload, secret, jwtOptions);
 
       return token;
     } catch (error: any) {
@@ -500,9 +630,24 @@ export class FormsService {
         await this.formSchemasRepo.unpublishSchema(publishedSchema.id);
       }
 
-      // Update form status to draft
+      // Story 26.3: Clean up QR code when unpublishing
+      if (form.qrCodeUrl) {
+        try {
+          await formQrCodeService.deleteQRCode(form.qrCodeUrl);
+          console.log(`✅ QR code deleted for unpublished form ${formId}`);
+        } catch (qrError) {
+          // Log but don't fail unpublishing if QR code deletion fails
+          console.error(
+            `⚠️ Failed to delete QR code for form ${formId}:`,
+            qrError
+          );
+        }
+      }
+
+      // Update form status to draft and clear QR code URL
       const updatedForm = await this.formsRepo.update(formId, {
         status: FormStatus.DRAFT,
+        qrCodeUrl: undefined,
       });
 
       return updatedForm;

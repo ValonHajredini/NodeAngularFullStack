@@ -4,19 +4,32 @@ import { ButtonDirective } from 'primeng/button';
 import { Tag } from 'primeng/tag';
 import { InputText } from 'primeng/inputtext';
 import { FormMetadata, FormStatus } from '@nodeangularfullstack/shared';
+import {
+  QrCodeThumbnailComponent,
+  QrCodeThumbnailAction,
+} from '../qr-code-thumbnail/qr-code-thumbnail.component';
 
 /**
  * Form card action events
  */
 export interface FormCardAction {
-  type: 'edit' | 'analytics' | 'delete' | 'copy-url';
+  type: 'edit' | 'analytics' | 'delete' | 'copy-url' | 'view-qr';
   formId: string;
   renderToken?: string;
+  qrCodeUrl?: string;
+  formTitle?: string;
 }
 
 /**
  * Reusable form card component for displaying form metadata
- * with actions like edit, analytics, delete, and copy URL.
+ * with actions like edit, analytics, delete, copy URL, and QR code viewing.
+ *
+ * Features:
+ * - Displays form title, description, and metadata
+ * - Shows publication status and public URL for published forms
+ * - Includes QR code thumbnail for published forms with QR codes
+ * - Provides action buttons for editing, analytics, and deletion
+ * - Responsive layout that adapts to different screen sizes
  *
  * @example
  * ```html
@@ -30,7 +43,7 @@ export interface FormCardAction {
   selector: 'app-form-card',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, ButtonDirective, Tag, InputText, DatePipe],
+  imports: [CommonModule, ButtonDirective, Tag, InputText, DatePipe, QrCodeThumbnailComponent],
   template: `
     <div class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-6">
       <!-- Status Badge -->
@@ -66,17 +79,17 @@ export interface FormCardAction {
         </span>
       </div>
 
-      <!-- Publish URL (for published forms) -->
+      <!-- Publish URL and QR Code (for published forms) -->
       @if (form.status === FormStatus.PUBLISHED && form.schema?.renderToken) {
         <div class="mb-3">
           <label class="block text-xs font-semibold text-gray-700 mb-1"> Public Form URL </label>
-          <div class="flex gap-2">
+          <div class="flex gap-2 items-center">
             <input
               type="text"
               pInputText
               [value]="getPublishUrl(form.schema?.renderToken ?? '')"
               readonly
-              class="w-full text-xs"
+              class="flex-1 text-xs"
             />
             <button
               pButton
@@ -87,6 +100,14 @@ export interface FormCardAction {
               (click)="onCopyUrl(form.schema?.renderToken ?? '')"
               title="Copy URL"
             ></button>
+            <!-- QR Code Thumbnail -->
+            @if (form.qrCodeUrl) {
+              <app-qr-code-thumbnail
+                [qrCodeUrl]="form.qrCodeUrl"
+                [formTitle]="form.title"
+                (thumbnailClick)="onQrCodeThumbnailClick($event)"
+              />
+            }
           </div>
         </div>
       }
@@ -184,6 +205,18 @@ export class FormCardComponent {
       type: 'copy-url',
       formId: this.form.id,
       renderToken,
+    });
+  }
+
+  /**
+   * Handles QR code thumbnail click to emit view-qr action
+   */
+  onQrCodeThumbnailClick(action: QrCodeThumbnailAction): void {
+    this.action.emit({
+      type: 'view-qr',
+      formId: this.form.id,
+      qrCodeUrl: action.qrCodeUrl,
+      formTitle: action.formTitle,
     });
   }
 }

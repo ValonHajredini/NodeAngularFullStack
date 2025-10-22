@@ -92,6 +92,7 @@ export class FormsRepository extends BaseRepository<FormMetadata> {
           title,
           description,
           status,
+          qr_code_url as "qrCodeUrl",
           created_at as "createdAt",
           updated_at as "updatedAt"
       `;
@@ -134,6 +135,7 @@ export class FormsRepository extends BaseRepository<FormMetadata> {
           title,
           description,
           status,
+          qr_code_url as "qrCodeUrl",
           created_at as "createdAt",
           updated_at as "updatedAt"
         FROM forms
@@ -180,6 +182,7 @@ export class FormsRepository extends BaseRepository<FormMetadata> {
           title,
           description,
           status,
+          qr_code_url as "qrCodeUrl",
           created_at as "createdAt",
           updated_at as "updatedAt"
         FROM forms
@@ -259,6 +262,7 @@ export class FormsRepository extends BaseRepository<FormMetadata> {
           title,
           description,
           status,
+          qr_code_url as "qrCodeUrl",
           created_at as "createdAt",
           updated_at as "updatedAt"
       `;
@@ -305,6 +309,7 @@ export class FormsRepository extends BaseRepository<FormMetadata> {
           f.title,
           f.description,
           f.status,
+          f.qr_code_url as "qrCodeUrl",
           f.created_at as "createdAt",
           f.updated_at as "updatedAt",
           fs.id as "schema.id",
@@ -435,6 +440,48 @@ export class FormsRepository extends BaseRepository<FormMetadata> {
       return result.rowCount !== null && result.rowCount > 0;
     } catch (error: any) {
       throw new Error(`Failed to delete form: ${error.message}`);
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Updates the QR code URL for a specific form.
+   * Story 26.3: Integrated QR Code Generation and Display
+   * @param formId - Form ID to update
+   * @param qrCodeUrl - QR code storage URL from DigitalOcean Spaces
+   * @returns Promise containing updated form metadata
+   * @throws {Error} When update fails or form not found
+   * @example
+   * const updated = await formsRepository.updateQRCodeUrl('form-uuid', 'https://storage.url/qr.png');
+   */
+  async updateQRCodeUrl(
+    formId: string,
+    qrCodeUrl: string
+  ): Promise<FormMetadata | null> {
+    const client = await this.pool.connect();
+
+    try {
+      const query = `
+        UPDATE forms
+        SET qr_code_url = $1, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+        RETURNING
+          id,
+          user_id as "userId",
+          tenant_id as "tenantId",
+          title,
+          description,
+          status,
+          qr_code_url as "qrCodeUrl",
+          created_at as "createdAt",
+          updated_at as "updatedAt"
+      `;
+
+      const result = await client.query(query, [qrCodeUrl, formId]);
+      return result.rows.length > 0 ? (result.rows[0] as FormMetadata) : null;
+    } catch (error: any) {
+      throw new Error(`Failed to update QR code URL: ${error.message}`);
     } finally {
       client.release();
     }

@@ -22,10 +22,26 @@ import { FormsApiService } from '../forms-api.service';
 import { FormSettingsComponent, FormSettings } from '../form-settings/form-settings.component';
 import { ToolConfigService } from '@core/services/tool-config.service';
 import { FormCardComponent, FormCardAction } from '../form-card/form-card.component';
+import { QrCodeDisplayComponent } from '../../short-link/components/qr-code-display/qr-code-display.component';
+import { Dialog } from 'primeng/dialog';
 
 /**
- * Forms list component displaying all user's forms.
- * Provides pagination, delete, and edit actions.
+ * Forms list component displaying all user's forms with enhanced QR code functionality.
+ *
+ * Features:
+ * - Grid display of form cards with metadata
+ * - Pagination and search functionality
+ * - Form actions: edit, analytics, delete, copy URL
+ * - QR code thumbnails for published forms
+ * - QR code modal with full-size display and download
+ * - Responsive layout that adapts to different screen sizes
+ * - Full-width display mode support
+ *
+ * QR Code Integration:
+ * - Shows QR code thumbnails in form cards for published forms
+ * - Click thumbnail to open modal with full-size QR code
+ * - Download QR code images with descriptive filenames
+ * - Lazy loading for optimal performance
  */
 @Component({
   selector: 'app-forms-list',
@@ -44,6 +60,8 @@ import { FormCardComponent, FormCardAction } from '../form-card/form-card.compon
     Toast,
     FormSettingsComponent,
     FormCardComponent,
+    QrCodeDisplayComponent,
+    Dialog,
   ],
   providers: [MessageService, ConfirmationService],
   template: `
@@ -188,6 +206,38 @@ import { FormCardComponent, FormCardAction } from '../form-card/form-card.compon
         [settings]="newFormSettings()"
         (settingsSaved)="onFormSettingsSaved($event)"
       ></app-form-settings>
+
+      <!-- QR Code Modal -->
+      <p-dialog
+        [(visible)]="showQrCodeModal"
+        [modal]="true"
+        [closable]="true"
+        [resizable]="false"
+        [draggable]="false"
+        styleClass="qr-code-modal"
+        [header]="qrCodeModalTitle()"
+        [style]="{ width: '400px', maxWidth: '90vw' }"
+        [breakpoints]="{ '640px': '90vw' }"
+      >
+        @if (qrCodeModalData()) {
+          <div class="text-center">
+            <app-qr-code-display
+              [qrCodeUrl]="qrCodeModalData()!.qrCodeUrl"
+              [label]="'QR Code for ' + qrCodeModalData()!.formTitle"
+              [altText]="'QR code for form: ' + qrCodeModalData()!.formTitle"
+              [helperText]="'Scan to open ' + qrCodeModalData()!.formTitle"
+              [downloadTooltip]="'Download QR code for ' + qrCodeModalData()!.formTitle"
+              [imageClass]="
+                'w-64 h-64 sm:w-64 sm:h-64 max-w-full border border-gray-200 rounded mx-auto'
+              "
+              (download)="downloadQrCode()"
+            />
+            <div class="mt-4 text-sm text-gray-600">
+              <p>Scan this QR code to quickly access your published form</p>
+            </div>
+          </div>
+        }
+      </p-dialog>
     </div>
   `,
 })
@@ -234,6 +284,14 @@ export class FormsListComponent implements OnInit {
   // Modal for creating new form
   showCreateModal = signal<boolean>(false);
   readonly newFormSettings = signal<FormSettings | null>(null);
+
+  // QR Code modal state
+  showQrCodeModal = signal<boolean>(false);
+  readonly qrCodeModalData = signal<{ qrCodeUrl: string; formTitle: string } | null>(null);
+  readonly qrCodeModalTitle = computed(() => {
+    const data = this.qrCodeModalData();
+    return data ? `QR Code - ${data.formTitle}` : 'QR Code';
+  });
 
   ngOnInit(): void {
     this.loadToolConfig();
@@ -393,7 +451,7 @@ export class FormsListComponent implements OnInit {
   }
 
   /**
-   * Handles form card actions (edit, analytics, delete, copy-url)
+   * Handles form card actions (edit, analytics, delete, copy-url, view-qr)
    */
   handleFormAction(action: FormCardAction): void {
     switch (action.type) {
@@ -412,6 +470,12 @@ export class FormsListComponent implements OnInit {
       case 'copy-url':
         if (action.renderToken) {
           this.copyPublishUrl(action.renderToken);
+        }
+        break;
+
+      case 'view-qr':
+        if (action.qrCodeUrl && action.formTitle) {
+          this.openQrCodeModal(action.qrCodeUrl, action.formTitle);
         }
         break;
     }
@@ -496,5 +560,36 @@ export class FormsListComponent implements OnInit {
         });
       },
     );
+  }
+
+  /**
+   * Opens the QR code modal for the specified form
+   */
+  openQrCodeModal(qrCodeUrl: string, formTitle: string): void {
+    this.qrCodeModalData.set({ qrCodeUrl, formTitle });
+    this.showQrCodeModal.set(true);
+  }
+
+  /**
+   * Downloads the QR code image
+   */
+  downloadQrCode(): void {
+    const data = this.qrCodeModalData();
+    if (!data) return;
+
+    // Create a temporary link element to trigger download
+    const link = document.createElement('a');
+    link.href = data.qrCodeUrl;
+    link.download = `qr-code-${data.formTitle.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    this.messageService.add({
+      severity: 'success',
+      summary: 'QR Code Downloaded',
+      detail: `QR code for "${data.formTitle}" has been downloaded`,
+      life: 2000,
+    });
   }
 }

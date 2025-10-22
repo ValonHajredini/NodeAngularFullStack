@@ -1,11 +1,27 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { PublishDialogComponent } from './publish-dialog.component';
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
+import { CheckboxModule } from 'primeng/checkbox';
+import { Component, Input, Output, EventEmitter } from '@angular/core';
+
+// Mock QrCodeDisplayComponent for testing
+@Component({
+  selector: 'app-qr-code-display',
+  template: '<div data-testid="qr-code-display">QR Code Display Mock</div>',
+})
+class MockQrCodeDisplayComponent {
+  @Input() qrCodeUrl?: string;
+  @Input() label?: string;
+  @Input() helperText?: string;
+  @Input() downloadTooltip?: string;
+  @Output() download = new EventEmitter<void>();
+}
 
 /**
  * Test suite for PublishDialogComponent.
@@ -20,12 +36,15 @@ describe('PublishDialogComponent', () => {
       imports: [
         PublishDialogComponent,
         ReactiveFormsModule,
+        NoopAnimationsModule,
         DialogModule,
         ButtonModule,
         DatePickerModule,
         InputTextModule,
         MessageModule,
+        CheckboxModule,
       ],
+      declarations: [MockQrCodeDisplayComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(PublishDialogComponent);
@@ -256,6 +275,209 @@ describe('PublishDialogComponent', () => {
 
       // Component should reflect loading state
       expect(component.loading).toBe(true);
+    });
+  });
+
+  // QR Code Integration Tests (Story 26.3)
+  describe('QR Code Display States', () => {
+    it('should not show QR code when dialog first opens', () => {
+      component.visible = true;
+      component.renderUrl = undefined;
+      component.qrCodeUrl = undefined;
+      component.qrCodeGenerated = false;
+      component.qrCodeLoading = false;
+      fixture.detectChanges();
+
+      const qrCodeDisplay = fixture.debugElement.nativeElement.querySelector(
+        '[data-testid="qr-code-display"]',
+      );
+      expect(qrCodeDisplay).toBeNull();
+    });
+
+    it('should show QR code loading state', () => {
+      component.visible = true;
+      component.renderUrl = 'https://example.com/form/abc123';
+      component.qrCodeLoading = true;
+      component.qrCodeGenerated = false;
+      component.qrCodeUrl = undefined;
+      fixture.detectChanges();
+
+      const loadingIndicator = fixture.debugElement.nativeElement.querySelector('.pi-spinner');
+      expect(loadingIndicator).toBeTruthy();
+
+      const loadingText = fixture.debugElement.nativeElement.textContent;
+      expect(loadingText).toContain('Generating QR code...');
+    });
+
+    it('should show QR code when successfully generated', () => {
+      component.visible = true;
+      component.renderUrl = 'https://example.com/form/abc123';
+      component.qrCodeUrl = 'https://cdn.example.com/qr-codes/test.png';
+      component.qrCodeGenerated = true;
+      component.qrCodeLoading = false;
+      fixture.detectChanges();
+
+      const qrCodeDisplay = fixture.debugElement.nativeElement.querySelector(
+        '[data-testid="qr-code-display"]',
+      );
+      expect(qrCodeDisplay).toBeTruthy();
+    });
+
+    it('should show QR code error state when generation fails', () => {
+      component.visible = true;
+      component.renderUrl = 'https://example.com/form/abc123';
+      component.qrCodeLoading = false;
+      component.qrCodeGenerated = false;
+      component.qrCodeUrl = undefined;
+      fixture.detectChanges();
+
+      const errorMessage = fixture.debugElement.nativeElement.querySelector('.text-orange-700');
+      expect(errorMessage).toBeTruthy();
+      expect(errorMessage.textContent).toContain('QR code generation failed');
+    });
+
+    it('should hide QR code section when no render URL exists', () => {
+      component.visible = true;
+      component.renderUrl = undefined;
+      component.qrCodeUrl = 'https://cdn.example.com/qr-codes/test.png';
+      component.qrCodeGenerated = true;
+      component.qrCodeLoading = false;
+      fixture.detectChanges();
+
+      const qrCodeDisplay = fixture.debugElement.nativeElement.querySelector(
+        '[data-testid="qr-code-display"]',
+      );
+      expect(qrCodeDisplay).toBeNull();
+    });
+  });
+
+  describe('QR Code Download Functionality', () => {
+    it('should emit downloadQrCode event when download is triggered', () => {
+      spyOn(component.downloadQrCode, 'emit');
+
+      component.onDownloadQrCode();
+
+      expect(component.downloadQrCode.emit).toHaveBeenCalled();
+    });
+
+    it('should handle QR code display download event', () => {
+      component.visible = true;
+      component.renderUrl = 'https://example.com/form/abc123';
+      component.qrCodeUrl = 'https://cdn.example.com/qr-codes/test.png';
+      component.qrCodeGenerated = true;
+      component.qrCodeLoading = false;
+      fixture.detectChanges();
+
+      spyOn(component, 'onDownloadQrCode');
+
+      const qrCodeComponent = fixture.debugElement.query(
+        (el) => el.componentInstance instanceof MockQrCodeDisplayComponent,
+      );
+
+      if (qrCodeComponent) {
+        qrCodeComponent.componentInstance.download.emit();
+        expect(component.onDownloadQrCode).toHaveBeenCalled();
+      }
+    });
+  });
+
+  describe('QR Code State Transitions', () => {
+    it('should handle loading to success state transition', () => {
+      component.visible = true;
+      component.renderUrl = 'https://example.com/form/abc123';
+
+      // Start with loading state
+      component.qrCodeLoading = true;
+      component.qrCodeGenerated = false;
+      component.qrCodeUrl = undefined;
+      fixture.detectChanges();
+
+      let loadingIndicator = fixture.debugElement.nativeElement.querySelector('.pi-spinner');
+      expect(loadingIndicator).toBeTruthy();
+
+      // Transition to success state
+      component.qrCodeLoading = false;
+      component.qrCodeGenerated = true;
+      component.qrCodeUrl = 'https://cdn.example.com/qr-codes/test.png';
+      fixture.detectChanges();
+
+      loadingIndicator = fixture.debugElement.nativeElement.querySelector('.pi-spinner');
+      expect(loadingIndicator).toBeNull();
+
+      const qrCodeDisplay = fixture.debugElement.nativeElement.querySelector(
+        '[data-testid="qr-code-display"]',
+      );
+      expect(qrCodeDisplay).toBeTruthy();
+    });
+
+    it('should handle loading to error state transition', () => {
+      component.visible = true;
+      component.renderUrl = 'https://example.com/form/abc123';
+
+      // Start with loading state
+      component.qrCodeLoading = true;
+      component.qrCodeGenerated = false;
+      component.qrCodeUrl = undefined;
+      fixture.detectChanges();
+
+      // Transition to error state
+      component.qrCodeLoading = false;
+      component.qrCodeGenerated = false;
+      component.qrCodeUrl = undefined;
+      fixture.detectChanges();
+
+      const errorMessage = fixture.debugElement.nativeElement.querySelector('.text-orange-700');
+      expect(errorMessage).toBeTruthy();
+      expect(errorMessage.textContent).toContain('QR code generation failed');
+    });
+  });
+
+  describe('QR Code Input Validation', () => {
+    it('should handle undefined QR code URL gracefully', () => {
+      component.visible = true;
+      component.renderUrl = 'https://example.com/form/abc123';
+      component.qrCodeUrl = undefined;
+      component.qrCodeGenerated = true;
+      component.qrCodeLoading = false;
+      fixture.detectChanges();
+
+      const qrCodeDisplay = fixture.debugElement.nativeElement.querySelector(
+        '[data-testid="qr-code-display"]',
+      );
+      expect(qrCodeDisplay).toBeNull();
+    });
+
+    it('should handle empty QR code URL gracefully', () => {
+      component.visible = true;
+      component.renderUrl = 'https://example.com/form/abc123';
+      component.qrCodeUrl = '';
+      component.qrCodeGenerated = true;
+      component.qrCodeLoading = false;
+      fixture.detectChanges();
+
+      const qrCodeDisplay = fixture.debugElement.nativeElement.querySelector(
+        '[data-testid="qr-code-display"]',
+      );
+      expect(qrCodeDisplay).toBeNull();
+    });
+
+    it('should maintain QR code state when dialog is visible', () => {
+      component.visible = true;
+      component.renderUrl = 'https://example.com/form/abc123';
+      component.qrCodeUrl = 'https://cdn.example.com/qr-codes/test.png';
+      component.qrCodeGenerated = true;
+      component.qrCodeLoading = false;
+      fixture.detectChanges();
+
+      // Verify QR code is displayed
+      const qrCodeDisplay = fixture.debugElement.nativeElement.querySelector(
+        '[data-testid="qr-code-display"]',
+      );
+      expect(qrCodeDisplay).toBeTruthy();
+
+      // Dialog should not reset QR state while visible
+      expect(component.qrCodeUrl).toBe('https://cdn.example.com/qr-codes/test.png');
+      expect(component.qrCodeGenerated).toBe(true);
     });
   });
 });

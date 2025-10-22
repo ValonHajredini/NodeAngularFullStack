@@ -62,7 +62,13 @@ class Server {
             styleSrc: ["'self'", "'unsafe-inline'"],
             scriptSrc: ["'self'"],
             imgSrc: ["'self'", 'data:', 'https:'],
+            // Story 26.4: Allow iframe embedding for form publishing
+            frameAncestors: ["'self'", '*'],
           },
+        },
+        // Story 26.4: Configure X-Frame-Options to allow iframe embedding
+        frameguard: {
+          action: 'sameorigin', // Allow same-origin framing, can be configured per route
         },
       })
     );

@@ -10,6 +10,8 @@ import {
   CreateThemeRequest,
   ApiResponse,
   PaginatedResponse,
+  TokenStatusResponse,
+  PublishFormResponse,
 } from '@nodeangularfullstack/shared';
 
 /**
@@ -113,34 +115,36 @@ export class FormsApiService {
   /**
    * Publishes a form and generates a render token.
    * @param formId - Form ID to publish
-   * @param expiresAt - Token expiration date
+   * @param expiresAt - Token expiration date (null for no expiration)
    * @returns Observable containing form, schema, and render URL
    * @throws {HttpErrorResponse} When publish fails or validation errors
    * @example
    * formsApiService.publishForm('form-123', new Date('2025-12-31'))
    *   .subscribe(result => console.log('Render URL:', result.renderUrl));
+   * @example
+   * formsApiService.publishForm('form-123', null)
+   *   .subscribe(result => console.log('Permanent form URL:', result.renderUrl));
    */
-  publishForm(
-    formId: string,
-    expiresAt: Date,
-  ): Observable<{ form: FormMetadata; schema: FormSchema; renderUrl: string }> {
-    // Calculate days until expiration
-    const now = new Date();
-    const diffTime = expiresAt.getTime() - now.getTime();
-    const expiresInDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  publishForm(formId: string, expiresAt: Date | null): Observable<PublishFormResponse> {
+    const requestBody: { expiresInDays?: number } = {};
+
+    // Only include expiration if a date is provided
+    if (expiresAt) {
+      const now = new Date();
+      const diffTime = expiresAt.getTime() - now.getTime();
+      const expiresInDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      requestBody.expiresInDays = expiresInDays;
+    }
 
     return this.apiClient
-      .post<ApiResponse<{ form: FormMetadata; schema: FormSchema; renderUrl: string }>>(
-        `/forms/${formId}/publish`,
-        {
-          expiresInDays,
-        },
-      )
+      .post<ApiResponse<PublishFormResponse>>(`/forms/${formId}/publish`, requestBody)
       .pipe(
         map((response) => ({
           form: this.convertDates(response.data!.form),
-          schema: this.convertSchemaDate(response.data!.schema),
+          formSchema: this.convertSchemaDate(response.data!.formSchema),
           renderUrl: response.data!.renderUrl,
+          qrCodeUrl: response.data!.qrCodeUrl,
+          qrCodeGenerated: response.data!.qrCodeGenerated,
         })),
         catchError((error) => throwError(() => error)),
       );
@@ -373,6 +377,35 @@ export class FormsApiService {
       .post<ApiResponse<{ thumbnailUrl: string }>>('/themes/upload-thumbnail', formData)
       .pipe(
         map((response) => response.data!.thumbnailUrl),
+        catchError((error) => throwError(() => error)),
+      );
+  }
+
+  /**
+   * Checks the token status for a form to enable smart token management.
+   * @param formId - Form ID to check token status for
+   * @returns Observable containing token status information
+   * @throws {HttpErrorResponse} When check fails, form not found, or access denied
+   * @example
+   * formsApiService.checkTokenStatus('form-123')
+   *   .subscribe(status => {
+   *     if (status.hasValidToken) {
+   *       console.log('Existing token found:', status.formUrl);
+   *     }
+   *   });
+   */
+  checkTokenStatus(formId: string): Observable<TokenStatusResponse> {
+    return this.apiClient
+      .get<ApiResponse<TokenStatusResponse>>(`/forms/${formId}/tokens/status`)
+      .pipe(
+        map((response) => ({
+          ...response.data!,
+          // Convert date strings to Date objects
+          tokenExpiration: response.data!.tokenExpiration
+            ? new Date(response.data!.tokenExpiration)
+            : null,
+          tokenCreatedAt: new Date(response.data!.tokenCreatedAt),
+        })),
         catchError((error) => throwError(() => error)),
       );
   }

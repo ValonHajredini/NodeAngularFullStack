@@ -346,6 +346,89 @@ router.post(
 
 /**
  * @swagger
+ * /api/forms/{id}/tokens/status:
+ *   get:
+ *     summary: Get token status for smart token management
+ *     description: Check if a form has existing valid tokens (owner only)
+ *     tags: [Forms]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Form ID (UUID)
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *     responses:
+ *       200:
+ *         description: Token status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Token status retrieved successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     hasValidToken:
+ *                       type: boolean
+ *                       example: true
+ *                       description: Whether the form has at least one valid token
+ *                     tokenExpiration:
+ *                       type: string
+ *                       format: date-time
+ *                       nullable: true
+ *                       example: "2025-02-01T14:30:00Z"
+ *                       description: Token expiration date (null if permanent)
+ *                     tokenCreatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-01-01T14:30:00Z"
+ *                       description: When the token was created
+ *                     formUrl:
+ *                       type: string
+ *                       example: "http://localhost:4200/public/form/eyJhbGciOiJIUzI1NiIs..."
+ *                       description: The public form URL for the existing token
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Insufficient permissions to check tokens for this form
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Form not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get(
+  '/:id/tokens/status',
+  AuthMiddleware.authenticate,
+  formIdValidator,
+  formsController.getTokenStatus
+);
+
+/**
+ * @swagger
  * /api/forms/upload-background:
  *   post:
  *     summary: Upload a background image for forms

@@ -355,4 +355,138 @@ describe('FormsListComponent', () => {
       expect(formsApiServiceSpy.getForms).toHaveBeenCalled();
     });
   });
+
+  describe('QR Code Modal Functionality', () => {
+    beforeEach(() => {
+      // Setup mock forms response
+      const mockResponse: PaginatedResponse<FormMetadata> = {
+        success: true,
+        data: mockForms,
+        timestamp: new Date().toISOString(),
+        pagination: {
+          page: 1,
+          pageSize: 9,
+          totalItems: 2,
+          totalPages: 1,
+          hasNext: false,
+          hasPrevious: false,
+        },
+      };
+      formsApiServiceSpy.getForms.and.returnValue(of(mockResponse));
+      fixture.detectChanges();
+    });
+
+    it('should handle view-qr action and open QR code modal', () => {
+      const qrCodeUrl = 'https://example.com/qr-code.png';
+      const formTitle = 'Test Form';
+
+      component.handleFormAction({
+        type: 'view-qr',
+        formId: 'form-1',
+        qrCodeUrl,
+        formTitle,
+      });
+
+      expect(component.showQrCodeModal()).toBe(true);
+      expect(component.qrCodeModalData()).toEqual({
+        qrCodeUrl,
+        formTitle,
+      });
+    });
+
+    it('should not open QR code modal for view-qr action without required data', () => {
+      component.handleFormAction({
+        type: 'view-qr',
+        formId: 'form-1',
+      });
+
+      expect(component.showQrCodeModal()).toBe(false);
+      expect(component.qrCodeModalData()).toBeNull();
+    });
+
+    it('should open QR code modal with correct data', () => {
+      const qrCodeUrl = 'https://example.com/qr-code.png';
+      const formTitle = 'Test Form';
+
+      component.openQrCodeModal(qrCodeUrl, formTitle);
+
+      expect(component.showQrCodeModal()).toBe(true);
+      expect(component.qrCodeModalData()).toEqual({
+        qrCodeUrl,
+        formTitle,
+      });
+    });
+
+    it('should generate correct QR code modal title', () => {
+      const formTitle = 'Test Form';
+      component.qrCodeModalData.set({
+        qrCodeUrl: 'https://example.com/qr-code.png',
+        formTitle,
+      });
+
+      expect(component.qrCodeModalTitle()).toBe('QR Code - Test Form');
+    });
+
+    it('should generate default QR code modal title when no data', () => {
+      component.qrCodeModalData.set(null);
+      expect(component.qrCodeModalTitle()).toBe('QR Code');
+    });
+
+    it('should download QR code and show success message', () => {
+      const mockData = {
+        qrCodeUrl: 'https://example.com/qr-code.png',
+        formTitle: 'Test Form',
+      };
+      component.qrCodeModalData.set(mockData);
+
+      // Mock document methods
+      const mockLink = jasmine.createSpyObj('HTMLAnchorElement', ['click']);
+      spyOn(document, 'createElement').and.returnValue(mockLink);
+      spyOn(document.body, 'appendChild');
+      spyOn(document.body, 'removeChild');
+
+      component.downloadQrCode();
+
+      expect(document.createElement).toHaveBeenCalledWith('a');
+      expect(mockLink.href).toBe(mockData.qrCodeUrl);
+      expect(mockLink.download).toBe('qr-code-test-form.png');
+      expect(document.body.appendChild).toHaveBeenCalledWith(mockLink);
+      expect(mockLink.click).toHaveBeenCalled();
+      expect(document.body.removeChild).toHaveBeenCalledWith(mockLink);
+
+      expect(messageServiceSpy.add).toHaveBeenCalledWith({
+        severity: 'success',
+        summary: 'QR Code Downloaded',
+        detail: 'QR code for "Test Form" has been downloaded',
+        life: 2000,
+      });
+    });
+
+    it('should not download QR code when no modal data', () => {
+      component.qrCodeModalData.set(null);
+      spyOn(document, 'createElement');
+
+      component.downloadQrCode();
+
+      expect(document.createElement).not.toHaveBeenCalled();
+      expect(messageServiceSpy.add).not.toHaveBeenCalled();
+    });
+
+    it('should sanitize form title for QR code filename', () => {
+      const mockData = {
+        qrCodeUrl: 'https://example.com/qr-code.png',
+        formTitle: 'Test Form With Special@#$%Characters',
+      };
+      component.qrCodeModalData.set(mockData);
+
+      const mockLink = jasmine.createSpyObj('HTMLAnchorElement', ['click']);
+      spyOn(document, 'createElement').and.returnValue(mockLink);
+      spyOn(document.body, 'appendChild');
+      spyOn(document.body, 'removeChild');
+
+      component.downloadQrCode();
+
+      expect(mockLink.download).toBe('qr-code-test-form-with-special----characters.png');
+    });
+  });
 });

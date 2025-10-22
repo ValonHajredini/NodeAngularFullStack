@@ -1,0 +1,87 @@
+# Required fields (keep these first)
+schema: 1
+story: "26.3"
+story_title: "Integrated QR Code Generation and Display - Brownfield Enhancement"
+gate: "FAIL" # PASS|CONCERNS|FAIL|WAIVED
+status_reason: "Tests have fundamental compilation errors preventing verification of acceptance criteria and functionality" # 1-2 sentence summary of why this gate decision
+reviewer: "Quinn (Test Architect)"
+updated: "2025-01-12T21:45:00Z"
+
+# Always present but only active when WAIVED
+waiver: { active: false }
+
+# Issues (if any) - Use fixed severity: low | medium | high
+top_issues:
+  - id: "TEST-001"
+    severity: high  # ONLY: low|medium|high
+    finding: "TypeScript compilation errors in all test files prevent test execution"
+    suggested_action: "Fix mock interfaces, repository method references, and type inconsistencies in test files"
+    suggested_owner: "dev"
+  - id: "TEST-002"
+    severity: high
+    finding: "QR code width inconsistency between service (192px) and tests (300px)"
+    suggested_action: "Standardize QR code dimensions - align tests with service implementation (192px correct)"
+    suggested_owner: "dev"
+  - id: "TEST-003"
+    severity: medium
+    finding: "Missing repository methods referenced in tests (deleteByFormId, findActiveByFormId)"
+    suggested_action: "Use correct repository interface methods or implement missing cleanup methods"
+    suggested_owner: "dev"
+
+# Risk summary (from risk-profile task if run)
+risk_summary:
+  totals: { critical: 0, high: 2, medium: 1, low: 0 }
+  highest: high
+  recommendations:
+    must_fix: 
+      - "Fix all TypeScript compilation errors in test files"
+      - "Standardize QR code dimensions between service and tests"
+    monitor: 
+      - "Test coverage gaps for edge cases and error scenarios"
+
+# ============ Optional Extended Fields ============
+quality_score: 60  # 100 - (20*high) - (10*medium) = 100 - 40 - 10 = 50, adjusted +10 for good architecture
+expires: "2025-01-26T00:00:00Z"  # Optional gate freshness window
+
+evidence:
+  tests_reviewed: 2
+  risks_identified: 3
+  trace:
+    ac_covered: [1, 2, 3, 5, 6, 7, 8, 9] # AC numbers with adequate implementation coverage
+    ac_gaps: [4] # Cannot verify integration without working tests
+
+nfr_validation:
+  security: { status: PASS, notes: "QR URL validation, secure file path handling, no exposed sensitive data" }
+  performance: { status: PASS, notes: "Asynchronous QR generation, proper indexing, non-blocking workflow" }
+  reliability: { status: CONCERNS, notes: "Cannot verify error handling and recovery without working tests" }
+  maintainability: { status: CONCERNS, notes: "Good code structure but broken tests violate maintainability" }
+
+recommendations:
+  immediate: # Must fix before production
+    - action: "Fix TypeScript compilation errors in form-qr-code.service.test.ts"
+      refs: ["tests/unit/services/form-qr-code.service.test.ts:34,71,80,123,144"]
+    - action: "Fix integration test imports and repository method references"
+      refs: ["tests/integration/forms-qr-integration.test.ts:2,3,70,190,235"]
+    - action: "Standardize QR code width to 192px in tests"
+      refs: ["tests/unit/services/form-qr-code.service.test.ts:50"]
+  future: # Can be addressed later
+    - action: "Add frontend integration tests for QR display workflow"
+      refs: ["apps/web/src/app/features/tools/components/form-builder/publish-dialog/"]
+    - action: "Add error scenario test coverage (timeouts, storage failures)"
+      refs: ["tests/unit/services/form-qr-code.service.test.ts"]
+
+# Implementation Highlights (positive findings)
+strengths:
+  - "Excellent reuse of existing QrCodeDisplayComponent from short-links tool"
+  - "Proper asynchronous QR generation that doesn't block publishing workflow"
+  - "Comprehensive error handling with graceful degradation patterns"
+  - "Well-structured service layer following established repository patterns"
+  - "Database schema properly extended with migration and indexing"
+  - "Clean separation between form publishing and QR generation concerns"
+
+# Critical Blocking Issues for FAIL gate
+blocking_issues:
+  - "All test files have TypeScript compilation errors preventing execution"
+  - "Cannot validate any acceptance criteria without working test suite"
+  - "Risk of production deployment with untested functionality"
+  - "Quality standards violation - tests must pass before deployment"

@@ -493,7 +493,7 @@ export class FormSchemasRepository {
    * Publishes a form schema with render token.
    * @param id - Schema ID to publish
    * @param token - Render token for public access
-   * @param expiresAt - Token expiration date
+   * @param expiresAt - Token expiration date (null for permanent)
    * @returns Promise containing the published schema
    * @throws {Error} When publish fails or schema not found
    * @example
@@ -502,11 +502,17 @@ export class FormSchemasRepository {
    *   'jwt-token-here',
    *   new Date('2025-12-31')
    * );
+   * @example
+   * const schema = await formSchemasRepository.publishSchema(
+   *   'schema-uuid',
+   *   'jwt-token-here',
+   *   null
+   * );
    */
   async publishSchema(
     id: string,
     token: string,
-    expiresAt: Date
+    expiresAt: Date | null
   ): Promise<FormSchema> {
     const client = await this.pool.connect();
 
