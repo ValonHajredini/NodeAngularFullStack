@@ -44,8 +44,11 @@ export class PublishDialogComponent {
   /** Validation errors from schema validation */
   @Input() validationErrors: string[] = [];
 
-  /** Render URL after successful publish */
+  /** Render URL after successful publish (JWT token URL - kept for backward compatibility) */
   @Input() renderUrl?: string;
+
+  /** Short link URL for easy sharing (preferred for displaying to users) */
+  @Input() shortUrl?: string;
 
   /** QR code storage URL for display (Story 26.3) */
   @Input() qrCodeUrl?: string;

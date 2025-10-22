@@ -494,6 +494,8 @@ export interface FormMetadata {
   schema?: FormSchema;
   /** QR code storage URL for form sharing (Story 26.3) */
   qrCodeUrl?: string;
+  /** Short code for easy form access (7-character code) */
+  shortCode?: string;
   /** Form creation timestamp */
   createdAt: Date;
   /** Form last update timestamp */
@@ -743,8 +745,12 @@ export interface PublishFormResponse {
   form: FormMetadata;
   /** Published form schema */
   formSchema: FormSchema;
-  /** Public render URL for the form */
+  /** Public render URL for the form (JWT token URL - kept for backward compatibility) */
   renderUrl: string;
+  /** Short link URL for easy sharing (preferred for displaying to users) */
+  shortUrl: string;
+  /** 7-character short code used in the short URL */
+  shortCode: string;
   /** QR code storage URL (optional, may be null if generation fails) */
   qrCodeUrl?: string;
   /** Whether QR code generation was successful */

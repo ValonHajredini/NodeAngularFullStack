@@ -13,6 +13,7 @@ export interface ShortLinkEntity {
   qrCodeUrl?: string | null;
   expiresAt?: Date | null;
   createdBy?: string | null;
+  formSchemaId?: string | null;
   clickCount: number;
   lastAccessedAt?: Date | null;
   createdAt: Date;
@@ -55,27 +56,35 @@ export class ShortLinksRepository extends BaseRepository<ShortLinkEntity> {
     const client = await this.pool.connect();
 
     try {
-      const { code, originalUrl, expiresAt, createdBy } = shortLinkData;
+      const { code, originalUrl, expiresAt, createdBy, formSchemaId } =
+        shortLinkData;
 
       const query = `
         INSERT INTO short_links (
-          code, original_url, expires_at, created_by,
+          code, original_url, expires_at, created_by, form_schema_id,
           click_count, created_at, updated_at
         )
-        VALUES ($1, $2, $3, $4, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        VALUES ($1, $2, $3, $4, $5, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         RETURNING
           id,
           code,
           original_url as "originalUrl",
           expires_at as "expiresAt",
           created_by as "createdBy",
+          form_schema_id as "formSchemaId",
           click_count as "clickCount",
           last_accessed as "lastAccessedAt",
           created_at as "createdAt",
           updated_at as "updatedAt"
       `;
 
-      const values = [code, originalUrl, expiresAt, createdBy];
+      const values = [
+        code,
+        originalUrl,
+        expiresAt,
+        createdBy,
+        formSchemaId || null,
+      ];
 
       const result = await client.query(query, values);
       return result.rows[0];
@@ -419,6 +428,7 @@ export class ShortLinksRepository extends BaseRepository<ShortLinkEntity> {
     settings: any;
     theme: any | null;
     shortCode: string;
+    renderToken: string;
   } | null> {
     const client = await this.pool.connect();
 
@@ -431,6 +441,7 @@ export class ShortLinksRepository extends BaseRepository<ShortLinkEntity> {
           form_schemas.theme_id as "themeId",
           form_schemas.is_published as "isPublished",
           form_schemas.expires_at as "expiresAt",
+          form_schemas.render_token as "renderToken",
           form_themes.id as "theme.id",
           form_themes.name as "theme.name",
           form_themes.description as "theme.description",
@@ -473,6 +484,7 @@ export class ShortLinksRepository extends BaseRepository<ShortLinkEntity> {
         settings,
         theme: null as any,
         shortCode: row.shortCode,
+        renderToken: row.renderToken,
       };
 
       // Add embedded theme object if theme exists

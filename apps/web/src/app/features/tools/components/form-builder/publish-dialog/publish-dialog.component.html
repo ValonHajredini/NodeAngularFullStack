@@ -96,7 +96,7 @@
       <div class="flex flex-col gap-2">
         <label class="font-semibold">Public Form URL</label>
         <div class="flex gap-2">
-          <input type="text" pInputText [value]="renderUrl" readonly class="flex-1" />
+          <input type="text" pInputText [value]="shortUrl || renderUrl" readonly class="flex-1" />
           <p-button
             icon="pi pi-copy"
             label="Copy"
@@ -168,7 +168,7 @@
             <!-- Iframe Embed Generator Component -->
             <app-iframe-embed-generator
               *ngIf="renderUrl && formTitle && shortCode"
-              [formUrl]="renderUrl"
+              [formUrl]="shortUrl || renderUrl"
               [formTitle]="formTitle"
               [shortCode]="shortCode"
             ></app-iframe-embed-generator>

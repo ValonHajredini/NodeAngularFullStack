@@ -346,6 +346,7 @@ import { AuthService } from '@core/auth/auth.service';
         [loading]="isPublishing()"
         [validationErrors]="publishValidationErrors()"
         [renderUrl]="publishedRenderUrl()"
+        [shortUrl]="publishedShortUrl()"
         [qrCodeUrl]="publishedQrCodeUrl()"
         [qrCodeGenerated]="qrCodeGenerated()"
         [qrCodeLoading]="qrCodeLoading()"
@@ -568,6 +569,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
   readonly isPublishing = signal<boolean>(false);
   readonly publishValidationErrors = signal<string[]>([]);
   readonly publishedRenderUrl = signal<string | undefined>(undefined);
+  readonly publishedShortUrl = signal<string | undefined>(undefined);
   readonly publishedQrCodeUrl = signal<string | undefined>(undefined);
   readonly qrCodeGenerated = signal<boolean>(false);
   readonly qrCodeLoading = signal<boolean>(false);
@@ -1454,6 +1456,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
     // Clear validation errors and show publish dialog
     this.publishValidationErrors.set([]);
     this.publishedRenderUrl.set(undefined);
+    this.publishedShortUrl.set(undefined);
     this.publishDialogVisible.set(true);
   }
 
@@ -1480,6 +1483,14 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
           ? result.renderUrl
           : `${window.location.origin}${result.renderUrl}`;
         this.publishedRenderUrl.set(renderUrl);
+
+        // Set the short URL for display (preferred over renderUrl)
+        if (result.shortUrl) {
+          const shortUrl = result.shortUrl.startsWith('http')
+            ? result.shortUrl
+            : `${window.location.origin}${result.shortUrl}`;
+          this.publishedShortUrl.set(shortUrl);
+        }
 
         // Story 26.3: Handle QR code response
         if (result.qrCodeUrl) {
@@ -1595,28 +1606,30 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
 
   /**
    * Handles render URL copy to clipboard.
+   * Prefers short URL over JWT token URL for better user experience.
    */
   onCopyRenderUrl(): void {
-    const renderUrl = this.publishedRenderUrl();
-    if (!renderUrl) return;
+    // Prefer short URL, fallback to render URL
+    const urlToCopy = this.publishedShortUrl() || this.publishedRenderUrl();
+    if (!urlToCopy) return;
 
     // Use Clipboard API with fallback
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(renderUrl).then(
+      navigator.clipboard.writeText(urlToCopy).then(
         () => {
           this.messageService.add({
             severity: 'success',
             summary: 'URL Copied',
-            detail: 'Render URL copied to clipboard',
+            detail: 'Form URL copied to clipboard',
             life: 2000,
           });
         },
         (error) => {
-          this.fallbackCopyToClipboard(renderUrl);
+          this.fallbackCopyToClipboard(urlToCopy);
         },
       );
     } else {
-      this.fallbackCopyToClipboard(renderUrl);
+      this.fallbackCopyToClipboard(urlToCopy);
     }
   }
 
@@ -1662,6 +1675,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
     // Reset QR code state when dialog is closed
     if (!visible) {
       this.publishedRenderUrl.set(undefined);
+      this.publishedShortUrl.set(undefined);
       this.publishedQrCodeUrl.set(undefined);
       this.qrCodeGenerated.set(false);
       this.qrCodeLoading.set(false);

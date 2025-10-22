@@ -170,9 +170,17 @@ export class FormCardComponent {
 
   /**
    * Gets the full publish URL for a given render token.
+   * Prefers short URL over JWT token URL for better user experience.
    */
   getPublishUrl(renderToken: string): string {
     const baseUrl = window.location.origin;
+
+    // If form has a short code, use the short URL
+    if (this.form.shortCode) {
+      return `${baseUrl}/public/form/${this.form.shortCode}`;
+    }
+
+    // Fallback to JWT token URL for backward compatibility
     return `${baseUrl}/forms/render/${renderToken}`;
   }
 

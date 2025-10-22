@@ -213,15 +213,22 @@ export class FormRendererComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Otherwise, detect if this is a preview route or published form route
+    // Otherwise, detect if this is a preview route, short code route, or published form route
     this.route.url.pipe(takeUntil(this.destroy$)).subscribe((urlSegments) => {
       const isPreviewRoute =
         urlSegments.length >= 2 &&
         urlSegments[0]?.path === 'forms' &&
         urlSegments[1]?.path === 'preview';
 
+      const isShortCodeRoute =
+        urlSegments.length >= 2 &&
+        urlSegments[0]?.path === 'public' &&
+        urlSegments[1]?.path === 'form';
+
       if (isPreviewRoute) {
         this.loadPreviewData();
+      } else if (isShortCodeRoute) {
+        this.loadFormByShortCode();
       } else {
         this.loadPublishedForm();
       }
@@ -300,6 +307,50 @@ export class FormRendererComponent implements OnInit, OnDestroy {
 
     // Load form schema
     this.loadFormSchema();
+  }
+
+  /**
+   * Loads a published form using short code from route parameter.
+   * Used for short link access (e.g., /public/form/abc123).
+   */
+  private loadFormByShortCode(): void {
+    // Get short code from route params
+    const shortCode = this.route.snapshot.paramMap.get('shortCode') || '';
+
+    if (!shortCode) {
+      this.handleError('No form short code provided', FormRenderErrorType.INVALID_TOKEN);
+      return;
+    }
+
+    // Load form schema by short code
+    this.formRendererService
+      .getFormByShortCode(shortCode)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (result) => {
+          this.schema = result.schema;
+          this._formSchemaSignal.set(result.schema);
+          this.settings = result.settings;
+          this.formGroup = this.buildFormGroup(result.schema);
+          this.setupConditionalVisibility();
+          this.state = { ...this.state, loading: false };
+
+          // Set token to renderToken for form submission
+          this.token = result.renderToken;
+
+          // Apply theme CSS if available (Story 20.7)
+          const themeIdFromSettings = this.settings?.themeId;
+          this.applyThemeIfAvailable(result.theme, themeIdFromSettings);
+
+          // Record initial 'view' event for step forms (Story 19.5)
+          if (this.isStepFormEnabled()) {
+            this.recordStepEvent('view');
+          }
+        },
+        error: (error: FormRenderError) => {
+          this.handleError(error.message, error.type);
+        },
+      });
   }
 
   /**

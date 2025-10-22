@@ -143,6 +143,8 @@ export class FormsApiService {
           form: this.convertDates(response.data!.form),
           formSchema: this.convertSchemaDate(response.data!.formSchema),
           renderUrl: response.data!.renderUrl,
+          shortUrl: response.data!.shortUrl,
+          shortCode: response.data!.shortCode,
           qrCodeUrl: response.data!.qrCodeUrl,
           qrCodeGenerated: response.data!.qrCodeGenerated,
         })),

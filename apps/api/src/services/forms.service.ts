@@ -1,4 +1,5 @@
 import * as jwt from 'jsonwebtoken';
+import { customAlphabet } from 'nanoid';
 import {
   FormMetadata,
   FormSchema,
@@ -12,6 +13,7 @@ import { formsRepository } from '../repositories/forms.repository';
 import { formSchemasRepository } from '../repositories/form-schemas.repository';
 import { themesRepository } from '../repositories/themes.repository';
 import { formQrCodeService } from './form-qr-code.service';
+import { shortLinksRepository } from '../repositories/short-links.repository';
 
 /**
  * API Error class for form-related errors.
@@ -31,6 +33,18 @@ export class ApiError extends Error {
     this.code = code;
   }
 }
+
+/**
+ * Custom alphabet for short codes excluding confusing characters.
+ * Excludes: 0, O, o, 1, l, I to prevent confusion.
+ */
+const SHORT_CODE_ALPHABET =
+  '23456789ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz';
+
+/**
+ * Custom nanoid generator for form short codes.
+ */
+const generateShortCode = customAlphabet(SHORT_CODE_ALPHABET, 7);
 
 /**
  * Schema validation result interface.
@@ -199,15 +213,62 @@ export class FormsService {
       const baseUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
       const renderUrl = `${baseUrl}/forms/render/${renderToken}`;
 
+      // Generate short link for easy sharing
+      let shortCode = '';
+      let shortUrl = renderUrl; // Fallback to JWT token URL
+      let maxAttempts = 10;
+      let attempts = 0;
+
+      try {
+        // Generate unique short code
+        while (attempts < maxAttempts) {
+          shortCode = generateShortCode();
+          const exists = await shortLinksRepository.codeExists(shortCode);
+          if (!exists) {
+            break;
+          }
+          attempts++;
+        }
+
+        if (attempts >= maxAttempts) {
+          throw new Error(
+            'Unable to generate unique short code after maximum attempts'
+          );
+        }
+
+        // Create short link in database
+        await shortLinksRepository.create({
+          code: shortCode,
+          originalUrl: renderUrl,
+          expiresAt,
+          createdBy: userId,
+          formSchemaId: latestSchema.id,
+        });
+
+        // Generate short URL
+        shortUrl = `${baseUrl}/public/form/${shortCode}`;
+        console.log(`✅ Short link created for form ${formId}: ${shortUrl}`);
+      } catch (shortLinkError) {
+        // Short link generation failure should not prevent successful publishing
+        console.error(
+          `⚠️ Short link generation failed for form ${formId}:`,
+          shortLinkError
+        );
+        // Fallback: Use renderUrl as shortUrl and empty shortCode
+        shortUrl = renderUrl;
+        shortCode = '';
+      }
+
       // Story 26.3: Generate QR code asynchronously (non-blocking)
+      // Use short URL for QR code generation (preferred over JWT token URL)
       let qrCodeUrl: string | undefined;
       let qrCodeGenerated = false;
 
       try {
-        // Generate and store QR code
+        // Generate and store QR code using short URL
         qrCodeUrl = await formQrCodeService.generateAndStoreQRCode(
           formId,
-          renderUrl
+          shortUrl
         );
 
         // Update form with QR code URL
@@ -234,6 +295,8 @@ export class FormsService {
         form: updatedForm,
         formSchema: publishedSchema,
         renderUrl,
+        shortUrl,
+        shortCode,
         qrCodeUrl,
         qrCodeGenerated,
       };

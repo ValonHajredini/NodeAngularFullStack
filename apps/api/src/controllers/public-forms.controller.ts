@@ -481,6 +481,7 @@ export class PublicFormsController {
           settings: formData.settings,
           theme: formData.theme || null, // null if no theme or theme deleted
           shortCode: formData.shortCode,
+          renderToken: formData.renderToken, // Include render token for form submission
         },
         timestamp: new Date().toISOString(),
       });

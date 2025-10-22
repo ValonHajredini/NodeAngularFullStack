@@ -103,6 +103,48 @@ export class FormRendererService {
   }
 
   /**
+   * Retrieves form schema using a short code.
+   * @param shortCode - Short code for form access (e.g., 'abc123')
+   * @returns Observable with form schema, settings, optional theme, and short code
+   * @throws {FormRenderError} Various error types based on failure reason
+   * @example
+   * formRendererService.getFormByShortCode('abc123').subscribe({
+   *   next: (result) => console.log('Schema:', result.schema, 'Theme:', result.theme),
+   *   error: (err) => console.error('Error:', err.type, err.message)
+   * });
+   */
+  getFormByShortCode(
+    shortCode: string,
+  ): Observable<{
+    schema: FormSchema;
+    settings: FormSettings;
+    theme?: FormTheme | null;
+    shortCode: string;
+    renderToken: string;
+  }> {
+    const url = `${environment.apiUrl}/public/forms/${shortCode}`;
+    console.log('FormRendererService: Fetching form schema by short code from:', url);
+    return this.http
+      .get<{ success: boolean; message: string; form: any; timestamp: string }>(url)
+      .pipe(
+        map((response) => {
+          console.log('FormRendererService: Successfully received schema by short code:', response);
+          return {
+            schema: response.form.schema,
+            settings: response.form.settings,
+            theme: response.form.theme,
+            shortCode: response.form.shortCode,
+            renderToken: response.form.renderToken,
+          };
+        }),
+        catchError((error: HttpErrorResponse) => {
+          console.error('FormRendererService: Error fetching schema by short code:', error);
+          return throwError(() => this.handleError(error));
+        }),
+      );
+  }
+
+  /**
    * Submits form data using a JWT render token.
    * @param token - JWT token for form access
    * @param values - Form field values to submit
