@@ -13,6 +13,7 @@ import {
   StepFormConfig,
   FormTheme,
   SubColumnConfig,
+  MAX_STEPS,
 } from '@nodeangularfullstack/shared';
 import { ThemesApiService } from './themes-api.service';
 import { ThemePreviewService } from './theme-preview.service';
@@ -101,7 +102,7 @@ export class FormBuilderService {
   readonly currentFormId = computed(() => this._currentForm()?.id || null);
 
   // Step form computed signals
-  readonly canAddStep = computed(() => this._steps().length < 10);
+  readonly canAddStep = computed(() => this._steps().length < MAX_STEPS);
   readonly canDeleteStep = computed(() => this._steps().length > 1);
   readonly activeStep = computed(() => this._steps().find((s) => s.id === this._activeStepId()));
   readonly activeStepOrder = computed(() => this.activeStep()?.order ?? 0);

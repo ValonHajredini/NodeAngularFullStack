@@ -449,10 +449,10 @@ export class FormsService {
 
     const steps = stepFormConfig.steps;
 
-    // Validate step count (2-10 when enabled)
-    if (steps.length < 2 || steps.length > 10) {
+    // Validate minimum step count (at least 2 steps required)
+    if (steps.length < 2) {
       errors.push(
-        `Step form must have between 2 and 10 steps. Found: ${steps.length} steps`
+        `Step form must have at least 2 steps. Found: ${steps.length} step(s)`
       );
     }
 

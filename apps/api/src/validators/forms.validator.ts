@@ -531,10 +531,10 @@ export const validateStepFormConfiguration = (
 
   const steps = stepFormConfig.steps;
 
-  // Validate step count (2-10 steps when enabled)
-  if (stepFormConfig.enabled && (steps.length < 2 || steps.length > 10)) {
+  // Validate minimum step count (at least 2 steps required when enabled)
+  if (stepFormConfig.enabled && steps.length < 2) {
     errors.push(
-      `Step count must be between 2 and 10 when enabled. Found: ${steps.length} steps`
+      `Step form must have at least 2 steps when enabled. Found: ${steps.length} step(s)`
     );
   }
 

@@ -9,6 +9,13 @@ import { FormTheme, ResponsiveThemeConfig, ThemeProperties } from './theme.types
 export type { FormTheme, ResponsiveThemeConfig, ThemeProperties } from './theme.types';
 
 /**
+ * Maximum number of steps allowed in a multi-step form
+ * Set to very high number for effectively unlimited steps
+ * Only minimum of 2 steps is enforced
+ */
+export const MAX_STEPS = 999;
+
+/**
  * Supported form field types
  */
 export enum FormFieldType {

@@ -23,7 +23,7 @@ import { SelectModule } from 'primeng/select';
 import { MessageModule } from 'primeng/message';
 import { AccordionModule } from 'primeng/accordion';
 import { FormBuilderService } from '../form-builder.service';
-import { FormStep, RowLayoutConfig } from '@nodeangularfullstack/shared';
+import { FormStep, RowLayoutConfig, MAX_STEPS } from '@nodeangularfullstack/shared';
 
 /** Width ratio option for dropdown UI */
 interface WidthRatioOption {
@@ -187,7 +187,7 @@ export class StepFormSidebarComponent {
 
   // Computed tooltip messages
   protected addStepTooltip = computed(() =>
-    this.canAddStep() ? 'Add new step' : 'Maximum 10 steps reached',
+    this.canAddStep() ? 'Add new step' : `Maximum ${MAX_STEPS} steps reached`,
   );
 
   protected deleteStepTooltip = computed(() =>

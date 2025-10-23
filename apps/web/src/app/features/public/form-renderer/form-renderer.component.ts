@@ -45,7 +45,6 @@ import { ThemePreviewService } from '../../tools/components/form-builder/theme-p
 
 // Field Renderers
 import { ImageGalleryRendererComponent } from './image-gallery-renderer.component';
-import { StepProgressIndicatorComponent } from './step-progress-indicator/step-progress-indicator.component';
 
 /**
  * Component state for UI management
@@ -57,6 +56,15 @@ interface ComponentState {
   submitting: boolean;
   submitted: boolean;
   submissionMessage: string | null;
+}
+
+/**
+ * Step dot item for pagination display
+ */
+interface StepDotItem {
+  type: 'dot' | 'ellipsis';
+  index?: number;
+  step?: FormStep;
 }
 
 /**
@@ -80,7 +88,6 @@ interface ComponentState {
     Card,
     ButtonDirective,
     ImageGalleryRendererComponent,
-    StepProgressIndicatorComponent,
   ],
   providers: [MessageService],
   templateUrl: './form-renderer.component.html',
@@ -156,6 +163,66 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   protected readonly currentStepFields = computed(() => {
     const fields = this._formSchemaSignal()?.fields ?? [];
     return this.filterFieldsForCurrentStep(fields);
+  });
+
+  /**
+   * Smart pagination for step dots - shows sliding window with ellipsis
+   * @returns Array of step indicators to display with type: 'dot' | 'ellipsis'
+   *
+   * Examples:
+   * - 7 steps or less: Show all dots
+   * - At step 1 of 30: [1, 2, 3, 4, ..., 29, 30]
+   * - At step 20 of 30: [1, 2, ..., 18, 19, 20, 21, 22, ..., 29, 30]
+   * - At step 29 of 30: [1, 2, ..., 26, 27, 28, 29, 30]
+   */
+  protected readonly visibleStepDots = computed<StepDotItem[]>(() => {
+    const steps = this.steps();
+    const totalSteps = steps.length;
+    const currentIndex = this._currentStepIndex();
+
+    // If 7 steps or fewer, show all dots (no ellipsis needed)
+    if (totalSteps <= 7) {
+      return steps.map((step, index) => ({ type: 'dot' as const, index, step }));
+    }
+
+    const dots: StepDotItem[] = [];
+
+    // Always show first 2 steps
+    dots.push({ type: 'dot', index: 0, step: steps[0] });
+    dots.push({ type: 'dot', index: 1, step: steps[1] });
+
+    // Near the beginning (steps 0-3): show first 4 steps + ellipsis + last 2
+    if (currentIndex <= 3) {
+      if (totalSteps > 2) dots.push({ type: 'dot', index: 2, step: steps[2] });
+      if (totalSteps > 3) dots.push({ type: 'dot', index: 3, step: steps[3] });
+      if (totalSteps > 6) dots.push({ type: 'ellipsis' });
+    }
+    // Near the end (last 4 steps): show first 2 + ellipsis + last 4 steps
+    else if (currentIndex >= totalSteps - 4) {
+      dots.push({ type: 'ellipsis' });
+      for (let i = totalSteps - 4; i < totalSteps - 2; i++) {
+        if (i > 1) dots.push({ type: 'dot', index: i, step: steps[i] });
+      }
+    }
+    // In the middle: show first 2 + ellipsis + window around current + ellipsis + last 2
+    else {
+      dots.push({ type: 'ellipsis' });
+
+      // Show 2 steps before, current, and 2 steps after
+      for (let i = currentIndex - 2; i <= currentIndex + 2; i++) {
+        if (i > 1 && i < totalSteps - 2) {
+          dots.push({ type: 'dot', index: i, step: steps[i] });
+        }
+      }
+
+      dots.push({ type: 'ellipsis' });
+    }
+
+    // Always show last 2 steps
+    dots.push({ type: 'dot', index: totalSteps - 2, step: steps[totalSteps - 2] });
+    dots.push({ type: 'dot', index: totalSteps - 1, step: steps[totalSteps - 1] });
+
+    return dots;
   });
 
   state: ComponentState = {

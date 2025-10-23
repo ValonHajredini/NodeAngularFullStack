@@ -1049,3 +1049,115 @@ hr {
     backdrop-filter: none !important; // Disable backdrop blur on mobile (performance)
   }
 }
+
+// ============================================================================
+// Step Form Pagination Dots Styling (New Design)
+// ============================================================================
+
+.step-name-display {
+  h2 {
+    font-family: var(--theme-heading-font, system-ui);
+    color: var(--theme-heading-color, #1f2937);
+  }
+
+  p {
+    font-family: var(--theme-body-font, system-ui);
+    color: var(--theme-text-secondary, #6b7280);
+  }
+}
+
+.pagination-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: #d1d5db; // Gray for inactive steps
+  border: none;
+  padding: 0;
+  cursor: default;
+  transition: all 0.3s ease;
+  flex-shrink: 0; // Prevent dots from shrinking when many steps
+
+  // Active step (current step)
+  &.active {
+    width: 32px; // Elongated oval shape for active
+    border-radius: 6px;
+    background-color: var(--theme-primary-color, #3b82f6);
+    box-shadow: 0 0 0 3px rgba(var(--theme-primary-color-rgb, 59, 130, 246), 0.2);
+  }
+
+  // Completed steps (green checkmark)
+  &.completed:not(.active) {
+    background-color: #10b981; // Green for completed
+    cursor: pointer;
+
+    &:hover {
+      transform: scale(1.2);
+      box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+    }
+  }
+
+  // Clickable dots (completed steps)
+  &.clickable {
+    cursor: pointer;
+  }
+
+  // Disabled appearance for future steps
+  &:not(.active):not(.completed):not(.clickable) {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  // Mobile responsive sizing
+  @media (max-width: 767px) {
+    width: 10px;
+    height: 10px;
+
+    &.active {
+      width: 28px;
+      border-radius: 5px;
+    }
+  }
+}
+
+// Pagination ellipsis styling
+.pagination-ellipsis {
+  color: #9ca3af; // Gray text
+  font-size: 1rem;
+  font-weight: bold;
+  line-height: 1;
+  user-select: none;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 12px;
+  flex-shrink: 0;
+
+  @media (max-width: 767px) {
+    font-size: 0.875rem;
+    height: 10px;
+  }
+}
+
+// Step navigation buttons layout
+.step-navigation-buttons {
+  // Mobile: stack vertically with dots in middle
+  @media (max-width: 767px) {
+    flex-direction: column !important;
+
+    button {
+      order: 1 !important; // Buttons at top and bottom
+    }
+
+    > div {
+      order: 2 !important; // Dots in the middle
+      width: 100%;
+      justify-content: center;
+      margin: 1rem 0;
+    }
+
+    .order-3 {
+      order: 3 !important;
+    }
+  }
+}

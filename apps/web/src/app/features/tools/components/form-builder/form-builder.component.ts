@@ -954,10 +954,21 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
         },
         error: (error) => {
           console.error('Error updating form settings:', error);
+
+          // Format error message with details
+          let errorDetail = error.error?.message || 'Failed to update form settings';
+          if (
+            error.error?.details &&
+            Array.isArray(error.error.details) &&
+            error.error.details.length > 0
+          ) {
+            errorDetail += '\n\nDetails:\n• ' + error.error.details.join('\n• ');
+          }
+
           this.messageService.add({
             severity: 'error',
             summary: 'Save Failed',
-            detail: error.error?.message || 'Failed to update form settings',
+            detail: errorDetail,
             life: 5000,
           });
         },
@@ -1318,11 +1329,22 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
       },
       error: (error) => {
         this.isSaving.set(false);
+
+        // Format error message with details
+        let errorDetail = error.error?.message || 'Failed to save form';
+        if (
+          error.error?.details &&
+          Array.isArray(error.error.details) &&
+          error.error.details.length > 0
+        ) {
+          errorDetail += '\n\nDetails:\n• ' + error.error.details.join('\n• ');
+        }
+
         this.messageService.add({
           severity: 'error',
           summary: 'Save Failed',
-          detail: error.error?.message || 'Failed to save form',
-          life: 3000,
+          detail: errorDetail,
+          life: 5000, // Extended to 5 seconds for longer error messages
         });
       },
     });
