@@ -12,9 +12,19 @@ import {
   FormStep,
   StepFormConfig,
   FormTheme,
+  SubColumnConfig,
 } from '@nodeangularfullstack/shared';
 import { ThemesApiService } from './themes-api.service';
 import { ThemePreviewService } from './theme-preview.service';
+
+/**
+ * Internal sub-column configuration with row context for efficient state management.
+ * Extends SubColumnConfig with rowId for normalized storage and O(1) lookups.
+ */
+interface SubColumnConfigInternal extends SubColumnConfig {
+  /** Row identifier this sub-column configuration belongs to */
+  rowId: string;
+}
 
 /**
  * Form Builder service for managing form state.
@@ -33,6 +43,9 @@ export class FormBuilderService {
   // Row layout state signals
   private readonly _rowLayoutEnabled = signal<boolean>(false);
   private readonly _rowConfigs = signal<RowLayoutConfig[]>([]);
+
+  // Sub-column configuration state signals (Story 27.3)
+  private readonly _subColumnConfigs = signal<SubColumnConfigInternal[]>([]);
 
   // Step form state signals
   private readonly _stepFormEnabled = signal<boolean>(false);
@@ -60,6 +73,9 @@ export class FormBuilderService {
   // Row layout public signals
   readonly rowLayoutEnabled = this._rowLayoutEnabled.asReadonly();
   readonly rowConfigs = this._rowConfigs.asReadonly();
+
+  // Sub-column configuration public signals (Story 27.3)
+  readonly subColumnConfigs = this._subColumnConfigs.asReadonly();
 
   // Step form public signals
   readonly stepFormEnabled = this._stepFormEnabled.asReadonly();
@@ -89,6 +105,21 @@ export class FormBuilderService {
   readonly canDeleteStep = computed(() => this._steps().length > 1);
   readonly activeStep = computed(() => this._steps().find((s) => s.id === this._activeStepId()));
   readonly activeStepOrder = computed(() => this.activeStep()?.order ?? 0);
+
+  /**
+   * Computed signal providing efficient O(1) lookup for sub-column configurations.
+   * Key format: `${rowId}-${columnIndex}` for direct row-column access.
+   * Recomputes automatically when sub-column configs or row layouts change.
+   * Story 27.3: Sub-Column State Management Infrastructure
+   */
+  readonly subColumnsByRowColumn = computed(() => {
+    const map = new Map<string, SubColumnConfigInternal>();
+    this._subColumnConfigs().forEach((config) => {
+      const key = `${config.rowId}-${config.columnIndex}`;
+      map.set(key, config);
+    });
+    return map;
+  });
 
   private readonly themesApi = inject(ThemesApiService);
   private readonly themePreviewService = inject(ThemePreviewService);
@@ -236,7 +267,7 @@ export class FormBuilderService {
 
   /**
    * Resets the form state to default values.
-   * Also resets row layout and step form state to default (disabled).
+   * Also resets row layout, sub-column configs, and step form state to default (disabled).
    */
   resetForm(): void {
     this._currentForm.set(null);
@@ -245,6 +276,7 @@ export class FormBuilderService {
     this._isDirty.set(false);
     this._rowLayoutEnabled.set(false);
     this._rowConfigs.set([]);
+    this._subColumnConfigs.set([]); // Story 27.3
     this._stepFormEnabled.set(false);
     this._steps.set([]);
     this._activeStepId.set(null);
@@ -590,8 +622,9 @@ export class FormBuilderService {
 
   /**
    * Loads a form from metadata and populates all signals.
-   * Restores row layout and step form configuration if present in schema.
+   * Restores row layout, sub-columns, and step form configuration if present in schema.
    * Marks the form as clean after loading.
+   * Story 27.3: Includes sub-column configuration loading
    * @param form - The form metadata to load
    */
   loadForm(form: FormMetadata): void {
@@ -608,10 +641,26 @@ export class FormBuilderService {
     if (form.schema?.settings?.rowLayout?.enabled) {
       this._rowLayoutEnabled.set(true);
       this._rowConfigs.set(form.schema.settings.rowLayout.rows || []);
+
+      // Load sub-column configurations from rows (Story 27.3)
+      const subColumnConfigs: SubColumnConfigInternal[] = [];
+      form.schema.settings.rowLayout.rows?.forEach((row) => {
+        if (row.subColumns && row.subColumns.length > 0) {
+          // Add rowId context to each sub-column config for internal state
+          row.subColumns.forEach((subCol) => {
+            subColumnConfigs.push({
+              ...subCol,
+              rowId: row.rowId,
+            });
+          });
+        }
+      });
+      this._subColumnConfigs.set(subColumnConfigs);
     } else {
-      // Reset row layout state for forms without row layout
+      // Reset row layout and sub-column state for forms without row layout
       this._rowLayoutEnabled.set(false);
       this._rowConfigs.set([]);
+      this._subColumnConfigs.set([]);
     }
 
     // Restore step form configuration if present
@@ -772,6 +821,7 @@ export class FormBuilderService {
   /**
    * Update column count for a row.
    * Fields that exceed the new column count are moved to the last column.
+   * Preserves orderInColumn and subColumnIndex properties when reassigning.
    * @param rowId - ID of the row to update
    * @param columnCount - New column count (0-4)
    */
@@ -781,14 +831,282 @@ export class FormBuilderService {
     );
 
     // Reassign fields that exceed new column count
+    // IMPORTANT: Preserve orderInColumn and subColumnIndex using spread operator
     this._formFields.update((fields) =>
       fields.map((field) => {
         if (field.position?.rowId === rowId && field.position.columnIndex >= columnCount) {
-          return { ...field, position: { rowId, columnIndex: Math.max(0, columnCount - 1) } };
+          return {
+            ...field,
+            position: {
+              ...field.position, // Preserve existing properties (orderInColumn, subColumnIndex)
+              columnIndex: Math.max(0, columnCount - 1),
+            },
+          };
         }
         return field;
       }),
     );
+    this.markDirty();
+  }
+
+  /**
+   * Updates column widths for a specific row using fractional units.
+   * Enables variable column width configuration (e.g., ["1fr", "3fr"] for 25%-75% split).
+   *
+   * @param rowId - Row identifier
+   * @param widths - Array of fractional unit strings (e.g., ["1fr", "2fr"])
+   * @throws Error if row not found or widths array length doesn't match row's columnCount
+   *
+   * @example
+   * // Set 2-column row to 33%-67% width split
+   * updateRowColumnWidths('row_123', ['1fr', '2fr']);
+   *
+   * // Set 3-column row to equal widths
+   * updateRowColumnWidths('row_456', ['1fr', '1fr', '1fr']);
+   */
+  updateRowColumnWidths(rowId: string, widths: string[]): void {
+    const row = this._rowConfigs().find((r) => r.rowId === rowId);
+    if (!row) {
+      throw new Error(`Row ${rowId} not found`);
+    }
+    if (widths.length !== row.columnCount) {
+      throw new Error(`Must provide ${row.columnCount} width values, got ${widths.length}`);
+    }
+
+    this._rowConfigs.update((rows) =>
+      rows.map((r) => (r.rowId === rowId ? { ...r, columnWidths: widths } : r)),
+    );
+    this.markDirty();
+  }
+
+  /**
+   * Adds sub-column configuration to a parent column.
+   * Creates nested sub-columns within a column for granular field positioning.
+   * Defaults to equal-width sub-columns (subColumnWidths omitted).
+   * Story 27.3: Sub-Column State Management Infrastructure
+   *
+   * @param rowId - Row identifier containing the parent column
+   * @param columnIndex - Parent column index to subdivide (0-3)
+   * @param subColumnCount - Number of sub-columns to create (1-4)
+   * @throws Error if row doesn't exist, column index invalid, or sub-columns already configured
+   *
+   * @example
+   * // Add 2 equal-width sub-columns to column 1 in row
+   * addSubColumn('row_123', 1, 2);
+   */
+  addSubColumn(rowId: string, columnIndex: number, subColumnCount: 1 | 2 | 3 | 4): void {
+    // Validate row exists
+    const row = this._rowConfigs().find((r) => r.rowId === rowId);
+    if (!row) {
+      throw new Error(`Row ${rowId} not found`);
+    }
+
+    // Validate column index is within row's column count
+    if (columnIndex >= row.columnCount) {
+      throw new Error(`Column index ${columnIndex} exceeds row column count ${row.columnCount}`);
+    }
+
+    // Prevent duplicate sub-column config for same row-column pair
+    const existing = this._subColumnConfigs().find(
+      (sc) => sc.rowId === rowId && sc.columnIndex === columnIndex,
+    );
+    if (existing) {
+      throw new Error(`Sub-columns already configured for row ${rowId} column ${columnIndex}`);
+    }
+
+    // Create new config with equal-width default (subColumnWidths omitted)
+    const newConfig: SubColumnConfigInternal = {
+      rowId,
+      columnIndex,
+      subColumnCount,
+      // subColumnWidths omitted for equal-width default
+    };
+
+    this._subColumnConfigs.update((configs) => [...configs, newConfig]);
+    this.markDirty();
+  }
+
+  /**
+   * Removes sub-column configuration and moves fields to parent column.
+   * Clears subColumnIndex from all fields in the sub-columns.
+   * Story 27.3: Sub-Column State Management Infrastructure
+   *
+   * @param rowId - Row identifier containing the sub-columns
+   * @param columnIndex - Parent column index with sub-columns
+   *
+   * @example
+   * // Remove sub-columns from column 1 in row
+   * removeSubColumn('row_123', 1);
+   */
+  removeSubColumn(rowId: string, columnIndex: number): void {
+    // Remove sub-column config
+    this._subColumnConfigs.update((configs) =>
+      configs.filter((sc) => !(sc.rowId === rowId && sc.columnIndex === columnIndex)),
+    );
+
+    // Move fields from sub-columns to parent column (clear subColumnIndex)
+    this._formFields.update((fields) =>
+      fields.map((field) => {
+        if (
+          field.position?.rowId === rowId &&
+          field.position.columnIndex === columnIndex &&
+          field.position.subColumnIndex !== undefined
+        ) {
+          return {
+            ...field,
+            position: {
+              ...field.position,
+              subColumnIndex: undefined,
+            },
+          };
+        }
+        return field;
+      }),
+    );
+
+    this.markDirty();
+  }
+
+  /**
+   * Updates sub-column width ratios using fractional units.
+   * Enables variable sub-column widths (e.g., ["1fr", "2fr"] for 33%-67% split).
+   * Pass empty array to reset to equal-width.
+   * Story 27.3: Sub-Column State Management Infrastructure
+   *
+   * @param rowId - Row identifier containing the sub-columns
+   * @param columnIndex - Parent column index with sub-columns
+   * @param widths - Fractional unit array (e.g., ["1fr", "2fr"]) or empty array for equal-width
+   * @throws Error if sub-columns not configured or widths length doesn't match subColumnCount
+   *
+   * @example
+   * // Set 2 sub-columns to 25%-75% split
+   * updateSubColumnWidths('row_123', 1, ['1fr', '3fr']);
+   *
+   * // Reset to equal-width
+   * updateSubColumnWidths('row_123', 1, []);
+   */
+  updateSubColumnWidths(rowId: string, columnIndex: number, widths: string[]): void {
+    const config = this._subColumnConfigs().find(
+      (sc) => sc.rowId === rowId && sc.columnIndex === columnIndex,
+    );
+
+    if (!config) {
+      throw new Error(`No sub-columns configured for row ${rowId} column ${columnIndex}`);
+    }
+
+    // Validate widths array length matches subColumnCount (unless empty for equal-width)
+    if (widths.length > 0 && widths.length !== config.subColumnCount) {
+      throw new Error(`Must provide ${config.subColumnCount} width values, got ${widths.length}`);
+    }
+
+    this._subColumnConfigs.update((configs) =>
+      configs.map((sc) => {
+        if (sc.rowId === rowId && sc.columnIndex === columnIndex) {
+          return {
+            ...sc,
+            subColumnWidths: widths.length > 0 ? widths : undefined,
+          };
+        }
+        return sc;
+      }),
+    );
+
+    this.markDirty();
+  }
+
+  /**
+   * Updates sub-column count for an existing sub-column configuration.
+   * Preserves fields in valid sub-columns and migrates fields from removed sub-columns.
+   * Story 27.8: Field Preservation When Changing Sub-Column Count
+   *
+   * @param rowId - Row identifier containing the sub-columns
+   * @param columnIndex - Parent column index with sub-columns
+   * @param newCount - New sub-column count (1-4)
+   * @throws Error if row doesn't exist, column invalid, or sub-columns not configured
+   *
+   * @example
+   * // Increase sub-columns from 2 to 3 (fields in sub-columns 0-1 preserved)
+   * updateSubColumnCount('row_123', 1, 3);
+   *
+   * // Decrease sub-columns from 3 to 2 (fields in sub-column 2 moved to sub-column 0)
+   * updateSubColumnCount('row_123', 1, 2);
+   */
+  updateSubColumnCount(rowId: string, columnIndex: number, newCount: 1 | 2 | 3 | 4): void {
+    // Validate row exists
+    const row = this._rowConfigs().find((r) => r.rowId === rowId);
+    if (!row) {
+      throw new Error(`Row ${rowId} not found`);
+    }
+
+    // Validate column index
+    if (columnIndex >= row.columnCount) {
+      throw new Error(`Column index ${columnIndex} exceeds row column count ${row.columnCount}`);
+    }
+
+    // Validate sub-columns configured
+    const config = this._subColumnConfigs().find(
+      (sc) => sc.rowId === rowId && sc.columnIndex === columnIndex,
+    );
+    if (!config) {
+      throw new Error(`Sub-columns not configured for row ${rowId} column ${columnIndex}`);
+    }
+
+    const oldCount = config.subColumnCount;
+
+    // Update sub-column configuration
+    this._subColumnConfigs.update((configs) =>
+      configs.map((sc) => {
+        if (sc.rowId === rowId && sc.columnIndex === columnIndex) {
+          // Reset widths if array length doesn't match new count
+          const widthsValid = sc.subColumnWidths && sc.subColumnWidths.length === newCount;
+          return {
+            ...sc,
+            subColumnCount: newCount,
+            subColumnWidths: widthsValid ? sc.subColumnWidths : undefined,
+          };
+        }
+        return sc;
+      }),
+    );
+
+    // If decreasing count, migrate fields from removed sub-columns
+    if (newCount < oldCount) {
+      this._formFields.update((fields) => {
+        // Calculate starting order for migrated fields (append after existing sub-column 0 fields)
+        const subColumn0Fields = fields.filter(
+          (f) =>
+            f.position?.rowId === rowId &&
+            f.position.columnIndex === columnIndex &&
+            f.position.subColumnIndex === 0,
+        );
+        let nextOrder =
+          Math.max(...subColumn0Fields.map((f) => f.position?.orderInColumn ?? 0), -1) + 1;
+
+        return fields.map((field) => {
+          // Check if field is in a removed sub-column
+          if (
+            field.position?.rowId === rowId &&
+            field.position.columnIndex === columnIndex &&
+            field.position.subColumnIndex !== undefined &&
+            field.position.subColumnIndex >= newCount
+          ) {
+            // Migrate to sub-column 0 with unique sequential order
+            const migratedField = {
+              ...field,
+              position: {
+                ...field.position,
+                subColumnIndex: 0,
+                orderInColumn: nextOrder,
+              },
+            };
+            nextOrder++; // Increment for next migrated field
+            return migratedField;
+          }
+          return field;
+        });
+      });
+    }
+
     this.markDirty();
   }
 
@@ -809,10 +1127,31 @@ export class FormBuilderService {
    * Set field position within row-column layout.
    * If orderInColumn is not provided, defaults to 0 for backward compatibility.
    * When moving field to new column, recalculates orderInColumn for both old and new columns.
+   * Story 27.3: Validates subColumnIndex against sub-column configuration
    * @param fieldId - ID of the field to position
-   * @param position - Position within row-column layout
+   * @param position - Position within row-column layout (including optional subColumnIndex)
+   * @throws Error if subColumnIndex is invalid for the target column
    */
   setFieldPosition(fieldId: string, position: FieldPosition): void {
+    // Validate subColumnIndex if provided (Story 27.3)
+    if (position.subColumnIndex !== undefined) {
+      const subColConfig = this._subColumnConfigs().find(
+        (sc) => sc.rowId === position.rowId && sc.columnIndex === position.columnIndex,
+      );
+
+      if (!subColConfig) {
+        throw new Error(
+          `No sub-columns configured for row ${position.rowId} column ${position.columnIndex}`,
+        );
+      }
+
+      if (position.subColumnIndex >= subColConfig.subColumnCount) {
+        throw new Error(
+          `Sub-column index ${position.subColumnIndex} exceeds sub-column count ${subColConfig.subColumnCount}`,
+        );
+      }
+    }
+
     const targetPosition: FieldPosition = {
       ...position,
       orderInColumn: position.orderInColumn ?? 0,
@@ -981,7 +1320,8 @@ export class FormBuilderService {
 
   /**
    * Exports the current form data for saving.
-   * Includes row layout and step form configuration if enabled.
+   * Includes row layout, sub-columns, and step form configuration if enabled.
+   * Story 27.3: Includes sub-column configuration serialization
    * @param formSettings - Form settings from the settings dialog
    * @returns Complete form data ready for API submission
    */
@@ -996,6 +1336,36 @@ export class FormBuilderService {
   }): Partial<FormMetadata> {
     const currentForm = this._currentForm();
     const fields = this._formFields();
+
+    // Build row configs with sub-column configurations (Story 27.3)
+    const rows: RowLayoutConfig[] = this._rowConfigs().map((row) => {
+      const rowConfig: RowLayoutConfig = {
+        rowId: row.rowId,
+        columnCount: row.columnCount,
+        order: row.order,
+        stepId: row.stepId,
+      };
+
+      // Include column widths if configured
+      if (row.columnWidths) {
+        rowConfig.columnWidths = row.columnWidths;
+      }
+
+      // Include sub-columns if configured for this row (Story 27.3)
+      const subColumnsForRow = this._subColumnConfigs()
+        .filter((sc) => sc.rowId === row.rowId)
+        .map((sc) => {
+          // Strip rowId before serialization (implicit in nested structure)
+          const { rowId, ...subColConfig } = sc;
+          return subColConfig as SubColumnConfig;
+        });
+
+      if (subColumnsForRow.length > 0) {
+        rowConfig.subColumns = subColumnsForRow;
+      }
+
+      return rowConfig;
+    });
 
     const schema: Partial<FormSchema> = {
       fields,
@@ -1015,11 +1385,11 @@ export class FormBuilderService {
           redirectUrl: formSettings.redirectUrl || undefined,
           allowMultipleSubmissions: formSettings.allowMultipleSubmissions,
         },
-        // Include row layout configuration if enabled
+        // Include row layout configuration with sub-columns if enabled
         rowLayout: this._rowLayoutEnabled()
           ? {
               enabled: true,
-              rows: this._rowConfigs(),
+              rows,
             }
           : undefined,
         // Include step form configuration if enabled

@@ -211,6 +211,252 @@
                           <i class="pi pi-trash text-red-500 text-xs"></i>
                         </button>
                       </div>
+
+                      <!-- Column Widths Section (appears when columnCount >= 2) -->
+                      @if (row.columnCount >= 2) {
+                        <div class="column-widths-section mt-3 pt-3 border-t border-gray-100 px-2">
+                          <label
+                            for="width-ratio-{{ row.rowId }}"
+                            class="text-xs font-semibold text-gray-700 mb-2 block"
+                          >
+                            Width Ratio
+                          </label>
+                          <p-select
+                            id="width-ratio-{{ row.rowId }}"
+                            [options]="getWidthRatioOptions(row.columnCount)"
+                            [(ngModel)]="selectedWidthRatios()[row.rowId]"
+                            (onChange)="onWidthRatioChange(row.rowId, $event)"
+                            placeholder="Select width ratio"
+                            optionLabel="label"
+                            optionValue="value"
+                            [style]="{ width: '100%' }"
+                            [styleClass]="'text-sm'"
+                          />
+
+                          @if (selectedWidthRatios()[row.rowId] === 'custom') {
+                            <div class="mt-3">
+                              <label
+                                for="custom-widths-{{ row.rowId }}"
+                                class="text-xs font-semibold text-gray-700 mb-2 block"
+                              >
+                                Custom Widths
+                              </label>
+                              <input
+                                id="custom-widths-{{ row.rowId }}"
+                                type="text"
+                                pInputText
+                                [(ngModel)]="customWidthInputs()[row.rowId]"
+                                (ngModelChange)="onCustomWidthsChange(row.rowId, $event)"
+                                [placeholder]="getCustomWidthsPlaceholder(row.columnCount)"
+                                class="w-full text-sm"
+                              />
+
+                              @if (widthValidationErrors()[row.rowId]) {
+                                <p-message
+                                  severity="error"
+                                  [text]="widthValidationErrors()[row.rowId]"
+                                  [styleClass]="'mt-2 text-xs'"
+                                />
+                              }
+                            </div>
+                          }
+                        </div>
+                      }
+
+                      <!-- Sub-Columns Section (appears when columnCount > 0) -->
+                      @if (row.columnCount > 0) {
+                        <div class="sub-columns-section mt-3 pt-3 border-t border-gray-100 px-2">
+                          <h4
+                            class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3"
+                          >
+                            Sub-Columns
+                          </h4>
+
+                          <p-accordion [multiple]="true" [styleClass]="'text-sm'">
+                            @for (
+                              columnIndex of getColumnIndices(row.columnCount);
+                              track columnIndex
+                            ) {
+                              <p-accordion-panel [value]="columnIndex">
+                                <p-accordion-header>
+                                  <div class="column-header flex items-center gap-2">
+                                    <span class="text-sm font-medium"
+                                      >Column {{ columnIndex + 1 }}</span
+                                    >
+                                    @if (hasSubColumns(row.rowId, columnIndex)) {
+                                      <i class="pi pi-th text-primary text-xs"></i>
+                                      <span
+                                        class="badge bg-primary-500 text-white px-2 py-0.5 rounded-full text-xs"
+                                      >
+                                        {{ getSubColumnCount(row.rowId, columnIndex) }}
+                                      </span>
+                                    }
+                                  </div>
+                                </p-accordion-header>
+
+                                <p-accordion-content>
+                                  <!-- Enable Sub-Columns Toggle -->
+                                  <div
+                                    class="toggle-container flex items-center justify-between mb-4"
+                                  >
+                                    <label
+                                      for="sub-columns-toggle-{{ row.rowId }}-{{ columnIndex }}"
+                                      class="text-xs font-medium text-gray-700"
+                                    >
+                                      Enable Sub-Columns
+                                    </label>
+                                    <p-toggleButton
+                                      id="sub-columns-toggle-{{ row.rowId }}-{{ columnIndex }}"
+                                      [(ngModel)]="
+                                        subColumnToggles()[row.rowId + '-' + columnIndex]
+                                      "
+                                      (onChange)="
+                                        onToggleSubColumns(
+                                          row.rowId,
+                                          columnIndex,
+                                          $event.checked ?? false
+                                        )
+                                      "
+                                      onLabel="Enabled"
+                                      offLabel="Disabled"
+                                      [onIcon]="'pi pi-check'"
+                                      [offIcon]="'pi pi-times'"
+                                      [attr.aria-label]="
+                                        'Enable or disable sub-columns for column ' +
+                                        (columnIndex + 1)
+                                      "
+                                      [styleClass]="'text-sm'"
+                                    />
+                                  </div>
+
+                                  <!-- Sub-column Configuration (appears when enabled) -->
+                                  @if (hasSubColumns(row.rowId, columnIndex)) {
+                                    <div class="sub-column-config space-y-3">
+                                      <!-- Sub-Column Count Dropdown -->
+                                      <div>
+                                        <label
+                                          for="sub-column-count-{{ row.rowId }}-{{ columnIndex }}"
+                                          class="text-xs font-semibold text-gray-700 mb-2 block"
+                                        >
+                                          Number of Sub-Columns
+                                        </label>
+                                        <p-select
+                                          id="sub-column-count-{{ row.rowId }}-{{ columnIndex }}"
+                                          [options]="subColumnCountOptions"
+                                          [(ngModel)]="
+                                            subColumnCounts()[row.rowId + '-' + columnIndex]
+                                          "
+                                          (onChange)="
+                                            onSubColumnCountChange(
+                                              row.rowId,
+                                              columnIndex,
+                                              $event.value
+                                            )
+                                          "
+                                          placeholder="Select count"
+                                          optionLabel="label"
+                                          optionValue="value"
+                                          [style]="{ width: '100%' }"
+                                          [styleClass]="'text-sm'"
+                                        />
+                                      </div>
+
+                                      <!-- Sub-Column Width Ratio Dropdown -->
+                                      <div>
+                                        <label
+                                          for="sub-column-width-{{ row.rowId }}-{{ columnIndex }}"
+                                          class="text-xs font-semibold text-gray-700 mb-2 block"
+                                        >
+                                          Sub-Column Width Ratio
+                                        </label>
+                                        <p-select
+                                          id="sub-column-width-{{ row.rowId }}-{{ columnIndex }}"
+                                          [options]="
+                                            getSubColumnWidthOptions(
+                                              getSubColumnCount(row.rowId, columnIndex) || 2
+                                            )
+                                          "
+                                          [(ngModel)]="
+                                            subColumnWidthRatios()[row.rowId + '-' + columnIndex]
+                                          "
+                                          (onChange)="
+                                            onSubColumnWidthRatioChange(
+                                              row.rowId,
+                                              columnIndex,
+                                              $event.value
+                                            )
+                                          "
+                                          placeholder="Select ratio"
+                                          optionLabel="label"
+                                          optionValue="value"
+                                          [style]="{ width: '100%' }"
+                                          [styleClass]="'text-sm'"
+                                        />
+                                      </div>
+
+                                      <!-- Custom Sub-Column Width Input (appears when 'custom' selected) -->
+                                      @if (
+                                        subColumnWidthRatios()[row.rowId + '-' + columnIndex] ===
+                                        'custom'
+                                      ) {
+                                        <div>
+                                          <label
+                                            for="custom-sub-widths-{{ row.rowId }}-{{
+                                              columnIndex
+                                            }}"
+                                            class="text-xs font-semibold text-gray-700 mb-2 block"
+                                          >
+                                            Custom Widths
+                                          </label>
+                                          <input
+                                            id="custom-sub-widths-{{ row.rowId }}-{{ columnIndex }}"
+                                            type="text"
+                                            pInputText
+                                            [(ngModel)]="
+                                              customSubColumnWidthInputs()[
+                                                row.rowId + '-' + columnIndex
+                                              ]
+                                            "
+                                            (ngModelChange)="
+                                              onCustomSubWidthsChange(
+                                                row.rowId,
+                                                columnIndex,
+                                                $event
+                                              )
+                                            "
+                                            [placeholder]="
+                                              getSubColumnWidthPlaceholder(
+                                                getSubColumnCount(row.rowId, columnIndex) || 2
+                                              )
+                                            "
+                                            class="w-full text-sm"
+                                          />
+
+                                          @if (
+                                            subColumnWidthValidationErrors()[
+                                              row.rowId + '-' + columnIndex
+                                            ]
+                                          ) {
+                                            <p-message
+                                              severity="error"
+                                              [text]="
+                                                subColumnWidthValidationErrors()[
+                                                  row.rowId + '-' + columnIndex
+                                                ]
+                                              "
+                                              [styleClass]="'mt-2 text-xs'"
+                                            />
+                                          }
+                                        </div>
+                                      }
+                                    </div>
+                                  }
+                                </p-accordion-content>
+                              </p-accordion-panel>
+                            }
+                          </p-accordion>
+                        </div>
+                      }
                     }
                   </div>
 

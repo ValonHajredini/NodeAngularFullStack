@@ -252,13 +252,55 @@ export interface ImageGalleryMetadata extends BaseFieldMetadata {
 }
 
 /**
+ * Configuration for nested sub-columns within a parent column.
+ * Enables subdividing a column into 2-4 horizontal sub-columns for granular field positioning.
+ *
+ * @example
+ * // Create 2 sub-columns with 33%-67% width split
+ * {
+ *   columnIndex: 1,
+ *   subColumnCount: 2,
+ *   subColumnWidths: ["1fr", "2fr"]
+ * }
+ */
+export interface SubColumnConfig {
+  /** Parent column index (0-3) that contains these sub-columns */
+  columnIndex: number;
+
+  /** Number of sub-columns to create (2-4 sub-columns supported) */
+  subColumnCount: 1 | 2 | 3 | 4;
+
+  /**
+   * Optional fractional units defining sub-column widths (e.g., ["1fr", "2fr"]).
+   * If omitted, sub-columns have equal width.
+   * Array length must match subColumnCount.
+   */
+  subColumnWidths?: string[];
+}
+
+/**
  * Row layout configuration for multi-column form rows
+ * Supports variable column widths and nested sub-columns (Epic 27)
  */
 export interface RowLayoutConfig {
   /** Unique row identifier */
   rowId: string;
   /** Number of columns in this row (0 = full-width, 1-4 = columns) */
   columnCount: 0 | 1 | 2 | 3 | 4;
+  /**
+   * Optional fractional units defining column widths (e.g., ["1fr", "3fr"]).
+   * If omitted, columns have equal width (backward compatible).
+   * Array length must match columnCount.
+   * @example
+   * // 25%-75% split for 2 columns
+   * columnWidths: ["1fr", "3fr"]
+   */
+  columnWidths?: string[];
+  /**
+   * Optional nested sub-column configurations for columns in this row.
+   * Enables subdividing columns into 2-4 sub-columns (one level deep: Row → Column → Sub-Column → Field).
+   */
+  subColumns?: SubColumnConfig[];
   /** Row order index for rendering */
   order: number;
   /**
@@ -271,6 +313,7 @@ export interface RowLayoutConfig {
 
 /**
  * Field position within row-column layout
+ * Supports nested sub-column positioning (Epic 27)
  */
 export interface FieldPosition {
   /** Row identifier this field belongs to */
@@ -278,7 +321,13 @@ export interface FieldPosition {
   /** Column index within row (0-3 for columns 1-4) */
   columnIndex: number;
   /**
-   * Order index within column for vertical stacking (0-based)
+   * Optional sub-column index for nested positioning (0-3).
+   * If omitted, field renders in parent column (backward compatible).
+   * Used when column is subdivided into sub-columns for granular field positioning.
+   */
+  subColumnIndex?: number;
+  /**
+   * Order index within column or sub-column for vertical stacking (0-based)
    * Optional for backward compatibility - defaults to 0 if undefined
    * Fields with lower orderInColumn render above fields with higher orderInColumn
    */

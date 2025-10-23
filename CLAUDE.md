@@ -350,6 +350,27 @@ packages/
     - **Location**: FormBuilderComponent toolbar (between Settings and Save buttons)
       - Form submission logic unchanged (POST to `/api/public/forms/:shortCode/submit`)
       - HTML sanitization middleware still applied server-side (DOMPurify)
+  - **Step Form Sub-Column Support (Story 27.9)**:
+    - **Sub-column configuration UI** available in StepFormSidebarComponent for step form rows
+    - **Column width ratio configuration** for rows within steps (Equal, Narrow-Wide, Custom, etc.)
+    - **Sub-column management** for each column in step form rows (enable/disable, count 2-4, width
+      ratios)
+    - **Service integration**: Uses existing FormBuilderService sub-column methods with stepId
+      parameter
+    - **UI pattern**: Follows RowLayoutSidebarComponent sub-column UI exactly (accordion, toggles,
+      dropdowns)
+    - **Location**: StepFormSidebarComponent in
+      `apps/web/src/app/features/tools/components/form-builder/step-form-sidebar/`
+    - **Features**:
+      - Width ratio dropdowns for row columns (2-4 columns)
+      - Custom width input with fractional unit validation (e.g., '1fr, 2fr')
+      - Accordion panels for each column with sub-column configuration
+      - Enable/disable sub-columns per column via toggle button
+      - Sub-column count selection (2-4 sub-columns)
+      - Sub-column width ratio presets and custom input
+      - Real-time validation errors for custom width inputs
+    - **Backward compatibility**: Existing step form functionality unchanged, no service method
+      changes required
 
 ### Prerequisites
 

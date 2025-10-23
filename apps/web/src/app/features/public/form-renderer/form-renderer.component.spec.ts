@@ -975,8 +975,8 @@ describe('FormRendererComponent', () => {
           rowLayout: {
             enabled: true,
             rows: [
-              { rowId: 'row-1', columnCount: 2, order: 0 },
-              { rowId: 'row-2', columnCount: 3, order: 1 },
+              { rowId: 'row-1', columnCount: 2 as const, order: 0 },
+              { rowId: 'row-2', columnCount: 3 as const, order: 1 },
             ],
           },
         };
@@ -1037,9 +1037,9 @@ describe('FormRendererComponent', () => {
           rowLayout: {
             enabled: true,
             rows: [
-              { rowId: 'row-3', columnCount: 4, order: 2 },
-              { rowId: 'row-1', columnCount: 2, order: 0 },
-              { rowId: 'row-2', columnCount: 3, order: 1 },
+              { rowId: 'row-3', columnCount: 4 as const, order: 2 },
+              { rowId: 'row-1', columnCount: 2 as const, order: 0 },
+              { rowId: 'row-2', columnCount: 3 as const, order: 1 },
             ],
           },
         };
@@ -2175,9 +2175,9 @@ describe('FormRendererComponent', () => {
             rowLayout: {
               enabled: true,
               rows: [
-                { rowId: 'row-1', columnCount: 2, order: 0, stepId: 'step-1' },
-                { rowId: 'row-2', columnCount: 2, order: 1, stepId: 'step-2' },
-                { rowId: 'row-3', columnCount: 1, order: 2, stepId: 'step-3' },
+                { rowId: 'row-1', columnCount: 2 as const, order: 0, stepId: 'step-1' },
+                { rowId: 'row-2', columnCount: 2 as const, order: 1, stepId: 'step-2' },
+                { rowId: 'row-3', columnCount: 1 as const, order: 2, stepId: 'step-3' },
               ],
             },
           },
@@ -2731,6 +2731,7 @@ describe('FormRendererComponent', () => {
       },
       usageCount: 5,
       isActive: true,
+      isCustom: false,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -2851,9 +2852,11 @@ describe('FormRendererComponent', () => {
           settings: {
             ...mockSettings,
             themeId: 'theme-1',
-            backgroundType: 'image',
-            backgroundImageUrl: 'https://example.com/bg.jpg',
-            backgroundImagePosition: 'cover',
+            background: {
+              type: 'image' as const,
+              imageUrl: 'https://example.com/bg.jpg',
+              imagePosition: 'cover' as const,
+            },
           },
           theme: mockTheme,
         };
@@ -2868,8 +2871,8 @@ describe('FormRendererComponent', () => {
 
         // Custom background should override theme background via higher CSS specificity
         // This is handled in the template via inline styles or CSS classes
-        expect(component.settings.backgroundType).toBe('image');
-        expect(component.settings.backgroundImageUrl).toBe('https://example.com/bg.jpg');
+        expect(component.settings?.background?.type).toBe('image');
+        expect(component.settings?.background?.imageUrl).toBe('https://example.com/bg.jpg');
       });
 
       it('should apply theme colors while preserving custom background image', () => {
@@ -2878,8 +2881,11 @@ describe('FormRendererComponent', () => {
           settings: {
             ...mockSettings,
             themeId: 'theme-1',
-            backgroundType: 'custom',
-            backgroundColor: 'linear-gradient(45deg, #ff6b6b, #4ecdc4)',
+            background: {
+              type: 'custom' as const,
+              customHtml:
+                '<div style="background: linear-gradient(45deg, #ff6b6b, #4ecdc4);"></div>',
+            },
           },
           theme: mockTheme,
         };
@@ -2892,8 +2898,10 @@ describe('FormRendererComponent', () => {
         expect(themePreviewService.applyThemeCss).toHaveBeenCalledWith(mockTheme);
 
         // Custom background overrides theme background
-        expect(component.settings.backgroundType).toBe('custom');
-        expect(component.settings.backgroundColor).toBe('linear-gradient(45deg, #ff6b6b, #4ecdc4)');
+        expect(component.settings?.background?.type).toBe('custom');
+        expect(component.settings?.background?.customHtml).toContain(
+          'linear-gradient(45deg, #ff6b6b, #4ecdc4)',
+        );
       });
 
       it('should handle theme with custom background in row layout', () => {
@@ -2904,18 +2912,20 @@ describe('FormRendererComponent', () => {
               ...mockSchema.settings,
               rowLayout: {
                 enabled: true,
-                rows: [{ rowId: 'row-1', columnCount: 2, order: 0 }],
+                rows: [{ rowId: 'row-1', columnCount: 2 as const, order: 0 }],
               },
             },
           },
           settings: {
             ...mockSettings,
             themeId: 'theme-1',
-            backgroundType: 'image',
-            backgroundImageUrl: 'https://example.com/bg.jpg',
+            background: {
+              type: 'image' as const,
+              imageUrl: 'https://example.com/bg.jpg',
+            },
             rowLayout: {
               enabled: true,
-              rows: [{ rowId: 'row-1', columnCount: 2, order: 0 }],
+              rows: [{ rowId: 'row-1', columnCount: 2 as const, order: 0 }],
             },
           },
           theme: mockTheme,
@@ -2930,7 +2940,7 @@ describe('FormRendererComponent', () => {
         expect(component.isRowLayoutEnabled()).toBe(true);
 
         // Custom background should still override theme background
-        expect(component.settings.backgroundType).toBe('image');
+        expect(component.settings?.background?.type).toBe('image');
       });
     });
 
@@ -2976,6 +2986,351 @@ describe('FormRendererComponent', () => {
 
         expect(themePreviewService.applyThemeCss).toHaveBeenCalledWith(themeWithoutMobile);
         expect(component.themeLoaded()).toBe(true);
+      });
+    });
+  });
+
+  /**
+   * Story 27.6: Nested Column Rendering Tests
+   */
+  describe('Sub-Column Rendering (Story 27.6)', () => {
+    describe('hasSubColumns', () => {
+      it('should return true when sub-columns are configured for a column', () => {
+        const schemaWithSubColumns: any = {
+          ...mockSchema,
+          settings: {
+            rowLayout: {
+              enabled: true,
+              rows: [
+                {
+                  rowId: 'row-1',
+                  columnCount: 2 as const,
+                  order: 0,
+                  subColumns: [
+                    { columnIndex: 0, subColumnCount: 2, subColumnWidths: ['1fr', '2fr'] },
+                  ],
+                },
+              ],
+            },
+          },
+        };
+
+        formRendererService.getFormSchema.and.returnValue(of(schemaWithSubColumns));
+        component.ngOnInit();
+        fixture.detectChanges();
+
+        expect(component.hasSubColumns('row-1', 0)).toBe(true);
+      });
+
+      it('should return false when no sub-columns configured', () => {
+        const schemaWithoutSubColumns: any = {
+          ...mockSchema,
+          settings: {
+            rowLayout: {
+              enabled: true,
+              rows: [
+                {
+                  rowId: 'row-1',
+                  columnCount: 2 as const,
+                  order: 0,
+                },
+              ],
+            },
+          },
+        };
+
+        formRendererService.getFormSchema.and.returnValue(of(schemaWithoutSubColumns));
+        component.ngOnInit();
+        fixture.detectChanges();
+
+        expect(component.hasSubColumns('row-1', 0)).toBe(false);
+      });
+
+      it('should return false for different column index', () => {
+        const schemaWithSubColumns: any = {
+          ...mockSchema,
+          settings: {
+            rowLayout: {
+              enabled: true,
+              rows: [
+                {
+                  rowId: 'row-1',
+                  columnCount: 2 as const,
+                  order: 0,
+                  subColumns: [{ columnIndex: 0, subColumnCount: 2 }],
+                },
+              ],
+            },
+          },
+        };
+
+        formRendererService.getFormSchema.and.returnValue(of(schemaWithSubColumns));
+        component.ngOnInit();
+        fixture.detectChanges();
+
+        expect(component.hasSubColumns('row-1', 1)).toBe(false);
+      });
+    });
+
+    describe('getSubColumnConfig', () => {
+      it('should return sub-column config when it exists', () => {
+        const expectedConfig = {
+          columnIndex: 0,
+          subColumnCount: 2,
+          subColumnWidths: ['1fr', '2fr'],
+        };
+        const schemaWithSubColumns: any = {
+          ...mockSchema,
+          settings: {
+            rowLayout: {
+              enabled: true,
+              rows: [
+                {
+                  rowId: 'row-1',
+                  columnCount: 2 as const,
+                  order: 0,
+                  subColumns: [expectedConfig],
+                },
+              ],
+            },
+          },
+        };
+
+        formRendererService.getFormSchema.and.returnValue(of(schemaWithSubColumns));
+        component.ngOnInit();
+        fixture.detectChanges();
+
+        const config = component.getSubColumnConfig('row-1', 0);
+        expect(config).toEqual(expectedConfig);
+      });
+
+      it('should return undefined when no sub-columns configured', () => {
+        formRendererService.getFormSchema.and.returnValue(of(mockSchema));
+        component.ngOnInit();
+        fixture.detectChanges();
+
+        const config = component.getSubColumnConfig('row-1', 0);
+        expect(config).toBeUndefined();
+      });
+    });
+
+    describe('fieldsForSubColumn', () => {
+      it('should return fields filtered by sub-column index', () => {
+        const schemaWithSubColumnFields: any = {
+          ...mockSchema,
+          fields: [
+            {
+              id: 'field-1',
+              type: FormFieldType.TEXT,
+              fieldName: 'field1',
+              label: 'Field 1',
+              position: { rowId: 'row-1', columnIndex: 0, subColumnIndex: 0, orderInColumn: 0 },
+            },
+            {
+              id: 'field-2',
+              type: FormFieldType.TEXT,
+              fieldName: 'field2',
+              label: 'Field 2',
+              position: { rowId: 'row-1', columnIndex: 0, subColumnIndex: 1, orderInColumn: 0 },
+            },
+            {
+              id: 'field-3',
+              type: FormFieldType.TEXT,
+              fieldName: 'field3',
+              label: 'Field 3',
+              position: { rowId: 'row-1', columnIndex: 0, subColumnIndex: 0, orderInColumn: 1 },
+            },
+          ],
+        };
+
+        formRendererService.getFormSchema.and.returnValue(of(schemaWithSubColumnFields));
+        component.ngOnInit();
+        fixture.detectChanges();
+
+        const fields = component.fieldsForSubColumn('row-1', 0, 0);
+        expect(fields.length).toBe(2);
+        expect(fields[0].id).toBe('field-1');
+        expect(fields[1].id).toBe('field-3');
+      });
+
+      it('should sort fields by orderInColumn', () => {
+        const schemaWithSubColumnFields: any = {
+          ...mockSchema,
+          fields: [
+            {
+              id: 'field-2',
+              type: FormFieldType.TEXT,
+              fieldName: 'field2',
+              label: 'Field 2',
+              position: { rowId: 'row-1', columnIndex: 0, subColumnIndex: 0, orderInColumn: 2 },
+            },
+            {
+              id: 'field-1',
+              type: FormFieldType.TEXT,
+              fieldName: 'field1',
+              label: 'Field 1',
+              position: { rowId: 'row-1', columnIndex: 0, subColumnIndex: 0, orderInColumn: 0 },
+            },
+            {
+              id: 'field-3',
+              type: FormFieldType.TEXT,
+              fieldName: 'field3',
+              label: 'Field 3',
+              position: { rowId: 'row-1', columnIndex: 0, subColumnIndex: 0, orderInColumn: 1 },
+            },
+          ],
+        };
+
+        formRendererService.getFormSchema.and.returnValue(of(schemaWithSubColumnFields));
+        component.ngOnInit();
+        fixture.detectChanges();
+
+        const fields = component.fieldsForSubColumn('row-1', 0, 0);
+        expect(fields[0].id).toBe('field-1'); // orderInColumn: 0
+        expect(fields[1].id).toBe('field-3'); // orderInColumn: 1
+        expect(fields[2].id).toBe('field-2'); // orderInColumn: 2
+      });
+    });
+
+    describe('subColumnGridTemplate', () => {
+      it('should return custom widths when defined', () => {
+        const schemaWithSubColumns: any = {
+          ...mockSchema,
+          settings: {
+            rowLayout: {
+              enabled: true,
+              rows: [
+                {
+                  rowId: 'row-1',
+                  columnCount: 2 as const,
+                  order: 0,
+                  subColumns: [
+                    { columnIndex: 0, subColumnCount: 2, subColumnWidths: ['1fr', '3fr'] },
+                  ],
+                },
+              ],
+            },
+          },
+        };
+
+        formRendererService.getFormSchema.and.returnValue(of(schemaWithSubColumns));
+        component.ngOnInit();
+        fixture.detectChanges();
+
+        const gridTemplate = component.subColumnGridTemplate('row-1', 0);
+        expect(gridTemplate).toBe('1fr 3fr');
+      });
+
+      it('should return equal-width fallback when no custom widths', () => {
+        const schemaWithSubColumns: any = {
+          ...mockSchema,
+          settings: {
+            rowLayout: {
+              enabled: true,
+              rows: [
+                {
+                  rowId: 'row-1',
+                  columnCount: 2 as const,
+                  order: 0,
+                  subColumns: [{ columnIndex: 0, subColumnCount: 3 }],
+                },
+              ],
+            },
+          },
+        };
+
+        formRendererService.getFormSchema.and.returnValue(of(schemaWithSubColumns));
+        component.ngOnInit();
+        fixture.detectChanges();
+
+        const gridTemplate = component.subColumnGridTemplate('row-1', 0);
+        expect(gridTemplate).toBe('repeat(3, 1fr)');
+      });
+
+      it('should return 1fr when no sub-column config exists', () => {
+        formRendererService.getFormSchema.and.returnValue(of(mockSchema));
+        component.ngOnInit();
+        fixture.detectChanges();
+
+        const gridTemplate = component.subColumnGridTemplate('row-1', 0);
+        expect(gridTemplate).toBe('1fr');
+      });
+    });
+
+    describe('subColumnIndexes', () => {
+      it('should return array of sub-column indexes', () => {
+        const schemaWithSubColumns: any = {
+          ...mockSchema,
+          settings: {
+            rowLayout: {
+              enabled: true,
+              rows: [
+                {
+                  rowId: 'row-1',
+                  columnCount: 2 as const,
+                  order: 0,
+                  subColumns: [{ columnIndex: 0, subColumnCount: 3 }],
+                },
+              ],
+            },
+          },
+        };
+
+        formRendererService.getFormSchema.and.returnValue(of(schemaWithSubColumns));
+        component.ngOnInit();
+        fixture.detectChanges();
+
+        const indexes = component.subColumnIndexes('row-1', 0);
+        expect(indexes).toEqual([0, 1, 2]);
+      });
+
+      it('should return empty array when no sub-columns', () => {
+        formRendererService.getFormSchema.and.returnValue(of(mockSchema));
+        component.ngOnInit();
+        fixture.detectChanges();
+
+        const indexes = component.subColumnIndexes('row-1', 0);
+        expect(indexes).toEqual([]);
+      });
+    });
+
+    describe('getFieldsInColumn - Sub-Column Exclusion', () => {
+      it('should exclude fields with subColumnIndex defined', () => {
+        const schemaWithMixedFields: any = {
+          ...mockSchema,
+          fields: [
+            {
+              id: 'field-1',
+              type: FormFieldType.TEXT,
+              fieldName: 'field1',
+              label: 'Field 1',
+              position: { rowId: 'row-1', columnIndex: 0, orderInColumn: 0 },
+            },
+            {
+              id: 'field-2',
+              type: FormFieldType.TEXT,
+              fieldName: 'field2',
+              label: 'Field 2',
+              position: { rowId: 'row-1', columnIndex: 0, subColumnIndex: 0, orderInColumn: 0 },
+            },
+            {
+              id: 'field-3',
+              type: FormFieldType.TEXT,
+              fieldName: 'field3',
+              label: 'Field 3',
+              position: { rowId: 'row-1', columnIndex: 0, orderInColumn: 1 },
+            },
+          ],
+        };
+
+        formRendererService.getFormSchema.and.returnValue(of(schemaWithMixedFields));
+        component.ngOnInit();
+        fixture.detectChanges();
+
+        const fields = component.getFieldsInColumn('row-1', 0);
+        expect(fields.length).toBe(2); // Only field-1 and field-3, not field-2
+        expect(fields[0].id).toBe('field-1');
+        expect(fields[1].id).toBe('field-3');
       });
     });
   });

@@ -132,12 +132,11 @@ export class FormRendererComponent implements OnInit, OnDestroy {
 
   // Step Form Navigation Signals
   private readonly _formSchemaSignal = signal<FormSchema | null>(null);
+  private readonly _settingsSignal = signal<FormSettings | null>(null);
   protected readonly isStepFormEnabled = computed(
-    () => this._formSchemaSignal()?.settings?.stepForm?.enabled === true,
+    () => this._settingsSignal()?.stepForm?.enabled === true,
   );
-  protected readonly steps = computed(
-    () => this._formSchemaSignal()?.settings?.stepForm?.steps ?? [],
-  );
+  protected readonly steps = computed(() => this._settingsSignal()?.stepForm?.steps ?? []);
 
   private readonly _currentStepIndex = signal<number>(0);
   readonly currentStepIndex = this._currentStepIndex.asReadonly();
@@ -194,6 +193,7 @@ export class FormRendererComponent implements OnInit, OnDestroy {
       this.schema = this.formSchema;
       this._formSchemaSignal.set(this.formSchema);
       this.settings = this.formSchema.settings as FormSettings;
+      this._settingsSignal.set(this.settings);
       this.isPreview = true;
       this.formGroup = this.buildFormGroup(this.formSchema);
       this.setupConditionalVisibility();
@@ -270,6 +270,7 @@ export class FormRendererComponent implements OnInit, OnDestroy {
       this.schema = previewData.schema;
       this._formSchemaSignal.set(previewData.schema);
       this.settings = previewData.settings;
+      this._settingsSignal.set(previewData.settings);
       this.isPreview = previewData.isPreview || false;
 
       if (this.schema) {
@@ -331,6 +332,7 @@ export class FormRendererComponent implements OnInit, OnDestroy {
           this.schema = result.schema;
           this._formSchemaSignal.set(result.schema);
           this.settings = result.settings;
+          this._settingsSignal.set(result.settings);
           this.formGroup = this.buildFormGroup(result.schema);
           this.setupConditionalVisibility();
           this.state = { ...this.state, loading: false };
@@ -586,6 +588,7 @@ export class FormRendererComponent implements OnInit, OnDestroy {
           this.schema = result.schema;
           this._formSchemaSignal.set(result.schema);
           this.settings = result.settings;
+          this._settingsSignal.set(result.settings);
           this.formGroup = this.buildFormGroup(result.schema);
           this.setupConditionalVisibility();
           this.state = { ...this.state, loading: false };
@@ -846,9 +849,11 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   /**
    * Get all fields in a specific row-column position, sorted by orderInColumn.
    * Supports multi-field columns (Story 14.1).
+   * EXCLUDES fields that belong to sub-columns (Story 27.6) - those render separately.
+   *
    * @param rowId - The row ID to filter by
    * @param columnIndex - The column index to filter by
-   * @returns Array of fields sorted by orderInColumn (ascending)
+   * @returns Array of fields sorted by orderInColumn (ascending), excluding sub-column fields
    */
   getFieldsInColumn(rowId: string, columnIndex: number): FormField[] {
     if (!this.schema?.fields) return [];
@@ -857,7 +862,10 @@ export class FormRendererComponent implements OnInit, OnDestroy {
 
     return fieldsForStep
       .filter(
-        (field) => field.position?.rowId === rowId && field.position?.columnIndex === columnIndex,
+        (field) =>
+          field.position?.rowId === rowId &&
+          field.position?.columnIndex === columnIndex &&
+          field.position?.subColumnIndex === undefined, // Exclude sub-column fields
       )
       .sort((a, b) => {
         const orderA = a.position?.orderInColumn ?? 0;
@@ -898,12 +906,37 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Get CSS Grid template columns for a row
-   * @param columnCount - Number of columns in the row
-   * @returns CSS Grid template columns value (e.g., 'repeat(2, 1fr)')
+   * Get CSS Grid template columns for a row.
+   * Uses custom columnWidths if defined, otherwise falls back to equal-width columns.
+   *
+   * @param row - Row configuration object or column count (for backward compatibility)
+   * @returns CSS Grid template columns value (e.g., '1fr 3fr' or 'repeat(2, 1fr)')
+   *
+   * @example
+   * // Row with custom widths
+   * getGridColumns({ columnCount: 2, columnWidths: ['1fr', '3fr'] })
+   * // Returns: "1fr 3fr"
+   *
+   * // Row without custom widths (equal width fallback)
+   * getGridColumns({ columnCount: 3 })
+   * // Returns: "repeat(3, 1fr)"
+   *
+   * // Backward compatibility: numeric column count
+   * getGridColumns(2)
+   * // Returns: "repeat(2, 1fr)"
    */
-  getGridColumns(columnCount: number): string {
-    return `repeat(${columnCount}, 1fr)`;
+  getGridColumns(row: RowLayoutConfig | number): string {
+    // Backward compatibility: accept numeric column count
+    if (typeof row === 'number') {
+      return `repeat(${row}, 1fr)`;
+    }
+
+    // Check for custom column widths
+    if (row.columnWidths && row.columnWidths.length === row.columnCount) {
+      return row.columnWidths.join(' '); // Custom widths: "1fr 3fr"
+    }
+
+    return `repeat(${row.columnCount}, 1fr)`; // Equal width fallback
   }
 
   /**
@@ -913,6 +946,98 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   getGlobalGridColumns(): string {
     const columnCount = this.settings?.layout?.columns || 1;
     return `repeat(${columnCount}, 1fr)`;
+  }
+
+  /**
+   * Check if a column has sub-columns defined (Story 27.6).
+   * Sub-columns enable nested column layouts within a parent column.
+   *
+   * @param rowId - Row identifier
+   * @param columnIndex - Parent column index (0-3)
+   * @returns True if sub-columns are configured for this column
+   */
+  hasSubColumns(rowId: string, columnIndex: number): boolean {
+    const rows = this.settings?.rowLayout?.rows || [];
+    const row = rows.find((r) => r.rowId === rowId);
+    return row?.subColumns?.some((sc) => sc.columnIndex === columnIndex) ?? false;
+  }
+
+  /**
+   * Get sub-column configuration for a specific column (Story 27.6).
+   * Returns sub-column count and optional fractional width units.
+   *
+   * @param rowId - Row identifier
+   * @param columnIndex - Parent column index (0-3)
+   * @returns Sub-column configuration or undefined if not configured
+   */
+  getSubColumnConfig(rowId: string, columnIndex: number): any {
+    const rows = this.settings?.rowLayout?.rows || [];
+    const row = rows.find((r) => r.rowId === rowId);
+    return row?.subColumns?.find((sc) => sc.columnIndex === columnIndex);
+  }
+
+  /**
+   * Get all fields positioned within a specific sub-column (Story 27.6).
+   * Fields are sorted by orderInColumn for vertical stacking.
+   *
+   * @param rowId - Row identifier
+   * @param columnIndex - Parent column index
+   * @param subColumnIndex - Sub-column index (0-3)
+   * @returns Array of fields sorted by orderInColumn
+   */
+  fieldsForSubColumn(rowId: string, columnIndex: number, subColumnIndex: number): FormField[] {
+    if (!this.schema?.fields) return [];
+
+    const fieldsForStep = this.filterFieldsForCurrentStep(this.schema.fields);
+
+    return fieldsForStep
+      .filter(
+        (field) =>
+          field.position?.rowId === rowId &&
+          field.position?.columnIndex === columnIndex &&
+          field.position?.subColumnIndex === subColumnIndex,
+      )
+      .sort((a, b) => {
+        const orderA = a.position?.orderInColumn ?? 0;
+        const orderB = b.position?.orderInColumn ?? 0;
+        return orderA - orderB;
+      });
+  }
+
+  /**
+   * Generate CSS Grid template columns for sub-columns (Story 27.6).
+   * Uses custom fractional widths if defined, otherwise equal-width fallback.
+   *
+   * @param rowId - Row identifier
+   * @param columnIndex - Parent column index
+   * @returns CSS Grid template string (e.g., "1fr 2fr" or "repeat(2, 1fr)")
+   */
+  subColumnGridTemplate(rowId: string, columnIndex: number): string {
+    const config = this.getSubColumnConfig(rowId, columnIndex);
+    if (!config) {
+      return '1fr'; // Default to single column if no config
+    }
+
+    // Check for custom sub-column widths
+    if (config.subColumnWidths && config.subColumnWidths.length === config.subColumnCount) {
+      return config.subColumnWidths.join(' '); // Custom widths: "1fr 2fr"
+    }
+
+    // Equal width fallback
+    return `repeat(${config.subColumnCount}, 1fr)`;
+  }
+
+  /**
+   * Get array of sub-column indexes for template iteration (Story 27.6).
+   *
+   * @param rowId - Row identifier
+   * @param columnIndex - Parent column index
+   * @returns Array of sub-column indexes [0, 1, 2, ...] or empty array if no sub-columns
+   */
+  subColumnIndexes(rowId: string, columnIndex: number): number[] {
+    const config = this.getSubColumnConfig(rowId, columnIndex);
+    if (!config) return [];
+    return Array.from({ length: config.subColumnCount }, (_, i) => i);
   }
 
   /**

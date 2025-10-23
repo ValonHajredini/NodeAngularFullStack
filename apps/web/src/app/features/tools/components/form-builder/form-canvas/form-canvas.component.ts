@@ -182,74 +182,188 @@ interface FieldTypeDefinition {
                     <!-- Row columns grid -->
                     <div
                       class="row-grid theme-row-container"
-                      [style.grid-template-columns]="'repeat(' + row.columnCount + ', 1fr)'"
+                      [style.grid-template-columns]="getColumnGridTemplate(row)"
                       style="display: grid; gap: 16px; min-height: 120px;"
                     >
                       @for (columnIndex of getColumnIndices(row.columnCount); track columnIndex) {
-                        <div
-                          class="column-drop-zone theme-column-container"
-                          [attr.data-row-id]="row.rowId"
-                          [attr.data-column-index]="columnIndex"
-                          [class.occupied]="getFieldsInColumn(row.rowId, columnIndex).length > 0"
-                          cdkDropList
-                          [cdkDropListData]="{ rowId: row.rowId, columnIndex: columnIndex }"
-                          [cdkDropListEnterPredicate]="canDropIntoColumn"
-                          (cdkDropListDropped)="onFieldDroppedInRow($event)"
-                        >
-                          @if (getFieldsInColumn(row.rowId, columnIndex); as columnFields) {
-                            @if (columnFields.length > 0) {
-                              <!-- Occupied column: render fields vertically stacked -->
-                              <div class="column-fields-container">
-                                @for (
-                                  field of columnFields;
-                                  track field.id;
-                                  let fieldIndex = $index
-                                ) {
-                                  <!-- Field wrapper with drag support -->
-                                  <div class="field-wrapper mb-3" cdkDrag [cdkDragData]="field">
-                                    <div
-                                      class="field-preview-container p-4 bg-white border-2 border-solid border-gray-300 rounded-lg transition-all relative group hover:border-blue-400 hover:shadow-md"
-                                      [class.border-blue-500]="isFieldSelected(field)"
-                                      [class.shadow-md]="isFieldSelected(field)"
-                                      [class.last:mb-0]="fieldIndex === columnFields.length - 1"
-                                      (click)="onFieldClicked(field)"
-                                      tabindex="0"
-                                      role="listitem"
-                                      [attr.aria-label]="field.label + ' field'"
-                                    >
-                                      <!-- Delete Button (Top Right) -->
-                                      <button
-                                        type="button"
-                                        class="delete-button-card absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                        (click)="onDeleteFieldFromCard($event, field)"
-                                        [attr.aria-label]="'Delete ' + field.label"
-                                        title="Delete field"
-                                      >
-                                        <i class="pi pi-times text-red-500 hover:text-red-700"></i>
-                                      </button>
+                        <div class="column-wrapper">
+                          @if (hasSubColumns(row.rowId, columnIndex)) {
+                            <!-- Sub-column layout: render sub-column drop zones -->
+                            <div
+                              class="sub-columns-container"
+                              [style.grid-template-columns]="
+                                getSubColumnWidths(row.rowId, columnIndex)
+                              "
+                              style="display: grid; gap: 12px; min-height: 100px;"
+                            >
+                              @for (
+                                subColumn of subColumnsForColumn(row.rowId, columnIndex);
+                                track subColumn.index
+                              ) {
+                                <div
+                                  class="sub-column-drop-zone"
+                                  [class.sub-column-drop-zone--empty]="
+                                    isSubColumnEmpty(row.rowId, columnIndex, subColumn.index)
+                                  "
+                                  [id]="
+                                    'subColumn-' +
+                                    row.rowId +
+                                    '-' +
+                                    columnIndex +
+                                    '-' +
+                                    subColumn.index
+                                  "
+                                  cdkDropList
+                                  [cdkDropListData]="
+                                    getSubColumnDropData(row.rowId, columnIndex, subColumn.index)
+                                  "
+                                  [cdkDropListEnterPredicate]="canDropIntoColumn"
+                                  (cdkDropListDropped)="onFieldDroppedInRow($event)"
+                                  role="region"
+                                  [attr.aria-label]="
+                                    'Sub-column ' +
+                                    (subColumn.index + 1) +
+                                    ' of ' +
+                                    subColumnsForColumn(row.rowId, columnIndex).length +
+                                    ' drop zone'
+                                  "
+                                >
+                                  @if (isSubColumnEmpty(row.rowId, columnIndex, subColumn.index)) {
+                                    <!-- Empty sub-column placeholder -->
+                                    <div class="empty-placeholder">
+                                      <i class="pi pi-inbox text-gray-300 text-2xl mb-2"></i>
+                                      <span class="text-xs theme-help-text">Drop field here</span>
+                                    </div>
+                                  }
 
+                                  <!-- Fields in sub-column -->
+                                  @for (
+                                    field of fieldsInSubColumn(
+                                      row.rowId,
+                                      columnIndex,
+                                      subColumn.index
+                                    );
+                                    track field.id;
+                                    let fieldIndex = $index
+                                  ) {
+                                    <div class="field-wrapper mb-3" cdkDrag [cdkDragData]="field">
                                       <div
-                                        class="field-preview-content cursor-pointer"
-                                        (click)="onFieldPreviewClicked($event, field)"
+                                        class="field-preview-container p-4 bg-white border-2 border-solid border-gray-300 rounded-lg transition-all relative group hover:border-blue-400 hover:shadow-md"
+                                        [class.border-blue-500]="isFieldSelected(field)"
+                                        [class.shadow-md]="isFieldSelected(field)"
+                                        [class.last:mb-0]="
+                                          fieldIndex ===
+                                          fieldsInSubColumn(row.rowId, columnIndex, subColumn.index)
+                                            .length -
+                                            1
+                                        "
+                                        (click)="onFieldClicked(field)"
+                                        tabindex="0"
+                                        role="listitem"
+                                        [attr.aria-label]="field.label + ' field'"
                                       >
-                                        <app-field-preview-renderer
-                                          [field]="field"
-                                          (labelChanged)="onLabelChanged(field, $event)"
-                                          (settingsClick)="openSettingsModal(field)"
-                                          (fieldUpdated)="onFieldUpdated(field.id, $event)"
-                                        />
+                                        <!-- Delete Button (Top Right) -->
+                                        <button
+                                          type="button"
+                                          class="delete-button-card absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                          (click)="onDeleteFieldFromCard($event, field)"
+                                          [attr.aria-label]="'Delete ' + field.label"
+                                          title="Delete field"
+                                        >
+                                          <i
+                                            class="pi pi-times text-red-500 hover:text-red-700"
+                                          ></i>
+                                        </button>
+
+                                        <div
+                                          class="field-preview-content cursor-pointer"
+                                          (click)="onFieldPreviewClicked($event, field)"
+                                        >
+                                          <app-field-preview-renderer
+                                            [field]="field"
+                                            (labelChanged)="onLabelChanged(field, $event)"
+                                            (settingsClick)="openSettingsModal(field)"
+                                            (fieldUpdated)="onFieldUpdated(field.id, $event)"
+                                          />
+                                        </div>
                                       </div>
                                     </div>
+                                  }
+                                </div>
+                              }
+                            </div>
+                          } @else {
+                            <!-- Parent column drop zone (no sub-columns) -->
+                            <div
+                              class="column-drop-zone theme-column-container"
+                              [attr.data-row-id]="row.rowId"
+                              [attr.data-column-index]="columnIndex"
+                              [class.occupied]="
+                                getFieldsInColumn(row.rowId, columnIndex).length > 0
+                              "
+                              cdkDropList
+                              [cdkDropListData]="getParentColumnDropData(row.rowId, columnIndex)"
+                              [cdkDropListEnterPredicate]="canDropIntoColumn"
+                              (cdkDropListDropped)="onFieldDroppedInRow($event)"
+                            >
+                              @if (getFieldsInColumn(row.rowId, columnIndex); as columnFields) {
+                                @if (columnFields.length > 0) {
+                                  <!-- Occupied column: render fields vertically stacked -->
+                                  <div class="column-fields-container">
+                                    @for (
+                                      field of columnFields;
+                                      track field.id;
+                                      let fieldIndex = $index
+                                    ) {
+                                      <!-- Field wrapper with drag support -->
+                                      <div class="field-wrapper mb-3" cdkDrag [cdkDragData]="field">
+                                        <div
+                                          class="field-preview-container p-4 bg-white border-2 border-solid border-gray-300 rounded-lg transition-all relative group hover:border-blue-400 hover:shadow-md"
+                                          [class.border-blue-500]="isFieldSelected(field)"
+                                          [class.shadow-md]="isFieldSelected(field)"
+                                          [class.last:mb-0]="fieldIndex === columnFields.length - 1"
+                                          (click)="onFieldClicked(field)"
+                                          tabindex="0"
+                                          role="listitem"
+                                          [attr.aria-label]="field.label + ' field'"
+                                        >
+                                          <!-- Delete Button (Top Right) -->
+                                          <button
+                                            type="button"
+                                            class="delete-button-card absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                            (click)="onDeleteFieldFromCard($event, field)"
+                                            [attr.aria-label]="'Delete ' + field.label"
+                                            title="Delete field"
+                                          >
+                                            <i
+                                              class="pi pi-times text-red-500 hover:text-red-700"
+                                            ></i>
+                                          </button>
+
+                                          <div
+                                            class="field-preview-content cursor-pointer"
+                                            (click)="onFieldPreviewClicked($event, field)"
+                                          >
+                                            <app-field-preview-renderer
+                                              [field]="field"
+                                              (labelChanged)="onLabelChanged(field, $event)"
+                                              (settingsClick)="openSettingsModal(field)"
+                                              (fieldUpdated)="onFieldUpdated(field.id, $event)"
+                                            />
+                                          </div>
+                                        </div>
+                                      </div>
+                                    }
+                                  </div>
+                                } @else {
+                                  <!-- Empty column: placeholder -->
+                                  <div class="empty-column-placeholder">
+                                    <i class="pi pi-inbox text-gray-300 text-2xl mb-2"></i>
+                                    <span class="text-xs theme-help-text">Drop field here</span>
                                   </div>
                                 }
-                              </div>
-                            } @else {
-                              <!-- Empty column: placeholder -->
-                              <div class="empty-column-placeholder">
-                                <i class="pi pi-inbox text-gray-300 text-2xl mb-2"></i>
-                                <span class="text-xs theme-help-text">Drop field here</span>
-                              </div>
-                            }
+                              }
+                            </div>
                           }
                         </div>
                       }
@@ -499,6 +613,40 @@ export class FormCanvasComponent {
   });
 
   /**
+   * Computed signal: Fields grouped by sub-column position for O(1) lookup.
+   * Map key format: "${rowId}-${columnIndex}-${subColumnIndex}"
+   * Performance optimization to avoid filtering on every render.
+   */
+  protected readonly fieldsBySubColumn = computed(() => {
+    const map = new Map<string, FormField[]>();
+
+    this.formBuilderService.formFields().forEach((field) => {
+      if (
+        field.position?.rowId &&
+        field.position?.columnIndex !== undefined &&
+        field.position?.subColumnIndex !== undefined
+      ) {
+        const key = `${field.position.rowId}-${field.position.columnIndex}-${field.position.subColumnIndex}`;
+        if (!map.has(key)) {
+          map.set(key, []);
+        }
+        map.get(key)!.push(field);
+      }
+    });
+
+    // Sort fields within each sub-column by orderInColumn
+    map.forEach((fields) => {
+      fields.sort((a, b) => {
+        const orderA = a.position?.orderInColumn ?? 0;
+        const orderB = b.position?.orderInColumn ?? 0;
+        return orderA - orderB;
+      });
+    });
+
+    return map;
+  });
+
+  /**
    * Handles drop events on the canvas.
    * Either adds a new field from the palette or reorders existing fields.
    * @param event - The CdkDragDrop event containing drag-drop metadata
@@ -743,6 +891,29 @@ export class FormCanvasComponent {
       default:
         return 'spacing-normal';
     }
+  }
+
+  /**
+   * Generates CSS Grid template columns string for a row.
+   * Uses custom columnWidths if defined, otherwise falls back to equal-width columns.
+   *
+   * @param row - Row configuration object
+   * @returns CSS grid-template-columns value (e.g., "1fr 3fr" or "repeat(2, 1fr)")
+   *
+   * @example
+   * // Row with custom widths
+   * getColumnGridTemplate({ columnCount: 2, columnWidths: ['1fr', '3fr'] })
+   * // Returns: "1fr 3fr"
+   *
+   * // Row without custom widths (equal width fallback)
+   * getColumnGridTemplate({ columnCount: 3 })
+   * // Returns: "repeat(3, 1fr)"
+   */
+  getColumnGridTemplate(row: { columnCount: number; columnWidths?: string[] }): string {
+    if (row.columnWidths && row.columnWidths.length === row.columnCount) {
+      return row.columnWidths.join(' '); // Custom widths: "1fr 3fr"
+    }
+    return `repeat(${row.columnCount}, 1fr)`; // Equal width fallback
   }
 
   /**
@@ -1028,6 +1199,111 @@ export class FormCanvasComponent {
   }
 
   /**
+   * Check if a column has sub-columns configured.
+   * Story 27.5: Sub-Column Drag-Drop Support
+   * @param rowId - Row identifier
+   * @param columnIndex - Column index to check
+   * @returns True if sub-columns are configured for this column
+   */
+  protected hasSubColumns(rowId: string, columnIndex: number): boolean {
+    const key = `${rowId}-${columnIndex}`;
+    return this.formBuilderService.subColumnsByRowColumn().has(key);
+  }
+
+  /**
+   * Get drop data for sub-column drop zone.
+   * Story 27.5: Type-safe helper for sub-column drop data
+   * @param rowId - Row identifier
+   * @param columnIndex - Parent column index
+   * @param subColumnIndex - Sub-column index
+   * @returns Drop data with correct typing
+   */
+  protected getSubColumnDropData(
+    rowId: string,
+    columnIndex: number,
+    subColumnIndex: number,
+  ): { rowId: string; columnIndex: number; subColumnIndex?: number } {
+    return { rowId, columnIndex, subColumnIndex };
+  }
+
+  /**
+   * Get drop data for parent column drop zone.
+   * Story 27.5: Type-safe helper for parent column drop data
+   * @param rowId - Row identifier
+   * @param columnIndex - Column index
+   * @returns Drop data with correct typing
+   */
+  protected getParentColumnDropData(
+    rowId: string,
+    columnIndex: number,
+  ): { rowId: string; columnIndex: number; subColumnIndex?: number } {
+    return { rowId, columnIndex, subColumnIndex: undefined };
+  }
+
+  /**
+   * Get array of sub-column indices for rendering.
+   * Story 27.5: Sub-Column Drag-Drop Support
+   * @param rowId - Row identifier
+   * @param columnIndex - Parent column index
+   * @returns Array of sub-column indices [{index: 0}, {index: 1}, ...]
+   */
+  protected subColumnsForColumn(rowId: string, columnIndex: number): Array<{ index: number }> {
+    const key = `${rowId}-${columnIndex}`;
+    const config = this.formBuilderService.subColumnsByRowColumn().get(key);
+    if (!config) return [];
+    return Array.from({ length: config.subColumnCount }, (_, i) => ({ index: i }));
+  }
+
+  /**
+   * Get CSS grid-template-columns value for sub-columns.
+   * Story 27.5: Sub-Column Drag-Drop Support
+   * @param rowId - Row identifier
+   * @param columnIndex - Parent column index
+   * @returns CSS grid-template-columns string (e.g., "1fr 2fr" or "repeat(2, 1fr)")
+   */
+  protected getSubColumnWidths(rowId: string, columnIndex: number): string {
+    const key = `${rowId}-${columnIndex}`;
+    const config = this.formBuilderService.subColumnsByRowColumn().get(key);
+    if (!config) return '1fr';
+
+    // Use custom widths if defined, otherwise equal-width fallback
+    if (config.subColumnWidths && config.subColumnWidths.length === config.subColumnCount) {
+      return config.subColumnWidths.join(' ');
+    }
+    return `repeat(${config.subColumnCount}, 1fr)`;
+  }
+
+  /**
+   * Get all fields in a specific sub-column, sorted by orderInColumn.
+   * Story 27.5: Sub-Column Drag-Drop Support
+   * Performance optimized using computed signal for O(1) lookup instead of O(n) filtering.
+   * @param rowId - Row identifier
+   * @param columnIndex - Parent column index
+   * @param subColumnIndex - Sub-column index within parent column
+   * @returns Array of fields in the sub-column (already sorted by orderInColumn)
+   */
+  protected fieldsInSubColumn(
+    rowId: string,
+    columnIndex: number,
+    subColumnIndex: number,
+  ): FormField[] {
+    const key = `${rowId}-${columnIndex}-${subColumnIndex}`;
+    return this.fieldsBySubColumn().get(key) ?? [];
+  }
+
+  /**
+   * Check if a sub-column is empty (has no fields).
+   * Story 27.5: Sub-Column Drag-Drop Support
+   * @param rowId - Row identifier
+   * @param columnIndex - Parent column index
+   * @param subColumnIndex - Sub-column index
+   * @returns True if sub-column has no fields
+   */
+  protected isSubColumnEmpty(rowId: string, columnIndex: number, subColumnIndex: number): boolean {
+    return this.fieldsInSubColumn(rowId, columnIndex, subColumnIndex).length === 0;
+  }
+
+  /**
    * Can drop predicate for row-column drop zones.
    * With multi-field column support, all drops are now allowed (no more "occupied" restriction).
    * @param drag - The CDK dragged item
@@ -1040,27 +1316,62 @@ export class FormCanvasComponent {
   };
 
   /**
-   * Handle field dropped into row-column position.
+   * Handle field dropped into row-column or sub-column position.
    * Creates new field from palette or moves existing field to new position.
-   * Calculates orderInColumn based on drop index within column.
+   * Calculates orderInColumn based on drop index within column or sub-column.
    * Assigns stepId to field when step mode is enabled.
-   * @param event - The CdkDragDrop event with row-column position data
+   * Story 27.5: Extended to support sub-column positioning via subColumnIndex
+   * @param event - The CdkDragDrop event with row-column-subColumn position data
    */
-  onFieldDroppedInRow(event: CdkDragDrop<{ rowId: string; columnIndex: number }>): void {
-    const dropData = event.container.data as { rowId: string; columnIndex: number };
+  onFieldDroppedInRow(
+    event: CdkDragDrop<{ rowId: string; columnIndex: number; subColumnIndex?: number }>,
+  ): void {
+    // Runtime validation of drop data structure (Story 27.5 - REL-001)
+    const dropData = event.container.data;
+    if (
+      !dropData ||
+      typeof dropData !== 'object' ||
+      typeof dropData.rowId !== 'string' ||
+      typeof dropData.columnIndex !== 'number'
+    ) {
+      console.error('Invalid drop data structure:', dropData);
+      this.showErrorToast('Invalid drop position. Please try again.');
+      return;
+    }
+
+    const validatedDropData = dropData as {
+      rowId: string;
+      columnIndex: number;
+      subColumnIndex?: number;
+    };
     const dragData = event.item.data;
 
-    // Get fields currently in target column
-    const columnFields = this.getFieldsInColumn(dropData.rowId, dropData.columnIndex);
+    // Get fields in target column or sub-column
+    let targetFields: FormField[];
+    if (validatedDropData.subColumnIndex !== undefined) {
+      // Dropping into sub-column: filter by subColumnIndex
+      targetFields = this.fieldsInSubColumn(
+        validatedDropData.rowId,
+        validatedDropData.columnIndex,
+        validatedDropData.subColumnIndex,
+      );
+    } else {
+      // Dropping into parent column: filter out fields with subColumnIndex
+      targetFields = this.getFieldsInColumn(
+        validatedDropData.rowId,
+        validatedDropData.columnIndex,
+      ).filter((f) => f.position?.subColumnIndex === undefined);
+    }
 
-    // Calculate orderInColumn based on drop index (defaults to end of column)
-    const orderInColumn = event.currentIndex ?? columnFields.length;
+    // Calculate orderInColumn based on drop index (defaults to end of column/sub-column)
+    const orderInColumn = event.currentIndex ?? targetFields.length;
 
     // Check if dragging field type from palette (create new field)
     if (this.isFieldTypeDefinition(dragData)) {
       this.createFieldAtPosition(dragData.type, {
-        rowId: dropData.rowId,
-        columnIndex: dropData.columnIndex,
+        rowId: validatedDropData.rowId,
+        columnIndex: validatedDropData.columnIndex,
+        subColumnIndex: validatedDropData.subColumnIndex,
         orderInColumn,
       });
       return;
@@ -1081,8 +1392,9 @@ export class FormCanvasComponent {
     }
 
     const position: FieldPosition = {
-      rowId: dropData.rowId,
-      columnIndex: dropData.columnIndex,
+      rowId: validatedDropData.rowId,
+      columnIndex: validatedDropData.columnIndex,
+      subColumnIndex: validatedDropData.subColumnIndex, // Includes undefined for parent column drops
       orderInColumn,
       stepId: this.stepFormEnabled() ? this.activeStepId() || undefined : undefined,
     };
@@ -1091,6 +1403,7 @@ export class FormCanvasComponent {
     if (
       field.position?.rowId === position.rowId &&
       field.position?.columnIndex === position.columnIndex &&
+      field.position?.subColumnIndex === position.subColumnIndex &&
       field.position?.orderInColumn === orderInColumn
     ) {
       return;
@@ -1101,23 +1414,30 @@ export class FormCanvasComponent {
   }
 
   /**
-   * Create new field at specific row-column position.
-   * Called when dropping field type from palette into row-column zone.
+   * Create new field at specific row-column or sub-column position.
+   * Called when dropping field type from palette into row-column or sub-column zone.
    * Assigns stepId when step mode is enabled.
+   * Story 27.5: Extended to support sub-column positioning
    * @param type - The field type to create
-   * @param position - The row-column position with orderInColumn
+   * @param position - The row-column-subColumn position with orderInColumn
    */
   private createFieldAtPosition(
     type: FormFieldType,
-    position: { rowId: string; columnIndex: number; orderInColumn?: number },
+    position: {
+      rowId: string;
+      columnIndex: number;
+      subColumnIndex?: number;
+      orderInColumn?: number;
+    },
   ): void {
     // Create field using service (auto-generates ID and defaults)
     const newField = this.formBuilderService.addFieldFromType(type);
 
-    // Set position after creation (includes orderInColumn and stepId)
+    // Set position after creation (includes orderInColumn, subColumnIndex, and stepId)
     this.formBuilderService.setFieldPosition(newField.id, {
       rowId: position.rowId,
       columnIndex: position.columnIndex,
+      subColumnIndex: position.subColumnIndex, // Undefined for parent column drops
       orderInColumn: position.orderInColumn ?? 0,
       stepId: this.stepFormEnabled() ? this.activeStepId() || undefined : undefined,
     });

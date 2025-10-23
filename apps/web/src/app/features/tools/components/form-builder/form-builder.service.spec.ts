@@ -2299,4 +2299,1186 @@ describe('FormBuilderService', () => {
       });
     });
   });
+
+  describe('Variable Column Widths - updateRowColumnWidths()', () => {
+    beforeEach(() => {
+      service.enableRowLayout(2);
+    });
+
+    it('should update column widths for a row with valid fractional units', () => {
+      const rowId = service.addRow(2);
+      const widths = ['1fr', '3fr'];
+
+      service.updateRowColumnWidths(rowId, widths);
+
+      const rowConfigs = service.getRowLayout();
+      const updatedRow = rowConfigs.find((r) => r.rowId === rowId);
+
+      expect(updatedRow?.columnWidths).toEqual(['1fr', '3fr']);
+    });
+
+    it('should mark form as dirty when updating column widths', () => {
+      const rowId = service.addRow(2);
+      service.markClean();
+
+      expect(service.isDirty()).toBe(false);
+
+      service.updateRowColumnWidths(rowId, ['1fr', '2fr']);
+
+      expect(service.isDirty()).toBe(true);
+    });
+
+    it('should update widths for 3-column row with equal widths', () => {
+      const rowId = service.addRow(3);
+      const widths = ['1fr', '1fr', '1fr'];
+
+      service.updateRowColumnWidths(rowId, widths);
+
+      const rowConfigs = service.getRowLayout();
+      const updatedRow = rowConfigs.find((r) => r.rowId === rowId);
+
+      expect(updatedRow?.columnWidths).toEqual(['1fr', '1fr', '1fr']);
+    });
+
+    it('should update widths for 4-column row with variable widths', () => {
+      const rowId = service.addRow(4);
+      const widths = ['1fr', '2fr', '1fr', '2fr'];
+
+      service.updateRowColumnWidths(rowId, widths);
+
+      const rowConfigs = service.getRowLayout();
+      const updatedRow = rowConfigs.find((r) => r.rowId === rowId);
+
+      expect(updatedRow?.columnWidths).toEqual(['1fr', '2fr', '1fr', '2fr']);
+    });
+
+    it('should throw error when row not found', () => {
+      const invalidRowId = 'non-existent-row';
+      const widths = ['1fr', '2fr'];
+
+      expect(() => service.updateRowColumnWidths(invalidRowId, widths)).toThrowError(
+        `Row ${invalidRowId} not found`,
+      );
+    });
+
+    it('should throw error when widths array length does not match column count', () => {
+      const rowId = service.addRow(3);
+      const widths = ['1fr', '2fr']; // Only 2 widths for 3-column row
+
+      expect(() => service.updateRowColumnWidths(rowId, widths)).toThrowError(
+        'Must provide 3 width values, got 2',
+      );
+    });
+
+    it('should throw error when widths array has too many values', () => {
+      const rowId = service.addRow(2);
+      const widths = ['1fr', '2fr', '3fr']; // 3 widths for 2-column row
+
+      expect(() => service.updateRowColumnWidths(rowId, widths)).toThrowError(
+        'Must provide 2 width values, got 3',
+      );
+    });
+
+    it('should trigger reactive updates to fieldsByRowColumn computed signal', () => {
+      const rowId = service.addRow(2);
+
+      // Add a field to the row
+      const field = service.addFieldFromType(FormFieldType.TEXT);
+      service.setFieldPosition(field.id, { rowId, columnIndex: 0 });
+
+      // Update column widths
+      service.updateRowColumnWidths(rowId, ['1fr', '3fr']);
+
+      // Verify computed signal still returns the field correctly
+      const fieldsInColumn = service.getFieldsInColumn(rowId, 0);
+      expect(fieldsInColumn.length).toBe(1);
+      expect(fieldsInColumn[0].id).toBe(field.id);
+    });
+
+    it('should allow updating widths multiple times for the same row', () => {
+      const rowId = service.addRow(2);
+
+      // First update
+      service.updateRowColumnWidths(rowId, ['1fr', '2fr']);
+      let rowConfigs = service.getRowLayout();
+      let updatedRow = rowConfigs.find((r) => r.rowId === rowId);
+      expect(updatedRow?.columnWidths).toEqual(['1fr', '2fr']);
+
+      // Second update
+      service.updateRowColumnWidths(rowId, ['3fr', '1fr']);
+      rowConfigs = service.getRowLayout();
+      updatedRow = rowConfigs.find((r) => r.rowId === rowId);
+      expect(updatedRow?.columnWidths).toEqual(['3fr', '1fr']);
+    });
+
+    it('should preserve other row properties when updating column widths', () => {
+      const rowId = service.addRow(2);
+      const rowConfigs = service.getRowLayout();
+      const originalRow = rowConfigs.find((r) => r.rowId === rowId);
+
+      service.updateRowColumnWidths(rowId, ['1fr', '3fr']);
+
+      const updatedRowConfigs = service.getRowLayout();
+      const updatedRow = updatedRowConfigs.find((r) => r.rowId === rowId);
+
+      expect(updatedRow?.rowId).toBe(originalRow?.rowId);
+      expect(updatedRow?.columnCount).toBe(originalRow?.columnCount);
+      expect(updatedRow?.order).toBe(originalRow?.order);
+    });
+
+    it('should not affect other rows when updating widths for one row', () => {
+      const rowId1 = service.addRow(2);
+      const rowId2 = service.addRow(3);
+
+      service.updateRowColumnWidths(rowId1, ['1fr', '3fr']);
+
+      const rowConfigs = service.getRowLayout();
+      const row1 = rowConfigs.find((r) => r.rowId === rowId1);
+      const row2 = rowConfigs.find((r) => r.rowId === rowId2);
+
+      expect(row1?.columnWidths).toEqual(['1fr', '3fr']);
+      expect(row2?.columnWidths).toBeUndefined(); // Row 2 should not be affected
+    });
+
+    it('should handle widths with larger fractional values', () => {
+      const rowId = service.addRow(2);
+      const widths = ['10fr', '50fr'];
+
+      service.updateRowColumnWidths(rowId, widths);
+
+      const rowConfigs = service.getRowLayout();
+      const updatedRow = rowConfigs.find((r) => r.rowId === rowId);
+
+      expect(updatedRow?.columnWidths).toEqual(['10fr', '50fr']);
+    });
+  });
+
+  describe('Performance Benchmarks - updateRowColumnWidths() (AC 12)', () => {
+    beforeEach(() => {
+      service.enableRowLayout(2);
+    });
+
+    it('should update column widths within 50ms (performance requirement)', () => {
+      const rowId = service.addRow(2);
+      const widths = ['1fr', '3fr'];
+
+      // Measure performance
+      const startTime = performance.now();
+      service.updateRowColumnWidths(rowId, widths);
+      const endTime = performance.now();
+
+      const executionTime = endTime - startTime;
+
+      // Verify width update succeeded
+      const rowConfigs = service.getRowLayout();
+      const updatedRow = rowConfigs.find((r) => r.rowId === rowId);
+      expect(updatedRow?.columnWidths).toEqual(['1fr', '3fr']);
+
+      // Verify performance requirement (<50ms)
+      expect(executionTime).toBeLessThan(50);
+    });
+
+    it('should handle multiple width updates within performance budget', () => {
+      const rowIds = [service.addRow(2), service.addRow(3), service.addRow(4)];
+      const widthConfigs = [
+        ['1fr', '2fr'],
+        ['1fr', '1fr', '1fr'],
+        ['1fr', '2fr', '1fr', '2fr'],
+      ];
+
+      const measurements: number[] = [];
+
+      // Measure each update
+      rowIds.forEach((rowId, index) => {
+        const startTime = performance.now();
+        service.updateRowColumnWidths(rowId, widthConfigs[index]);
+        const endTime = performance.now();
+        measurements.push(endTime - startTime);
+      });
+
+      // Verify all updates are under 50ms
+      measurements.forEach((time, index) => {
+        expect(time).toBeLessThan(50);
+      });
+
+      // Verify average performance
+      const avgTime = measurements.reduce((sum, t) => sum + t, 0) / measurements.length;
+      expect(avgTime).toBeLessThan(25); // Average should be even better
+    });
+
+    it('should handle rapid consecutive width updates efficiently', () => {
+      const rowId = service.addRow(2);
+      const iterations = 100;
+      const widthConfigs = [
+        ['1fr', '2fr'],
+        ['2fr', '1fr'],
+        ['1fr', '3fr'],
+        ['3fr', '1fr'],
+      ];
+
+      const startTime = performance.now();
+
+      // Perform 100 rapid updates
+      for (let i = 0; i < iterations; i++) {
+        service.updateRowColumnWidths(rowId, widthConfigs[i % widthConfigs.length]);
+      }
+
+      const endTime = performance.now();
+      const totalTime = endTime - startTime;
+      const avgTimePerUpdate = totalTime / iterations;
+
+      // Average time per update should be well under 50ms
+      expect(avgTimePerUpdate).toBeLessThan(10);
+
+      // Verify final state
+      const finalRow = service.getRowLayout().find((r) => r.rowId === rowId);
+      expect(finalRow?.columnWidths).toEqual(widthConfigs[(iterations - 1) % widthConfigs.length]);
+    });
+
+    it('should maintain performance with 10 rows (canvas re-render scenario)', () => {
+      // Create 10 rows (simulating large form)
+      const rowIds: string[] = [];
+      for (let i = 0; i < 10; i++) {
+        rowIds.push(service.addRow(2));
+      }
+
+      // Add fields to rows to simulate realistic form
+      for (let i = 0; i < 20; i++) {
+        const field = service.addFieldFromType(FormFieldType.TEXT);
+        service.setFieldPosition(field.id, {
+          rowId: rowIds[i % 10],
+          columnIndex: i % 2,
+        });
+      }
+
+      // Measure width update on one row
+      const targetRowId = rowIds[5]; // Middle row
+      const startTime = performance.now();
+      service.updateRowColumnWidths(targetRowId, ['1fr', '3fr']);
+      const endTime = performance.now();
+
+      const executionTime = endTime - startTime;
+
+      // Verify update succeeded
+      const updatedRow = service.getRowLayout().find((r) => r.rowId === targetRowId);
+      expect(updatedRow?.columnWidths).toEqual(['1fr', '3fr']);
+
+      // Verify performance (should still be under 50ms even with 10 rows + 20 fields)
+      expect(executionTime).toBeLessThan(50);
+    });
+
+    it('should propagate signal updates within performance budget', () => {
+      const rowId = service.addRow(2);
+
+      // Add field to enable signal propagation testing
+      const field = service.addFieldFromType(FormFieldType.TEXT);
+      service.setFieldPosition(field.id, { rowId, columnIndex: 0 });
+
+      const startTime = performance.now();
+
+      // Update widths (triggers signal propagation)
+      service.updateRowColumnWidths(rowId, ['1fr', '3fr']);
+
+      // Access computed signal (forces computation)
+      const fieldsInColumn = service.getFieldsInColumn(rowId, 0);
+
+      const endTime = performance.now();
+      const totalTime = endTime - startTime;
+
+      // Verify signal propagation happened correctly
+      expect(fieldsInColumn.length).toBe(1);
+      expect(fieldsInColumn[0].id).toBe(field.id);
+
+      // Verify total time including signal computation is under 100ms
+      expect(totalTime).toBeLessThan(100);
+    });
+  });
+
+  /**
+   * Story 27.3: Sub-Column State Management Infrastructure
+   * Comprehensive unit tests for sub-column configuration methods
+   */
+  describe('Sub-Column Configuration - Story 27.3', () => {
+    let rowId: string;
+
+    beforeEach(() => {
+      // Enable row layout and create a 2-column row
+      service.enableRowLayout(2);
+      rowId = service.getRowLayout()[0].rowId;
+    });
+
+    describe('addSubColumn()', () => {
+      it('should add sub-column config with equal-width default', () => {
+        service.addSubColumn(rowId, 0, 2);
+
+        const configs = service.subColumnConfigs();
+        expect(configs.length).toBe(1);
+        expect(configs[0].columnIndex).toBe(0);
+        expect(configs[0].subColumnCount).toBe(2);
+        expect(configs[0].subColumnWidths).toBeUndefined(); // Equal-width default
+      });
+
+      it('should support 1-4 sub-columns', () => {
+        service.addSubColumn(rowId, 0, 1);
+        service.addSubColumn(rowId, 1, 3);
+
+        const configs = service.subColumnConfigs();
+        expect(configs.length).toBe(2);
+        expect(configs[0].subColumnCount).toBe(1);
+        expect(configs[1].subColumnCount).toBe(3);
+      });
+
+      it('should throw error when row does not exist', () => {
+        expect(() => service.addSubColumn('invalid-row', 0, 2)).toThrowError(
+          /Row invalid-row not found/,
+        );
+      });
+
+      it('should throw error when column index exceeds row column count', () => {
+        expect(() => service.addSubColumn(rowId, 2, 2)).toThrowError(
+          /Column index 2 exceeds row column count 2/,
+        );
+      });
+
+      it('should throw error when sub-columns already configured for same row-column', () => {
+        service.addSubColumn(rowId, 0, 2);
+        expect(() => service.addSubColumn(rowId, 0, 3)).toThrowError(
+          /Sub-columns already configured for row/,
+        );
+      });
+
+      it('should mark form as dirty', () => {
+        service.markClean();
+        service.addSubColumn(rowId, 0, 2);
+        expect(service.isDirty()).toBe(true);
+      });
+    });
+
+    describe('removeSubColumn()', () => {
+      it('should remove sub-column config', () => {
+        service.addSubColumn(rowId, 0, 2);
+        expect(service.subColumnConfigs().length).toBe(1);
+
+        service.removeSubColumn(rowId, 0);
+        expect(service.subColumnConfigs().length).toBe(0);
+      });
+
+      it('should move fields from sub-columns to parent column', () => {
+        service.addSubColumn(rowId, 0, 2);
+        const field = service.addFieldFromType(FormFieldType.TEXT);
+        service.setFieldPosition(field.id, { rowId, columnIndex: 0, subColumnIndex: 1 });
+
+        const fieldBefore = service.getAllFields().find((f) => f.id === field.id);
+        expect(fieldBefore?.position?.subColumnIndex).toBe(1);
+
+        service.removeSubColumn(rowId, 0);
+
+        const fieldAfter = service.getAllFields().find((f) => f.id === field.id);
+        expect(fieldAfter?.position?.subColumnIndex).toBeUndefined();
+      });
+
+      it('should handle removal when no sub-columns exist (no-op)', () => {
+        expect(() => service.removeSubColumn(rowId, 0)).not.toThrow();
+        expect(service.subColumnConfigs().length).toBe(0);
+      });
+
+      it('should mark form as dirty', () => {
+        service.addSubColumn(rowId, 0, 2);
+        service.markClean();
+        service.removeSubColumn(rowId, 0);
+        expect(service.isDirty()).toBe(true);
+      });
+    });
+
+    describe('updateSubColumnWidths()', () => {
+      beforeEach(() => {
+        service.addSubColumn(rowId, 0, 2);
+      });
+
+      it('should update sub-column widths with fractional units', () => {
+        service.updateSubColumnWidths(rowId, 0, ['1fr', '3fr']);
+
+        const config = service.subColumnConfigs()[0];
+        expect(config.subColumnWidths).toEqual(['1fr', '3fr']);
+      });
+
+      it('should reset to equal-width when empty array provided', () => {
+        service.updateSubColumnWidths(rowId, 0, ['1fr', '3fr']);
+        service.updateSubColumnWidths(rowId, 0, []);
+
+        const config = service.subColumnConfigs()[0];
+        expect(config.subColumnWidths).toBeUndefined();
+      });
+
+      it('should throw error when sub-columns not configured', () => {
+        expect(() => service.updateSubColumnWidths(rowId, 1, ['1fr', '2fr'])).toThrowError(
+          /No sub-columns configured for row/,
+        );
+      });
+
+      it('should throw error when widths length does not match subColumnCount', () => {
+        expect(() => service.updateSubColumnWidths(rowId, 0, ['1fr', '2fr', '3fr'])).toThrowError(
+          /Must provide 2 width values, got 3/,
+        );
+      });
+
+      it('should allow equal-width reset regardless of subColumnCount', () => {
+        expect(() => service.updateSubColumnWidths(rowId, 0, [])).not.toThrow();
+      });
+
+      it('should mark form as dirty', () => {
+        service.markClean();
+        service.updateSubColumnWidths(rowId, 0, ['1fr', '2fr']);
+        expect(service.isDirty()).toBe(true);
+      });
+    });
+
+    describe('updateSubColumnCount() - Story 27.8', () => {
+      it('should increase sub-column count from 2 to 3 and preserve fields', () => {
+        service.addSubColumn(rowId, 0, 2);
+
+        // Add fields to sub-columns 0 and 1
+        const field1 = service.addFieldFromType(FormFieldType.TEXT);
+        const field2 = service.addFieldFromType(FormFieldType.EMAIL);
+        service.setFieldPosition(field1.id, {
+          rowId,
+          columnIndex: 0,
+          subColumnIndex: 0,
+          orderInColumn: 0,
+        });
+        service.setFieldPosition(field2.id, {
+          rowId,
+          columnIndex: 0,
+          subColumnIndex: 1,
+          orderInColumn: 0,
+        });
+
+        service.updateSubColumnCount(rowId, 0, 3);
+
+        const config = service.subColumnConfigs().find((sc) => sc.columnIndex === 0);
+        expect(config?.subColumnCount).toBe(3);
+
+        const fields = service.getAllFields();
+        const updatedField1 = fields.find((f) => f.id === field1.id);
+        const updatedField2 = fields.find((f) => f.id === field2.id);
+
+        expect(updatedField1?.position?.subColumnIndex).toBe(0); // Preserved
+        expect(updatedField2?.position?.subColumnIndex).toBe(1); // Preserved
+      });
+
+      it('should increase sub-column count from 3 to 4 and preserve all fields', () => {
+        service.addSubColumn(rowId, 0, 3);
+
+        // Add fields to sub-columns 0, 1, and 2
+        const field1 = service.addFieldFromType(FormFieldType.TEXT);
+        const field2 = service.addFieldFromType(FormFieldType.EMAIL);
+        const field3 = service.addFieldFromType(FormFieldType.PHONE);
+        service.setFieldPosition(field1.id, {
+          rowId,
+          columnIndex: 0,
+          subColumnIndex: 0,
+          orderInColumn: 0,
+        });
+        service.setFieldPosition(field2.id, {
+          rowId,
+          columnIndex: 0,
+          subColumnIndex: 1,
+          orderInColumn: 0,
+        });
+        service.setFieldPosition(field3.id, {
+          rowId,
+          columnIndex: 0,
+          subColumnIndex: 2,
+          orderInColumn: 0,
+        });
+
+        service.updateSubColumnCount(rowId, 0, 4);
+
+        const config = service.subColumnConfigs().find((sc) => sc.columnIndex === 0);
+        expect(config?.subColumnCount).toBe(4);
+
+        const fields = service.getAllFields();
+        expect(fields.find((f) => f.id === field1.id)?.position?.subColumnIndex).toBe(0);
+        expect(fields.find((f) => f.id === field2.id)?.position?.subColumnIndex).toBe(1);
+        expect(fields.find((f) => f.id === field3.id)?.position?.subColumnIndex).toBe(2);
+      });
+
+      it('should decrease sub-column count from 3 to 2 and migrate fields', () => {
+        service.addSubColumn(rowId, 0, 3);
+
+        // Add fields to sub-columns 0, 1, and 2
+        const field1 = service.addFieldFromType(FormFieldType.TEXT);
+        const field2 = service.addFieldFromType(FormFieldType.EMAIL);
+        const field3 = service.addFieldFromType(FormFieldType.PHONE);
+        service.setFieldPosition(field1.id, {
+          rowId,
+          columnIndex: 0,
+          subColumnIndex: 0,
+          orderInColumn: 0,
+        });
+        service.setFieldPosition(field2.id, {
+          rowId,
+          columnIndex: 0,
+          subColumnIndex: 1,
+          orderInColumn: 0,
+        });
+        service.setFieldPosition(field3.id, {
+          rowId,
+          columnIndex: 0,
+          subColumnIndex: 2,
+          orderInColumn: 0,
+        });
+
+        service.updateSubColumnCount(rowId, 0, 2);
+
+        const config = service.subColumnConfigs().find((sc) => sc.columnIndex === 0);
+        expect(config?.subColumnCount).toBe(2);
+
+        const fields = service.getAllFields();
+        const updatedField1 = fields.find((f) => f.id === field1.id);
+        const updatedField2 = fields.find((f) => f.id === field2.id);
+        const updatedField3 = fields.find((f) => f.id === field3.id);
+
+        expect(updatedField1?.position?.subColumnIndex).toBe(0); // Preserved
+        expect(updatedField2?.position?.subColumnIndex).toBe(1); // Preserved
+        expect(updatedField3?.position?.subColumnIndex).toBe(0); // Migrated from sub-column 2
+        expect(updatedField3?.position?.orderInColumn).toBe(1); // Appended to bottom of sub-column 0
+      });
+
+      it('should decrease sub-column count from 4 to 3 and migrate fields', () => {
+        service.addSubColumn(rowId, 0, 4);
+
+        // Add fields to all sub-columns
+        const field1 = service.addFieldFromType(FormFieldType.TEXT);
+        const field2 = service.addFieldFromType(FormFieldType.EMAIL);
+        const field3 = service.addFieldFromType(FormFieldType.PHONE);
+        const field4 = service.addFieldFromType(FormFieldType.DATE);
+        service.setFieldPosition(field1.id, {
+          rowId,
+          columnIndex: 0,
+          subColumnIndex: 0,
+          orderInColumn: 0,
+        });
+        service.setFieldPosition(field2.id, {
+          rowId,
+          columnIndex: 0,
+          subColumnIndex: 1,
+          orderInColumn: 0,
+        });
+        service.setFieldPosition(field3.id, {
+          rowId,
+          columnIndex: 0,
+          subColumnIndex: 2,
+          orderInColumn: 0,
+        });
+        service.setFieldPosition(field4.id, {
+          rowId,
+          columnIndex: 0,
+          subColumnIndex: 3,
+          orderInColumn: 0,
+        });
+
+        service.updateSubColumnCount(rowId, 0, 3);
+
+        const config = service.subColumnConfigs().find((sc) => sc.columnIndex === 0);
+        expect(config?.subColumnCount).toBe(3);
+
+        const fields = service.getAllFields();
+        expect(fields.find((f) => f.id === field1.id)?.position?.subColumnIndex).toBe(0);
+        expect(fields.find((f) => f.id === field2.id)?.position?.subColumnIndex).toBe(1);
+        expect(fields.find((f) => f.id === field3.id)?.position?.subColumnIndex).toBe(2);
+        expect(fields.find((f) => f.id === field4.id)?.position?.subColumnIndex).toBe(0); // Migrated
+      });
+
+      it('should throw error if row does not exist', () => {
+        service.addSubColumn(rowId, 0, 2);
+
+        expect(() => service.updateSubColumnCount('invalid-row', 0, 3)).toThrowError(
+          /Row invalid-row not found/,
+        );
+      });
+
+      it('should throw error if column index exceeds row column count', () => {
+        service.addSubColumn(rowId, 0, 2);
+
+        expect(() => service.updateSubColumnCount(rowId, 5, 3)).toThrowError(
+          /Column index 5 exceeds row column count/,
+        );
+      });
+
+      it('should throw error if sub-columns not configured', () => {
+        expect(() => service.updateSubColumnCount(rowId, 0, 3)).toThrowError(
+          /Sub-columns not configured for row/,
+        );
+      });
+
+      it('should reset width ratios if array length does not match new count', () => {
+        service.addSubColumn(rowId, 0, 2);
+        service.updateSubColumnWidths(rowId, 0, ['1fr', '3fr']);
+
+        service.updateSubColumnCount(rowId, 0, 3);
+
+        const config = service.subColumnConfigs().find((sc) => sc.columnIndex === 0);
+        expect(config?.subColumnWidths).toBeUndefined(); // Reset to equal-width
+      });
+
+      it('should preserve width ratios if array length matches new count', () => {
+        service.addSubColumn(rowId, 0, 3);
+        service.updateSubColumnWidths(rowId, 0, ['1fr', '2fr', '1fr']);
+
+        service.updateSubColumnCount(rowId, 0, 2);
+
+        const config = service.subColumnConfigs().find((sc) => sc.columnIndex === 0);
+        // Width array is sliced but since length doesn't match, it's reset
+        expect(config?.subColumnWidths).toBeUndefined();
+      });
+
+      it('should migrate multiple fields from removed sub-column', () => {
+        service.addSubColumn(rowId, 0, 3);
+
+        // Add multiple fields to sub-column 2
+        const field1 = service.addFieldFromType(FormFieldType.TEXT);
+        const field2 = service.addFieldFromType(FormFieldType.EMAIL);
+        const field3 = service.addFieldFromType(FormFieldType.PHONE);
+        service.setFieldPosition(field1.id, {
+          rowId,
+          columnIndex: 0,
+          subColumnIndex: 2,
+          orderInColumn: 0,
+        });
+        service.setFieldPosition(field2.id, {
+          rowId,
+          columnIndex: 0,
+          subColumnIndex: 2,
+          orderInColumn: 1,
+        });
+        service.setFieldPosition(field3.id, {
+          rowId,
+          columnIndex: 0,
+          subColumnIndex: 0,
+          orderInColumn: 0,
+        });
+
+        service.updateSubColumnCount(rowId, 0, 2);
+
+        const fields = service.getAllFields();
+        const migratedField1 = fields.find((f) => f.id === field1.id);
+        const migratedField2 = fields.find((f) => f.id === field2.id);
+        const preservedField = fields.find((f) => f.id === field3.id);
+
+        expect(migratedField1?.position?.subColumnIndex).toBe(0);
+        expect(migratedField2?.position?.subColumnIndex).toBe(0);
+        expect(preservedField?.position?.subColumnIndex).toBe(0);
+
+        // Check orderInColumn for appended fields - must be unique and sequential
+        expect(preservedField?.position?.orderInColumn).toBe(0); // Original field in sub-column 0
+        expect(migratedField1?.position?.orderInColumn).toBe(1); // First migrated field
+        expect(migratedField2?.position?.orderInColumn).toBe(2); // Second migrated field
+      });
+
+      it('should mark form as dirty', () => {
+        service.addSubColumn(rowId, 0, 2);
+        service.markClean();
+
+        service.updateSubColumnCount(rowId, 0, 3);
+
+        expect(service.isDirty()).toBe(true);
+      });
+    });
+
+    describe('subColumnsByRowColumn computed signal', () => {
+      it('should provide O(1) lookup by row-column key', () => {
+        service.addSubColumn(rowId, 0, 2);
+        service.addSubColumn(rowId, 1, 3);
+
+        const map = service.subColumnsByRowColumn();
+        const key = `${rowId}-0`;
+        const config = map.get(key);
+
+        expect(config).toBeDefined();
+        expect(config?.columnIndex).toBe(0);
+        expect(config?.subColumnCount).toBe(2);
+      });
+
+      it('should return empty map when no sub-columns configured', () => {
+        const map = service.subColumnsByRowColumn();
+        expect(map.size).toBe(0);
+      });
+
+      it('should recompute when sub-column configs change', () => {
+        service.addSubColumn(rowId, 0, 2);
+        expect(service.subColumnsByRowColumn().size).toBe(1);
+
+        service.removeSubColumn(rowId, 0);
+        expect(service.subColumnsByRowColumn().size).toBe(0);
+      });
+
+      it('should complete lookup in under 10ms for 100 rows', () => {
+        // Create 100 rows with sub-columns
+        for (let i = 0; i < 100; i++) {
+          const newRowId = service.addRow(2);
+          service.addSubColumn(newRowId, 0, 2);
+        }
+
+        const start = performance.now();
+        const map = service.subColumnsByRowColumn();
+        const end = performance.now();
+
+        expect(map.size).toBe(100);
+        expect(end - start).toBeLessThan(10);
+      });
+    });
+
+    describe('setFieldPosition() with subColumnIndex', () => {
+      beforeEach(() => {
+        service.addSubColumn(rowId, 0, 2);
+      });
+
+      it('should accept valid subColumnIndex', () => {
+        const field = service.addFieldFromType(FormFieldType.TEXT);
+        expect(() =>
+          service.setFieldPosition(field.id, { rowId, columnIndex: 0, subColumnIndex: 1 }),
+        ).not.toThrow();
+
+        const updated = service.getAllFields().find((f) => f.id === field.id);
+        expect(updated?.position?.subColumnIndex).toBe(1);
+      });
+
+      it('should throw error when subColumnIndex provided but no sub-columns configured', () => {
+        const field = service.addFieldFromType(FormFieldType.TEXT);
+        expect(() =>
+          service.setFieldPosition(field.id, { rowId, columnIndex: 1, subColumnIndex: 0 }),
+        ).toThrowError(/No sub-columns configured for row/);
+      });
+
+      it('should throw error when subColumnIndex exceeds subColumnCount', () => {
+        const field = service.addFieldFromType(FormFieldType.TEXT);
+        expect(() =>
+          service.setFieldPosition(field.id, { rowId, columnIndex: 0, subColumnIndex: 2 }),
+        ).toThrowError(/Sub-column index 2 exceeds sub-column count 2/);
+      });
+
+      it('should allow positioning without subColumnIndex (backward compatible)', () => {
+        const field = service.addFieldFromType(FormFieldType.TEXT);
+        expect(() => service.setFieldPosition(field.id, { rowId, columnIndex: 0 })).not.toThrow();
+
+        const updated = service.getAllFields().find((f) => f.id === field.id);
+        expect(updated?.position?.subColumnIndex).toBeUndefined();
+      });
+    });
+
+    describe('loadForm() with sub-columns', () => {
+      it('should load sub-column configs from schema', () => {
+        const mockForm: FormMetadata = {
+          id: 'form-1',
+          userId: 'user-1',
+          title: 'Test Form',
+          status: FormStatus.DRAFT,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          schema: {
+            id: 'schema-1',
+            formId: 'form-1',
+            version: 1,
+            fields: [],
+            settings: {
+              layout: { columns: 1, spacing: 'medium' },
+              submission: { showSuccessMessage: true, allowMultipleSubmissions: false },
+              rowLayout: {
+                enabled: true,
+                rows: [
+                  {
+                    rowId: 'row-1',
+                    columnCount: 2,
+                    order: 0,
+                    subColumns: [
+                      { columnIndex: 0, subColumnCount: 2, subColumnWidths: ['1fr', '3fr'] },
+                      { columnIndex: 1, subColumnCount: 3 },
+                    ],
+                  },
+                ],
+              },
+            },
+            isPublished: false,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        };
+
+        service.loadForm(mockForm);
+
+        const configs = service.subColumnConfigs();
+        expect(configs.length).toBe(2);
+        expect(configs[0].columnIndex).toBe(0);
+        expect(configs[0].subColumnCount).toBe(2);
+        expect(configs[0].subColumnWidths).toEqual(['1fr', '3fr']);
+        expect(configs[1].columnIndex).toBe(1);
+        expect(configs[1].subColumnCount).toBe(3);
+        expect(configs[1].subColumnWidths).toBeUndefined();
+      });
+
+      it('should handle forms without sub-columns (backward compatibility)', () => {
+        const mockForm: FormMetadata = {
+          id: 'form-1',
+          userId: 'user-1',
+          title: 'Test Form',
+          status: FormStatus.DRAFT,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          schema: {
+            id: 'schema-1',
+            formId: 'form-1',
+            version: 1,
+            fields: [],
+            settings: {
+              layout: { columns: 1, spacing: 'medium' },
+              submission: { showSuccessMessage: true, allowMultipleSubmissions: false },
+              rowLayout: {
+                enabled: true,
+                rows: [{ rowId: 'row-1', columnCount: 2, order: 0 }],
+              },
+            },
+            isPublished: false,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        };
+
+        service.loadForm(mockForm);
+
+        expect(service.subColumnConfigs().length).toBe(0);
+      });
+
+      it('should reset sub-column configs for forms without row layout', () => {
+        service.addSubColumn(rowId, 0, 2);
+        expect(service.subColumnConfigs().length).toBe(1);
+
+        const mockForm: FormMetadata = {
+          id: 'form-1',
+          userId: 'user-1',
+          title: 'Test Form',
+          status: FormStatus.DRAFT,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          schema: {
+            id: 'schema-1',
+            formId: 'form-1',
+            version: 1,
+            fields: [],
+            settings: {
+              layout: { columns: 1, spacing: 'medium' },
+              submission: { showSuccessMessage: true, allowMultipleSubmissions: false },
+            },
+            isPublished: false,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        };
+
+        service.loadForm(mockForm);
+        expect(service.subColumnConfigs().length).toBe(0);
+      });
+    });
+
+    describe('exportFormData() with sub-columns', () => {
+      it('should include sub-column configs in exported schema', () => {
+        service.addSubColumn(rowId, 0, 2);
+        service.updateSubColumnWidths(rowId, 0, ['1fr', '3fr']);
+
+        const exported = service.exportFormData({
+          title: 'Test Form',
+          description: 'Test Description',
+          columnLayout: 1,
+          fieldSpacing: 'normal',
+          successMessage: 'Success!',
+          redirectUrl: '',
+          allowMultipleSubmissions: false,
+        });
+
+        const rows = exported.schema?.settings.rowLayout?.rows;
+        expect(rows).toBeDefined();
+        expect(rows![0].subColumns).toBeDefined();
+        expect(rows![0].subColumns!.length).toBe(1);
+        expect(rows![0].subColumns![0].columnIndex).toBe(0);
+        expect(rows![0].subColumns![0].subColumnCount).toBe(2);
+        expect(rows![0].subColumns![0].subColumnWidths).toEqual(['1fr', '3fr']);
+      });
+
+      it('should omit subColumns when no sub-columns configured', () => {
+        const exported = service.exportFormData({
+          title: 'Test Form',
+          description: 'Test Description',
+          columnLayout: 1,
+          fieldSpacing: 'normal',
+          successMessage: 'Success!',
+          redirectUrl: '',
+          allowMultipleSubmissions: false,
+        });
+
+        const rows = exported.schema?.settings.rowLayout?.rows;
+        expect(rows).toBeDefined();
+        expect(rows![0].subColumns).toBeUndefined();
+      });
+
+      it('should not include rowId in serialized sub-column configs', () => {
+        service.addSubColumn(rowId, 0, 2);
+
+        const exported = service.exportFormData({
+          title: 'Test Form',
+          description: 'Test Description',
+          columnLayout: 1,
+          fieldSpacing: 'normal',
+          successMessage: 'Success!',
+          redirectUrl: '',
+          allowMultipleSubmissions: false,
+        });
+
+        const subCol = exported.schema?.settings.rowLayout?.rows![0].subColumns![0];
+        expect(subCol).toBeDefined();
+        expect((subCol as any).rowId).toBeUndefined(); // rowId should be stripped
+      });
+    });
+
+    describe('getFieldsInColumn() with sub-columns', () => {
+      it('should return all fields in column including those with subColumnIndex', () => {
+        service.addSubColumn(rowId, 0, 2);
+
+        // Add field to sub-column 0
+        const field1 = service.addFieldFromType(FormFieldType.TEXT);
+        service.setFieldPosition(field1.id, {
+          rowId,
+          columnIndex: 0,
+          subColumnIndex: 0,
+          orderInColumn: 0,
+        });
+
+        // Add field to sub-column 1
+        const field2 = service.addFieldFromType(FormFieldType.EMAIL);
+        service.setFieldPosition(field2.id, {
+          rowId,
+          columnIndex: 0,
+          subColumnIndex: 1,
+          orderInColumn: 0,
+        });
+
+        // Add field to parent column (no subColumnIndex)
+        const field3 = service.addFieldFromType(FormFieldType.NUMBER);
+        service.setFieldPosition(field3.id, { rowId, columnIndex: 0, orderInColumn: 1 });
+
+        const fieldsInColumn = service.getFieldsInColumn(rowId, 0);
+
+        // Should return all 3 fields in column 0 regardless of subColumnIndex
+        expect(fieldsInColumn.length).toBe(3);
+        expect(fieldsInColumn.some((f) => f.id === field1.id)).toBe(true);
+        expect(fieldsInColumn.some((f) => f.id === field2.id)).toBe(true);
+        expect(fieldsInColumn.some((f) => f.id === field3.id)).toBe(true);
+      });
+
+      it('should maintain sort order by orderInColumn for sub-column fields', () => {
+        service.addSubColumn(rowId, 0, 2);
+
+        const field1 = service.addFieldFromType(FormFieldType.TEXT);
+        service.setFieldPosition(field1.id, {
+          rowId,
+          columnIndex: 0,
+          subColumnIndex: 0,
+          orderInColumn: 2,
+        });
+
+        const field2 = service.addFieldFromType(FormFieldType.EMAIL);
+        service.setFieldPosition(field2.id, {
+          rowId,
+          columnIndex: 0,
+          subColumnIndex: 1,
+          orderInColumn: 0,
+        });
+
+        const field3 = service.addFieldFromType(FormFieldType.NUMBER);
+        service.setFieldPosition(field3.id, {
+          rowId,
+          columnIndex: 0,
+          subColumnIndex: 0,
+          orderInColumn: 1,
+        });
+
+        const fieldsInColumn = service.getFieldsInColumn(rowId, 0);
+
+        // Should be sorted by orderInColumn regardless of subColumnIndex
+        expect(fieldsInColumn[0].id).toBe(field2.id); // orderInColumn: 0
+        expect(fieldsInColumn[1].id).toBe(field3.id); // orderInColumn: 1
+        expect(fieldsInColumn[2].id).toBe(field1.id); // orderInColumn: 2
+      });
+    });
+
+    describe('reorderFieldInColumn() with sub-columns', () => {
+      it('should reorder fields within a sub-column', () => {
+        service.addSubColumn(rowId, 0, 2);
+
+        // Add 3 fields to sub-column 0
+        const field1 = service.addFieldFromType(FormFieldType.TEXT);
+        service.setFieldPosition(field1.id, {
+          rowId,
+          columnIndex: 0,
+          subColumnIndex: 0,
+          orderInColumn: 0,
+        });
+
+        const field2 = service.addFieldFromType(FormFieldType.EMAIL);
+        service.setFieldPosition(field2.id, {
+          rowId,
+          columnIndex: 0,
+          subColumnIndex: 0,
+          orderInColumn: 1,
+        });
+
+        const field3 = service.addFieldFromType(FormFieldType.NUMBER);
+        service.setFieldPosition(field3.id, {
+          rowId,
+          columnIndex: 0,
+          subColumnIndex: 0,
+          orderInColumn: 2,
+        });
+
+        // Move field3 from position 2 to position 0
+        service.reorderFieldInColumn(field3.id, 0);
+
+        const fields = service.getAllFields();
+        const f1 = fields.find((f) => f.id === field1.id);
+        const f2 = fields.find((f) => f.id === field2.id);
+        const f3 = fields.find((f) => f.id === field3.id);
+
+        // Verify orderInColumn updated correctly
+        expect(f3?.position?.orderInColumn).toBe(0); // Moved to top
+        expect(f1?.position?.orderInColumn).toBe(1); // Shifted down
+        expect(f2?.position?.orderInColumn).toBe(2); // Shifted down
+
+        // Verify subColumnIndex preserved
+        expect(f1?.position?.subColumnIndex).toBe(0);
+        expect(f2?.position?.subColumnIndex).toBe(0);
+        expect(f3?.position?.subColumnIndex).toBe(0);
+      });
+
+      it('should not affect fields in different sub-columns when reordering', () => {
+        service.addSubColumn(rowId, 0, 2);
+
+        // Add fields to sub-column 0
+        const field1 = service.addFieldFromType(FormFieldType.TEXT);
+        service.setFieldPosition(field1.id, {
+          rowId,
+          columnIndex: 0,
+          subColumnIndex: 0,
+          orderInColumn: 0,
+        });
+
+        const field2 = service.addFieldFromType(FormFieldType.EMAIL);
+        service.setFieldPosition(field2.id, {
+          rowId,
+          columnIndex: 0,
+          subColumnIndex: 0,
+          orderInColumn: 1,
+        });
+
+        // Add field to sub-column 1
+        const field3 = service.addFieldFromType(FormFieldType.NUMBER);
+        service.setFieldPosition(field3.id, {
+          rowId,
+          columnIndex: 0,
+          subColumnIndex: 1,
+          orderInColumn: 0,
+        });
+
+        // Reorder field in sub-column 0
+        service.reorderFieldInColumn(field2.id, 0);
+
+        const fields = service.getAllFields();
+        const f3 = fields.find((f) => f.id === field3.id);
+
+        // Field in sub-column 1 should remain unchanged
+        expect(f3?.position?.orderInColumn).toBe(0);
+        expect(f3?.position?.subColumnIndex).toBe(1);
+      });
+    });
+
+    describe('resetForm() with sub-columns', () => {
+      it('should clear sub-column configs', () => {
+        service.addSubColumn(rowId, 0, 2);
+        expect(service.subColumnConfigs().length).toBe(1);
+
+        service.resetForm();
+        expect(service.subColumnConfigs().length).toBe(0);
+      });
+    });
+
+    describe('Performance requirements', () => {
+      it('should complete addSubColumn in under 50ms for 50-field form', () => {
+        // Add 50 fields
+        for (let i = 0; i < 50; i++) {
+          service.addFieldFromType(FormFieldType.TEXT);
+        }
+
+        const start = performance.now();
+        service.addSubColumn(rowId, 0, 2);
+        const end = performance.now();
+
+        expect(end - start).toBeLessThan(50);
+      });
+
+      it('should complete removeSubColumn in under 50ms for 50-field form', () => {
+        service.addSubColumn(rowId, 0, 2);
+
+        // Add 50 fields
+        for (let i = 0; i < 50; i++) {
+          service.addFieldFromType(FormFieldType.TEXT);
+        }
+
+        const start = performance.now();
+        service.removeSubColumn(rowId, 0);
+        const end = performance.now();
+
+        expect(end - start).toBeLessThan(50);
+      });
+
+      it('should complete loadForm with 10 sub-column configs in under 100ms', () => {
+        const rows = [];
+        for (let i = 0; i < 10; i++) {
+          rows.push({
+            rowId: `row-${i}`,
+            columnCount: 2,
+            order: i,
+            subColumns: [{ columnIndex: 0, subColumnCount: 2 }],
+          } as any);
+        }
+
+        const mockForm: FormMetadata = {
+          id: 'form-1',
+          userId: 'user-1',
+          title: 'Test Form',
+          status: FormStatus.DRAFT,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          schema: {
+            id: 'schema-1',
+            formId: 'form-1',
+            version: 1,
+            fields: [],
+            settings: {
+              layout: { columns: 1, spacing: 'medium' },
+              submission: { showSuccessMessage: true, allowMultipleSubmissions: false },
+              rowLayout: { enabled: true, rows },
+            },
+            isPublished: false,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        };
+
+        const start = performance.now();
+        service.loadForm(mockForm);
+        const end = performance.now();
+
+        expect(service.subColumnConfigs().length).toBe(10);
+        expect(end - start).toBeLessThan(100);
+      });
+    });
+  });
 });

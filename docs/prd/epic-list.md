@@ -68,3 +68,17 @@ workflows.
 (colors, fonts, spacing, backgrounds) to their forms through a dropdown selector in the form builder
 toolbar, providing instant visual transformations similar to Typeform or Google Forms theme systems
 with 6-8 curated themes out-of-the-box, responsive breakpoint support, and usage-based sorting.
+
+**Epic 23: Complete Theme System Implementation** Correct the theme system by rolling back
+incomplete work and rebuilding with proper architecture, enabling all users to create custom themes
+via Form Builder modal wizard with universal theme application to all form elements.
+
+**Epic 24: Universal Theme Application to All Input Field Types** Ensure all 16 form input field
+types and display elements consistently apply the selected form theme's CSS variables, providing a
+unified visual experience across all field types.
+
+**Epic 25: Nested Column Layout System with Variable Width Configuration** Enable form builders to
+create sophisticated multi-column layouts with variable column widths (fractional units) and nested
+sub-columns (2-4 sub-columns per column, one level deep), while maintaining full backward
+compatibility with existing equal-width row layouts. Includes drag-and-drop support, preset width
+ratios, and responsive mobile rendering.

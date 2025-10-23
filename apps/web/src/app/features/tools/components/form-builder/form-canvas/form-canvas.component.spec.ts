@@ -207,7 +207,7 @@ describe('FormCanvasComponent', () => {
       expect(canDrop).toBe(true);
     });
 
-    it('should reject drop into occupied column', () => {
+    it('should allow drop into occupied column (multi-field column support)', () => {
       // Add field to column 0
       const existingField = {
         id: 'existing-field',
@@ -223,7 +223,7 @@ describe('FormCanvasComponent', () => {
       formBuilderService.addField(existingField);
       fixture.detectChanges();
 
-      // Try to drop different field into same column
+      // Try to drop different field into same column (should succeed with multi-field support)
       const newField = {
         id: 'new-field',
         type: FormFieldType.EMAIL,
@@ -239,7 +239,7 @@ describe('FormCanvasComponent', () => {
       const drop = { data: { rowId: 'row-1', columnIndex: 0 } } as any;
 
       const canDrop = component.canDropIntoColumn(drag, drop);
-      expect(canDrop).toBe(false);
+      expect(canDrop).toBe(true); // Multi-field column support allows multiple fields per column
     });
 
     it('should allow drop into same position (no-op)', () => {
@@ -377,7 +377,7 @@ describe('FormCanvasComponent', () => {
       formBuilderService.addField(field);
       fixture.detectChanges();
 
-      const originalPosition = field.position;
+      const _originalPosition = field.position;
 
       const mockEvent = {
         container: { data: { rowId, columnIndex: 0 } },
@@ -765,6 +765,214 @@ describe('FormCanvasComponent', () => {
       const columnDropZone = compiled.querySelector('.column-drop-zone');
 
       expect(columnDropZone?.classList.contains('theme-column-container')).toBe(true);
+    });
+  });
+
+  describe('Sub-Column Drag-Drop (Story 27.5)', () => {
+    beforeEach(() => {
+      formBuilderService.enableRowLayout();
+      const rows = formBuilderService.rowConfigs();
+      const rowId = rows[0].rowId;
+      // Enable sub-columns: 2 sub-columns in column 0
+      formBuilderService.addSubColumn(rowId, 0, 2);
+      fixture.detectChanges();
+    });
+
+    it('should render sub-column drop zones when subColumnConfigs defined', () => {
+      const compiled = fixture.nativeElement as HTMLElement;
+      const subColumnZones = compiled.querySelectorAll('.sub-column-drop-zone');
+
+      expect(subColumnZones.length).toBeGreaterThan(0);
+      expect(subColumnZones[0].getAttribute('id')).toContain('subColumn-');
+    });
+
+    it('should apply drag-over class during drag operations', () => {
+      const compiled = fixture.nativeElement as HTMLElement;
+      const subColumnZone = compiled.querySelector('.sub-column-drop-zone') as HTMLElement;
+
+      expect(subColumnZone).toBeTruthy();
+      // CDK adds cdk-drop-list-dragging class during drag
+      subColumnZone.classList.add('cdk-drop-list-dragging');
+
+      expect(subColumnZone.classList.contains('cdk-drop-list-dragging')).toBe(true);
+    });
+
+    it('should create field with correct subColumnIndex when dropping from palette', () => {
+      const rows = formBuilderService.rowConfigs();
+      const rowId = rows[0].rowId;
+
+      const mockEvent = {
+        container: { data: { rowId, columnIndex: 0, subColumnIndex: 1 } },
+        item: { data: { type: FormFieldType.TEXT, icon: 'pi-pencil', label: 'Text' } },
+        currentIndex: 0,
+      };
+
+      component.onFieldDroppedInRow(mockEvent as any);
+      fixture.detectChanges();
+
+      const fields = formBuilderService.formFields();
+      const newField = fields.find((f) => f.type === FormFieldType.TEXT);
+
+      expect(newField).toBeTruthy();
+      expect(newField?.position?.subColumnIndex).toBe(1);
+      expect(newField?.position?.rowId).toBe(rowId);
+      expect(newField?.position?.columnIndex).toBe(0);
+    });
+
+    it('should update field position correctly when moving to sub-column', () => {
+      const rows = formBuilderService.rowConfigs();
+      const rowId = rows[0].rowId;
+
+      // Create field in parent column (no subColumnIndex)
+      const field = {
+        id: 'field-1',
+        type: FormFieldType.TEXT,
+        fieldName: 'field1',
+        label: 'Field 1',
+        required: false,
+        order: 0,
+        placeholder: '',
+        helpText: '',
+        position: { rowId, columnIndex: 1, subColumnIndex: undefined },
+      };
+      formBuilderService.addField(field);
+      fixture.detectChanges();
+
+      // Move to sub-column
+      const mockEvent = {
+        container: { data: { rowId, columnIndex: 0, subColumnIndex: 0 } },
+        item: { data: field },
+        currentIndex: 0,
+      };
+
+      component.onFieldDroppedInRow(mockEvent as any);
+      fixture.detectChanges();
+
+      const updatedField = formBuilderService.formFields().find((f) => f.id === 'field-1');
+      expect(updatedField?.position?.subColumnIndex).toBe(0);
+      expect(updatedField?.position?.columnIndex).toBe(0);
+    });
+
+    it('should calculate correct orderInColumn for multi-field stacking in sub-column', () => {
+      const rows = formBuilderService.rowConfigs();
+      const rowId = rows[0].rowId;
+
+      // Add first field to sub-column 0
+      const mockEvent1 = {
+        container: { data: { rowId, columnIndex: 0, subColumnIndex: 0 } },
+        item: { data: { type: FormFieldType.TEXT, icon: 'pi-pencil', label: 'Text' } },
+        currentIndex: 0,
+      };
+      component.onFieldDroppedInRow(mockEvent1 as any);
+
+      // Add second field to same sub-column
+      const mockEvent2 = {
+        container: { data: { rowId, columnIndex: 0, subColumnIndex: 0 } },
+        item: { data: { type: FormFieldType.EMAIL, icon: 'pi-envelope', label: 'Email' } },
+        currentIndex: 1,
+      };
+      component.onFieldDroppedInRow(mockEvent2 as any);
+      fixture.detectChanges();
+
+      const fieldsInSubColumn = component.fieldsInSubColumn(rowId, 0, 0);
+      expect(fieldsInSubColumn.length).toBe(2);
+      expect(fieldsInSubColumn[0].position?.orderInColumn).toBe(0);
+      expect(fieldsInSubColumn[1].position?.orderInColumn).toBe(1);
+    });
+
+    it('should clear subColumnIndex when moving field to parent column', () => {
+      const rows = formBuilderService.rowConfigs();
+      const rowId = rows[0].rowId;
+
+      // Create field in sub-column
+      const field = {
+        id: 'field-1',
+        type: FormFieldType.TEXT,
+        fieldName: 'field1',
+        label: 'Field 1',
+        required: false,
+        order: 0,
+        placeholder: '',
+        helpText: '',
+        position: { rowId, columnIndex: 0, subColumnIndex: 1 },
+      };
+      formBuilderService.addField(field);
+      fixture.detectChanges();
+
+      // Move to parent column (subColumnIndex: undefined)
+      const mockEvent = {
+        container: { data: { rowId, columnIndex: 1, subColumnIndex: undefined } },
+        item: { data: field },
+        currentIndex: 0,
+      };
+
+      component.onFieldDroppedInRow(mockEvent as any);
+      fixture.detectChanges();
+
+      const updatedField = formBuilderService.formFields().find((f) => f.id === 'field-1');
+      expect(updatedField?.position?.subColumnIndex).toBeUndefined();
+      expect(updatedField?.position?.columnIndex).toBe(1);
+    });
+
+    it('should maintain backward compatibility with non-nested columns', () => {
+      // Reset to row layout without sub-columns
+      formBuilderService.disableRowLayout();
+      formBuilderService.enableRowLayout();
+      const rows = formBuilderService.rowConfigs();
+      const rowId = rows[0].rowId;
+      fixture.detectChanges();
+
+      // Drop field in regular parent column (no sub-columns)
+      const mockEvent = {
+        container: { data: { rowId, columnIndex: 0, subColumnIndex: undefined } },
+        item: { data: { type: FormFieldType.TEXT, icon: 'pi-pencil', label: 'Text' } },
+        currentIndex: 0,
+      };
+
+      component.onFieldDroppedInRow(mockEvent as any);
+      fixture.detectChanges();
+
+      const fields = formBuilderService.formFields();
+      const newField = fields.find((f) => f.type === FormFieldType.TEXT);
+
+      expect(newField).toBeTruthy();
+      expect(newField?.position?.subColumnIndex).toBeUndefined();
+      expect(newField?.position?.columnIndex).toBe(0);
+    });
+
+    it('should handle no-op drops when dropping field in same position', () => {
+      const rows = formBuilderService.rowConfigs();
+      const rowId = rows[0].rowId;
+
+      // Create field in sub-column
+      const field = {
+        id: 'field-1',
+        type: FormFieldType.TEXT,
+        fieldName: 'field1',
+        label: 'Field 1',
+        required: false,
+        order: 0,
+        placeholder: '',
+        helpText: '',
+        position: { rowId, columnIndex: 0, subColumnIndex: 0, orderInColumn: 0 },
+      };
+      formBuilderService.addField(field);
+      fixture.detectChanges();
+
+      const _originalPosition = { ...field.position };
+
+      // Drop in same position (should be no-op)
+      const mockEvent = {
+        container: { data: { rowId, columnIndex: 0, subColumnIndex: 0 } },
+        item: { data: field },
+        currentIndex: 0,
+      };
+
+      spyOn(formBuilderService, 'setFieldPosition');
+      component.onFieldDroppedInRow(mockEvent as any);
+
+      // setFieldPosition should not be called for no-op drops
+      expect(formBuilderService.setFieldPosition).not.toHaveBeenCalled();
     });
   });
 });

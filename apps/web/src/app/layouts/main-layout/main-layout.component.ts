@@ -366,6 +366,7 @@ export class MainLayoutComponent implements OnInit {
 
   protected readonly user = this.authService.user;
   protected readonly mobileMenuOpen = signal(false);
+  protected readonly userMenuOpen = signal(false);
   protected readonly currentRoute = signal('');
 
   /**
@@ -454,9 +455,13 @@ export class MainLayoutComponent implements OnInit {
 
   /**
    * Toggles the mobile menu visibility.
+   * Closes user menu if open.
    */
   public toggleMobileMenu(): void {
     this.mobileMenuOpen.update((open) => !open);
+    if (this.mobileMenuOpen()) {
+      this.userMenuOpen.set(false);
+    }
   }
 
   /**
@@ -464,5 +469,76 @@ export class MainLayoutComponent implements OnInit {
    */
   public closeMobileMenu(): void {
     this.mobileMenuOpen.set(false);
+  }
+
+  /**
+   * Toggles the user menu visibility.
+   * Closes mobile menu if open.
+   */
+  public toggleUserMenu(): void {
+    this.userMenuOpen.update((open) => !open);
+    if (this.userMenuOpen()) {
+      this.mobileMenuOpen.set(false);
+    }
+  }
+
+  /**
+   * Handles user menu item clicks.
+   * Closes both menus after action.
+   * @param item - Menu item with optional action and route
+   */
+  public handleUserMenuClick(item: { action?: string; route?: string; label?: string }): void {
+    if (item.action === 'logout') {
+      this.authService.logout().subscribe({
+        next: () => {
+          this.userMenuOpen.set(false);
+          this.mobileMenuOpen.set(false);
+        },
+        error: (error) => {
+          console.error('Logout failed:', error);
+        },
+      });
+    } else {
+      // Close menus for regular navigation
+      this.userMenuOpen.set(false);
+      this.mobileMenuOpen.set(false);
+    }
+  }
+
+  /**
+   * Returns display name for user role.
+   * @param role - User role identifier
+   * @returns Human-readable role name
+   */
+  public getRoleDisplayName(role: string): string {
+    const roleMap: Record<string, string> = {
+      admin: 'Administrator',
+      user: 'User',
+      readonly: 'Read Only',
+    };
+    return roleMap[role] || role;
+  }
+
+  /**
+   * Gets user initials from current user's name or email.
+   * @returns User initials (2 characters)
+   */
+  public getUserInitials(): string {
+    const currentUser = this.user();
+    if (!currentUser) return '??';
+
+    if (currentUser.firstName && currentUser.lastName) {
+      return `${currentUser.firstName[0]}${currentUser.lastName[0]}`.toUpperCase();
+    }
+
+    if (currentUser.email) {
+      const emailParts = currentUser.email.split('@')[0].split('.');
+      if (emailParts.length >= 2) {
+        return `${emailParts[0][0]}${emailParts[1][0]}`.toUpperCase();
+      }
+      return currentUser.email.substring(0, 2).toUpperCase();
+    }
+
+    return '??';
   }
 }

@@ -1,0 +1,119 @@
+# Quality Gate: Story 27.2 - Variable Column Width Configuration
+# Epic 27: Nested Column Layout System with Variable Width Configuration
+
+schema: 1
+story: "27.2"
+story_title: "Variable Column Width Configuration - Brownfield Enhancement"
+gate: CONCERNS
+status_reason: "Solid implementation with comprehensive unit testing (58 tests total), but missing critical E2E, accessibility, and performance validation required by ACs 11-13."
+reviewer: "Quinn (Test Architect)"
+updated: "2025-10-22T00:00:00Z"
+
+waiver: { active: false }
+
+top_issues:
+  - id: "TEST-001"
+    severity: medium
+    finding: "No E2E tests for UI interaction (preset dropdown, custom input validation, error display)"
+    suggested_action: "Add Playwright E2E tests covering: dropdown selection, custom input validation, visual width changes"
+    refs:
+      - "apps/web/src/app/features/tools/components/form-builder/row-layout-sidebar/row-layout-sidebar.component.ts:270-418"
+
+  - id: "TEST-002"
+    severity: medium
+    finding: "No accessibility tests for AC 13 (keyboard navigation, screen reader announcements)"
+    suggested_action: "Add tests verifying: Tab navigation through dropdown/input, Enter/Arrow key interactions, aria-live error announcements"
+    refs:
+      - "AC 13 (lines 123-128)"
+
+  - id: "TEST-003"
+    severity: medium
+    finding: "No performance tests for AC 12 (<50ms width change, <100ms canvas re-render)"
+    suggested_action: "Add performance measurement tests using performance.now() to verify timing constraints"
+    refs:
+      - "AC 12 (lines 118-122)"
+
+  - id: "TEST-004"
+    severity: low
+    finding: "No regression tests for AC 11 (equal-width layouts before/after deployment)"
+    suggested_action: "Add snapshot tests or visual regression tests for existing equal-width forms"
+    refs:
+      - "AC 11 (lines 112-117)"
+
+  - id: "INTEGRATION-001"
+    severity: low
+    finding: "No API integration tests showing forms with columnWidths save/load correctly"
+    suggested_action: "Add integration test: POST form with columnWidths -> GET form -> verify columnWidths persisted"
+    refs:
+      - "AC 10 (lines 104-109)"
+
+quality_score: 70
+# Calculation: 100 - (10 × 3 medium concerns)
+
+evidence:
+  tests_reviewed: 58
+  # 13 frontend service tests + 45 backend validator tests
+  risks_identified: 5
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 8]
+    # AC 1: Service method ✓
+    # AC 2-3: Sidebar UI + presets ✓
+    # AC 4: Custom input ✓
+    # AC 5: Validation + errors ✓
+    # AC 6: Canvas rendering ✓
+    # AC 8: Reactive signals ✓
+    ac_gaps: [7, 9, 10, 11, 12, 13]
+    # AC 7: Backward compatibility (no tests)
+    # AC 9: Public form renderer (no E2E)
+    # AC 10: API persistence (no integration test)
+    # AC 11: Regression testing (missing)
+    # AC 12: Performance verification (missing)
+    # AC 13: Accessibility compliance (missing)
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Backend validator properly validates fractional unit syntax with 45 comprehensive tests. Rejects invalid input (negative values, decimals, leading zeros, non-fr units)."
+  performance:
+    status: CONCERNS
+    notes: "No performance measurements provided. AC 12 requires <50ms width change and <100ms canvas re-render verification."
+  reliability:
+    status: PASS
+    notes: "Error handling comprehensive with descriptive messages. Signal-based reactivity ensures consistent state updates."
+  maintainability:
+    status: PASS
+    notes: "Code is clean, well-documented with JSDoc comments. Consistent patterns across FormCanvasComponent and FormRendererComponent."
+
+recommendations:
+  immediate: []
+  # No blocking issues - all concerns are test coverage gaps
+
+  future:
+    - action: "Add E2E test suite for row layout sidebar interactions"
+      refs:
+        - "tests/e2e/form-builder/variable-column-widths.spec.ts (create)"
+
+    - action: "Add accessibility audit for dropdown and custom input fields"
+      refs:
+        - "Use axe-core or Pa11y for automated accessibility testing"
+
+    - action: "Add performance benchmarking tests with timing assertions"
+      refs:
+        - "apps/web/src/app/features/tools/components/form-builder/form-builder.service.spec.ts"
+
+    - action: "Add visual regression tests for backward compatibility (equal-width layouts)"
+      refs:
+        - "tests/e2e/form-builder/regression-equal-widths.spec.ts (create)"
+
+    - action: "Add API integration test for columnWidths persistence"
+      refs:
+        - "apps/api/tests/integration/forms-column-widths.test.ts (create)"
+
+technical_strengths:
+  - "Comprehensive backend validator with 45 passing tests covering edge cases (leading zeros, decimals, negative values, whitespace)"
+  - "Frontend service has 13 unit tests with excellent coverage (error cases, signal reactivity, multiple updates, row isolation)"
+  - "Signal-based reactive architecture eliminates manual refresh logic"
+  - "Backward compatibility built-in with graceful fallback to equal widths when columnWidths undefined"
+  - "Consistent implementation pattern across FormCanvasComponent.getColumnGridTemplate() and FormRendererComponent.getGridColumns()"
+  - "Type safety with columnWidths?: string[] properly defined in RowLayoutConfig"
+  - "Clear error messages for validation failures (both frontend and backend)"

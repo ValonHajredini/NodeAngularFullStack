@@ -337,4 +337,133 @@ describe('StepFormSidebarComponent', () => {
       expect(component['deleteStepTooltip']()).toBe('Cannot delete last step');
     });
   });
+
+  describe('Column Width Configuration', () => {
+    beforeEach(() => {
+      // Add required methods to mock service
+      (mockFormBuilderService as any).updateRowColumnWidths =
+        jasmine.createSpy('updateRowColumnWidths');
+      (mockFormBuilderService as any).getRowLayout = jasmine
+        .createSpy('getRowLayout')
+        .and.returnValue([{ rowId: 'row1', columnCount: 2, order: 0 }]);
+      (mockFormBuilderService as any).rowLayoutEnabled = signal<boolean>(true);
+      (mockFormBuilderService as any).rowConfigs = signal<any[]>([
+        { rowId: 'row1', columnCount: 2, order: 0 },
+      ]);
+    });
+
+    it('should update width ratio on dropdown change', () => {
+      const event = { value: ['1fr', '2fr'] };
+      component['onWidthRatioChange']('row1', event);
+
+      expect(mockFormBuilderService.updateRowColumnWidths).toHaveBeenCalledWith('row1', [
+        '1fr',
+        '2fr',
+      ]);
+      expect(component['selectedWidthRatios']()['row1']).toEqual(['1fr', '2fr']);
+    });
+
+    it('should enable custom input mode when custom selected', () => {
+      const event = { value: 'custom' };
+      component['onWidthRatioChange']('row1', event);
+
+      expect(component['selectedWidthRatios']()['row1']).toBe('custom');
+      expect(mockFormBuilderService.updateRowColumnWidths).not.toHaveBeenCalled();
+    });
+
+    it('should validate and apply custom widths', () => {
+      component['onCustomWidthsChange']('row1', '1fr, 2fr');
+
+      expect(mockFormBuilderService.updateRowColumnWidths).toHaveBeenCalledWith('row1', [
+        '1fr',
+        '2fr',
+      ]);
+      expect(component['widthValidationErrors']()['row1']).toBeUndefined();
+    });
+
+    it('should show validation error for invalid custom widths', () => {
+      component['onCustomWidthsChange']('row1', '1fr');
+
+      expect(component['widthValidationErrors']()['row1']).toContain('exactly 2 values');
+    });
+
+    it('should get correct width ratio options for column count', () => {
+      const options2 = component['getWidthRatioOptions'](2);
+      const options3 = component['getWidthRatioOptions'](3);
+      const options4 = component['getWidthRatioOptions'](4);
+
+      expect(options2.length).toBe(6);
+      expect(options3.length).toBe(4);
+      expect(options4.length).toBe(3);
+    });
+  });
+
+  describe('Sub-Column Configuration', () => {
+    beforeEach(() => {
+      // Add required methods to mock service
+      (mockFormBuilderService as any).addSubColumn = jasmine.createSpy('addSubColumn');
+      (mockFormBuilderService as any).removeSubColumn = jasmine.createSpy('removeSubColumn');
+      (mockFormBuilderService as any).updateSubColumnCount =
+        jasmine.createSpy('updateSubColumnCount');
+      (mockFormBuilderService as any).updateSubColumnWidths =
+        jasmine.createSpy('updateSubColumnWidths');
+      (mockFormBuilderService as any).subColumnsByRowColumn = signal<Map<string, any>>(new Map());
+    });
+
+    it('should enable sub-columns when toggle is turned on', () => {
+      component['onToggleSubColumns']('row1', 0, true);
+
+      expect(mockFormBuilderService.addSubColumn).toHaveBeenCalledWith('row1', 0, 2);
+      expect(component['subColumnToggles']()['row1-0']).toBe(true);
+      expect(component['subColumnCounts']()['row1-0']).toBe(2);
+    });
+
+    it('should update sub-column count', () => {
+      component['onSubColumnCountChange']('row1', 0, 3);
+
+      expect(mockFormBuilderService.updateSubColumnCount).toHaveBeenCalledWith('row1', 0, 3);
+      expect(component['subColumnCounts']()['row1-0']).toBe(3);
+    });
+
+    it('should update sub-column width ratio', () => {
+      const value = ['1fr', '2fr'];
+      component['onSubColumnWidthRatioChange']('row1', 0, value);
+
+      expect(mockFormBuilderService.updateSubColumnWidths).toHaveBeenCalledWith('row1', 0, value);
+      expect(component['subColumnWidthRatios']()['row1-0']).toEqual(value);
+    });
+
+    it('should check if column has sub-columns', () => {
+      const mockMap = new Map();
+      mockMap.set('row1-0', { subColumnCount: 2 });
+      (mockFormBuilderService as any).subColumnsByRowColumn.set(mockMap);
+
+      const result = component['hasSubColumns']('row1', 0);
+      expect(result).toBe(true);
+    });
+
+    it('should get sub-column count for column', () => {
+      const mockMap = new Map();
+      mockMap.set('row1-0', { subColumnCount: 3 });
+      (mockFormBuilderService as any).subColumnsByRowColumn.set(mockMap);
+
+      const count = component['getSubColumnCount']('row1', 0);
+      expect(count).toBe(3);
+    });
+
+    it('should get correct sub-column width options', () => {
+      const options2 = component['getSubColumnWidthOptions'](2);
+      const options3 = component['getSubColumnWidthOptions'](3);
+      const options4 = component['getSubColumnWidthOptions'](4);
+
+      expect(options2.length).toBe(6);
+      expect(options3.length).toBe(2);
+      expect(options4.length).toBe(2);
+    });
+
+    it('should get column indices array', () => {
+      const indices = component['getColumnIndices'](3);
+      expect(indices).toEqual([0, 1, 2]);
+    });
+  });
 });
