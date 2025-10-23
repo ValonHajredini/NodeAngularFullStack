@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -10,6 +10,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { AccordionModule } from 'primeng/accordion';
 import { ToggleButtonModule } from 'primeng/togglebutton';
+import { CheckboxModule } from 'primeng/checkbox';
 import { FormBuilderService } from '../form-builder.service';
 
 /** Width ratio option for dropdown UI */
@@ -46,6 +47,7 @@ interface WidthRatioOption {
     MessageModule,
     AccordionModule,
     ToggleButtonModule,
+    CheckboxModule,
   ],
   providers: [ConfirmationService],
   template: `
@@ -86,26 +88,89 @@ interface WidthRatioOption {
             </span>
           </div>
 
-          <div class="row-list space-y-3">
-            @for (row of formBuilderService.rowConfigs(); track row.rowId) {
-              <div class="row-item rounded-lg border border-gray-200 bg-white p-3 shadow-xs">
-                <div class="flex items-center justify-between gap-2 mb-3">
-                  <div>
-                    <p class="text-sm font-semibold text-gray-800">Row {{ row.order + 1 }}</p>
-                    <p class="text-xs text-gray-500">
-                      {{ row.columnCount }}
-                      {{ row.columnCount === 1 ? 'column' : 'columns' }}
-                    </p>
-                  </div>
+          <!-- Batch Actions Toolbar (appears when 2+ rows selected) -->
+          @if (formBuilderService.selectedRowCount() >= 2) {
+            <div
+              class="batch-toolbar sticky top-0 z-10 bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 shadow-sm"
+            >
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-semibold text-blue-700">
+                  {{ formBuilderService.selectedRowCount() }} rows selected
+                </span>
+                <div class="flex gap-2">
                   <button
                     pButton
-                    icon="pi pi-trash"
-                    severity="danger"
+                    label="Duplicate Selected"
+                    icon="pi pi-copy"
+                    severity="primary"
                     size="small"
-                    [outlined]="true"
-                    (click)="onRemoveRow(row.rowId)"
-                    [attr.aria-label]="'Remove row ' + (row.order + 1)"
+                    (click)="onDuplicateSelected()"
+                    [disabled]="formBuilderService.isPublished()"
                   ></button>
+                  <button
+                    pButton
+                    label="Clear"
+                    icon="pi pi-times"
+                    severity="secondary"
+                    size="small"
+                    [text]="true"
+                    (click)="onClearSelection()"
+                  ></button>
+                </div>
+              </div>
+            </div>
+          }
+
+          <div class="row-list space-y-3">
+            @for (row of formBuilderService.rowConfigs(); track row.rowId) {
+              <div
+                class="row-item rounded-lg border p-3 shadow-xs transition-colors"
+                [class.border-blue-500]="formBuilderService.isRowSelected(row.rowId)"
+                [class.bg-blue-50]="formBuilderService.isRowSelected(row.rowId)"
+                [class.border-gray-200]="!formBuilderService.isRowSelected(row.rowId)"
+                [class.bg-white]="!formBuilderService.isRowSelected(row.rowId)"
+              >
+                <div class="flex items-center justify-between gap-2 mb-3">
+                  <div class="flex items-center gap-3">
+                    <!-- Selection Checkbox -->
+                    <p-checkbox
+                      [binary]="true"
+                      [(ngModel)]="rowSelectionStates[row.rowId]"
+                      (onChange)="onRowCheckboxChange(row.rowId, $event.checked, $event)"
+                      [disabled]="formBuilderService.isPublished()"
+                      [attr.aria-label]="'Select row ' + (row.order + 1)"
+                    />
+                    <div>
+                      <p class="text-sm font-semibold text-gray-800">Row {{ row.order + 1 }}</p>
+                      <p class="text-xs text-gray-500">
+                        {{ row.columnCount }}
+                        {{ row.columnCount === 1 ? 'column' : 'columns' }}
+                      </p>
+                    </div>
+                  </div>
+                  <div class="flex gap-2">
+                    <!-- Duplicate Button -->
+                    <button
+                      pButton
+                      icon="pi pi-copy"
+                      severity="secondary"
+                      size="small"
+                      [outlined]="true"
+                      (click)="onDuplicateRow(row.rowId)"
+                      [attr.aria-label]="'Duplicate row ' + (row.order + 1)"
+                      [disabled]="formBuilderService.isPublished()"
+                    ></button>
+                    <!-- Trash Button -->
+                    <button
+                      pButton
+                      icon="pi pi-trash"
+                      severity="danger"
+                      size="small"
+                      [outlined]="true"
+                      (click)="onRemoveRow(row.rowId)"
+                      [attr.aria-label]="'Remove row ' + (row.order + 1)"
+                    ></button>
+                  </div>
                 </div>
 
                 <div class="flex gap-2">
@@ -473,6 +538,33 @@ export class RowLayoutSidebarComponent {
   rowLayoutEnabled = false;
 
   /**
+   * Last selected row ID for range selection with Shift+Click.
+   * Story 28.2: Multi-Row Selection and Batch Duplication
+   */
+  private readonly lastSelectedRowId = signal<string | null>(null);
+
+  /**
+   * Checkbox states for each row (rowId => checked boolean).
+   * Used for two-way binding with p-checkbox components.
+   * Story 28.2: Multi-Row Selection and Batch Duplication
+   */
+  readonly rowSelectionStates: Record<string, boolean> = {};
+
+  /**
+   * Constructor initializes checkbox state sync with service selection.
+   * Story 28.2: Multi-Row Selection and Batch Duplication
+   */
+  constructor() {
+    // Sync checkbox states with service selection
+    effect(() => {
+      const selectedIds = this.formBuilderService.selectedRowIds();
+      this.formBuilderService.rowConfigs().forEach((row) => {
+        this.rowSelectionStates[row.rowId] = selectedIds.includes(row.rowId);
+      });
+    });
+  }
+
+  /**
    * Expose step form state for quick status preview.
    */
   protected readonly stepFormEnabled = this.formBuilderService.stepFormEnabled;
@@ -817,6 +909,72 @@ export class RowLayoutSidebarComponent {
         this.formBuilderService.removeRow(rowId);
       },
     });
+  }
+
+  /**
+   * Duplicates an existing row with all fields and configuration.
+   * Story 28.1: Single Row Duplication with Field Preservation
+   *
+   * @param rowId - ID of the row to duplicate
+   */
+  onDuplicateRow(rowId: string): void {
+    const newRowId = this.formBuilderService.duplicateRow(rowId);
+    if (newRowId) {
+      console.log('Row duplicated successfully. New row ID:', newRowId);
+    } else {
+      console.error('Failed to duplicate row:', rowId);
+    }
+  }
+
+  /**
+   * Handles row checkbox change with keyboard modifier support.
+   * Story 28.2: Multi-Row Selection and Batch Duplication
+   *
+   * - Ctrl/Cmd+Click: Toggle individual row selection (add/remove)
+   * - Shift+Click: Select range from last selected row to clicked row
+   * - Click without modifiers: Single-select (deselects others, selects clicked row)
+   *
+   * @param rowId - ID of the row whose checkbox changed
+   * @param checked - New checkbox state (true = checked, false = unchecked)
+   * @param event - PrimeNG onChange event containing originalEvent (MouseEvent)
+   */
+  onRowCheckboxChange(rowId: string, checked: boolean, event: any): void {
+    const nativeEvent = event.originalEvent as MouseEvent;
+
+    if (nativeEvent.shiftKey && this.lastSelectedRowId()) {
+      // Shift+Click: Select range
+      this.formBuilderService.selectRowRange(this.lastSelectedRowId()!, rowId);
+    } else if (nativeEvent.ctrlKey || nativeEvent.metaKey) {
+      // Ctrl/Cmd+Click: Toggle selection
+      this.formBuilderService.selectRow(rowId);
+    } else {
+      // Regular click: Single-select (clear others)
+      this.formBuilderService.clearSelection();
+      if (checked) {
+        this.formBuilderService.selectRow(rowId);
+      }
+    }
+
+    this.lastSelectedRowId.set(rowId);
+  }
+
+  /**
+   * Duplicates all selected rows as a batch.
+   * Story 28.2: Multi-Row Selection and Batch Duplication
+   */
+  onDuplicateSelected(): void {
+    const selectedIds = this.formBuilderService.selectedRowIds();
+    const newRowIds = this.formBuilderService.duplicateRows(selectedIds);
+    console.log(`${newRowIds.length} rows duplicated successfully`);
+  }
+
+  /**
+   * Clears all row selections.
+   * Story 28.2: Multi-Row Selection and Batch Duplication
+   */
+  onClearSelection(): void {
+    this.formBuilderService.clearSelection();
+    this.lastSelectedRowId.set(null);
   }
 
   /**

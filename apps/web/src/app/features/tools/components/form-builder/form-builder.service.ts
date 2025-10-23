@@ -45,6 +45,9 @@ export class FormBuilderService {
   private readonly _rowLayoutEnabled = signal<boolean>(false);
   private readonly _rowConfigs = signal<RowLayoutConfig[]>([]);
 
+  // Row selection state signals (Story 28.2: Multi-Row Selection and Batch Duplication)
+  private readonly _selectedRowIds = signal<string[]>([]);
+
   // Sub-column configuration state signals (Story 27.3)
   private readonly _subColumnConfigs = signal<SubColumnConfigInternal[]>([]);
 
@@ -74,6 +77,11 @@ export class FormBuilderService {
   // Row layout public signals
   readonly rowLayoutEnabled = this._rowLayoutEnabled.asReadonly();
   readonly rowConfigs = this._rowConfigs.asReadonly();
+
+  // Row selection public signals (Story 28.2)
+  readonly selectedRowIds = this._selectedRowIds.asReadonly();
+  readonly selectedRowCount = computed(() => this._selectedRowIds().length);
+  readonly hasSelectedRows = computed(() => this._selectedRowIds().length > 0);
 
   // Sub-column configuration public signals (Story 27.3)
   readonly subColumnConfigs = this._subColumnConfigs.asReadonly();
@@ -817,6 +825,215 @@ export class FormBuilderService {
       this._formFields.update((fields) => fields.map((f) => ({ ...f, position: undefined })));
     }
     this.markDirty();
+  }
+
+  /**
+   * Duplicates an existing row with all fields and configuration.
+   * Clones row config, fields, sub-columns, and inserts below source row.
+   * Story 28.1: Single Row Duplication with Field Preservation
+   *
+   * @param rowId - ID of the row to duplicate
+   * @returns New row ID, or empty string if duplication fails
+   *
+   * @example
+   * // Duplicate a row with 2 columns
+   * const newRowId = formBuilderService.duplicateRow('row_123');
+   * console.log('Row duplicated successfully. New row ID:', newRowId);
+   */
+  duplicateRow(rowId: string): string {
+    const sourceRow = this._rowConfigs().find((r) => r.rowId === rowId);
+    if (!sourceRow) {
+      console.error('Source row not found:', rowId);
+      return '';
+    }
+
+    try {
+      // Generate new row ID
+      const newRowId = crypto.randomUUID();
+
+      // Clone row configuration with new ID
+      const newRow: RowLayoutConfig = {
+        rowId: newRowId,
+        columnCount: sourceRow.columnCount,
+        columnWidths: sourceRow.columnWidths ? [...sourceRow.columnWidths] : undefined,
+        subColumns: sourceRow.subColumns
+          ? sourceRow.subColumns.map((sc) => ({ ...sc }))
+          : undefined,
+        order: sourceRow.order + 1,
+        stepId: sourceRow.stepId,
+      };
+
+      // Insert new row and reorder subsequent rows
+      this._rowConfigs.update((rows) => {
+        const updated = [...rows];
+        const insertIndex = updated.findIndex((r) => r.rowId === rowId) + 1;
+        updated.splice(insertIndex, 0, newRow);
+
+        // Reorder all rows to maintain sequential order
+        return updated.map((row, index) => ({
+          ...row,
+          order: index,
+        }));
+      });
+
+      // Clone fields in source row
+      const fieldsToClone = this._formFields().filter((f) => f.position?.rowId === rowId);
+
+      const clonedFields: FormField[] = fieldsToClone.map((field) => {
+        const newFieldId = crypto.randomUUID();
+        const newFieldName = this.generateUniqueFieldName(field.type);
+
+        return {
+          ...field,
+          id: newFieldId,
+          fieldName: newFieldName,
+          position: field.position
+            ? {
+                ...field.position,
+                rowId: newRowId,
+              }
+            : undefined,
+        };
+      });
+
+      // Add cloned fields to form
+      this._formFields.update((fields) => [...fields, ...clonedFields]);
+
+      // Clone sub-column configs if present
+      const sourceSubColumns = this._subColumnConfigs().filter((sc) => sc.rowId === rowId);
+      if (sourceSubColumns.length > 0) {
+        const clonedSubColumns: SubColumnConfigInternal[] = sourceSubColumns.map((sc) => ({
+          ...sc,
+          rowId: newRowId,
+        }));
+        this._subColumnConfigs.update((configs) => [...configs, ...clonedSubColumns]);
+      }
+
+      this.markDirty();
+      console.log(`Row ${sourceRow.order + 1} duplicated successfully. New row ID: ${newRowId}`);
+      return newRowId;
+    } catch (error) {
+      console.error('Failed to duplicate row:', error);
+      return '';
+    }
+  }
+
+  /**
+   * Toggles row selection state (add or remove from selection).
+   * Story 28.2: Multi-Row Selection and Batch Duplication
+   * @param rowId - ID of the row to select/deselect
+   */
+  selectRow(rowId: string): void {
+    this._selectedRowIds.update((selected) => {
+      const index = selected.indexOf(rowId);
+      if (index > -1) {
+        // Already selected, deselect it
+        return selected.filter((id) => id !== rowId);
+      } else {
+        // Not selected, add it
+        return [...selected, rowId];
+      }
+    });
+  }
+
+  /**
+   * Removes row from selection.
+   * Story 28.2: Multi-Row Selection and Batch Duplication
+   * @param rowId - ID of the row to deselect
+   */
+  deselectRow(rowId: string): void {
+    this._selectedRowIds.update((selected) => selected.filter((id) => id !== rowId));
+  }
+
+  /**
+   * Clears all row selections.
+   * Story 28.2: Multi-Row Selection and Batch Duplication
+   */
+  clearSelection(): void {
+    this._selectedRowIds.set([]);
+  }
+
+  /**
+   * Selects a continuous range of rows.
+   * Story 28.2: Multi-Row Selection and Batch Duplication
+   * @param startRowId - Starting row ID
+   * @param endRowId - Ending row ID
+   */
+  selectRowRange(startRowId: string, endRowId: string): void {
+    const rows = this._rowConfigs();
+    const startIndex = rows.findIndex((r) => r.rowId === startRowId);
+    const endIndex = rows.findIndex((r) => r.rowId === endRowId);
+
+    if (startIndex === -1 || endIndex === -1) {
+      console.error('Invalid row range:', startRowId, endRowId);
+      return;
+    }
+
+    const [min, max] = [Math.min(startIndex, endIndex), Math.max(startIndex, endIndex)];
+    const rangeRowIds = rows.slice(min, max + 1).map((r) => r.rowId);
+
+    this._selectedRowIds.update((selected) => {
+      const newSelection = new Set([...selected, ...rangeRowIds]);
+      return Array.from(newSelection);
+    });
+  }
+
+  /**
+   * Checks if row is selected.
+   * Story 28.2: Multi-Row Selection and Batch Duplication
+   * @param rowId - ID of the row
+   * @returns True if row is in selection set
+   */
+  isRowSelected(rowId: string): boolean {
+    return this._selectedRowIds().includes(rowId);
+  }
+
+  /**
+   * Duplicates multiple rows as a batch.
+   * Maintains relative order and inserts below source rows.
+   * Story 28.2: Multi-Row Selection and Batch Duplication
+   * @param rowIds - Array of row IDs to duplicate
+   * @returns Array of new row IDs in same order
+   * @example
+   * // Duplicate 2 selected rows
+   * const newRowIds = formBuilderService.duplicateRows(['row_1', 'row_2']);
+   * console.log(`${newRowIds.length} rows duplicated successfully`);
+   */
+  duplicateRows(rowIds: string[]): string[] {
+    // Validate all rowIds exist
+    const validRowIds = rowIds.filter((id) => {
+      const exists = this._rowConfigs().some((r) => r.rowId === id);
+      if (!exists) {
+        console.error('Invalid row ID:', id);
+      }
+      return exists;
+    });
+
+    if (validRowIds.length === 0) {
+      console.error('No valid row IDs provided');
+      return [];
+    }
+
+    // Sort rowIds by source row order to maintain relative positions
+    const sortedRowIds = validRowIds.sort((a, b) => {
+      const orderA = this._rowConfigs().find((r) => r.rowId === a)?.order ?? 0;
+      const orderB = this._rowConfigs().find((r) => r.rowId === b)?.order ?? 0;
+      return orderA - orderB;
+    });
+
+    // Duplicate each row sequentially
+    const newRowIds: string[] = [];
+    sortedRowIds.forEach((rowId) => {
+      const newRowId = this.duplicateRow(rowId);
+      if (newRowId) {
+        newRowIds.push(newRowId);
+      }
+    });
+
+    // Clear selection after duplication
+    this.clearSelection();
+
+    return newRowIds;
   }
 
   /**

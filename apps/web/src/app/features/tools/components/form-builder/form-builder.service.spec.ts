@@ -762,6 +762,261 @@ describe('FormBuilderService', () => {
     });
   });
 
+  describe('Row Layout - duplicateRow() (Story 28.1)', () => {
+    it('should duplicate empty row with config only', () => {
+      service.enableRowLayout();
+      const rowId = service.rowConfigs()[0].rowId;
+
+      const newRowId = service.duplicateRow(rowId);
+
+      expect(newRowId).toBeTruthy();
+      expect(service.rowConfigs().length).toBe(2);
+      expect(service.rowConfigs()[1].columnCount).toBe(1);
+      expect(service.rowConfigs()[1].rowId).toBe(newRowId);
+      expect(service.rowConfigs()[1].order).toBe(1);
+    });
+
+    it('should duplicate row with single field and preserve position', () => {
+      service.enableRowLayout();
+      const rowId = service.rowConfigs()[0].rowId;
+
+      const field = service.addFieldFromType(FormFieldType.TEXT);
+      service.setFieldPosition(field.id, { rowId, columnIndex: 0, orderInColumn: 0 });
+
+      const newRowId = service.duplicateRow(rowId);
+      const newRowFields = service.getFieldsInColumn(newRowId, 0);
+
+      expect(newRowFields.length).toBe(1);
+      expect(newRowFields[0].type).toBe(FormFieldType.TEXT);
+      expect(newRowFields[0].position?.rowId).toBe(newRowId);
+      expect(newRowFields[0].position?.columnIndex).toBe(0);
+      expect(newRowFields[0].position?.orderInColumn).toBe(0);
+      expect(newRowFields[0].id).not.toBe(field.id); // New UUID
+      expect(newRowFields[0].fieldName).not.toBe(field.fieldName); // Unique field name
+    });
+
+    it('should duplicate row with multiple fields in multiple columns', () => {
+      service.enableRowLayout();
+      const rowId = service.addRow(3);
+
+      const field1 = service.addFieldFromType(FormFieldType.TEXT);
+      const field2 = service.addFieldFromType(FormFieldType.EMAIL);
+      const field3 = service.addFieldFromType(FormFieldType.NUMBER);
+
+      service.setFieldPosition(field1.id, { rowId, columnIndex: 0, orderInColumn: 0 });
+      service.setFieldPosition(field2.id, { rowId, columnIndex: 1, orderInColumn: 0 });
+      service.setFieldPosition(field3.id, { rowId, columnIndex: 2, orderInColumn: 0 });
+
+      const newRowId = service.duplicateRow(rowId);
+
+      const col0Fields = service.getFieldsInColumn(newRowId, 0);
+      const col1Fields = service.getFieldsInColumn(newRowId, 1);
+      const col2Fields = service.getFieldsInColumn(newRowId, 2);
+
+      expect(col0Fields.length).toBe(1);
+      expect(col1Fields.length).toBe(1);
+      expect(col2Fields.length).toBe(1);
+
+      expect(col0Fields[0].type).toBe(FormFieldType.TEXT);
+      expect(col1Fields[0].type).toBe(FormFieldType.EMAIL);
+      expect(col2Fields[0].type).toBe(FormFieldType.NUMBER);
+
+      // Verify all fields have new row ID
+      expect(col0Fields[0].position?.rowId).toBe(newRowId);
+      expect(col1Fields[0].position?.rowId).toBe(newRowId);
+      expect(col2Fields[0].position?.rowId).toBe(newRowId);
+    });
+
+    it('should preserve sub-column configurations', () => {
+      service.enableRowLayout();
+      const rowId = service.addRow(2);
+      service.addSubColumn(rowId, 0, 2);
+
+      const newRowId = service.duplicateRow(rowId);
+      const subColConfig = service.subColumnsByRowColumn().get(`${newRowId}-0`);
+
+      expect(subColConfig).toBeDefined();
+      expect(subColConfig?.subColumnCount).toBe(2);
+      expect(subColConfig?.rowId).toBe(newRowId);
+      expect(subColConfig?.columnIndex).toBe(0);
+    });
+
+    it('should preserve stepId in step form mode', () => {
+      service.enableStepForm();
+      service.enableRowLayout();
+      const stepId = service.steps()[0].id;
+      const rowId = service.addRow(2);
+
+      // Verify row has stepId
+      const sourceRow = service.rowConfigs().find((r) => r.rowId === rowId);
+      expect(sourceRow?.stepId).toBe(stepId);
+
+      const newRowId = service.duplicateRow(rowId);
+      const newRow = service.rowConfigs().find((r) => r.rowId === newRowId);
+
+      expect(newRow?.stepId).toBe(stepId);
+    });
+
+    it('should insert duplicated row directly below source row', () => {
+      service.enableRowLayout();
+      const row1 = service.rowConfigs()[0].rowId;
+      const row2 = service.addRow(2);
+      const row3 = service.addRow(3);
+
+      // Duplicate row2 (middle row)
+      const newRowId = service.duplicateRow(row2);
+
+      const rows = service.rowConfigs();
+      expect(rows.length).toBe(4);
+      expect(rows[0].rowId).toBe(row1);
+      expect(rows[1].rowId).toBe(row2);
+      expect(rows[2].rowId).toBe(newRowId); // New row inserted below row2
+      expect(rows[3].rowId).toBe(row3);
+
+      // Verify orders are sequential
+      expect(rows[0].order).toBe(0);
+      expect(rows[1].order).toBe(1);
+      expect(rows[2].order).toBe(2);
+      expect(rows[3].order).toBe(3);
+    });
+
+    it('should generate unique field names when duplicating', () => {
+      service.enableRowLayout();
+      const rowId = service.rowConfigs()[0].rowId;
+
+      const field1 = service.addFieldFromType(FormFieldType.TEXT);
+      service.setFieldPosition(field1.id, { rowId, columnIndex: 0, orderInColumn: 0 });
+
+      const newRowId = service.duplicateRow(rowId);
+      const newRowFields = service.getFieldsInColumn(newRowId, 0);
+
+      expect(newRowFields[0].fieldName).not.toBe(field1.fieldName);
+      expect(newRowFields[0].fieldName).toMatch(/^text-\d+$/); // Should be text-2 or similar
+    });
+
+    it('should preserve all field properties', () => {
+      service.enableRowLayout();
+      const rowId = service.rowConfigs()[0].rowId;
+
+      const field = service.addFieldFromType(FormFieldType.EMAIL);
+      service.updateField(0, {
+        ...field,
+        label: 'Email Address',
+        placeholder: 'Enter your email',
+        helpText: 'We will never share your email',
+        required: true,
+        validation: { pattern: '^[a-z]+@[a-z]+\\.[a-z]{2,}$' },
+      });
+      service.setFieldPosition(field.id, { rowId, columnIndex: 0, orderInColumn: 0 });
+
+      const newRowId = service.duplicateRow(rowId);
+      const newRowFields = service.getFieldsInColumn(newRowId, 0);
+      const clonedField = newRowFields[0];
+
+      expect(clonedField.type).toBe(FormFieldType.EMAIL);
+      expect(clonedField.label).toBe('Email Address');
+      expect(clonedField.placeholder).toBe('Enter your email');
+      expect(clonedField.helpText).toBe('We will never share your email');
+      expect(clonedField.required).toBe(true);
+      expect(clonedField.validation?.pattern).toBe('^[a-z]+@[a-z]+\\.[a-z]{2,}$');
+    });
+
+    it('should preserve column widths configuration', () => {
+      service.enableRowLayout();
+      const rowId = service.addRow(2);
+      service.updateRowColumnWidths(rowId, ['1fr', '3fr']);
+
+      const newRowId = service.duplicateRow(rowId);
+      const newRow = service.rowConfigs().find((r) => r.rowId === newRowId);
+
+      expect(newRow?.columnWidths).toEqual(['1fr', '3fr']);
+    });
+
+    it('should mark form as dirty after duplication', () => {
+      service.enableRowLayout();
+      const rowId = service.rowConfigs()[0].rowId;
+      service.markClean();
+
+      expect(service.isDirty()).toBe(false);
+
+      service.duplicateRow(rowId);
+
+      expect(service.isDirty()).toBe(true);
+    });
+
+    it('should return empty string for invalid rowId', () => {
+      service.enableRowLayout();
+
+      const newRowId = service.duplicateRow('non-existent-row-id');
+
+      expect(newRowId).toBe('');
+      expect(service.rowConfigs().length).toBe(1); // No new row added
+    });
+
+    it('should handle duplication with multiple fields stacked in same column', () => {
+      service.enableRowLayout();
+      const rowId = service.addRow(2);
+
+      const field1 = service.addFieldFromType(FormFieldType.TEXT);
+      const field2 = service.addFieldFromType(FormFieldType.EMAIL);
+      const field3 = service.addFieldFromType(FormFieldType.NUMBER);
+
+      service.setFieldPosition(field1.id, { rowId, columnIndex: 0, orderInColumn: 0 });
+      service.setFieldPosition(field2.id, { rowId, columnIndex: 0, orderInColumn: 1 });
+      service.setFieldPosition(field3.id, { rowId, columnIndex: 0, orderInColumn: 2 });
+
+      const newRowId = service.duplicateRow(rowId);
+      const newRowFields = service.getFieldsInColumn(newRowId, 0);
+
+      expect(newRowFields.length).toBe(3);
+      expect(newRowFields[0].position?.orderInColumn).toBe(0);
+      expect(newRowFields[1].position?.orderInColumn).toBe(1);
+      expect(newRowFields[2].position?.orderInColumn).toBe(2);
+    });
+
+    it('should duplicate row with sub-column positioned fields', () => {
+      service.enableRowLayout();
+      const rowId = service.addRow(2);
+      service.addSubColumn(rowId, 0, 3);
+
+      const field1 = service.addFieldFromType(FormFieldType.TEXT);
+      const field2 = service.addFieldFromType(FormFieldType.EMAIL);
+
+      service.setFieldPosition(field1.id, {
+        rowId,
+        columnIndex: 0,
+        subColumnIndex: 0,
+        orderInColumn: 0,
+      });
+      service.setFieldPosition(field2.id, {
+        rowId,
+        columnIndex: 0,
+        subColumnIndex: 1,
+        orderInColumn: 0,
+      });
+
+      const newRowId = service.duplicateRow(rowId);
+      const allFields = service.getAllFields();
+      const newRowFieldsSubCol0 = allFields.filter(
+        (f) =>
+          f.position?.rowId === newRowId &&
+          f.position?.columnIndex === 0 &&
+          f.position?.subColumnIndex === 0,
+      );
+      const newRowFieldsSubCol1 = allFields.filter(
+        (f) =>
+          f.position?.rowId === newRowId &&
+          f.position?.columnIndex === 0 &&
+          f.position?.subColumnIndex === 1,
+      );
+
+      expect(newRowFieldsSubCol0.length).toBe(1);
+      expect(newRowFieldsSubCol1.length).toBe(1);
+      expect(newRowFieldsSubCol0[0].type).toBe(FormFieldType.TEXT);
+      expect(newRowFieldsSubCol1[0].type).toBe(FormFieldType.EMAIL);
+    });
+  });
+
   describe('Row Layout - updateRowColumns()', () => {
     it('should update column count for specified row', () => {
       service.enableRowLayout();
@@ -3478,6 +3733,370 @@ describe('FormBuilderService', () => {
 
         expect(service.subColumnConfigs().length).toBe(10);
         expect(end - start).toBeLessThan(100);
+      });
+    });
+  });
+
+  /**
+   * Story 28.2: Multi-Row Selection and Batch Duplication
+   * Test suite for row selection state management and batch duplication functionality.
+   */
+  describe('Row Selection and Batch Duplication (Story 28.2)', () => {
+    describe('selectRow()', () => {
+      it('should add row to selection when not already selected', () => {
+        service.enableRowLayout();
+        const rowId = service.addRow(2);
+
+        service.selectRow(rowId);
+
+        expect(service.selectedRowIds()).toEqual([rowId]);
+        expect(service.isRowSelected(rowId)).toBe(true);
+        expect(service.selectedRowCount()).toBe(1);
+        expect(service.hasSelectedRows()).toBe(true);
+      });
+
+      it('should toggle row selection (remove when already selected)', () => {
+        service.enableRowLayout();
+        const rowId = service.addRow(2);
+
+        service.selectRow(rowId);
+        service.selectRow(rowId);
+
+        expect(service.selectedRowIds()).toEqual([]);
+        expect(service.isRowSelected(rowId)).toBe(false);
+        expect(service.selectedRowCount()).toBe(0);
+        expect(service.hasSelectedRows()).toBe(false);
+      });
+
+      it('should support multiple row selection', () => {
+        service.enableRowLayout();
+        const row1 = service.addRow(2);
+        const row2 = service.addRow(3);
+        const row3 = service.addRow(4);
+
+        service.selectRow(row1);
+        service.selectRow(row2);
+        service.selectRow(row3);
+
+        expect(service.selectedRowIds()).toEqual([row1, row2, row3]);
+        expect(service.selectedRowCount()).toBe(3);
+      });
+    });
+
+    describe('deselectRow()', () => {
+      it('should remove row from selection', () => {
+        service.enableRowLayout();
+        const rowId = service.addRow(2);
+        service.selectRow(rowId);
+
+        service.deselectRow(rowId);
+
+        expect(service.selectedRowIds()).toEqual([]);
+        expect(service.isRowSelected(rowId)).toBe(false);
+      });
+
+      it('should handle deselecting non-selected row gracefully', () => {
+        service.enableRowLayout();
+        const rowId = service.addRow(2);
+
+        service.deselectRow(rowId);
+
+        expect(service.selectedRowIds()).toEqual([]);
+      });
+    });
+
+    describe('clearSelection()', () => {
+      it('should clear all selected rows', () => {
+        service.enableRowLayout();
+        const row1 = service.addRow(2);
+        const row2 = service.addRow(3);
+        service.selectRow(row1);
+        service.selectRow(row2);
+
+        service.clearSelection();
+
+        expect(service.selectedRowIds()).toEqual([]);
+        expect(service.selectedRowCount()).toBe(0);
+        expect(service.hasSelectedRows()).toBe(false);
+      });
+
+      it('should handle clearing empty selection gracefully', () => {
+        service.enableRowLayout();
+        service.addRow(2);
+
+        service.clearSelection();
+
+        expect(service.selectedRowIds()).toEqual([]);
+      });
+    });
+
+    describe('selectRowRange()', () => {
+      it('should select continuous range of rows (forward direction)', () => {
+        service.enableRowLayout();
+        const row1 = service.addRow(2);
+        const row2 = service.addRow(2);
+        const row3 = service.addRow(2);
+
+        service.selectRowRange(row1, row3);
+
+        expect(service.selectedRowIds()).toEqual([row1, row2, row3]);
+        expect(service.selectedRowCount()).toBe(3);
+      });
+
+      it('should select continuous range of rows (reverse direction)', () => {
+        service.enableRowLayout();
+        const row1 = service.addRow(2);
+        const row2 = service.addRow(2);
+        const row3 = service.addRow(2);
+
+        service.selectRowRange(row3, row1);
+
+        expect(service.selectedRowIds()).toEqual([row1, row2, row3]);
+        expect(service.selectedRowCount()).toBe(3);
+      });
+
+      it('should add to existing selection when selecting range', () => {
+        service.enableRowLayout();
+        const row1 = service.addRow(2);
+        const row2 = service.addRow(2);
+        const row3 = service.addRow(2);
+        const row4 = service.addRow(2);
+
+        service.selectRow(row1);
+        service.selectRowRange(row3, row4);
+
+        expect(service.selectedRowIds()).toContain(row1);
+        expect(service.selectedRowIds()).toContain(row3);
+        expect(service.selectedRowIds()).toContain(row4);
+        expect(service.selectedRowCount()).toBe(3);
+      });
+
+      it('should handle invalid startRowId gracefully', () => {
+        service.enableRowLayout();
+        const row1 = service.addRow(2);
+        const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+        service.selectRowRange('invalid-id', row1);
+
+        expect(consoleSpy).toHaveBeenCalledWith('Invalid row range:', 'invalid-id', row1);
+        expect(service.selectedRowIds()).toEqual([]);
+        consoleSpy.mockRestore();
+      });
+
+      it('should handle invalid endRowId gracefully', () => {
+        service.enableRowLayout();
+        const row1 = service.addRow(2);
+        const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+        service.selectRowRange(row1, 'invalid-id');
+
+        expect(consoleSpy).toHaveBeenCalledWith('Invalid row range:', row1, 'invalid-id');
+        expect(service.selectedRowIds()).toEqual([]);
+        consoleSpy.mockRestore();
+      });
+    });
+
+    describe('isRowSelected()', () => {
+      it('should return true for selected row', () => {
+        service.enableRowLayout();
+        const rowId = service.addRow(2);
+        service.selectRow(rowId);
+
+        expect(service.isRowSelected(rowId)).toBe(true);
+      });
+
+      it('should return false for non-selected row', () => {
+        service.enableRowLayout();
+        const rowId = service.addRow(2);
+
+        expect(service.isRowSelected(rowId)).toBe(false);
+      });
+    });
+
+    describe('duplicateRows()', () => {
+      it('should duplicate 2 rows successfully', () => {
+        service.enableRowLayout();
+        const row1 = service.addRow(2);
+        const row2 = service.addRow(3);
+
+        const newRowIds = service.duplicateRows([row1, row2]);
+
+        expect(newRowIds.length).toBe(2);
+        expect(service.rowConfigs().length).toBe(4);
+      });
+
+      it('should duplicate 3+ rows successfully', () => {
+        service.enableRowLayout();
+        const row1 = service.addRow(2);
+        const row2 = service.addRow(3);
+        const row3 = service.addRow(4);
+
+        const newRowIds = service.duplicateRows([row1, row2, row3]);
+
+        expect(newRowIds.length).toBe(3);
+        expect(service.rowConfigs().length).toBe(6);
+      });
+
+      it('should duplicate rows with non-contiguous selection', () => {
+        service.enableRowLayout();
+        const row1 = service.addRow(2);
+        const row2 = service.addRow(3);
+        const row3 = service.addRow(4);
+
+        const newRowIds = service.duplicateRows([row1, row3]);
+
+        expect(newRowIds.length).toBe(2);
+        expect(service.rowConfigs().length).toBe(5);
+      });
+
+      it('should clear selection after duplication', () => {
+        service.enableRowLayout();
+        const row1 = service.addRow(2);
+        const row2 = service.addRow(3);
+        service.selectRow(row1);
+        service.selectRow(row2);
+
+        service.duplicateRows([row1, row2]);
+
+        expect(service.selectedRowIds()).toEqual([]);
+        expect(service.selectedRowCount()).toBe(0);
+      });
+
+      it('should maintain row order when duplicating batch', () => {
+        service.enableRowLayout();
+        const row1 = service.addRow(2);
+        const row2 = service.addRow(3);
+
+        service.duplicateRows([row1, row2]);
+
+        const rows = service.rowConfigs();
+        expect(rows[0].columnCount).toBe(2); // Original row1
+        expect(rows[1].columnCount).toBe(2); // Duplicated row1
+        expect(rows[2].columnCount).toBe(3); // Original row2
+        expect(rows[3].columnCount).toBe(3); // Duplicated row2
+      });
+
+      it('should sort rowIds by source row order before duplication', () => {
+        service.enableRowLayout();
+        const row1 = service.addRow(2);
+        const row2 = service.addRow(3);
+        const row3 = service.addRow(4);
+
+        // Pass in reverse order - should still duplicate in correct order
+        service.duplicateRows([row3, row1, row2]);
+
+        const rows = service.rowConfigs();
+        expect(rows[0].columnCount).toBe(2); // Original row1
+        expect(rows[1].columnCount).toBe(2); // Duplicated row1
+        expect(rows[2].columnCount).toBe(3); // Original row2
+        expect(rows[3].columnCount).toBe(3); // Duplicated row2
+        expect(rows[4].columnCount).toBe(4); // Original row3
+        expect(rows[5].columnCount).toBe(4); // Duplicated row3
+      });
+
+      it('should handle invalid rowIds gracefully', () => {
+        service.enableRowLayout();
+        const row1 = service.addRow(2);
+        const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+        const newRowIds = service.duplicateRows(['invalid-id', row1]);
+
+        expect(consoleSpy).toHaveBeenCalledWith('Invalid row ID:', 'invalid-id');
+        expect(newRowIds.length).toBe(1); // Only valid row duplicated
+        consoleSpy.mockRestore();
+      });
+
+      it('should return empty array when all rowIds are invalid', () => {
+        service.enableRowLayout();
+        service.addRow(2);
+        const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+        const newRowIds = service.duplicateRows(['invalid-1', 'invalid-2']);
+
+        expect(consoleSpy).toHaveBeenCalledWith('Invalid row ID:', 'invalid-1');
+        expect(consoleSpy).toHaveBeenCalledWith('Invalid row ID:', 'invalid-2');
+        expect(consoleSpy).toHaveBeenCalledWith('No valid row IDs provided');
+        expect(newRowIds).toEqual([]);
+        consoleSpy.mockRestore();
+      });
+
+      it('should preserve fields in duplicated rows', () => {
+        service.enableRowLayout();
+        const row1 = service.addRow(2);
+        const row2 = service.addRow(3);
+
+        // Add fields to rows
+        const field1 = service.addFieldFromType(FormFieldType.TEXT);
+        service.setFieldPosition(field1.id, { rowId: row1, columnIndex: 0, orderInColumn: 0 });
+        const field2 = service.addFieldFromType(FormFieldType.EMAIL);
+        service.setFieldPosition(field2.id, { rowId: row2, columnIndex: 1, orderInColumn: 0 });
+
+        const newRowIds = service.duplicateRows([row1, row2]);
+
+        // Check that fields were cloned for each new row
+        const row1Fields = service.formFields().filter((f) => f.position?.rowId === newRowIds[0]);
+        const row2Fields = service.formFields().filter((f) => f.position?.rowId === newRowIds[1]);
+
+        expect(row1Fields.length).toBe(1);
+        expect(row1Fields[0].type).toBe(FormFieldType.TEXT);
+        expect(row2Fields.length).toBe(1);
+        expect(row2Fields[0].type).toBe(FormFieldType.EMAIL);
+      });
+
+      it('should mark form as dirty after batch duplication', () => {
+        service.enableRowLayout();
+        const row1 = service.addRow(2);
+        const row2 = service.addRow(3);
+        service.loadForm({
+          schema: {
+            id: 'test-form',
+            fields: [],
+            settings: { rowLayout: { enabled: true, rows: [] } },
+          },
+          metadata: {
+            title: 'Test',
+            description: '',
+            status: FormStatus.DRAFT,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        });
+
+        service.duplicateRows([row1, row2]);
+
+        expect(service.isDirty()).toBe(true);
+      });
+    });
+
+    describe('Computed Signals', () => {
+      it('should update selectedRowCount when selection changes', () => {
+        service.enableRowLayout();
+        const row1 = service.addRow(2);
+        const row2 = service.addRow(3);
+
+        expect(service.selectedRowCount()).toBe(0);
+
+        service.selectRow(row1);
+        expect(service.selectedRowCount()).toBe(1);
+
+        service.selectRow(row2);
+        expect(service.selectedRowCount()).toBe(2);
+
+        service.clearSelection();
+        expect(service.selectedRowCount()).toBe(0);
+      });
+
+      it('should update hasSelectedRows when selection changes', () => {
+        service.enableRowLayout();
+        const rowId = service.addRow(2);
+
+        expect(service.hasSelectedRows()).toBe(false);
+
+        service.selectRow(rowId);
+        expect(service.hasSelectedRows()).toBe(true);
+
+        service.clearSelection();
+        expect(service.hasSelectedRows()).toBe(false);
       });
     });
   });
