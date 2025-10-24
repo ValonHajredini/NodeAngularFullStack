@@ -56,7 +56,9 @@ module.exports = {
   verbose: true,
   forceExit: true,
   detectOpenHandles: true,
-  maxWorkers: 2,
+  // Run tests sequentially to avoid database race conditions in integration tests
+  // This prevents state interference when multiple tests access shared database resources
+  maxWorkers: 1,
   testPathIgnorePatterns: ['/node_modules/', '/coverage/', '/dist/'],
   errorOnDeprecated: true,
   bail: false,

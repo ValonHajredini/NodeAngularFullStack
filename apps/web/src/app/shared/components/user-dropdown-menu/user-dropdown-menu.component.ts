@@ -2,6 +2,7 @@ import { Component, signal, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
+import { ThemeService } from '../../../core/services/theme.service';
 
 /**
  * Interface for user menu items.
@@ -12,6 +13,7 @@ export interface UserMenuItem {
   icon?: string;
   action?: string;
   separator?: boolean;
+  themeValue?: 'light' | 'dark' | 'system';
 }
 
 /**
@@ -105,12 +107,16 @@ export interface UserMenuItem {
               <div class="dropdown-divider my-1"></div>
             } @else {
               <a
-                [routerLink]="item.route!"
+                [routerLink]="item.route || null"
                 (click)="handleUserMenuClick(item)"
                 class="dropdown-item"
+                [class.theme-item-active]="item.themeValue && currentTheme() === item.themeValue"
               >
                 <i [class]="item.icon!" class="mr-2 dropdown-icon"></i>
                 {{ item.label! }}
+                @if (item.themeValue && currentTheme() === item.themeValue) {
+                  <i class="pi pi-check ml-auto text-primary-600"></i>
+                }
               </a>
             }
           }
@@ -154,7 +160,8 @@ export interface UserMenuItem {
       }
 
       .dropdown-item {
-        display: block;
+        display: flex;
+        align-items: center;
         padding: var(--spacing-2) var(--spacing-4);
         font-size: var(--font-size-sm);
         color: var(--color-text-secondary);
@@ -165,6 +172,11 @@ export interface UserMenuItem {
       .dropdown-item:hover {
         background-color: var(--color-gray-100);
         color: var(--color-text-primary);
+      }
+
+      .theme-item-active {
+        background-color: var(--color-primary-50);
+        color: var(--color-primary-700);
       }
 
       .dropdown-icon {
@@ -233,10 +245,12 @@ export interface UserMenuItem {
 export class UserDropdownMenuComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
+  private readonly themeService = inject(ThemeService);
 
   protected readonly user = this.authService.user;
   protected readonly userMenuOpen = signal(false);
   protected readonly imageLoadError = signal(false);
+  protected readonly currentTheme = this.themeService.currentTheme;
 
   private clickOutsideHandler: ((event: Event) => void) | null = null;
 
@@ -258,6 +272,27 @@ export class UserDropdownMenuComponent implements OnInit, OnDestroy {
       label: 'Help & Support',
       route: '/app/support',
       icon: 'pi pi-question-circle',
+    },
+    {
+      separator: true,
+    },
+    {
+      label: 'Light Mode',
+      icon: 'pi pi-sun',
+      action: 'theme',
+      themeValue: 'light',
+    },
+    {
+      label: 'Dark Mode',
+      icon: 'pi pi-moon',
+      action: 'theme',
+      themeValue: 'dark',
+    },
+    {
+      label: 'System Default',
+      icon: 'pi pi-desktop',
+      action: 'theme',
+      themeValue: 'system',
     },
     {
       separator: true,
@@ -357,6 +392,8 @@ export class UserDropdownMenuComponent implements OnInit, OnDestroy {
           void this.router.navigate(['/auth/login']);
         },
       });
+    } else if (item.action === 'theme' && item.themeValue) {
+      this.themeService.setTheme(item.themeValue);
     }
   }
 }

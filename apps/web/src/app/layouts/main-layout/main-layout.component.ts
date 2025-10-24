@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterOutlet, RouterLink, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { AuthService, User } from '../../core/auth/auth.service';
-import { ThemeToggleComponent } from '../../shared/components';
 import { UserDropdownMenuComponent } from '../../shared/components/user-dropdown-menu/user-dropdown-menu.component';
 
 /**
@@ -26,13 +25,7 @@ export interface NavigationItem {
 @Component({
   selector: 'app-main-layout',
   standalone: true,
-  imports: [
-    CommonModule,
-    RouterOutlet,
-    RouterLink,
-    ThemeToggleComponent,
-    UserDropdownMenuComponent,
-  ],
+  imports: [CommonModule, RouterOutlet, RouterLink, UserDropdownMenuComponent],
   template: `
     <div class="min-h-screen main-container">
       <!-- Navigation Header -->
@@ -75,9 +68,6 @@ export interface NavigationItem {
 
             <!-- Secondary Navigation (Desktop) -->
             <div class="hidden md:ml-6 md:flex md:items-center md:space-x-4">
-              <!-- Theme Toggle -->
-              <app-theme-toggle />
-
               <!-- Notifications (placeholder for future) -->
               <button type="button" class="nav-button rounded-full p-1 transition-colors">
                 <span class="sr-only">View notifications</span>
@@ -128,11 +118,6 @@ export interface NavigationItem {
             <!-- Mobile User Section -->
             @if (user()) {
               <div class="pt-4 pb-3 mobile-user-section">
-                <!-- Theme Toggle for Mobile -->
-                <div class="px-4 py-2">
-                  <app-theme-toggle [showAllOptions]="true" />
-                </div>
-
                 <!-- User Dropdown for Mobile -->
                 <div class="px-4 py-2">
                   <app-user-dropdown-menu />
@@ -379,41 +364,41 @@ export class MainLayoutComponent implements OnInit {
       route: '/app/dashboard',
       icon: 'pi pi-home',
     },
-    {
-      label: 'Projects',
-      route: '/app/projects',
-      icon: 'pi pi-folder',
-    },
-    {
-      label: 'Tasks',
-      route: '/app/tasks',
-      icon: 'pi pi-check-square',
-    },
+    // {
+    //   label: 'Projects',
+    //   route: '/app/projects',
+    //   icon: 'pi pi-folder',
+    // },
+    // {
+    //   label: 'Tasks',
+    //   route: '/app/tasks',
+    //   icon: 'pi pi-check-square',
+    // },
     {
       label: 'Team',
       route: '/app/team',
       icon: 'pi pi-users',
     },
-    {
-      label: 'Reports',
-      route: '/app/reports',
-      icon: 'pi pi-chart-bar',
-      roles: ['admin', 'user'],
-    },
+    // {
+    //   label: 'Reports',
+    //   route: '/app/reports',
+    //   icon: 'pi pi-chart-bar',
+    //   roles: ['admin', 'user'],
+    // },
     {
       label: 'Documentation',
       route: '/app/documentation',
       icon: 'pi pi-book',
     },
-    {
-      label: 'Tools',
-      route: '/app/tools',
-      icon: 'pi pi-wrench',
-    },
+    // {
+    //   label: 'Tools',
+    //   route: '/app/tools',
+    //   icon: 'pi pi-folder',
+    // },
     {
       label: 'Admin Tools',
       route: '/app/admin/tools',
-      icon: 'pi pi-cog',
+      icon: 'pi pi-folder',
       roles: ['admin'],
     },
   ];

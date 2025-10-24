@@ -28,6 +28,7 @@ import drawingProjectsRoutes from './routes/drawing-projects.routes';
 import { formsRoutes } from './routes/forms.routes';
 import { publicFormsRoutes } from './routes/public-forms.routes';
 import { themesRoutes } from './routes/themes.routes';
+import { toolRegistryRoutes } from './routes/tool-registry.routes';
 import { shortLinksController } from './controllers/short-links.controller';
 import { resolveShortLinkValidator } from './validators/url.validators';
 
@@ -185,6 +186,7 @@ class Server {
     this.app.use('/api/v1/drawing-projects', drawingProjectsRoutes);
     this.app.use('/api/v1/admin/tools', toolsRoutes);
     this.app.use('/api/v1/tools', publicToolsRoutes);
+    this.app.use('/api/tools', toolRegistryRoutes); // Tool Registry API (Epic 30)
     this.app.use('/api/v1', healthRoutes);
 
     // API root endpoint

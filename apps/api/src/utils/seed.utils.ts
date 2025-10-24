@@ -29,13 +29,18 @@ export class SeedUtils {
   private static async ensureDatabaseConnection(): Promise<void> {
     const status = databaseService.getStatus();
     if (!status.isConnected) {
-      const dbConfig = DatabaseService.parseConnectionUrl(this.getDatabaseUrl());
+      const dbConfig = DatabaseService.parseConnectionUrl(
+        this.getDatabaseUrl()
+      );
       await databaseService.initialize(dbConfig);
     }
   }
 
   private static getDatabaseUrl(): string {
-    if (process.env.DATABASE_URL && process.env.DATABASE_URL.trim().length > 0) {
+    if (
+      process.env.DATABASE_URL &&
+      process.env.DATABASE_URL.trim().length > 0
+    ) {
       return process.env.DATABASE_URL;
     }
 
@@ -60,7 +65,7 @@ export class SeedUtils {
       lastName: 'User',
       role: 'admin',
       emailVerified: true,
-      isActive: true
+      isActive: true,
     },
     {
       email: 'user@example.com',
@@ -69,7 +74,7 @@ export class SeedUtils {
       lastName: 'User',
       role: 'user',
       emailVerified: true,
-      isActive: true
+      isActive: true,
     },
     {
       email: 'readonly@example.com',
@@ -78,7 +83,7 @@ export class SeedUtils {
       lastName: 'User',
       role: 'readonly',
       emailVerified: true,
-      isActive: true
+      isActive: true,
     },
     {
       email: 'inactive@example.com',
@@ -87,7 +92,7 @@ export class SeedUtils {
       lastName: 'User',
       role: 'user',
       emailVerified: true,
-      isActive: false
+      isActive: false,
     },
     {
       email: 'unverified@example.com',
@@ -96,8 +101,8 @@ export class SeedUtils {
       lastName: 'User',
       role: 'user',
       emailVerified: false,
-      isActive: true
-    }
+      isActive: true,
+    },
   ];
 
   /**
@@ -112,9 +117,17 @@ export class SeedUtils {
       const passwordHash = await bcrypt.hash(user.password, this.SALT_ROUNDS);
 
       // Set last_login to a realistic timestamp for some users
-      const lastLogin = user.role === 'admin' || user.email === 'user@example.com'
-        ? new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000) // Random time in last 7 days
-        : null;
+      const lastLogin =
+        user.role === 'admin' || user.email === 'user@example.com'
+          ? new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000) // Random time in last 7 days
+          : null;
+
+      // For single-tenant mode (tenant_id IS NULL), use the partial unique index
+      // For multi-tenant mode, use the composite unique constraint
+      // Note: WHERE clause must EXACTLY match the partial index definition
+      const conflictClause = user.tenantId
+        ? 'ON CONFLICT (email, tenant_id)'
+        : 'ON CONFLICT (email) WHERE (tenant_id IS NULL AND deleted_at IS NULL)';
 
       const query = `
         INSERT INTO users (
@@ -128,7 +141,7 @@ export class SeedUtils {
           is_active,
           last_login
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-        ON CONFLICT (email, tenant_id) DO UPDATE SET
+        ${conflictClause} DO UPDATE SET
           password_hash = EXCLUDED.password_hash,
           first_name = EXCLUDED.first_name,
           last_name = EXCLUDED.last_name,
@@ -148,7 +161,7 @@ export class SeedUtils {
         user.role,
         user.emailVerified,
         user.isActive,
-        lastLogin
+        lastLogin,
       ];
 
       await databaseService.query(query, params);
@@ -169,16 +182,18 @@ export class SeedUtils {
     try {
       console.log('🌱 Creating test users...');
 
-      const usersWithTenant = this.TEST_USERS.map(user => ({
+      const usersWithTenant = this.TEST_USERS.map((user) => ({
         ...user,
-        tenantId
+        tenantId,
       }));
 
       for (const user of usersWithTenant) {
         await this.createUser(user);
       }
 
-      console.log(`🎉 Successfully created ${this.TEST_USERS.length} test users`);
+      console.log(
+        `🎉 Successfully created ${this.TEST_USERS.length} test users`
+      );
     } catch (error) {
       console.error('❌ Failed to create test users:', error);
       throw error;
@@ -189,7 +204,10 @@ export class SeedUtils {
    * Creates test tenant data for multi-tenant scenarios.
    * @returns Promise that resolves with created tenant information
    */
-  public static async createTestTenant(): Promise<{ id: string; slug: string }> {
+  public static async createTestTenant(): Promise<{
+    id: string;
+    slug: string;
+  }> {
     try {
       console.log('🏢 Creating test tenant...');
 
@@ -211,20 +229,20 @@ export class SeedUtils {
       const settings = {
         branding: {
           primaryColor: '#007bff',
-          logo: null
+          logo: null,
         },
         features: {
           multiUser: true,
           apiAccess: true,
-          customReports: false
-        }
+          customReports: false,
+        },
       };
 
       const result = await databaseService.query(query, [
         'Test Organization',
         'test-org',
         JSON.stringify(settings),
-        true
+        true,
       ]);
 
       const tenant = result.rows[0];
@@ -261,7 +279,7 @@ export class SeedUtils {
 
       console.log('🎉 Database seeding completed successfully');
       console.log('📋 Test credentials:');
-      this.TEST_USERS.forEach(user => {
+      this.TEST_USERS.forEach((user) => {
         console.log(`   ${user.email} / ${user.password} (${user.role})`);
       });
     } catch (error) {
@@ -280,11 +298,11 @@ export class SeedUtils {
     role: string;
     description: string;
   }> {
-    return this.TEST_USERS.map(user => ({
+    return this.TEST_USERS.map((user) => ({
       email: user.email,
       password: user.password,
       role: user.role,
-      description: `${user.firstName} ${user.lastName} - ${user.role} role${!user.isActive ? ' (inactive)' : ''}${!user.emailVerified ? ' (unverified)' : ''}`
+      description: `${user.firstName} ${user.lastName} - ${user.role} role${!user.isActive ? ' (inactive)' : ''}${!user.emailVerified ? ' (unverified)' : ''}`,
     }));
   }
 
@@ -305,7 +323,9 @@ export class SeedUtils {
       await databaseService.query('DELETE FROM users');
 
       // Only delete test tenant, not the default one
-      await databaseService.query(`DELETE FROM tenants WHERE slug = 'test-org'`);
+      await databaseService.query(
+        `DELETE FROM tenants WHERE slug = 'test-org'`
+      );
 
       console.log('✅ Test data cleared successfully');
     } catch (error) {
@@ -327,7 +347,7 @@ export class SeedUtils {
     try {
       await this.ensureDatabaseConnection();
 
-      const expectedEmails = this.TEST_USERS.map(u => u.email);
+      const expectedEmails = this.TEST_USERS.map((u) => u.email);
       const missingUsers: string[] = [];
 
       for (const email of expectedEmails) {
@@ -345,7 +365,7 @@ export class SeedUtils {
         success: missingUsers.length === 0,
         usersFound: expectedEmails.length - missingUsers.length,
         expectedUsers: expectedEmails.length,
-        missingUsers
+        missingUsers,
       };
     } catch (error) {
       console.error('❌ Failed to verify test users:', error);
@@ -353,7 +373,7 @@ export class SeedUtils {
         success: false,
         usersFound: 0,
         expectedUsers: this.TEST_USERS.length,
-        missingUsers: this.TEST_USERS.map(u => u.email)
+        missingUsers: this.TEST_USERS.map((u) => u.email),
       };
     }
   }
