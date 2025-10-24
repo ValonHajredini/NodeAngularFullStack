@@ -82,6 +82,10 @@ export interface DirectoryStructure {
     routes: string;
     /** Validator file path */
     validator: string;
+    /** Database migration file (draft) */
+    migration: string;
+    /** Express app integration guide */
+    appIntegration: string;
   };
   /** Shared types file path */
   shared: {
@@ -159,6 +163,12 @@ export function getDirectoryStructure(metadata: ToolMetadata): DirectoryStructur
       repository: path.join(workspaceRoot, 'apps/api/src/repositories', `${toolId}.repository.ts`),
       routes: path.join(workspaceRoot, 'apps/api/src/routes', `${toolId}.routes.ts`),
       validator: path.join(workspaceRoot, 'apps/api/src/validators', `${toolId}.validator.ts`),
+      migration: path.join(
+        workspaceRoot,
+        'apps/api/database/migrations',
+        `${Date.now()}_${toolId.replace(/-/g, '_')}_table.sql.draft`
+      ),
+      appIntegration: path.join(workspaceRoot, 'apps/api/docs', `${toolId}-integration.md`),
     },
     shared: {
       // Shared types (single file per tool)
@@ -204,6 +214,8 @@ export function getUniqueDirs(structure: DirectoryStructure): string[] {
   dirs.add(path.dirname(structure.backend.repository));
   dirs.add(path.dirname(structure.backend.routes));
   dirs.add(path.dirname(structure.backend.validator));
+  dirs.add(path.dirname(structure.backend.migration));
+  dirs.add(path.dirname(structure.backend.appIntegration));
 
   // Shared directories
   dirs.add(path.dirname(structure.shared.types));
@@ -249,6 +261,8 @@ export function getAllFilePaths(structure: DirectoryStructure): string[] {
     structure.backend.repository,
     structure.backend.routes,
     structure.backend.validator,
+    structure.backend.migration,
+    structure.backend.appIntegration,
     // Shared files
     structure.shared.types,
     // Config files

@@ -39,6 +39,8 @@ import {
   setPermissions,
   getFileSize,
 } from '../utils/file-writer';
+import { updateAllIndexFiles } from '../utils/index-updater';
+import { toPascalCase } from '../utils/string-helpers';
 
 /**
  * Generation options for file creation.
@@ -202,7 +204,12 @@ export async function generateToolFiles(
       console.log(chalk.green(`  ✓ ${fileName}`) + chalk.gray(` (${sizeKB} KB)`));
     }
 
-    // 6. Success summary
+    // 6. Update index files
+    const className = toPascalCase(metadata.toolId);
+    const apiBase = `/api/tools/${metadata.toolId}`;
+    await updateAllIndexFiles(metadata.toolId, className, apiBase);
+
+    // 7. Success summary
     result.success = true;
     console.log(
       chalk.green.bold(
@@ -210,7 +217,7 @@ export async function generateToolFiles(
       )
     );
 
-    // 7. Print next steps
+    // 8. Print next steps
     printNextSteps(metadata);
 
   } catch (error) {
@@ -278,6 +285,8 @@ function getFileMap(
     [structure.backend.repository]: rendered.backend.repository,
     [structure.backend.routes]: rendered.backend.routes,
     [structure.backend.validator]: rendered.backend.validator,
+    [structure.backend.migration]: rendered.backend.migration,
+    [structure.backend.appIntegration]: rendered.backend.appIntegration,
 
     // Shared files
     [structure.shared.types]: rendered.shared.types,
@@ -294,44 +303,55 @@ function getFileMap(
  * @param metadata - Tool metadata from prompts
  */
 function printNextSteps(metadata: ToolMetadata): void {
-  console.log(chalk.blue.bold('📋 Next Steps:\n'));
+  console.log(chalk.blue.bold('📋 Manual Steps Required:\n'));
 
-  console.log(chalk.white('1. Review Integration Guide:'));
-  console.log(chalk.cyan(`   apps/web/src/app/features/tools/${metadata.toolId}/INTEGRATION.md`));
-  console.log(chalk.gray('   Complete step-by-step integration instructions\n'));
+  console.log(chalk.yellow.bold('⚠️  IMPORTANT: Database Migration\n'));
 
-  console.log(chalk.white('2. Build shared types:'));
-  console.log(chalk.gray('   npm run build:shared\n'));
+  const migrationFile = `apps/api/database/migrations/*${metadata.toolId}*.draft`;
 
-  console.log(chalk.white('3. Add tool route to Angular app:'));
+  console.log(chalk.white('1. Review and customize migration:'));
+  console.log(chalk.gray(`   cat ${migrationFile}`));
+  console.log(chalk.gray('   • Add/remove columns as needed'));
+  console.log(chalk.gray('   • Adjust constraints and indexes\n'));
+
+  console.log(chalk.white('2. Remove .draft suffix:'));
+  console.log(chalk.gray('   cd apps/api/database/migrations'));
+  console.log(chalk.cyan(`   mv *${metadata.toolId}*.draft $(ls *${metadata.toolId}*.draft | sed 's/.draft$//')\n`));
+
+  console.log(chalk.white('3. Run migration:'));
+  console.log(chalk.cyan('   npm --workspace=apps/api run db:migrate\n'));
+
+  console.log(chalk.white('4. Build shared types:'));
+  console.log(chalk.cyan('   npm run build:shared\n'));
+
+  console.log(chalk.white('5. Restart API server:'));
+  console.log(chalk.cyan('   npm --workspace=apps/api run dev\n'));
+
+  console.log(chalk.white('6. Add tool route to Angular app:'));
   console.log(chalk.gray('   Edit apps/web/src/app/app.routes.ts'));
   console.log(chalk.cyan(`   import { ${metadata.toolId}Routes } from './features/tools/${metadata.toolId}/${metadata.toolId}.routes';`));
-  console.log(chalk.cyan(`   ...${metadata.toolId}Routes,`));
-  console.log(chalk.gray(`   Route: /tools/${metadata.toolId}\n`));
+  console.log(chalk.cyan(`   ...${metadata.toolId}Routes,\n`));
 
-  console.log(chalk.white('4. Add navigation menu item:'));
-  console.log(chalk.gray('   Import menu item in your sidebar component'));
-  console.log(chalk.cyan(`   import { ${metadata.toolId}MenuItem } from '@app/features/tools/${metadata.toolId}/menu-item';`));
-  console.log(chalk.cyan(`   menuItems.push(${metadata.toolId}MenuItem);\n`));
-
-  console.log(chalk.white('5. Create database migration:'));
-  console.log(chalk.gray(`   npm --workspace=apps/api run db:migration:create ${metadata.toolId.replace(/-/g, '_')}_table\n`));
-
-  console.log(chalk.white('6. Start development servers:'));
-  console.log(chalk.gray('   npm start'));
+  console.log(chalk.white('7. Start development and test:'));
+  console.log(chalk.cyan('   npm start'));
   console.log(chalk.cyan(`   Visit: http://localhost:4200/tools/${metadata.toolId}\n`));
 
-  console.log(chalk.blue('📚 Documentation:'));
-  console.log(chalk.gray(`   Integration: apps/web/src/app/features/tools/${metadata.toolId}/INTEGRATION.md`));
-  console.log(chalk.gray(`   README: apps/web/src/app/features/tools/${metadata.toolId}/README.md\n`));
+  console.log(chalk.green.bold('✅ Automatically Updated:\n'));
+  console.log(chalk.gray('   ✓ apps/api/src/controllers/index.ts'));
+  console.log(chalk.gray('   ✓ apps/api/src/services/index.ts'));
+  console.log(chalk.gray('   ✓ apps/api/src/repositories/index.ts'));
+  console.log(chalk.gray('   ✓ apps/api/src/validators/index.ts'));
+  console.log(chalk.gray('   ✓ apps/api/src/routes/index.ts'));
+  console.log(chalk.gray('   ✓ apps/api/src/server.ts (route registration)'));
+  console.log(chalk.gray('   ✓ packages/shared/src/index.ts\n'));
 
-  console.log(chalk.green('✨ Generated Files Include:'));
-  console.log(chalk.gray('   • Angular component with signals & PrimeNG'));
-  console.log(chalk.gray('   • Service with cache & retry logic'));
-  console.log(chalk.gray('   • Routes with lazy loading & guards'));
-  console.log(chalk.gray('   • Menu item helper for navigation'));
-  console.log(chalk.gray('   • Component & service test specs'));
-  console.log(chalk.gray('   • Express backend (controller, service, repository)'));
-  console.log(chalk.gray('   • Shared TypeScript types'));
-  console.log(chalk.gray('   • Integration guide with troubleshooting\n'));
+  console.log(chalk.blue('📚 Documentation Generated:\n'));
+  console.log(chalk.gray(`   Frontend Integration: apps/web/src/app/features/tools/${metadata.toolId}/INTEGRATION.md`));
+  console.log(chalk.gray(`   Backend Integration:  apps/api/docs/${metadata.toolId}-integration.md`));
+  console.log(chalk.gray(`   README:               apps/web/src/app/features/tools/${metadata.toolId}/README.md\n`));
+
+  console.log(chalk.blue('🔌 API Endpoint:\n'));
+  console.log(chalk.cyan(`   http://localhost:3000/api/tools/${metadata.toolId}\n`));
+
+  console.log(chalk.gray('💡 Tip: Check backend integration guide for cURL test examples\n'));
 }

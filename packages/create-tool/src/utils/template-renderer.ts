@@ -70,6 +70,8 @@ export interface RenderedTemplates {
     repository: string;
     routes: string;
     validator: string;
+    migration: string;
+    appIntegration: string;
   };
   shared: {
     types: string;
@@ -186,6 +188,8 @@ export async function renderAllTemplates(metadata: ToolMetadata): Promise<Render
       repository,
       backendRoutes,
       validator,
+      migration,
+      appIntegration,
       // Shared templates
       types,
       // Config templates
@@ -207,6 +211,8 @@ export async function renderAllTemplates(metadata: ToolMetadata): Promise<Render
       renderTemplateFile('backend/repository.ts.ejs', templateData),
       renderTemplateFile('backend/routes.ts.ejs', templateData),
       renderTemplateFile('backend/validator.ts.ejs', templateData),
+      renderTemplateFile('backend/migration-template.sql.ejs', templateData),
+      renderTemplateFile('backend/app-integration.md.ejs', templateData),
       // Shared
       renderTemplateFile('shared/types.ts.ejs', templateData),
       // Config
@@ -231,6 +237,8 @@ export async function renderAllTemplates(metadata: ToolMetadata): Promise<Render
         repository,
         routes: backendRoutes,
         validator,
+        migration,
+        appIntegration,
       },
       shared: {
         types,

@@ -1,0 +1,65 @@
+-- Migration: <%= toolId %> table
+-- Description: Create table for <%= toolName %> tool
+-- Date: <%= new Date().toISOString().split('T')[0] %>
+--
+-- ⚠️ DRAFT: This is a template migration. Review and customize before running.
+-- To use:
+--   1. Remove .draft suffix from filename
+--   2. Customize columns and constraints as needed
+--   3. Run: npm --workspace=apps/api run db:migrate
+
+-- Create <%= toolId.replace(/-/g, '_') %> table
+CREATE TABLE IF NOT EXISTS <%= toolId.replace(/-/g, '_') %> (
+  -- Primary key
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  -- Core fields (customize as needed)
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+
+  -- Status and configuration (optional, remove if not needed)
+  status VARCHAR(50) DEFAULT 'active',
+  settings JSONB DEFAULT '{}',
+
+  -- Metadata
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
+  -- Constraints
+  CONSTRAINT <%= toolId.replace(/-/g, '_') %>_name_length CHECK (char_length(name) >= 3 AND char_length(name) <= 255),
+  CONSTRAINT <%= toolId.replace(/-/g, '_') %>_status_check CHECK (status IN ('active', 'inactive', 'archived'))
+);
+
+-- Indexes for common queries
+CREATE INDEX idx_<%= toolId.replace(/-/g, '_') %>_created_by ON <%= toolId.replace(/-/g, '_') %>(created_by);
+CREATE INDEX idx_<%= toolId.replace(/-/g, '_') %>_created_at ON <%= toolId.replace(/-/g, '_') %>(created_at DESC);
+CREATE INDEX idx_<%= toolId.replace(/-/g, '_') %>_status ON <%= toolId.replace(/-/g, '_') %>(status);
+
+-- Updated timestamp trigger
+CREATE TRIGGER update_<%= toolId.replace(/-/g, '_') %>_updated_at
+  BEFORE UPDATE ON <%= toolId.replace(/-/g, '_') %>
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Table and column comments
+COMMENT ON TABLE <%= toolId.replace(/-/g, '_') %> IS '<%= toolName %> data table';
+COMMENT ON COLUMN <%= toolId.replace(/-/g, '_') %>.id IS 'Unique identifier (UUID v4)';
+COMMENT ON COLUMN <%= toolId.replace(/-/g, '_') %>.name IS '<%= toolName %> name (3-255 characters)';
+COMMENT ON COLUMN <%= toolId.replace(/-/g, '_') %>.description IS 'Optional description of the item';
+COMMENT ON COLUMN <%= toolId.replace(/-/g, '_') %>.status IS 'Record status (active, inactive, archived)';
+COMMENT ON COLUMN <%= toolId.replace(/-/g, '_') %>.settings IS 'JSON settings specific to this record';
+COMMENT ON COLUMN <%= toolId.replace(/-/g, '_') %>.created_by IS 'User who created this record';
+COMMENT ON COLUMN <%= toolId.replace(/-/g, '_') %>.created_at IS 'Timestamp when record was created';
+COMMENT ON COLUMN <%= toolId.replace(/-/g, '_') %>.updated_at IS 'Timestamp when record was last updated';
+
+-- Grant permissions (adjust as needed for your security model)
+GRANT SELECT, INSERT, UPDATE, DELETE ON <%= toolId.replace(/-/g, '_') %> TO authenticated_user;
+
+-- Sample data (optional, for development only)
+-- INSERT INTO <%= toolId.replace(/-/g, '_') %> (name, description, created_by)
+-- VALUES (
+--   'Sample <%= toolName %>',
+--   'Example record for testing',
+--   (SELECT id FROM users WHERE email = 'admin@example.com' LIMIT 1)
+-- );
