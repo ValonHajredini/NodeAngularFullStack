@@ -59,6 +59,10 @@ export interface RenderedTemplates {
     componentCss: string;
     service: string;
     routes: string;
+    menuItem: string;
+    integration: string;
+    componentSpec: string;
+    serviceSpec: string;
   };
   backend: {
     controller: string;
@@ -172,6 +176,10 @@ export async function renderAllTemplates(metadata: ToolMetadata): Promise<Render
       componentCss,
       service,
       routes,
+      menuItem,
+      integration,
+      componentSpec,
+      serviceSpec,
       // Backend templates
       controller,
       backendService,
@@ -189,6 +197,10 @@ export async function renderAllTemplates(metadata: ToolMetadata): Promise<Render
       renderTemplateFile('frontend/component.css.ejs', templateData),
       renderTemplateFile('frontend/service.ts.ejs', templateData),
       renderTemplateFile('frontend/routes.ts.ejs', templateData),
+      renderTemplateFile('frontend/menu-item.ts.ejs', templateData),
+      renderTemplateFile('frontend/INTEGRATION.md.ejs', templateData),
+      renderTemplateFile('frontend/component.spec.ts.ejs', templateData),
+      renderTemplateFile('frontend/service.spec.ts.ejs', templateData),
       // Backend
       renderTemplateFile('backend/controller.ts.ejs', templateData),
       renderTemplateFile('backend/service.ts.ejs', templateData),
@@ -208,6 +220,10 @@ export async function renderAllTemplates(metadata: ToolMetadata): Promise<Render
         componentCss,
         service,
         routes,
+        menuItem,
+        integration,
+        componentSpec,
+        serviceSpec,
       },
       backend: {
         controller,

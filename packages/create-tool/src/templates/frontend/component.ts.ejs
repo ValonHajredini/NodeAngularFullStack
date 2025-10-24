@@ -1,11 +1,26 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { <%= className %>Service } from './<%= toolId %>.service';
+import { Subscription } from 'rxjs';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { MessageModule } from 'primeng/message';
+import { ButtonModule } from 'primeng/button';
+import { CardModule } from 'primeng/card';
+import { ToastModule } from 'primeng/toast';
+import { MessageService } from 'primeng/api';
+import { <%= className %>Service } from './services/<%= toolId %>.service';
+import { <%= className %>Record } from '@nodeangularfullstack/shared';
 
 /**
  * <%= toolName %> Component
  *
  * <%= description %>
+ *
+ * Features:
+ * - Signal-based reactive state management
+ * - Loading state with spinner indicator
+ * - Error handling with user-friendly messages
+ * - Responsive grid layout (mobile/tablet/desktop)
+ * - Empty state handling
  *
  * @example
  * ```html
@@ -15,31 +30,136 @@ import { <%= className %>Service } from './<%= toolId %>.service';
 @Component({
   selector: 'app-<%= toolId %>',
   standalone: true,
-  imports: [CommonModule],
+  imports: [
+    CommonModule,
+    ProgressSpinnerModule,
+    MessageModule,
+    ButtonModule,
+    CardModule,
+    ToastModule,
+  ],
+  providers: [MessageService],
   templateUrl: './<%= toolId %>.component.html',
   styleUrls: ['./<%= toolId %>.component.css'],
 })
-export class <%= className %>Component implements OnInit {
-  /** Service for <%= toolName %> operations */
-  constructor(private <%= serviceName %>: <%= className %>Service) {}
+export class <%= className %>Component implements OnInit, OnDestroy {
+  /** Loading state signal - true while fetching data */
+  loading = signal<boolean>(false);
+
+  /** Error message signal - null when no errors */
+  error = signal<string | null>(null);
+
+  /** Data items signal - array of <%= toolName %> records */
+  items = signal<<%= className %>Record[]>([]);
+
+  /** Subscription holder for cleanup */
+  private subscriptions = new Subscription();
+
+  /**
+   * Constructor with dependency injection.
+   * @param <%= serviceName %> - Service for <%= toolName %> data operations
+   * @param messageService - PrimeNG service for toast notifications
+   */
+  constructor(
+    private <%= serviceName %>: <%= className %>Service,
+    private messageService: MessageService
+  ) {}
 
   /**
    * Component initialization lifecycle hook.
-   * Loads initial data and sets up subscriptions.
+   * Loads initial data on component mount.
    */
   ngOnInit(): void {
     this.loadData();
   }
 
   /**
-   * Load <%= toolName %> data from backend.
+   * Component cleanup lifecycle hook.
+   * Unsubscribes from all active subscriptions to prevent memory leaks.
+   */
+  ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
+  }
+
+  /**
+   * Load <%= toolName %> data from backend API.
+   * Updates loading, error, and items signals based on response.
+   *
+   * @private
    */
   private loadData(): void {
-    console.log('<%= toolName %> component initialized');
-    // TODO: Implement data loading
-    // this.<%= serviceName %>.getAll().subscribe({
-    //   next: (data) => console.log('Data loaded:', data),
-    //   error: (err) => console.error('Error loading data:', err)
-    // });
+    this.loading.set(true);
+    this.error.set(null);
+
+    const sub = this.<%= serviceName %>.getAll().subscribe({
+      next: (data) => {
+        this.items.set(data);
+        this.loading.set(false);
+        console.log('<%= toolName %> data loaded:', data.length, 'items');
+      },
+      error: (err) => {
+        const errorMessage = err.message || 'Failed to load <%= toolName.toLowerCase() %> data';
+        this.error.set(errorMessage);
+        this.loading.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: errorMessage,
+        });
+        console.error('<%= toolName %> loading error:', err);
+      },
+    });
+
+    this.subscriptions.add(sub);
+  }
+
+  /**
+   * Handle create button click.
+   * TODO: Implement create functionality.
+   */
+  onCreate(): void {
+    console.log('Create <%= toolName.toLowerCase() %> clicked');
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Info',
+      detail: 'Create functionality coming soon',
+    });
+  }
+
+  /**
+   * Handle edit button click for specific item.
+   * TODO: Implement edit functionality.
+   *
+   * @param item - The <%= toolName %> record to edit
+   */
+  onEdit(item: <%= className %>Record): void {
+    console.log('Edit <%= toolName.toLowerCase() %>:', item.id);
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Info',
+      detail: `Edit ${item.name || 'item'} - coming soon`,
+    });
+  }
+
+  /**
+   * Handle delete button click for specific item.
+   * TODO: Implement delete confirmation and functionality.
+   *
+   * @param item - The <%= toolName %> record to delete
+   */
+  onDelete(item: <%= className %>Record): void {
+    console.log('Delete <%= toolName.toLowerCase() %>:', item.id);
+    this.messageService.add({
+      severity: 'warn',
+      summary: 'Warning',
+      detail: `Delete ${item.name || 'item'} - coming soon`,
+    });
+  }
+
+  /**
+   * Retry loading data after error.
+   */
+  onRetry(): void {
+    this.loadData();
   }
 }

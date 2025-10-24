@@ -1,0 +1,71 @@
+import { MenuItem } from 'primeng/api';
+
+/**
+ * <%= toolName %> Menu Item
+ *
+ * PrimeNG MenuItem configuration for <%= toolName %> tool navigation.
+ * Use this in your sidebar/navigation menu to add <%= toolName %> to the app.
+ *
+ * **Integration Example:**
+ * ```typescript
+ * // In your menu/sidebar component (e.g., apps/web/src/app/core/layout/sidebar/sidebar.component.ts)
+ * import { <%= toolId %>MenuItem } from '@app/features/tools/<%= toolId %>/menu-item';
+ *
+ * export class SidebarComponent {
+ *   menuItems: MenuItem[] = [
+ *     // ... existing menu items
+ *     <%= toolId %>MenuItem, // Add <%= toolName %> to menu
+ *   ];
+ * }
+ * ```
+ *
+ * **Features:**
+ * - Icon: <%= icon %>
+ * - Route: /tools/<%= toolId %>
+ * - Permissions: <%= permissions.join(', ') %>
+ *
+ * **Customization:**
+ * You can modify visibility, permissions, or styling by updating this object.
+ *
+ * @module menu-item
+ */
+export const <%= toolId %>MenuItem: MenuItem = {
+  /** Display label in navigation menu */
+  label: '<%= toolName %>',
+
+  /** PrimeNG icon for menu item */
+  icon: '<%= icon %>',
+
+  /** Router link to <%= toolName %> component */
+  routerLink: ['/tools/<%= toolId %>'],
+
+  /** Tooltip on hover */
+  title: '<%= description %>',
+
+  /** Visibility control (set to false to hide) */
+  visible: true,
+
+  /** CSS style class for custom styling */
+  styleClass: '<%= toolId %>-menu-item',
+
+  /**
+   * Dynamic visibility based on user permissions.
+   * TODO: Implement permission check logic.
+   *
+   * Example:
+   * ```typescript
+   * visible: () => {
+   *   const authService = inject(AuthService);
+   *   return authService.hasPermission('<%= permissions[0] %>');
+   * }
+   * ```
+   */
+  // visible: () => true, // Uncomment to use function-based visibility
+
+  /** Additional data for menu item */
+  data: {
+    toolId: '<%= toolId %>',
+    permissions: <%= JSON.stringify(permissions) %>,
+    version: '<%= version %>',
+  },
+};

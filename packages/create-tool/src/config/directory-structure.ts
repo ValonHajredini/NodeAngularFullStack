@@ -60,6 +60,14 @@ export interface DirectoryStructure {
       service: string;
       /** Angular routes file */
       routes: string;
+      /** Navigation menu item helper */
+      menuItem: string;
+      /** Integration instructions */
+      integration: string;
+      /** Component test spec file */
+      componentSpec: string;
+      /** Service test spec file */
+      serviceSpec: string;
     };
   };
   /** Backend file paths (Express.js API) */
@@ -138,6 +146,10 @@ export function getDirectoryStructure(metadata: ToolMetadata): DirectoryStructur
         componentCss: path.join(frontendBase, `${toolId}.component.css`),
         service: path.join(frontendBase, 'services', `${toolId}.service.ts`),
         routes: path.join(frontendBase, `${toolId}.routes.ts`),
+        menuItem: path.join(frontendBase, 'menu-item.ts'),
+        integration: path.join(frontendBase, 'INTEGRATION.md'),
+        componentSpec: path.join(frontendBase, `${toolId}.component.spec.ts`),
+        serviceSpec: path.join(frontendBase, 'services', `${toolId}.service.spec.ts`),
       },
     },
     backend: {
@@ -227,6 +239,10 @@ export function getAllFilePaths(structure: DirectoryStructure): string[] {
     structure.frontend.files.componentCss,
     structure.frontend.files.service,
     structure.frontend.files.routes,
+    structure.frontend.files.menuItem,
+    structure.frontend.files.integration,
+    structure.frontend.files.componentSpec,
+    structure.frontend.files.serviceSpec,
     // Backend files
     structure.backend.controller,
     structure.backend.service,

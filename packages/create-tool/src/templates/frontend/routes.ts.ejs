@@ -1,22 +1,51 @@
-import { Routes } from '@angular/router';
+import { Route } from '@angular/router';
 import { AuthGuard } from '../../../core/guards/auth.guard';
 import { ToolGuard } from '../../../core/guards/tool.guard';
 
 /**
  * <%= toolName %> Routes
  *
- * Lazy-loaded route configuration for <%= toolName %> feature.
- * Protected by AuthGuard and ToolGuard.
+ * Lazy-loaded route configuration for <%= toolName %> tool.
+ * Uses standalone component with lazy loading for optimal bundle size.
+ *
+ * **Guards:**
+ * - AuthGuard: Ensures user is authenticated
+ * - ToolGuard: Validates tool permissions
+ *
+ * **Integration:**
+ * Add these routes to your application routing:
+ *
+ * ```typescript
+ * // In apps/web/src/app/app.routes.ts
+ * import { <%= toolId %>Routes } from './features/tools/<%= toolId %>/<%= toolId %>.routes';
+ *
+ * export const routes: Routes = [
+ *   // ... other routes
+ *   ...<%= toolId %>Routes, // Add <%= toolName %> routes
+ * ];
+ * ```
+ *
+ * **Route URL:** `/tools/<%= toolId %>`
+ *
+ * @module <%= toolId %>.routes
  */
-export const <%= className.toUpperCase() %>_ROUTES: Routes = [
+export const <%= toolId %>Routes: Route[] = [
   {
-    path: '',
+    path: 'tools/<%= toolId %>',
     loadComponent: () =>
       import('./<%= toolId %>.component').then((m) => m.<%= className %>Component),
     canActivate: [AuthGuard, ToolGuard],
     data: {
+      /** Page title for browser tab */
       title: '<%= toolName %>',
+      /** Tool identifier for permission checks */
       toolId: '<%= toolId %>',
+      /** Required permissions for access */
+      permissions: <%= JSON.stringify(permissions) %>,
+      /** PrimeNG icon for navigation */
+      icon: '<%= icon %>',
+      /** Breadcrumb label */
+      breadcrumb: '<%= toolName %>',
     },
   },
 ];
