@@ -1,0 +1,80 @@
+# Docker Compose for Links Service POC
+# This demonstrates microservices architecture with isolated database
+
+version: '3.8'
+
+services:
+  # Links Service Database
+  links-db:
+    image: postgres:15-alpine
+    container_name: links-db
+    environment:
+      POSTGRES_DB: links_db
+      POSTGRES_USER: dbuser
+      POSTGRES_PASSWORD: dbpassword
+    ports:
+      - "5435:5432"
+    volumes:
+      - links_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dbuser -d links_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - microservices
+
+  # Links Service API
+  links-api:
+    build:
+      context: ./apps/links-api
+      dockerfile: Dockerfile
+    container_name: links-api
+    environment:
+      PORT: 3003
+      NODE_ENV: development
+      # Database configuration
+      DB_HOST: links-db
+      DB_PORT: 5432
+      DB_NAME: links_db
+      DB_USER: dbuser
+      DB_PASSWORD: dbpassword
+      # Platform service integration
+      PLATFORM_API_URL: http://host.docker.internal:3000
+      SERVICE_AUTH_TOKEN: poc-service-token-12345
+      # Short link configuration
+      BASE_URL: http://localhost:8080
+      SHORT_CODE_LENGTH: 8
+      DEFAULT_EXPIRATION_DAYS: 90
+      # CORS
+      CORS_ORIGIN: http://localhost:4200
+    ports:
+      - "3003:3003"
+    depends_on:
+      links-db:
+        condition: service_healthy
+    networks:
+      - microservices
+    restart: unless-stopped
+
+  # Nginx API Gateway
+  api-gateway:
+    image: nginx:1.25-alpine
+    container_name: api-gateway
+    ports:
+      - "8080:80"
+    volumes:
+      - ./infrastructure/nginx/nginx.poc.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - links-api
+    networks:
+      - microservices
+    restart: unless-stopped
+
+volumes:
+  links_db_data:
+    driver: local
+
+networks:
+  microservices:
+    driver: bridge

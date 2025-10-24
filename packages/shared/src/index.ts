@@ -10,4 +10,5 @@ export * from './types/storage.interface';
 export * from './types/tools.interface';
 export * from './types/forms.types';
 export * from './types/theme.types';
+export * from './types/tool-registry.types';
 export * from './utils/validation';
