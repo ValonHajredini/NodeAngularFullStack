@@ -1,0 +1,45 @@
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { <%= className %>Service } from './<%= toolId %>.service';
+
+/**
+ * <%= toolName %> Component
+ *
+ * <%= description %>
+ *
+ * @example
+ * ```html
+ * <app-<%= toolId %>></app-<%= toolId %>>
+ * ```
+ */
+@Component({
+  selector: 'app-<%= toolId %>',
+  standalone: true,
+  imports: [CommonModule],
+  templateUrl: './<%= toolId %>.component.html',
+  styleUrls: ['./<%= toolId %>.component.css'],
+})
+export class <%= className %>Component implements OnInit {
+  /** Service for <%= toolName %> operations */
+  constructor(private <%= serviceName %>: <%= className %>Service) {}
+
+  /**
+   * Component initialization lifecycle hook.
+   * Loads initial data and sets up subscriptions.
+   */
+  ngOnInit(): void {
+    this.loadData();
+  }
+
+  /**
+   * Load <%= toolName %> data from backend.
+   */
+  private loadData(): void {
+    console.log('<%= toolName %> component initialized');
+    // TODO: Implement data loading
+    // this.<%= serviceName %>.getAll().subscribe({
+    //   next: (data) => console.log('Data loaded:', data),
+    //   error: (err) => console.error('Error loading data:', err)
+    // });
+  }
+}

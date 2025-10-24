@@ -1,0 +1,87 @@
+import { Injectable } from '@angular/core';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Observable, throwError } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
+import { <%= className %>Record } from '@nodeangularfullstack/shared';
+
+/**
+ * <%= toolName %> Service
+ *
+ * Provides data access methods for <%= toolName %> operations.
+ * Communicates with backend API at <%= apiBase %>.
+ */
+@Injectable({
+  providedIn: 'root',
+})
+export class <%= className %>Service {
+  private readonly apiUrl = '<%= apiBase %>';
+
+  constructor(private http: HttpClient) {}
+
+  /**
+   * Get all <%= toolName %> records.
+   * @returns Observable of <%= toolName %> records array
+   */
+  getAll(): Observable<<%= className %>Record[]> {
+    return this.http.get<{ data: <%= className %>Record[] }>(`${this.apiUrl}`).pipe(
+      map((response) => response.data),
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Get single <%= toolName %> record by ID.
+   * @param id - Record ID
+   * @returns Observable of <%= toolName %> record
+   */
+  getById(id: string): Observable<<%= className %>Record> {
+    return this.http.get<{ data: <%= className %>Record }>(`${this.apiUrl}/${id}`).pipe(
+      map((response) => response.data),
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Create new <%= toolName %> record.
+   * @param data - Record data
+   * @returns Observable of created record
+   */
+  create(data: Partial<<%= className %>Record>): Observable<<%= className %>Record> {
+    return this.http.post<{ data: <%= className %>Record }>(this.apiUrl, data).pipe(
+      map((response) => response.data),
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Update existing <%= toolName %> record.
+   * @param id - Record ID
+   * @param data - Updated data
+   * @returns Observable of updated record
+   */
+  update(id: string, data: Partial<<%= className %>Record>): Observable<<%= className %>Record> {
+    return this.http.put<{ data: <%= className %>Record }>(`${this.apiUrl}/${id}`, data).pipe(
+      map((response) => response.data),
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Delete <%= toolName %> record.
+   * @param id - Record ID
+   * @returns Observable of void
+   */
+  delete(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${id}`).pipe(catchError(this.handleError));
+  }
+
+  /**
+   * Handle HTTP errors.
+   * @param error - HTTP error response
+   * @returns Observable error
+   */
+  private handleError(error: HttpErrorResponse): Observable<never> {
+    console.error('<%= className %> Service Error:', error);
+    return throwError(() => new Error(error.message || 'Server error'));
+  }
+}

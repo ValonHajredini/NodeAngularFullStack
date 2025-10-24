@@ -1,0 +1,44 @@
+{
+  "name": "@nodeangularfullstack/create-tool",
+  "version": "1.0.0",
+  "description": "CLI tool to scaffold new tools for NodeAngularFullStack platform",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "create-tool": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/index.ts",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:verbose": "jest --verbose",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'Linting not configured yet - will be added in future story'",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "cli",
+    "scaffolding",
+    "tools",
+    "generator"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "commander": "^14.0.1",
+    "ejs": "^3.1.10",
+    "inquirer": "^9.3.8"
+  },
+  "devDependencies": {
+    "@types/ejs": "^3.1.5",
+    "@types/inquirer": "^9.0.9",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.9.1",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}

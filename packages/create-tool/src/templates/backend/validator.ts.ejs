@@ -1,0 +1,50 @@
+import { body, ValidationChain } from 'express-validator';
+
+/**
+ * <%= toolName %> Validation Middleware
+ *
+ * Express-validator middleware for validating <%= toolName %> requests.
+ */
+
+/**
+ * Validation rules for creating <%= toolName %> record.
+ */
+export const validate<%= className %>Create: ValidationChain[] = [
+  body('name')
+    .trim()
+    .notEmpty()
+    .withMessage('<%= toolName %> name is required')
+    .isLength({ min: 3, max: 255 })
+    .withMessage('<%= toolName %> name must be between 3 and 255 characters'),
+
+  body('description')
+    .optional()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage('Description cannot exceed 500 characters'),
+
+  body('createdBy')
+    .notEmpty()
+    .withMessage('Created by user ID is required')
+    .isUUID()
+    .withMessage('Created by must be a valid UUID'),
+];
+
+/**
+ * Validation rules for updating <%= toolName %> record.
+ */
+export const validate<%= className %>Update: ValidationChain[] = [
+  body('name')
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage('<%= toolName %> name cannot be empty')
+    .isLength({ min: 3, max: 255 })
+    .withMessage('<%= toolName %> name must be between 3 and 255 characters'),
+
+  body('description')
+    .optional()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage('Description cannot exceed 500 characters'),
+];

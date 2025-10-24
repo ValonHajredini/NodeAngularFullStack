@@ -1,0 +1,22 @@
+import { Routes } from '@angular/router';
+import { AuthGuard } from '../../../core/guards/auth.guard';
+import { ToolGuard } from '../../../core/guards/tool.guard';
+
+/**
+ * <%= toolName %> Routes
+ *
+ * Lazy-loaded route configuration for <%= toolName %> feature.
+ * Protected by AuthGuard and ToolGuard.
+ */
+export const <%= className.toUpperCase() %>_ROUTES: Routes = [
+  {
+    path: '',
+    loadComponent: () =>
+      import('./<%= toolId %>.component').then((m) => m.<%= className %>Component),
+    canActivate: [AuthGuard, ToolGuard],
+    data: {
+      title: '<%= toolName %>',
+      toolId: '<%= toolId %>',
+    },
+  },
+];
