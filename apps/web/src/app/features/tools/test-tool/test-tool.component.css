@@ -1,0 +1,21 @@
+.test-tool-container {
+  padding: 1rem;
+}
+
+.test-tool-container h1 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.test-tool-container p {
+  margin-bottom: 1rem;
+  color: #666;
+}
+
+.test-tool-content {
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: #f9f9f9;
+}

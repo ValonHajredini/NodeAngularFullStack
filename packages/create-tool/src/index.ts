@@ -19,7 +19,8 @@
 import { Command } from 'commander';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { promptForToolMetadata } from './prompts/tool-prompts.js';
+import { promptForToolMetadata } from './prompts/tool-prompts';
+import { generateToolFiles } from './generator/file-generator';
 
 /**
  * Read package version from package.json
@@ -41,7 +42,9 @@ program
   .usage('[options] [tool-name]')
   .helpOption('-h, --help', 'Display help for command')
   .argument('[tool-name]', 'Name of the tool to create (optional - will prompt if not provided)')
-  .action(async (toolName?: string) => {
+  .option('--force', 'Overwrite existing files')
+  .option('--skip-existing', 'Skip existing files')
+  .action(async (toolName?: string, options?: { force?: boolean; skipExisting?: boolean }) => {
     try {
       console.log('🛠️  Create Tool Wizard\n');
 
@@ -54,14 +57,19 @@ program
         process.exit(0);
       }
 
-      // TODO: Story 31.1.3 - Load and process EJS templates
-      // TODO: Story 31.2.1 - Generate tool files from templates
-      // TODO: Story 31.2.4 - Register tool in database via API
+      // Generate tool files from templates
+      const result = await generateToolFiles(metadata, {
+        force: options?.force,
+        skipExisting: options?.skipExisting,
+      });
 
-      console.log('\n✅ Tool metadata collected successfully!');
-      console.log('📋 Collected metadata:');
-      console.log(JSON.stringify(metadata, null, 2));
-      console.log('\n💡 Note: File generation will be implemented in Story 31.1.3');
+      // Exit with appropriate status code
+      if (result.success) {
+        process.exit(0);
+      } else {
+        console.error('❌ Generation failed:', result.errors.join('\n'));
+        process.exit(1);
+      }
     } catch (error) {
       // Handle Inquirer-specific errors
       if (error instanceof Error) {
@@ -86,11 +94,13 @@ program
     'after',
     `
 Examples:
-  $ create-tool                      # Interactive mode (will prompt for all details)
-  $ create-tool my-awesome-tool      # Start with a tool name
-  $ create-tool "Inventory Tracker"  # Tool name with spaces
-  $ create-tool --help               # Show help
-  $ create-tool --version            # Show version
+  $ create-tool                        # Interactive mode (will prompt for all details)
+  $ create-tool my-awesome-tool        # Start with a tool name
+  $ create-tool "Inventory Tracker"    # Tool name with spaces
+  $ create-tool --force                # Overwrite existing files
+  $ create-tool --skip-existing        # Skip existing files
+  $ create-tool --help                 # Show help
+  $ create-tool --version              # Show version
     `
   );
 
