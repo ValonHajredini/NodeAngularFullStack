@@ -127,7 +127,7 @@ describe('RowLayoutSidebarComponent - Story 28.1: Row Duplication (AC 10)', () =
     );
 
     // Verify all duplicate buttons are disabled
-    duplicateButtons.forEach((button: HTMLButtonElement, index) => {
+    duplicateButtons.forEach((button: HTMLButtonElement, index: number) => {
       expect(button.disabled)
         .withContext(`Duplicate button ${index + 1} should be disabled when published`)
         .toBe(true);
@@ -186,7 +186,7 @@ describe('RowLayoutSidebarComponent - Story 28.1: Row Duplication (AC 10)', () =
       .toBe('Duplicate row 2');
 
     // Verify all buttons have aria-label attribute (required for screen readers)
-    duplicateButtons.forEach((button: HTMLButtonElement, index) => {
+    duplicateButtons.forEach((button: HTMLButtonElement, index: number) => {
       expect(button.hasAttribute('aria-label'))
         .withContext(`Button ${index + 1} must have aria-label for accessibility`)
         .toBe(true);

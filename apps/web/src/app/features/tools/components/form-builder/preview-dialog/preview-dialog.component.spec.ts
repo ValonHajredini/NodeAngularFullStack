@@ -161,6 +161,7 @@ describe('PreviewDialogComponent', () => {
       },
       usageCount: 0,
       isActive: true,
+      isCustom: false,
       createdAt: new Date(),
       updatedAt: new Date(),
     };

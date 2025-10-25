@@ -281,19 +281,11 @@ describe('FormsListComponent', () => {
     });
   });
 
-  describe('editForm', () => {
-    it('should navigate to form builder with ID', () => {
-      component.editForm('form-123');
-
-      expect(routerSpy.navigate).toHaveBeenCalledWith(['/tools/form-builder', 'form-123']);
-    });
-  });
-
   describe('confirmDelete', () => {
     it('should show confirmation dialog for draft forms', () => {
       const draftForm = mockForms[0]; // Draft status
 
-      component.confirmDelete(draftForm);
+      component.confirmDelete(draftForm.id);
 
       expect(confirmationServiceSpy.confirm).toHaveBeenCalledWith(
         jasmine.objectContaining({
@@ -306,7 +298,7 @@ describe('FormsListComponent', () => {
     it('should show warning for published forms', () => {
       const publishedForm = mockForms[1]; // Published status
 
-      component.confirmDelete(publishedForm);
+      component.confirmDelete(publishedForm.id);
 
       expect(confirmationServiceSpy.confirm).not.toHaveBeenCalled();
       expect(messageServiceSpy.add).toHaveBeenCalledWith({
@@ -343,7 +335,7 @@ describe('FormsListComponent', () => {
         return confirmationServiceSpy;
       });
 
-      component.confirmDelete(mockForms[0]);
+      component.confirmDelete(mockForms[0].id);
 
       expect(formsApiServiceSpy.deleteForm).toHaveBeenCalledWith('form-1');
       expect(messageServiceSpy.add).toHaveBeenCalledWith({

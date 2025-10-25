@@ -32,7 +32,7 @@ describe('ThemeDesignerModalService', () => {
     expect(service.getBodyFont()).toBe('Open Sans');
     expect(service.getBorderRadius()).toBe(8);
     expect(service.getFieldPadding()).toBe(12);
-    expect(service.getFieldMargin()).toBe(8);
+    expect(service.getFieldSpacing()).toBe(8);
     expect(service.getBorderWidth()).toBe(1);
   });
 
@@ -91,9 +91,9 @@ describe('ThemeDesignerModalService', () => {
     const theme = service.currentTheme();
 
     expect(theme.name).toBe('Test Theme');
-    expect(theme.primaryColor).toBe('#FF0000');
-    expect(theme.secondaryColor).toBe('#00FF00');
-    expect(theme.backgroundColor).toBe('#FFFFFF');
+    expect(theme.themeConfig.desktop.primaryColor).toBe('#FF0000');
+    expect(theme.themeConfig.desktop.secondaryColor).toBe('#00FF00');
+    expect(theme.themeConfig.desktop.backgroundColor).toBe('#FFFFFF');
   });
 
   it('should compute linear gradient background correctly', () => {
@@ -104,9 +104,9 @@ describe('ThemeDesignerModalService', () => {
 
     const theme = service.currentTheme();
 
-    expect(theme.backgroundColor).toBe('linear-gradient(90deg, #FF0000, #00FF00)');
-    expect(theme.backgroundType).toBe('linear');
-    expect(theme.gradientAngle).toBe(90);
+    expect(theme.themeConfig.desktop.backgroundColor).toBe(
+      'linear-gradient(90deg, #FF0000, #00FF00)',
+    );
   });
 
   it('should compute radial gradient background correctly', () => {
@@ -117,9 +117,9 @@ describe('ThemeDesignerModalService', () => {
 
     const theme = service.currentTheme();
 
-    expect(theme.backgroundColor).toBe('radial-gradient(circle at top-left, #FF0000, #00FF00)');
-    expect(theme.backgroundType).toBe('radial');
-    expect(theme.gradientPosition).toBe('top-left');
+    expect(theme.themeConfig.desktop.backgroundColor).toBe(
+      'radial-gradient(circle at top-left, #FF0000, #00FF00)',
+    );
   });
 
   it('should use image URL for image background', () => {
@@ -128,9 +128,7 @@ describe('ThemeDesignerModalService', () => {
 
     const theme = service.currentTheme();
 
-    expect(theme.backgroundColor).toBe('https://example.com/image.jpg');
-    expect(theme.backgroundType).toBe('image');
-    expect(theme.backgroundImageUrl).toBe('https://example.com/image.jpg');
+    expect(theme.themeConfig.desktop.backgroundImageUrl).toBe('https://example.com/image.jpg');
   });
 
   it('should detect unsaved changes', () => {

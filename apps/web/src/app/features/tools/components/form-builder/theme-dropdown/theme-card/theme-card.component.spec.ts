@@ -29,7 +29,7 @@ describe('ThemeCardComponent', () => {
     },
     usageCount: 42,
     isActive: true,
-    createdBy: 'user-1',
+    isCustom: false,
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
   };

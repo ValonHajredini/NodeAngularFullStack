@@ -69,7 +69,7 @@ export class StepFormSidebarComponent {
   private readonly changeDetectorRef = inject(ChangeDetectorRef);
 
   // Expose service signals
-  protected readonly steps = this.formBuilderService.steps;
+  public readonly steps = this.formBuilderService.steps;
   protected readonly stepFormEnabled = this.formBuilderService.stepFormEnabled;
   protected readonly canAddStep = this.formBuilderService.canAddStep;
   protected readonly canDeleteStep = this.formBuilderService.canDeleteStep;

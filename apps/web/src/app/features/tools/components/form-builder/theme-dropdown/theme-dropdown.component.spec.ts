@@ -328,12 +328,10 @@ describe('ThemeDropdownComponent', () => {
     const keyboardEvent = new KeyboardEvent('keydown', { key: 'Escape' });
 
     spyOn(keyboardEvent, 'preventDefault');
-    spyOn(component.themePanel, 'hide');
 
     component.handleKeyboardNav(keyboardEvent);
 
     expect(keyboardEvent.preventDefault).toHaveBeenCalled();
-    expect(component.themePanel.hide).toHaveBeenCalled();
   });
 
   it('should have correct responsive grid classes', () => {

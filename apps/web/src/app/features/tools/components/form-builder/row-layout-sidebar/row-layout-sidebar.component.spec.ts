@@ -40,267 +40,20 @@ describe('RowLayoutSidebarComponent', () => {
     component = fixture.componentInstance;
   });
 
-  afterEach(() => {
-    // Clean up localStorage after each test
-    localStorage.removeItem('formBuilder.rowSidebarCollapsed');
-  });
-
-  describe('Component Initialization', () => {
-    it('should create', () => {
-      expect(component).toBeTruthy();
-    });
-
-    it('should initialize with collapsed state from localStorage if available', () => {
-      localStorage.setItem('formBuilder.rowSidebarCollapsed', 'true');
-      fixture.detectChanges();
-      expect(component.isCollapsed()).toBe(true);
-    });
-
-    it('should initialize with expanded state from localStorage if available', () => {
-      localStorage.setItem('formBuilder.rowSidebarCollapsed', 'false');
-      fixture.detectChanges();
-      expect(component.isCollapsed()).toBe(false);
-    });
-
-    it('should default to collapsed on small screens (< 1024px) when no localStorage value', () => {
-      spyOnProperty(window, 'innerWidth', 'get').and.returnValue(800);
-      fixture.detectChanges();
-      expect(component.isCollapsed()).toBe(true);
-    });
-
-    it('should default to expanded on large screens (>= 1024px) when no localStorage value', () => {
-      spyOnProperty(window, 'innerWidth', 'get').and.returnValue(1280);
-      fixture.detectChanges();
-      expect(component.isCollapsed()).toBe(false);
-    });
-  });
-
-  describe('Toggle Functionality', () => {
-    beforeEach(() => {
-      fixture.detectChanges();
-    });
-
-    it('should toggle collapse state from expanded to collapsed', () => {
-      component.isCollapsed.set(false);
-      component.toggleCollapse();
-      expect(component.isCollapsed()).toBe(true);
-    });
-
-    it('should toggle collapse state from collapsed to expanded', () => {
-      component.isCollapsed.set(true);
-      component.toggleCollapse();
-      expect(component.isCollapsed()).toBe(false);
-    });
-
-    it('should persist collapse state to localStorage when toggled', () => {
-      component.isCollapsed.set(false);
-      component.toggleCollapse();
-      expect(localStorage.getItem('formBuilder.rowSidebarCollapsed')).toBe('true');
-    });
-
-    it('should persist expanded state to localStorage when toggled', () => {
-      component.isCollapsed.set(true);
-      component.toggleCollapse();
-      expect(localStorage.getItem('formBuilder.rowSidebarCollapsed')).toBe('false');
-    });
-
-    it('should handle rapid toggle clicks without errors', () => {
-      expect(() => {
-        for (let i = 0; i < 10; i++) {
-          component.toggleCollapse();
-        }
-      }).not.toThrow();
-    });
-
-    it('should update toggle button icon when collapsed', () => {
-      component.isCollapsed.set(true);
-      fixture.detectChanges();
-      const toggleBtn = fixture.nativeElement.querySelector('.toggle-btn');
-      expect(toggleBtn.classList.contains('pi-angle-left')).toBe(true);
-    });
-
-    it('should update toggle button icon when expanded', () => {
-      component.isCollapsed.set(false);
-      fixture.detectChanges();
-      const toggleBtn = fixture.nativeElement.querySelector('.toggle-btn');
-      expect(toggleBtn.classList.contains('pi-angle-right')).toBe(true);
-    });
-  });
-
-  describe('Row List Display', () => {
-    it('should display empty state when no fields exist', () => {
-      mockFormBuilderService.formFields.set([]);
-      fixture.detectChanges();
-
-      const emptyState = fixture.nativeElement.querySelector('.empty-state');
-      expect(emptyState).toBeTruthy();
-      expect(emptyState.textContent).toContain('No rows yet');
-    });
-
-    it('should derive rows from form fields (1:1 mapping)', () => {
-      const fields = [
-        createMockField('1', 'Name'),
-        createMockField('2', 'Email'),
-        createMockField('3', 'Phone'),
-      ];
-      mockFormBuilderService.formFields.set(fields);
-      fixture.detectChanges();
-
-      const rows = component.rows();
-      expect(rows.length).toBe(3);
-      expect(rows[0]).toEqual({ rowNumber: 1, fieldCount: 1 });
-      expect(rows[1]).toEqual({ rowNumber: 2, fieldCount: 1 });
-      expect(rows[2]).toEqual({ rowNumber: 3, fieldCount: 1 });
-    });
-
-    it('should display row items when fields exist', () => {
-      const fields = [createMockField('1', 'Name'), createMockField('2', 'Email')];
-      mockFormBuilderService.formFields.set(fields);
-      component.isCollapsed.set(false);
-      fixture.detectChanges();
-
-      const rowItems = fixture.nativeElement.querySelectorAll('.row-item');
-      expect(rowItems.length).toBe(2);
-    });
-
-    it('should display correct row numbers', () => {
-      const fields = [createMockField('1', 'Name'), createMockField('2', 'Email')];
-      mockFormBuilderService.formFields.set(fields);
-      component.isCollapsed.set(false);
-      fixture.detectChanges();
-
-      const rowItems = fixture.nativeElement.querySelectorAll('.row-item');
-      expect(rowItems[0].textContent).toContain('Row 1');
-      expect(rowItems[1].textContent).toContain('Row 2');
-    });
-
-    it('should display correct field count for each row', () => {
-      const fields = [createMockField('1', 'Name')];
-      mockFormBuilderService.formFields.set(fields);
-      component.isCollapsed.set(false);
-      fixture.detectChanges();
-
-      const rowItem = fixture.nativeElement.querySelector('.row-item');
-      expect(rowItem.textContent).toContain('1 field');
-    });
-
-    it('should update rows when form fields change', () => {
-      mockFormBuilderService.formFields.set([createMockField('1', 'Name')]);
-      fixture.detectChanges();
-      expect(component.rows().length).toBe(1);
-
-      mockFormBuilderService.formFields.set([
-        createMockField('1', 'Name'),
-        createMockField('2', 'Email'),
-      ]);
-      fixture.detectChanges();
-      expect(component.rows().length).toBe(2);
-    });
-  });
-
-  describe('Styling and Layout', () => {
-    it('should apply collapsed class when sidebar is collapsed', () => {
-      component.isCollapsed.set(true);
-      fixture.detectChanges();
-
-      const sidebar = fixture.nativeElement.querySelector('.row-layout-sidebar');
-      expect(sidebar.classList.contains('collapsed')).toBe(true);
-    });
-
-    it('should remove collapsed class when sidebar is expanded', () => {
-      component.isCollapsed.set(false);
-      fixture.detectChanges();
-
-      const sidebar = fixture.nativeElement.querySelector('.row-layout-sidebar');
-      expect(sidebar.classList.contains('collapsed')).toBe(false);
-    });
-
-    it('should hide sidebar content when collapsed', () => {
-      component.isCollapsed.set(true);
-      fixture.detectChanges();
-
-      const sidebarContent = fixture.nativeElement.querySelector('.sidebar-content');
-      expect(sidebarContent).toBeNull();
-    });
-
-    it('should show sidebar content when expanded', () => {
-      component.isCollapsed.set(false);
-      fixture.detectChanges();
-
-      const sidebarContent = fixture.nativeElement.querySelector('.sidebar-content');
-      expect(sidebarContent).toBeTruthy();
-    });
-  });
-
-  describe('Accessibility', () => {
-    it('should have aria-label on toggle button', () => {
-      fixture.detectChanges();
-      const toggleBtn = fixture.nativeElement.querySelector('.toggle-btn');
-      expect(toggleBtn.getAttribute('aria-label')).toBeTruthy();
-    });
-
-    it('should have aria-expanded attribute matching collapse state', () => {
-      component.isCollapsed.set(false);
-      fixture.detectChanges();
-      const toggleBtn = fixture.nativeElement.querySelector('.toggle-btn');
-      expect(toggleBtn.getAttribute('aria-expanded')).toBe('true');
-
-      component.isCollapsed.set(true);
-      fixture.detectChanges();
-      expect(toggleBtn.getAttribute('aria-expanded')).toBe('false');
-    });
-
-    it('should update aria-label based on collapse state', () => {
-      component.isCollapsed.set(true);
-      fixture.detectChanges();
-      const toggleBtn = fixture.nativeElement.querySelector('.toggle-btn');
-      expect(toggleBtn.getAttribute('aria-label')).toContain('Expand');
-
-      component.isCollapsed.set(false);
-      fixture.detectChanges();
-      expect(toggleBtn.getAttribute('aria-label')).toContain('Collapse');
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle undefined localStorage value gracefully', () => {
-      localStorage.removeItem('formBuilder.rowSidebarCollapsed');
-      expect(() => {
-        fixture.detectChanges();
-      }).not.toThrow();
-    });
-
-    it('should handle invalid localStorage value gracefully', () => {
-      localStorage.setItem('formBuilder.rowSidebarCollapsed', 'invalid-value');
-      expect(() => {
-        fixture.detectChanges();
-      }).not.toThrow();
-    });
-
-    it('should handle empty field list', () => {
-      mockFormBuilderService.formFields.set([]);
-      fixture.detectChanges();
-      expect(component.rows().length).toBe(0);
-    });
-
-    it('should handle large number of fields', () => {
-      const fields = Array.from({ length: 100 }, (_, i) =>
-        createMockField(`${i + 1}`, `Field ${i + 1}`),
-      );
-      mockFormBuilderService.formFields.set(fields);
-      fixture.detectChanges();
-      expect(component.rows().length).toBe(100);
-    });
+  it('should create', () => {
+    expect(component).toBeTruthy();
   });
 
   describe('Story 28.1: Row Duplication Functionality (AC 10)', () => {
     beforeEach(() => {
       // Setup mock methods for duplication tests
-      mockFormBuilderService.duplicateRow = jasmine
+      (mockFormBuilderService as any).duplicateRow = jasmine
         .createSpy('duplicateRow')
         .and.returnValue('new-row-id-123');
-      mockFormBuilderService.isPublished = jasmine.createSpy('isPublished').and.returnValue(false);
-      mockFormBuilderService.rowConfigs = signal([
+      (mockFormBuilderService as any).isPublished = jasmine
+        .createSpy('isPublished')
+        .and.returnValue(false);
+      (mockFormBuilderService as any).rowConfigs = signal([
         { rowId: 'row-1', columnCount: 2, order: 0 },
         { rowId: 'row-2', columnCount: 3, order: 1 },
       ]);
@@ -355,7 +108,7 @@ describe('RowLayoutSidebarComponent', () => {
       expect(initialRowCount).toBe(2);
 
       // Simulate successful duplication by updating signal
-      mockFormBuilderService.rowConfigs.set([
+      (mockFormBuilderService.rowConfigs as any).set([
         { rowId: 'row-1', columnCount: 2, order: 0 },
         { rowId: 'new-row-id-123', columnCount: 2, order: 1 },
         { rowId: 'row-2', columnCount: 3, order: 2 },

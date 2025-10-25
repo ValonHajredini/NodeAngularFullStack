@@ -50,7 +50,7 @@ describe('ThemeDesignerModalComponent', () => {
     component.visible = true;
     fixture.detectChanges();
 
-    component['onVisibleChange'](false);
+    component.handleDialogVisibilityChange(false);
 
     expect(component.visibleChange.emit).toHaveBeenCalledWith(false);
     expect(component.visible).toBe(false);

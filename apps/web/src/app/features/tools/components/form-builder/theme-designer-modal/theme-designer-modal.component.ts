@@ -516,7 +516,7 @@ export class ThemeDesignerModalComponent implements OnInit, OnDestroy {
    * Intercepts close attempts to check for unsaved changes.
    * @param value - New visibility state
    */
-  protected handleDialogVisibilityChange(value: boolean): void {
+  public handleDialogVisibilityChange(value: boolean): void {
     if (!value && !this.bypassConfirmation) {
       // User is trying to close the dialog - check for unsaved changes
       if (this.modalService.hasUnsavedChanges()) {

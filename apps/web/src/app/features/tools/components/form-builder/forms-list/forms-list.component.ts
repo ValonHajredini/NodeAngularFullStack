@@ -484,7 +484,7 @@ export class FormsListComponent implements OnInit {
   /**
    * Shows confirmation dialog before deleting a form.
    */
-  private confirmDelete(formId: string): void {
+  public confirmDelete(formId: string): void {
     const form = this.forms().find((f) => f.id === formId);
     if (!form) return;
 
