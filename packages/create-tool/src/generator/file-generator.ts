@@ -41,6 +41,8 @@ import {
 } from '../utils/file-writer';
 import { updateAllIndexFiles } from '../utils/index-updater';
 import { toPascalCase } from '../utils/string-helpers';
+import { RegistryApiClient } from '../api/registry-client';
+import { saveRegistration } from '../utils/registration-cache';
 
 /**
  * Generation options for file creation.
@@ -50,6 +52,14 @@ export interface GenerationOptions {
   force?: boolean;
   /** Skip existing files instead of failing */
   skipExisting?: boolean;
+  /** Skip automatic tool registration with API */
+  skipRegistration?: boolean;
+  /** Custom API URL (overrides default and environment) */
+  apiUrl?: string;
+  /** Admin email for authentication (overrides environment) */
+  adminEmail?: string;
+  /** Admin password for authentication (overrides environment) */
+  adminPassword?: string;
 }
 
 /**
@@ -217,7 +227,16 @@ export async function generateToolFiles(
       )
     );
 
-    // 8. Print next steps
+    // 8. Register with API (unless skipped)
+    if (!options.skipRegistration) {
+      await registerToolWithAPI(metadata, options);
+    } else {
+      console.log(chalk.gray('⊘ Tool registration skipped (--skip-registration)'));
+      console.log(chalk.gray('   Register manually: POST /api/tools/register\n'));
+      await saveRegistration(metadata.toolId, 'skipped');
+    }
+
+    // 9. Print next steps
     printNextSteps(metadata);
 
   } catch (error) {
@@ -294,6 +313,73 @@ function getFileMap(
     // Config files
     [structure.config.readme]: rendered.config.readme,
   };
+}
+
+/**
+ * Register tool with platform API.
+ * Handles authentication, registration, and error reporting.
+ * Does not fail the entire generation if registration fails.
+ *
+ * @param metadata - Tool metadata from prompts
+ * @param options - Generation options containing API configuration
+ */
+async function registerToolWithAPI(
+  metadata: ToolMetadata,
+  options: GenerationOptions
+): Promise<void> {
+  console.log(chalk.blue('📡 Registering tool with platform...\n'));
+
+  try {
+    // Create API client with custom or default URL
+    const apiUrl = options.apiUrl || process.env.CREATE_TOOL_API_URL || 'http://localhost:3000';
+    const apiClient = new RegistryApiClient(apiUrl);
+
+    // Authenticate and register
+    const registrationResult = await apiClient.registerTool(metadata);
+
+    // Success feedback
+    console.log(chalk.green('✅ Tool registered with platform'));
+    console.log(chalk.gray(`   Tool ID: ${registrationResult.toolId}`));
+    console.log(chalk.gray(`   Version: 1.0.0`));
+    console.log(chalk.gray(`   API: /api/tools/${metadata.toolId}\n`));
+
+    // Save to cache
+    await saveRegistration(metadata.toolId, 'success', registrationResult);
+  } catch (error) {
+    // Failure feedback (but don't fail generation)
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    console.log(chalk.yellow('⚠️  Tool generation successful, but registration failed'));
+    console.log(chalk.gray(`   Error: ${errorMessage}\n`));
+
+    // Provide troubleshooting tips
+    if (errorMessage.includes('ECONNREFUSED')) {
+      console.log(chalk.gray('   Troubleshooting:'));
+      console.log(chalk.gray('   1. Ensure API server is running: npm --workspace=apps/api run dev'));
+      console.log(chalk.gray(`   2. Check API URL is correct: ${options.apiUrl || process.env.CREATE_TOOL_API_URL || 'http://localhost:3000'}\n`));
+    } else if (errorMessage.includes('Invalid credentials')) {
+      console.log(chalk.gray('   Troubleshooting:'));
+      console.log(chalk.gray('   1. Check admin credentials in .env file'));
+      console.log(chalk.gray('   2. Verify admin user exists in database'));
+      console.log(chalk.gray('   3. Set CREATE_TOOL_ADMIN_EMAIL and CREATE_TOOL_ADMIN_PASSWORD\n'));
+    } else if (errorMessage.includes('already registered')) {
+      console.log(chalk.gray('   Note: This tool already exists in the registry.'));
+      console.log(chalk.gray('   You can continue development without re-registering.\n'));
+    }
+
+    // Manual registration instructions
+    console.log(chalk.gray('   You can manually register later:'));
+    console.log(chalk.cyan(`   curl -X POST http://localhost:3000/api/tools/register \\`));
+    console.log(chalk.cyan(`     -H "Authorization: Bearer YOUR_TOKEN" \\`));
+    console.log(chalk.cyan(`     -H "Content-Type: application/json" \\`));
+    console.log(chalk.cyan(`     -d '{"toolId":"${metadata.toolId}","name":"${metadata.toolName}",...}'\n`));
+
+    // Save failure to cache
+    await saveRegistration(metadata.toolId, 'failed', null, errorMessage);
+
+    // Reassure user
+    console.log(chalk.blue('✅ Files generated successfully (registration can be done later)\n'));
+  }
 }
 
 /**

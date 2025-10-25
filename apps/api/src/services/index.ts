@@ -4,3 +4,4 @@
  */
 
 export { ToolRegistryService } from './tool-registry.service.js';
+export { TestToolService } from './test-tool.service';

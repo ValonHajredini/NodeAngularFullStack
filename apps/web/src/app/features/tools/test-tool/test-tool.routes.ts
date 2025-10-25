@@ -1,21 +1,50 @@
-import { Routes } from '@angular/router';
-import { AuthGuard } from '../../../core/guards/auth.guard';
-import { ToolGuard } from '../../../core/guards/tool.guard';
+import { Route } from '@angular/router';
+import { authGuard } from '../../../core/guards/auth.guard';
+import { toolGuard } from '../../../core/guards/tool.guard';
 
 /**
  * Test Tool Routes
  *
- * Lazy-loaded route configuration for Test Tool feature.
- * Protected by AuthGuard and ToolGuard.
+ * Lazy-loaded route configuration for Test Tool tool.
+ * Uses standalone component with lazy loading for optimal bundle size.
+ *
+ * **Guards:**
+ * - authGuard: Ensures user is authenticated
+ * - toolGuard: Validates tool permissions
+ *
+ * **Integration:**
+ * Add these routes to your application routing:
+ *
+ * ```typescript
+ * // In apps/web/src/app/app.routes.ts
+ * import { testToolRoutes } from './features/tools/test-tool/test-tool.routes';
+ *
+ * export const routes: Routes = [
+ *   // ... other routes
+ *   ...testToolRoutes, // Add Test Tool routes
+ * ];
+ * ```
+ *
+ * **Route URL:** `/tools/test-tool`
+ *
+ * @module test-tool.routes
  */
-export const TESTTOOL_ROUTES: Routes = [
+export const testToolRoutes: Route[] = [
   {
-    path: '',
+    path: 'tools/test-tool',
     loadComponent: () => import('./test-tool.component').then((m) => m.TestToolComponent),
-    canActivate: [AuthGuard, ToolGuard],
+    canActivate: [authGuard, toolGuard],
     data: {
+      /** Page title for browser tab */
       title: 'Test Tool',
+      /** Tool identifier for permission checks */
       toolId: 'test-tool',
+      /** Required permissions for access */
+      permissions: ['user'],
+      /** PrimeNG icon for navigation */
+      icon: 'pi-box',
+      /** Breadcrumb label */
+      breadcrumb: 'Test Tool',
     },
   },
 ];

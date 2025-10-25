@@ -19,6 +19,7 @@ import { databaseService, DatabaseService } from './services/database.service';
 import swaggerSpec from './config/swagger.config';
 import healthRoutes from './routes/health.routes';
 import authRoutes from './routes/auth.routes';
+import { testToolRoutes } from './routes/test-tool.routes';
 import { usersRoutes } from './routes/users.routes';
 import tokensRoutes from './routes/tokens.routes';
 import toolsRoutes from './routes/tools.routes';
@@ -186,6 +187,7 @@ class Server {
     this.app.use('/api/v1/drawing-projects', drawingProjectsRoutes);
     this.app.use('/api/v1/admin/tools', toolsRoutes);
     this.app.use('/api/v1/tools', publicToolsRoutes);
+    this.app.use('/api/tools/test-tool', testToolRoutes);
     this.app.use('/api/tools', toolRegistryRoutes); // Tool Registry API (Epic 30)
     this.app.use('/api/v1', healthRoutes);
 

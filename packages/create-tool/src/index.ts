@@ -16,6 +16,10 @@
  * @packageDocumentation
  */
 
+// Load environment variables from .env file if exists
+import dotenv from 'dotenv';
+dotenv.config();
+
 import { Command } from 'commander';
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -44,7 +48,21 @@ program
   .argument('[tool-name]', 'Name of the tool to create (optional - will prompt if not provided)')
   .option('--force', 'Overwrite existing files')
   .option('--skip-existing', 'Skip existing files')
-  .action(async (toolName?: string, options?: { force?: boolean; skipExisting?: boolean }) => {
+  .option('--skip-registration', 'Skip automatic tool registration with API')
+  .option('--api-url <url>', 'Custom API base URL (default: http://localhost:3000)')
+  .option('--admin-email <email>', 'Admin email for authentication')
+  .option('--admin-password <password>', 'Admin password for authentication')
+  .action(async (
+    toolName?: string,
+    options?: {
+      force?: boolean;
+      skipExisting?: boolean;
+      skipRegistration?: boolean;
+      apiUrl?: string;
+      adminEmail?: string;
+      adminPassword?: string;
+    }
+  ) => {
     try {
       console.log('🛠️  Create Tool Wizard\n');
 
@@ -61,6 +79,10 @@ program
       const result = await generateToolFiles(metadata, {
         force: options?.force,
         skipExisting: options?.skipExisting,
+        skipRegistration: options?.skipRegistration,
+        apiUrl: options?.apiUrl,
+        adminEmail: options?.adminEmail,
+        adminPassword: options?.adminPassword,
       });
 
       // Exit with appropriate status code
@@ -94,13 +116,21 @@ program
     'after',
     `
 Examples:
-  $ create-tool                        # Interactive mode (will prompt for all details)
-  $ create-tool my-awesome-tool        # Start with a tool name
-  $ create-tool "Inventory Tracker"    # Tool name with spaces
-  $ create-tool --force                # Overwrite existing files
-  $ create-tool --skip-existing        # Skip existing files
-  $ create-tool --help                 # Show help
-  $ create-tool --version              # Show version
+  $ create-tool                                    # Interactive mode (prompts for details)
+  $ create-tool my-awesome-tool                    # Start with a tool name
+  $ create-tool "Inventory Tracker"                # Tool name with spaces
+  $ create-tool --force                            # Overwrite existing files
+  $ create-tool --skip-existing                    # Skip existing files
+  $ create-tool --skip-registration                # Generate files without API registration
+  $ create-tool --api-url http://api.example.com   # Custom API server URL
+  $ create-tool --admin-email admin@example.com    # Custom admin email
+  $ create-tool --help                             # Show help
+  $ create-tool --version                          # Show version
+
+Environment Variables:
+  CREATE_TOOL_API_URL          # API base URL (default: http://localhost:3000)
+  CREATE_TOOL_ADMIN_EMAIL      # Admin email for authentication (default: admin@example.com)
+  CREATE_TOOL_ADMIN_PASSWORD   # Admin password for authentication (required for registration)
     `
   );
 

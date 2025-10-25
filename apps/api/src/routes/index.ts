@@ -6,3 +6,4 @@
 export { toolRegistryRoutes } from './tool-registry.routes';
 export { formsRoutes } from './forms.routes';
 export { themesRoutes } from './themes.routes';
+export { testToolRoutes } from './test-tool.routes';
