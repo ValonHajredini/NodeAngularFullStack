@@ -255,6 +255,182 @@ These components are tested through:
 - User acceptance testing
 - Integration testing in real-world scenarios
 
+### End-to-End (E2E) Testing
+
+The CLI package includes comprehensive E2E tests that validate the complete user workflow from CLI
+invocation through file generation, database integration, and API registration.
+
+#### Prerequisites
+
+Before running E2E tests, ensure the following:
+
+1. **PostgreSQL 14+ running locally**:
+
+   ```bash
+   brew services start postgresql@14
+   ```
+
+2. **Backend API server running**:
+
+   ```bash
+   # From project root
+   npm --workspace=apps/api run dev
+   ```
+
+3. **Environment variables configured**:
+   - Copy `.env.e2e.example` to `.env.e2e` (or use defaults from `.env.development`)
+   - Ensure `DATABASE_URL` points to your local PostgreSQL instance
+
+#### Running E2E Tests
+
+```bash
+# Run all E2E tests
+npm run test:e2e
+
+# Run E2E tests in watch mode
+npm run test:e2e:watch
+
+# Run E2E tests with coverage
+npm run test:e2e:coverage
+
+# Debug E2E tests with Node inspector
+npm run test:e2e:debug
+```
+
+#### E2E Test Structure
+
+E2E tests are located in `tests/e2e/`:
+
+```
+tests/e2e/
+├── setup.ts                    # Global test setup (seeds database)
+├── teardown.ts                 # Global test teardown (cleanup)
+├── setup-env.ts                # Environment variable loading
+├── utils/                      # E2E test utilities
+│   ├── test-workspace.ts       # Isolated file system workspaces
+│   ├── cli-runner.ts           # CLI execution and output capture
+│   └── database.ts             # Database seeding and verification
+├── full-workflow.e2e.test.ts   # Complete CLI generation workflow
+├── registration.e2e.test.ts    # API registration integration
+├── conflict-handling.e2e.test.ts  # --force and --skip-existing flags
+├── smoke-tests.e2e.test.ts     # Generated code validation
+└── error-scenarios.e2e.test.ts # Error handling and edge cases
+```
+
+#### What E2E Tests Validate
+
+1. **Full CLI Workflow** (`full-workflow.e2e.test.ts`):
+   - Generates tool with all files (9 files: component, service, routes, controller, etc.)
+   - Validates file contents match expected patterns
+   - Verifies backend index files updated correctly
+   - Checks file permissions (644 for files, 755 for directories)
+
+2. **API Registration** (`registration.e2e.test.ts`):
+   - Registers tool with backend API using `--register` flag
+   - Verifies tool exists in `tool_registry` table
+   - Validates manifest JSON saved correctly
+   - Checks registration cache updated (`~/.create-tool/registrations.json`)
+
+3. **Conflict Handling** (`conflict-handling.e2e.test.ts`):
+   - Detects duplicate tool IDs and displays error
+   - Overwrites existing files with `--force` flag
+   - Creates backups before overwriting
+   - Skips existing files with `--skip-existing` flag
+
+4. **Smoke Tests** (`smoke-tests.e2e.test.ts`):
+   - Builds shared package successfully
+   - Typechecks backend generated files (no TypeScript errors)
+   - Typechecks frontend generated files (no TypeScript errors)
+   - Lints backend and frontend files (no ESLint errors)
+
+5. **Error Scenarios** (`error-scenarios.e2e.test.ts`):
+   - Rejects invalid tool ID formats (uppercase, underscores)
+   - Handles missing admin credentials gracefully
+   - Retries on network failures with exponential backoff
+   - Handles database connection failures
+   - Handles file system permission errors
+
+#### E2E Test Utilities
+
+**TestWorkspace** - Isolated file system workspaces:
+
+```typescript
+const workspace = new TestWorkspace();
+await workspace.create();
+const filePath = workspace.getPath('apps/web/src/app/features/my-tool/');
+await workspace.writeFile('test.txt', 'content');
+await workspace.cleanup();
+```
+
+**CliRunner** - Programmatic CLI execution:
+
+```typescript
+const cli = new CliRunner();
+const result = await cli.run({
+  answers: { toolName: 'My Tool', toolId: 'my-tool' },
+  flags: ['--register'],
+  timeout: 60000,
+});
+cli.expectSuccess(result);
+```
+
+**DatabaseSeeder** - Test data management:
+
+```typescript
+const seeder = new DatabaseSeeder();
+const { email, password } = await seeder.seedAdminUser();
+const token = await seeder.getAuthToken(email, password);
+const isRegistered = await seeder.verifyToolRegistered('my-tool');
+await seeder.cleanup();
+```
+
+#### E2E Test Execution Time
+
+- **Target**: Full E2E suite completes in ≤5 minutes
+- **Individual tests**: ≤60 seconds per test
+- **Parallel execution**: Tests run sequentially due to database/file system dependencies
+
+#### Debugging Failed E2E Tests
+
+When E2E tests fail, check the following:
+
+1. **Database Connection**: Ensure PostgreSQL is running (`pg_isready`)
+2. **API Server**: Verify backend API is running on port 3000
+3. **Environment Variables**: Check `.env.e2e` or `.env.development` values
+4. **Test Artifacts**: Inspect generated files in `/tmp/create-tool-e2e/`
+5. **Logs**: Review test output for specific error messages
+
+#### CI/CD Integration
+
+E2E tests run automatically in GitHub Actions on every PR:
+
+- PostgreSQL service container spins up automatically
+- Backend API starts in background
+- Database seeded before tests
+- Test artifacts uploaded on failure (logs, generated files)
+- Tests must pass for PR merge
+
+#### Troubleshooting Common Failures
+
+**"Database connection failed"**:
+
+- Ensure PostgreSQL is running: `brew services start postgresql@14`
+- Check DATABASE_URL in `.env.e2e`
+
+**"CLI execution timeout"**:
+
+- Increase timeout in test: `timeout: 120000` (2 minutes)
+- Check if CLI is built: `npm run build`
+
+**"Tool already exists"**:
+
+- Test cleanup failed. Manually clean: `DELETE FROM tool_registry WHERE tool_id LIKE 'e2e-test-%'`
+
+**"Authentication failed"**:
+
+- Re-seed admin user: Run global setup manually
+- Check CREATE_TOOL_ADMIN_EMAIL and CREATE_TOOL_ADMIN_PASSWORD in `.env.e2e`
+
 ## Contributing
 
 1. Fork the repository

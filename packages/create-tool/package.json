@@ -14,6 +14,10 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:verbose": "jest --verbose",
+    "test:e2e": "jest --config jest.e2e.config.js",
+    "test:e2e:watch": "jest --config jest.e2e.config.js --watch",
+    "test:e2e:coverage": "jest --config jest.e2e.config.js --coverage",
+    "test:e2e:debug": "node --inspect-brk node_modules/.bin/jest --config jest.e2e.config.js --runInBand",
     "typecheck": "tsc --noEmit",
     "lint": "echo 'Linting not configured yet - will be added in future story'",
     "prepublishOnly": "npm run build"
@@ -35,14 +39,18 @@
     "inquirer": "^9.3.8"
   },
   "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
     "@types/ejs": "^3.1.5",
     "@types/inquirer": "^9.0.9",
     "@types/jest": "^30.0.0",
     "@types/mock-fs": "^4.13.4",
     "@types/node": "^24.9.1",
+    "@types/pg": "^8.11.10",
     "axios-mock-adapter": "^2.1.0",
+    "bcrypt": "^5.1.1",
     "jest": "^30.2.0",
     "mock-fs": "^5.5.0",
+    "pg": "^8.13.1",
     "ts-jest": "^29.4.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
