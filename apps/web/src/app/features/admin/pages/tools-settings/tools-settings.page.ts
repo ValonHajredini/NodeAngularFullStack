@@ -25,7 +25,7 @@ import { ToolsService } from '../../services/tools.service';
 import { Tool } from '@nodeangularfullstack/shared';
 import {
   StatsCardComponent,
-  ToolCardComponent,
+  ToolManagementCardComponent,
   SearchFilterComponent,
   BulkAction,
 } from '../../../../shared/components';
@@ -67,7 +67,7 @@ import { TooltipModule } from 'primeng/tooltip';
     DividerModule,
     TooltipModule,
     StatsCardComponent,
-    ToolCardComponent,
+    ToolManagementCardComponent,
     SearchFilterComponent,
   ],
   providers: [MessageService, ConfirmationService],

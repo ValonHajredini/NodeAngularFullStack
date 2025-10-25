@@ -33,12 +33,8 @@ export {
   type AvatarUploadState,
 } from './avatar-upload/avatar-upload.component';
 export { ToolLoadingComponent } from './tool-loading/tool-loading.component';
-export {
-  ToolCardComponent,
-  type ToolCardColorVariant,
-  type ToolCardSize,
-  type ToolCardConfig,
-} from './tool-card';
+export { ToolCardComponent } from './tool-card';
+export { ToolManagementCardComponent } from './tool-management-card';
 export {
   SearchFilterComponent,
   type StatusFilterValue,

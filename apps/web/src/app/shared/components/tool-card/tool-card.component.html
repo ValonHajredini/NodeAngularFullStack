@@ -1,0 +1,81 @@
+<article
+  class="tool-card"
+  [class.interactive]="interactive && !loading"
+  [tabindex]="interactive && !loading ? 0 : -1"
+  [attr.role]="interactive ? 'button' : null"
+  [attr.aria-label]="tool ? tool.name + ': ' + (tool.description || 'No description') : 'Tool card'"
+  (click)="onCardClick()"
+  (keydown)="onKeyDown($event)"
+>
+  <p-card>
+    <!-- Loading State -->
+    <ng-container *ngIf="loading">
+      <div class="tool-card-skeleton">
+        <div class="icon-skeleton">
+          <p-skeleton shape="circle" size="48px"></p-skeleton>
+        </div>
+        <div class="content-skeleton">
+          <p-skeleton width="60%" height="1.5rem"></p-skeleton>
+          <p-skeleton width="100%" height="1rem"></p-skeleton>
+          <p-skeleton width="80%" height="1rem"></p-skeleton>
+          <div class="footer-skeleton">
+            <p-skeleton width="40%" height="1rem"></p-skeleton>
+            <p-skeleton width="30%" height="1rem"></p-skeleton>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- Empty State -->
+    <ng-container *ngIf="!loading && !tool">
+      <div class="tool-card-empty">
+        <i class="pi pi-inbox empty-icon"></i>
+        <p class="empty-message">No tool data available</p>
+      </div>
+    </ng-container>
+
+    <!-- Tool Content -->
+    <ng-container *ngIf="!loading && tool">
+      <div class="tool-card-content">
+        <!-- Icon -->
+        <div class="tool-icon" [style.background-color]="getIconColor(tool)">
+          <i [class]="'pi ' + (tool.icon || 'pi-box')" [attr.aria-label]="tool.name + ' icon'"></i>
+        </div>
+
+        <!-- Header -->
+        <div class="tool-header">
+          <h3
+            class="tool-name"
+            [pTooltip]="tool.name && tool.name.length > 30 ? tool.name : undefined"
+            tooltipPosition="top"
+          >
+            {{ tool.name }}
+          </h3>
+        </div>
+
+        <!-- Description -->
+        <div class="tool-body">
+          <p
+            class="tool-description"
+            [pTooltip]="
+              tool.description && tool.description.length > 80 ? tool.description : undefined
+            "
+            tooltipPosition="top"
+          >
+            {{ tool.description || 'No description provided' }}
+          </p>
+        </div>
+
+        <!-- Footer -->
+        <div class="tool-footer">
+          <span class="tool-version">v{{ tool.version }}</span>
+          <p-badge
+            [value]="getStatusLabel(tool)"
+            [severity]="getStatusSeverity(tool)"
+            [attr.aria-label]="'Status: ' + getStatusLabel(tool)"
+          ></p-badge>
+        </div>
+      </div>
+    </ng-container>
+  </p-card>
+</article>

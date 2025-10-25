@@ -1,6 +1,1 @@
-export {
-  ToolCardComponent,
-  type ToolCardColorVariant,
-  type ToolCardSize,
-  type ToolCardConfig,
-} from './tool-card.component';
+export { ToolCardComponent } from './tool-card.component';

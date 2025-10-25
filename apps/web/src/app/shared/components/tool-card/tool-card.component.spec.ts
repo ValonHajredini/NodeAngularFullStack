@@ -1,24 +1,28 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { By } from '@angular/platform-browser';
-import { DebugElement } from '@angular/core';
-import { Tool } from '@nodeangularfullstack/shared';
 import { ToolCardComponent } from './tool-card.component';
+import { ToolRegistryRecord, ToolStatus } from '@nodeangularfullstack/shared';
+import { DebugElement } from '@angular/core';
+import { By } from '@angular/platform-browser';
 
 describe('ToolCardComponent', () => {
   let component: ToolCardComponent;
   let fixture: ComponentFixture<ToolCardComponent>;
+  let compiled: DebugElement;
 
-  const mockTool: Tool = {
+  const mockTool: ToolRegistryRecord = {
     id: '1',
-    key: 'test-tool',
+    tool_id: 'test-tool',
     name: 'Test Tool',
-    slug: 'test-tool',
-    description: 'A test tool for unit testing',
-    icon: 'pi pi-wrench',
-    category: 'utility',
-    active: true,
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-02'),
+    description: 'A tool for testing',
+    version: '1.0.0',
+    icon: 'pi-box',
+    route: '/tools/test-tool',
+    api_base: '/api/test-tool',
+    permissions: ['read', 'write'],
+    status: ToolStatus.ACTIVE,
+    is_exported: false,
+    created_at: new Date(),
+    updated_at: new Date(),
   };
 
   beforeEach(async () => {
@@ -28,161 +32,313 @@ describe('ToolCardComponent', () => {
 
     fixture = TestBed.createComponent(ToolCardComponent);
     component = fixture.componentInstance;
-
-    // Set required inputs
-    fixture.componentRef.setInput('tool', mockTool);
-
-    fixture.detectChanges();
+    compiled = fixture.debugElement;
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should display tool name and description', () => {
-    const titleElement = fixture.debugElement.query(By.css('.tool-card-title'));
-    const descriptionElement = fixture.debugElement.query(By.css('.tool-card-description'));
+  describe('Rendering', () => {
+    it('should render tool name', () => {
+      component.tool = mockTool;
+      fixture.detectChanges();
 
-    expect(titleElement.nativeElement.textContent.trim()).toBe(mockTool.name);
-    expect(descriptionElement.nativeElement.textContent.trim()).toBe(mockTool.description);
+      const nameEl = compiled.query(By.css('.tool-name'));
+      expect(nameEl.nativeElement.textContent).toContain('Test Tool');
+    });
+
+    it('should render tool description', () => {
+      component.tool = mockTool;
+      fixture.detectChanges();
+
+      const descEl = compiled.query(By.css('.tool-description'));
+      expect(descEl.nativeElement.textContent).toContain('A tool for testing');
+    });
+
+    it('should render tool icon', () => {
+      component.tool = mockTool;
+      fixture.detectChanges();
+
+      const iconEl = compiled.query(By.css('.tool-icon i'));
+      expect(iconEl.nativeElement.classList).toContain('pi-box');
+    });
+
+    it('should render version badge', () => {
+      component.tool = mockTool;
+      fixture.detectChanges();
+
+      const versionEl = compiled.query(By.css('.tool-version'));
+      expect(versionEl.nativeElement.textContent).toContain('v1.0.0');
+    });
+
+    it('should render status badge with correct severity', () => {
+      component.tool = mockTool;
+      fixture.detectChanges();
+
+      const badgeEl = compiled.query(By.css('p-badge'));
+      expect(badgeEl.componentInstance.severity).toBe('success');
+      expect(badgeEl.componentInstance.value).toBe('Active');
+    });
+
+    it('should display skeleton in loading state', () => {
+      component.loading = true;
+      fixture.detectChanges();
+
+      const skeletons = compiled.queryAll(By.css('p-skeleton'));
+      expect(skeletons.length).toBeGreaterThan(0);
+    });
+
+    it('should display empty state when tool is null', () => {
+      component.tool = null;
+      fixture.detectChanges();
+
+      const emptyEl = compiled.query(By.css('.tool-card-empty'));
+      expect(emptyEl).toBeTruthy();
+      expect(emptyEl.nativeElement.textContent).toContain('No tool data');
+    });
+
+    it('should apply interactive class when interactive is true', () => {
+      component.tool = mockTool;
+      component.interactive = true;
+      fixture.detectChanges();
+
+      const card = compiled.query(By.css('.tool-card'));
+      expect(card.nativeElement.classList.contains('interactive')).toBeTruthy();
+    });
+
+    it('should not apply interactive class when loading', () => {
+      component.tool = mockTool;
+      component.interactive = true;
+      component.loading = true;
+      fixture.detectChanges();
+
+      const card = compiled.query(By.css('.tool-card'));
+      expect(card.nativeElement.classList.contains('interactive')).toBeFalsy();
+    });
   });
 
-  it('should display active status badge', () => {
-    const badge = fixture.debugElement.query(By.css('p-badge'));
-    expect(badge).toBeTruthy();
+  describe('Interactions', () => {
+    it('should emit toolClick on card click', () => {
+      component.tool = mockTool;
+      component.interactive = true;
+      fixture.detectChanges();
+
+      spyOn(component.toolClick, 'emit');
+
+      const card = compiled.query(By.css('.tool-card'));
+      card.nativeElement.click();
+
+      expect(component.toolClick.emit).toHaveBeenCalledWith(mockTool);
+    });
+
+    it('should not emit toolClick when interactive is false', () => {
+      component.tool = mockTool;
+      component.interactive = false;
+      fixture.detectChanges();
+
+      spyOn(component.toolClick, 'emit');
+
+      const card = compiled.query(By.css('.tool-card'));
+      card.nativeElement.click();
+
+      expect(component.toolClick.emit).not.toHaveBeenCalled();
+    });
+
+    it('should not emit toolClick when loading is true', () => {
+      component.tool = mockTool;
+      component.loading = true;
+      fixture.detectChanges();
+
+      spyOn(component.toolClick, 'emit');
+
+      const card = compiled.query(By.css('.tool-card'));
+      card.nativeElement.click();
+
+      expect(component.toolClick.emit).not.toHaveBeenCalled();
+    });
+
+    it('should emit toolClick on Enter key', () => {
+      component.tool = mockTool;
+      component.interactive = true;
+      fixture.detectChanges();
+
+      spyOn(component.toolClick, 'emit');
+
+      const event = new KeyboardEvent('keydown', { key: 'Enter' });
+      component.onKeyDown(event);
+
+      expect(component.toolClick.emit).toHaveBeenCalledWith(mockTool);
+    });
+
+    it('should emit toolClick on Space key', () => {
+      component.tool = mockTool;
+      component.interactive = true;
+      fixture.detectChanges();
+
+      spyOn(component.toolClick, 'emit');
+
+      const event = new KeyboardEvent('keydown', { key: ' ' });
+      spyOn(event, 'preventDefault');
+      component.onKeyDown(event);
+
+      expect(event.preventDefault).toHaveBeenCalled();
+      expect(component.toolClick.emit).toHaveBeenCalledWith(mockTool);
+    });
+
+    it('should have tabindex 0 when interactive', () => {
+      component.tool = mockTool;
+      component.interactive = true;
+      fixture.detectChanges();
+
+      const card = compiled.query(By.css('.tool-card'));
+      expect(card.nativeElement.getAttribute('tabindex')).toBe('0');
+    });
+
+    it('should not have tabindex when not interactive', () => {
+      component.tool = mockTool;
+      component.interactive = false;
+      fixture.detectChanges();
+
+      const card = compiled.query(By.css('.tool-card'));
+      expect(card.nativeElement.getAttribute('tabindex')).toBe('-1');
+    });
   });
 
-  it('should emit toggle status event when checkbox is changed', () => {
-    spyOn(component.toggleStatus, 'emit');
+  describe('Status Mapping', () => {
+    it('should map "active" status to "success" severity', () => {
+      const tool = { ...mockTool, status: ToolStatus.ACTIVE };
+      expect(component.getStatusSeverity(tool)).toBe('success');
+    });
 
-    component.onToggleStatus(false);
+    it('should map "beta" status to "warn" severity', () => {
+      const tool = { ...mockTool, status: ToolStatus.BETA };
+      expect(component.getStatusSeverity(tool)).toBe('warn');
+    });
 
-    expect(component.toggleStatus.emit).toHaveBeenCalledWith(false);
+    it('should map "deprecated" status to "secondary" severity', () => {
+      const tool = { ...mockTool, status: ToolStatus.DEPRECATED };
+      expect(component.getStatusSeverity(tool)).toBe('secondary');
+    });
+
+    it('should map exported tool to "info" severity', () => {
+      const tool = { ...mockTool, is_exported: true };
+      expect(component.getStatusSeverity(tool)).toBe('info');
+    });
+
+    it('should convert status to title case', () => {
+      expect(component.getStatusLabel({ ...mockTool, status: ToolStatus.ACTIVE })).toBe('Active');
+      expect(component.getStatusLabel({ ...mockTool, status: ToolStatus.BETA })).toBe('Beta');
+      expect(component.getStatusLabel({ ...mockTool, status: ToolStatus.DEPRECATED })).toBe(
+        'Deprecated',
+      );
+    });
+
+    it('should show "Exported" for exported tools', () => {
+      const tool = { ...mockTool, is_exported: true };
+      expect(component.getStatusLabel(tool)).toBe('Exported');
+    });
+
+    it('should handle null tool gracefully', () => {
+      expect(component.getStatusSeverity(null)).toBe('info');
+      expect(component.getStatusLabel(null)).toBe('Unknown');
+    });
   });
 
-  it('should emit view details event when view button is clicked', () => {
-    spyOn(component.viewDetails, 'emit');
+  describe('Edge Cases', () => {
+    it('should handle missing icon gracefully', () => {
+      component.tool = { ...mockTool, icon: undefined };
+      fixture.detectChanges();
 
-    component.onViewDetails();
+      const iconEl = compiled.query(By.css('.tool-icon i'));
+      expect(iconEl.nativeElement.classList).toContain('pi-box'); // Fallback
+    });
 
-    expect(component.viewDetails.emit).toHaveBeenCalledWith(mockTool);
-  });
+    it('should handle missing description', () => {
+      component.tool = { ...mockTool, description: undefined };
+      fixture.detectChanges();
 
-  it('should emit configure event when configure button is clicked', () => {
-    spyOn(component.configure, 'emit');
+      const descEl = compiled.query(By.css('.tool-description'));
+      expect(descEl.nativeElement.textContent).toContain('No description');
+    });
 
-    component.onConfigure();
+    it('should truncate long tool names', () => {
+      const longName = 'This is a very long tool name that should be truncated';
+      component.tool = { ...mockTool, name: longName };
+      fixture.detectChanges();
 
-    expect(component.configure.emit).toHaveBeenCalledWith(mockTool);
-  });
+      const nameEl = compiled.query(By.css('.tool-name'));
+      const styles = window.getComputedStyle(nameEl.nativeElement);
+      expect(styles.textOverflow).toBe('ellipsis');
+      expect(styles.whiteSpace).toBe('nowrap');
+    });
 
-  it('should emit card click event when card is clicked', () => {
-    spyOn(component.cardClick, 'emit');
+    it('should truncate long descriptions', () => {
+      const longDesc =
+        'This is a very long description that should be truncated to two lines maximum with ellipsis overflow';
+      component.tool = { ...mockTool, description: longDesc };
+      fixture.detectChanges();
 
-    const cardElement = fixture.debugElement.query(By.css('.tool-card'));
-    const mockEvent = new MouseEvent('click');
-    Object.defineProperty(mockEvent, 'target', { value: cardElement.nativeElement });
+      const descEl = compiled.query(By.css('.tool-description'));
+      const styles = window.getComputedStyle(descEl.nativeElement);
+      expect(styles.display).toContain('-webkit-box');
+    });
 
-    component.handleCardClick(mockEvent);
+    it('should get correct icon color for active status', () => {
+      const tool = { ...mockTool, status: ToolStatus.ACTIVE };
+      expect(component.getIconColor(tool)).toBe('#22c55e');
+    });
 
-    expect(component.cardClick.emit).toHaveBeenCalledWith(mockTool);
-  });
+    it('should get correct icon color for beta status', () => {
+      const tool = { ...mockTool, status: ToolStatus.BETA };
+      expect(component.getIconColor(tool)).toBe('#f59e0b');
+    });
 
-  it('should show selection checkbox when showSelection is true', () => {
-    fixture.componentRef.setInput('showSelection', true);
-    fixture.detectChanges();
+    it('should get correct icon color for deprecated status', () => {
+      const tool = { ...mockTool, status: ToolStatus.DEPRECATED };
+      expect(component.getIconColor(tool)).toBe('#6b7280');
+    });
 
-    const checkbox = fixture.debugElement.query(By.css('.tool-card-checkbox'));
-    expect(checkbox).toBeTruthy();
-  });
+    it('should get correct icon color for exported tool', () => {
+      const tool = { ...mockTool, is_exported: true };
+      expect(component.getIconColor(tool)).toBe('#3b82f6');
+    });
 
-  it('should hide selection checkbox when showSelection is false', () => {
-    fixture.componentRef.setInput('showSelection', false);
-    fixture.detectChanges();
+    it('should handle undefined tool gracefully', () => {
+      expect(component.getIconColor(null)).toBe('#6b7280');
+    });
 
-    const checkbox = fixture.debugElement.query(By.css('.tool-card-checkbox'));
-    expect(checkbox).toBeFalsy();
-  });
+    it('should emit actionClick with correct data', () => {
+      component.tool = mockTool;
+      fixture.detectChanges();
 
-  it('should show loading spinner when updating is true', () => {
-    fixture.componentRef.setInput('updating', true);
-    fixture.detectChanges();
+      spyOn(component.actionClick, 'emit');
 
-    const spinner = fixture.debugElement.query(By.css('.tool-card-loading'));
-    expect(spinner).toBeTruthy();
-  });
+      const mockEvent = new MouseEvent('click');
+      spyOn(mockEvent, 'stopPropagation');
 
-  it('should apply selected class when selected is true', () => {
-    fixture.componentRef.setInput('selected', true);
-    fixture.detectChanges();
+      component.onActionButtonClick('export', mockEvent);
 
-    const cardElement = fixture.debugElement.query(By.css('.tool-card'));
-    expect(cardElement.nativeElement.classList.contains('selected')).toBeTruthy();
-  });
+      expect(mockEvent.stopPropagation).toHaveBeenCalled();
+      expect(component.actionClick.emit).toHaveBeenCalledWith({
+        action: 'export',
+        tool: mockTool,
+      });
+    });
 
-  it('should apply updating class when updating is true', () => {
-    fixture.componentRef.setInput('updating', true);
-    fixture.detectChanges();
+    it('should not emit actionClick when tool is null', () => {
+      component.tool = null;
+      fixture.detectChanges();
 
-    const cardElement = fixture.debugElement.query(By.css('.tool-card'));
-    expect(cardElement.nativeElement.classList.contains('updating')).toBeTruthy();
-  });
+      spyOn(component.actionClick, 'emit');
 
-  it('should display correct icon based on tool key', () => {
-    const iconElement = fixture.debugElement.query(By.css('.tool-card-icon i'));
-    expect(iconElement.nativeElement.classList.contains('pi')).toBeTruthy();
-    expect(iconElement.nativeElement.classList.contains('pi-wrench')).toBeTruthy();
-  });
+      const mockEvent = new MouseEvent('click');
+      spyOn(mockEvent, 'stopPropagation');
 
-  it('should handle keyboard navigation with Enter key', () => {
-    spyOn(component.cardClick, 'emit');
+      component.onActionButtonClick('export', mockEvent);
 
-    const mockEvent = new KeyboardEvent('keydown', { key: 'Enter' });
-    spyOn(mockEvent, 'preventDefault');
-
-    component.handleKeydown(mockEvent);
-
-    expect(mockEvent.preventDefault).toHaveBeenCalled();
-    expect(component.cardClick.emit).toHaveBeenCalledWith(mockTool);
-  });
-
-  it('should handle keyboard navigation with Space key', () => {
-    spyOn(component.cardClick, 'emit');
-
-    const mockEvent = new KeyboardEvent('keydown', { key: ' ' });
-    spyOn(mockEvent, 'preventDefault');
-
-    component.handleKeydown(mockEvent);
-
-    expect(mockEvent.preventDefault).toHaveBeenCalled();
-    expect(component.cardClick.emit).toHaveBeenCalledWith(mockTool);
-  });
-
-  it('should generate appropriate aria label', () => {
-    const ariaLabel = component.ariaLabel();
-    expect(ariaLabel).toContain(mockTool.name);
-    expect(ariaLabel).toContain('active');
-    expect(ariaLabel).toContain(mockTool.description);
-  });
-
-  it('should show correct status text for active tool', () => {
-    expect(component.statusText()).toBe('Active');
-  });
-
-  it('should show correct status text for inactive tool', () => {
-    const inactiveTool = { ...mockTool, active: false };
-    fixture.componentRef.setInput('tool', inactiveTool);
-    fixture.detectChanges();
-
-    expect(component.statusText()).toBe('Inactive');
-  });
-
-  it('should use default icon when tool has no icon property', () => {
-    const toolWithoutIcon = { ...mockTool, icon: undefined };
-    fixture.componentRef.setInput('tool', toolWithoutIcon);
-    fixture.detectChanges();
-
-    const icon = component.toolIcon();
-    expect(icon).toBe('pi pi-wrench'); // default fallback
+      expect(mockEvent.stopPropagation).toHaveBeenCalled();
+      expect(component.actionClick.emit).not.toHaveBeenCalled();
+    });
   });
 });
