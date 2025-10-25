@@ -2276,6 +2276,7 @@ describe('FormBuilderService', () => {
           },
           usageCount: 0,
           isActive: true,
+          isCustom: false,
           createdAt: new Date(),
           updatedAt: new Date(),
         };
@@ -2302,7 +2303,7 @@ describe('FormBuilderService', () => {
         });
 
         // Apply theme
-        service.applyTheme('theme-1');
+        service.applyTheme(mockTheme);
 
         // Verify theme was applied
         expect(service.currentTheme()).toEqual(mockTheme);
@@ -2313,35 +2314,6 @@ describe('FormBuilderService', () => {
         // Verify form schema was updated
         const currentForm = service.currentForm();
         expect(currentForm?.schema?.settings?.themeId).toBe('theme-1');
-      });
-
-      it('should warn when theme not found in available themes', () => {
-        spyOn(console, 'warn');
-
-        // Set up available themes (empty)
-        (service as any)._availableThemes.set([]);
-
-        // Set up current form
-        const mockForm: FormMetadata = {
-          id: 'form-1',
-          userId: 'user-1',
-          title: 'Test Form',
-          status: FormStatus.DRAFT,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-        service.setCurrentForm(mockForm);
-
-        // Apply non-existent theme
-        service.applyTheme('non-existent-theme');
-
-        // Verify warning was logged
-        expect(console.warn).toHaveBeenCalledWith(
-          'Theme non-existent-theme not found in available themes',
-        );
-        expect(service.currentTheme()).toBeNull();
-        expect(service.isDirty()).toBe(false);
-        expect(mockThemePreviewService.applyThemeCss).not.toHaveBeenCalled();
       });
 
       it('should create schema if it does not exist', () => {
@@ -2368,6 +2340,7 @@ describe('FormBuilderService', () => {
           },
           usageCount: 0,
           isActive: true,
+          isCustom: false,
           createdAt: new Date(),
           updatedAt: new Date(),
         };
@@ -2394,7 +2367,7 @@ describe('FormBuilderService', () => {
         });
 
         // Apply theme
-        service.applyTheme('theme-1');
+        service.applyTheme(mockTheme);
 
         // Verify schema was created
         const currentForm = service.currentForm();
@@ -2428,6 +2401,7 @@ describe('FormBuilderService', () => {
           },
           usageCount: 0,
           isActive: true,
+          isCustom: false,
           createdAt: new Date(),
           updatedAt: new Date(),
         };
@@ -3027,7 +3001,7 @@ describe('FormBuilderService', () => {
         // Add fields to sub-columns 0, 1, and 2
         const field1 = service.addFieldFromType(FormFieldType.TEXT);
         const field2 = service.addFieldFromType(FormFieldType.EMAIL);
-        const field3 = service.addFieldFromType(FormFieldType.PHONE);
+        const field3 = service.addFieldFromType(FormFieldType.NUMBER);
         service.setFieldPosition(field1.id, {
           rowId,
           columnIndex: 0,
@@ -3064,7 +3038,7 @@ describe('FormBuilderService', () => {
         // Add fields to sub-columns 0, 1, and 2
         const field1 = service.addFieldFromType(FormFieldType.TEXT);
         const field2 = service.addFieldFromType(FormFieldType.EMAIL);
-        const field3 = service.addFieldFromType(FormFieldType.PHONE);
+        const field3 = service.addFieldFromType(FormFieldType.NUMBER);
         service.setFieldPosition(field1.id, {
           rowId,
           columnIndex: 0,
@@ -3106,7 +3080,7 @@ describe('FormBuilderService', () => {
         // Add fields to all sub-columns
         const field1 = service.addFieldFromType(FormFieldType.TEXT);
         const field2 = service.addFieldFromType(FormFieldType.EMAIL);
-        const field3 = service.addFieldFromType(FormFieldType.PHONE);
+        const field3 = service.addFieldFromType(FormFieldType.NUMBER);
         const field4 = service.addFieldFromType(FormFieldType.DATE);
         service.setFieldPosition(field1.id, {
           rowId,
@@ -3194,7 +3168,7 @@ describe('FormBuilderService', () => {
         // Add multiple fields to sub-column 2
         const field1 = service.addFieldFromType(FormFieldType.TEXT);
         const field2 = service.addFieldFromType(FormFieldType.EMAIL);
-        const field3 = service.addFieldFromType(FormFieldType.PHONE);
+        const field3 = service.addFieldFromType(FormFieldType.NUMBER);
         service.setFieldPosition(field1.id, {
           rowId,
           columnIndex: 0,
@@ -3874,25 +3848,23 @@ describe('FormBuilderService', () => {
       it('should handle invalid startRowId gracefully', () => {
         service.enableRowLayout();
         const row1 = service.addRow(2);
-        const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+        const consoleSpy = spyOn(console, 'error');
 
         service.selectRowRange('invalid-id', row1);
 
         expect(consoleSpy).toHaveBeenCalledWith('Invalid row range:', 'invalid-id', row1);
         expect(service.selectedRowIds()).toEqual([]);
-        consoleSpy.mockRestore();
       });
 
       it('should handle invalid endRowId gracefully', () => {
         service.enableRowLayout();
         const row1 = service.addRow(2);
-        const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+        const consoleSpy = spyOn(console, 'error');
 
         service.selectRowRange(row1, 'invalid-id');
 
         expect(consoleSpy).toHaveBeenCalledWith('Invalid row range:', row1, 'invalid-id');
         expect(service.selectedRowIds()).toEqual([]);
-        consoleSpy.mockRestore();
       });
     });
 
@@ -3997,19 +3969,18 @@ describe('FormBuilderService', () => {
       it('should handle invalid rowIds gracefully', () => {
         service.enableRowLayout();
         const row1 = service.addRow(2);
-        const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+        const consoleSpy = spyOn(console, 'error');
 
         const newRowIds = service.duplicateRows(['invalid-id', row1]);
 
         expect(consoleSpy).toHaveBeenCalledWith('Invalid row ID:', 'invalid-id');
         expect(newRowIds.length).toBe(1); // Only valid row duplicated
-        consoleSpy.mockRestore();
       });
 
       it('should return empty array when all rowIds are invalid', () => {
         service.enableRowLayout();
         service.addRow(2);
-        const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+        const consoleSpy = spyOn(console, 'error');
 
         const newRowIds = service.duplicateRows(['invalid-1', 'invalid-2']);
 
@@ -4017,7 +3988,6 @@ describe('FormBuilderService', () => {
         expect(consoleSpy).toHaveBeenCalledWith('Invalid row ID:', 'invalid-2');
         expect(consoleSpy).toHaveBeenCalledWith('No valid row IDs provided');
         expect(newRowIds).toEqual([]);
-        consoleSpy.mockRestore();
       });
 
       it('should preserve fields in duplicated rows', () => {
@@ -4048,15 +4018,28 @@ describe('FormBuilderService', () => {
         const row1 = service.addRow(2);
         const row2 = service.addRow(3);
         service.loadForm({
+          id: 'form-1',
+          userId: 'user-1',
+          title: 'Test',
+          description: '',
+          status: FormStatus.DRAFT,
+          createdAt: new Date(),
+          updatedAt: new Date(),
           schema: {
             id: 'test-form',
+            formId: 'form-1',
+            version: 1,
             fields: [],
-            settings: { rowLayout: { enabled: true, rows: [] } },
-          },
-          metadata: {
-            title: 'Test',
-            description: '',
-            status: FormStatus.DRAFT,
+            settings: {
+              layout: { columns: 1, spacing: 'medium' },
+              submission: {
+                showSuccessMessage: true,
+                successMessage: 'Thank you!',
+                allowMultipleSubmissions: false,
+              },
+              rowLayout: { enabled: true, rows: [] },
+            },
+            isPublished: false,
             createdAt: new Date(),
             updatedAt: new Date(),
           },

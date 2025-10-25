@@ -217,8 +217,8 @@ describe('TestToolService', () => {
 
       service.create(newData).subscribe({
         next: (created) => {
-          expect(created.name).toBe(newData.name);
-          expect(created.description).toBe(newData.description);
+          expect(created.name).toBe('New Item');
+          expect(created.description).toBe('New description');
           done();
         },
         error: done.fail,
@@ -277,7 +277,7 @@ describe('TestToolService', () => {
 
       service.update(id, updateData).subscribe({
         next: (updated) => {
-          expect(updated.name).toBe(updateData.name);
+          expect(updated.name).toBe('Updated Name');
           done();
         },
         error: done.fail,

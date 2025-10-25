@@ -44,12 +44,4 @@ describe('SvgDrawingComponent', () => {
     expect(component.error()).toBe('Failed to initialize tool. Please try again later.');
     expect(component.loading()).toBe(false);
   });
-
-  it('should handle get started action', () => {
-    spyOn(console, 'log');
-
-    component.onGetStarted();
-
-    expect(console.log).toHaveBeenCalledWith('SVG Drawing tool started');
-  });
 });

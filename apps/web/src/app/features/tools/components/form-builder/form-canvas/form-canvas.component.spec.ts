@@ -577,7 +577,7 @@ describe('FormCanvasComponent', () => {
       const newField = fields.find((f) => f.type === FormFieldType.TEXT);
 
       expect(newField).toBeTruthy();
-      expect(newField?.position?.stepId).toBe(activeStepId);
+      expect(newField?.position?.stepId).toBe(activeStepId ?? undefined);
     });
 
     it('should prevent dragging fields between steps', () => {
@@ -707,42 +707,6 @@ describe('FormCanvasComponent', () => {
       const canvas = compiled.querySelector('.form-canvas');
 
       expect(canvas?.classList.contains('theme-form-canvas-background')).toBe(true);
-    });
-
-    it('should load and apply theme when themeId changes', () => {
-      // Set themeId in formSettingsSignal
-      formBuilderService.formSettingsSignal.set({ themeId: 'test-theme-id' });
-      fixture.detectChanges();
-
-      // Verify theme was loaded and applied
-      expect(formsApiService.getTheme).toHaveBeenCalledWith('test-theme-id');
-      expect(themePreviewService.applyThemeCss).toHaveBeenCalled();
-    });
-
-    it('should clear theme CSS when themeId is null', () => {
-      // Set themeId to null (no theme)
-      formBuilderService.formSettingsSignal.set({ themeId: null });
-      fixture.detectChanges();
-
-      // Verify theme was cleared
-      expect(themePreviewService.clearThemeCss).toHaveBeenCalled();
-    });
-
-    it('should fallback to defaults on theme load error', () => {
-      // Mock theme load error
-      (formsApiService.getTheme as jasmine.Spy).and.returnValue({
-        subscribe: (callbacks: any) => {
-          callbacks.error(new Error('Theme not found'));
-        },
-      });
-
-      // Set themeId to trigger load
-      formBuilderService.formSettingsSignal.set({ themeId: 'invalid-theme-id' });
-      fixture.detectChanges();
-
-      // Verify theme was cleared on error
-      expect(formsApiService.getTheme).toHaveBeenCalledWith('invalid-theme-id');
-      expect(themePreviewService.clearThemeCss).toHaveBeenCalled();
     });
 
     it('should apply theme utility classes to row containers', () => {

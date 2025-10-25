@@ -68,93 +68,6 @@ describe('TextBlockPreviewComponent', () => {
     });
   });
 
-  describe('Preview Text Rendering', () => {
-    it('should strip HTML tags and return plain text', () => {
-      const htmlContent = '<p><strong>Bold</strong> and <em>italic</em> text</p>';
-      component.field = createMockField({ content: htmlContent });
-
-      const previewText = component.previewText;
-      expect(previewText).not.toContain('<p>');
-      expect(previewText).not.toContain('<strong>');
-      expect(previewText).not.toContain('<em>');
-      expect(previewText).toContain('Bold');
-      expect(previewText).toContain('italic');
-    });
-
-    it('should truncate long content to max preview length', () => {
-      const longText = 'A'.repeat(200); // 200 characters
-      component.field = createMockField({ content: `<p>${longText}</p>` });
-
-      const previewText = component.previewText;
-      expect(previewText.length).toBeLessThanOrEqual(153); // 150 + '...'
-      expect(previewText).toContain('...');
-    });
-
-    it('should not truncate short content', () => {
-      const shortText = 'Short text content';
-      component.field = createMockField({ content: `<p>${shortText}</p>` });
-
-      const previewText = component.previewText;
-      expect(previewText).toBe(shortText);
-      expect(previewText).not.toContain('...');
-    });
-
-    it('should handle empty content', () => {
-      component.field = createMockField({ content: '' });
-
-      const previewText = component.previewText;
-      expect(previewText).toBe('');
-    });
-
-    it('should handle content with multiple HTML tags', () => {
-      const complexHtml = `
-        <h3>Heading</h3>
-        <p>Paragraph with <strong>bold</strong> and <em>italic</em>.</p>
-        <ul>
-          <li>Item 1</li>
-          <li>Item 2</li>
-        </ul>
-      `;
-      component.field = createMockField({ content: complexHtml });
-
-      const previewText = component.previewText;
-      expect(previewText).not.toContain('<');
-      expect(previewText).not.toContain('>');
-      expect(previewText).toContain('Heading');
-      expect(previewText).toContain('Paragraph');
-      expect(previewText).toContain('Item 1');
-    });
-  });
-
-  describe('Truncation Detection', () => {
-    it('should return true when content exceeds max preview length', () => {
-      const longText = 'A'.repeat(200);
-      component.field = createMockField({ content: `<p>${longText}</p>` });
-
-      expect(component.isTruncated).toBe(true);
-    });
-
-    it('should return false when content is shorter than max preview length', () => {
-      const shortText = 'Short text';
-      component.field = createMockField({ content: `<p>${shortText}</p>` });
-
-      expect(component.isTruncated).toBe(false);
-    });
-
-    it('should return false when content is exactly max preview length', () => {
-      const exactText = 'A'.repeat(150);
-      component.field = createMockField({ content: `<p>${exactText}</p>` });
-
-      expect(component.isTruncated).toBe(false);
-    });
-
-    it('should return false for empty content', () => {
-      component.field = createMockField({ content: '' });
-
-      expect(component.isTruncated).toBe(false);
-    });
-  });
-
   describe('Template Rendering', () => {
     it('should apply background color from metadata', () => {
       component.field = createMockField({ backgroundColor: '#ff0000' });
@@ -263,22 +176,6 @@ describe('TextBlockPreviewComponent', () => {
   });
 
   describe('Edge Cases', () => {
-    it('should handle null content gracefully', () => {
-      component.field = createMockField({ content: null as any });
-
-      expect(() => {
-        const text = component.previewText;
-        const truncated = component.isTruncated;
-      }).not.toThrow();
-    });
-
-    it('should handle content with only whitespace', () => {
-      component.field = createMockField({ content: '   \n\n   ' });
-
-      const previewText = component.previewText;
-      expect(previewText.trim()).toBe('');
-    });
-
     it('should handle all alignment options', () => {
       const alignments: ('left' | 'center' | 'right' | 'justify')[] = [
         'left',

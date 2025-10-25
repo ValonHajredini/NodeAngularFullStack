@@ -142,6 +142,7 @@ describe('ThemePreviewService', () => {
         },
         usageCount: 0,
         isActive: true,
+        isCustom: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -216,6 +217,7 @@ describe('ThemePreviewService', () => {
         },
         usageCount: 0,
         isActive: true,
+        isCustom: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -272,6 +274,7 @@ describe('ThemePreviewService', () => {
         },
         usageCount: 0,
         isActive: true,
+        isCustom: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -321,6 +324,7 @@ describe('ThemePreviewService', () => {
         },
         usageCount: 0,
         isActive: true,
+        isCustom: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -359,6 +363,7 @@ describe('ThemePreviewService', () => {
         },
         usageCount: 0,
         isActive: true,
+        isCustom: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       };

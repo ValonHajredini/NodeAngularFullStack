@@ -1,13 +1,13 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { SelectPreviewComponent } from './select-preview.component';
-import { FormField, FormFieldType, FieldOption } from '@nodeangularfullstack/shared';
+import { FormField, FormFieldType } from '@nodeangularfullstack/shared';
 import { Select } from 'primeng/select';
 
 describe('SelectPreviewComponent', () => {
   let component: SelectPreviewComponent;
   let fixture: ComponentFixture<SelectPreviewComponent>;
 
-  const mockSelectOptions: FieldOption[] = [
+  const mockSelectOptions: { label: string; value: string }[] = [
     { label: 'Option 1', value: 'option1' },
     { label: 'Option 2', value: 'option2' },
     { label: 'Option 3', value: 'option3' },

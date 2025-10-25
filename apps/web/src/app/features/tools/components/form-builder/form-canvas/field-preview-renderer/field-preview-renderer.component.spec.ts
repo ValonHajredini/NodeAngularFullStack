@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FieldPreviewRendererComponent } from './field-preview-renderer.component';
 import { FormField, FormFieldType } from '@nodeangularfullstack/shared';
-import { ValidationPresetsService } from '../../../field-properties/validation-presets.service';
+import { ValidationPresetsService } from '../../field-properties/validation-presets.service';
 import { DebugElement } from '@angular/core';
 import { By } from '@angular/platform-browser';
 
@@ -275,7 +275,9 @@ describe('FieldPreviewRendererComponent', () => {
 
       it('should identify Email pattern preset', () => {
         // Arrange
-        const emailPreset = validationPresetsService.getPresets().find((p) => p.name === 'email');
+        const emailPreset = validationPresetsService
+          .getPresets()
+          .find((p: any) => p.name === 'email');
         const field: FormField = {
           id: 'field-1',
           type: FormFieldType.EMAIL,
@@ -298,7 +300,9 @@ describe('FieldPreviewRendererComponent', () => {
 
       it('should identify Phone pattern preset', () => {
         // Arrange
-        const phonePreset = validationPresetsService.getPresets().find((p) => p.name === 'phone');
+        const phonePreset = validationPresetsService
+          .getPresets()
+          .find((p: any) => p.name === 'phone');
         const field: FormField = {
           id: 'field-1',
           type: FormFieldType.TEXT,
@@ -321,7 +325,7 @@ describe('FieldPreviewRendererComponent', () => {
 
       it('should identify URL pattern preset', () => {
         // Arrange
-        const urlPreset = validationPresetsService.getPresets().find((p) => p.name === 'url');
+        const urlPreset = validationPresetsService.getPresets().find((p: any) => p.name === 'url');
         const field: FormField = {
           id: 'field-1',
           type: FormFieldType.TEXT,
@@ -712,7 +716,7 @@ describe('FieldPreviewRendererComponent', () => {
         order: 0,
       };
       component.field = field;
-      const emitSpy = jest.spyOn(component.labelChanged, 'emit');
+      const emitSpy = spyOn(component.labelChanged, 'emit');
 
       // Act
       component.onLabelChanged('New Label');
@@ -732,9 +736,9 @@ describe('FieldPreviewRendererComponent', () => {
         order: 0,
       };
       component.field = field;
-      const emitSpy = jest.spyOn(component.settingsClick, 'emit');
+      const emitSpy = spyOn(component.settingsClick, 'emit');
       const mockEvent = {
-        stopPropagation: jest.fn(),
+        stopPropagation: jasmine.createSpy('stopPropagation'),
       } as unknown as Event;
 
       // Act
@@ -756,7 +760,7 @@ describe('FieldPreviewRendererComponent', () => {
         order: 0,
       };
       component.field = field;
-      const emitSpy = jest.spyOn(component.fieldUpdated, 'emit');
+      const emitSpy = spyOn(component.fieldUpdated, 'emit');
       const newOptions = [
         { label: 'USA', value: 'usa' },
         { label: 'Canada', value: 'canada' },

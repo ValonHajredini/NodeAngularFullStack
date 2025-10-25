@@ -564,7 +564,7 @@ export class FormCanvasComponent {
    * Computed signal: Visible fields filtered by active step
    * Returns all fields when step mode is disabled, or only fields for active step when enabled
    */
-  protected readonly visibleFields = computed(() => {
+  public readonly visibleFields = computed(() => {
     if (!this.stepFormEnabled()) {
       return this.formBuilderService.formFields();
     }
@@ -579,7 +579,7 @@ export class FormCanvasComponent {
    * Computed signal: Visible rows filtered by active step
    * Returns all rows when step mode is disabled, or only rows for active step when enabled
    */
-  protected readonly visibleRows = computed(() => {
+  public readonly visibleRows = computed(() => {
     const rows = this.formBuilderService.rowConfigs();
     if (!this.stepFormEnabled()) {
       return rows;
@@ -1282,7 +1282,7 @@ export class FormCanvasComponent {
    * @param subColumnIndex - Sub-column index within parent column
    * @returns Array of fields in the sub-column (already sorted by orderInColumn)
    */
-  protected fieldsInSubColumn(
+  public fieldsInSubColumn(
     rowId: string,
     columnIndex: number,
     subColumnIndex: number,

@@ -880,7 +880,9 @@ describe('SvgDrawingService', () => {
     });
 
     it('should handle localStorage quota exceeded', () => {
-      spyOn(localStorage, 'setItem').and.throwError({ name: 'QuotaExceededError' });
+      spyOn(localStorage, 'setItem').and.throwError(
+        new DOMException('Quota exceeded', 'QuotaExceededError'),
+      );
       spyOn(console, 'error');
 
       const lineShape: LineShape = {

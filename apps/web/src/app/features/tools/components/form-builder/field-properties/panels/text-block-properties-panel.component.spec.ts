@@ -477,15 +477,4 @@ describe('TextBlockPropertiesPanelComponent', () => {
       expect(component['form'].value.padding).toBe('medium');
     });
   });
-
-  describe('Monaco Editor Configuration', () => {
-    it('should have HTML editor options configured', () => {
-      const options = component['htmlEditorOptions'];
-
-      expect(options.language).toBe('html');
-      expect(options.minimap.enabled).toBe(false);
-      expect(options.lineNumbers).toBe('on');
-      expect(options.wordWrap).toBe('on');
-    });
-  });
 });

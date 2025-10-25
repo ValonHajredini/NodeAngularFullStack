@@ -3105,7 +3105,9 @@ describe('FormRendererComponent', () => {
       });
 
       it('should return undefined when no sub-columns configured', () => {
-        formRendererService.getFormSchema.and.returnValue(of(mockSchema));
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: mockSchema, settings: mockSettings }),
+        );
         component.ngOnInit();
         fixture.detectChanges();
 
@@ -3248,7 +3250,9 @@ describe('FormRendererComponent', () => {
       });
 
       it('should return 1fr when no sub-column config exists', () => {
-        formRendererService.getFormSchema.and.returnValue(of(mockSchema));
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: mockSchema, settings: mockSettings }),
+        );
         component.ngOnInit();
         fixture.detectChanges();
 
@@ -3285,7 +3289,9 @@ describe('FormRendererComponent', () => {
       });
 
       it('should return empty array when no sub-columns', () => {
-        formRendererService.getFormSchema.and.returnValue(of(mockSchema));
+        formRendererService.getFormSchema.and.returnValue(
+          of({ schema: mockSchema, settings: mockSettings }),
+        );
         component.ngOnInit();
         fixture.detectChanges();
 

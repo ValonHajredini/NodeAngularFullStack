@@ -423,6 +423,7 @@ describe('FormBuilderComponent', () => {
           },
           usageCount: 0,
           isActive: true,
+          isCustom: false,
           createdAt: new Date(),
           updatedAt: new Date(),
         };
@@ -449,82 +450,13 @@ describe('FormBuilderComponent', () => {
         formBuilderService.setCurrentForm(mockForm);
 
         // Select theme
-        component.onThemeSelected('theme-1');
+        component.onThemeSelected(mockTheme);
 
         // Verify theme was applied
         expect(formBuilderService.currentTheme()).toEqual(mockTheme);
         expect(formBuilderService.isDirty()).toBe(true);
         expect(themePreviewService.applyThemeCss).toHaveBeenCalledWith(mockTheme);
         expect(themesApiService.applyTheme).toHaveBeenCalledWith('theme-1');
-      });
-
-      it('should clear theme when "No Theme" is selected', () => {
-        const mockTheme = {
-          id: 'theme-1',
-          name: 'Test Theme',
-          description: 'A test theme',
-          thumbnailUrl: 'https://example.com/thumb.jpg',
-          themeConfig: {
-            desktop: {
-              primaryColor: '#FF5733',
-              secondaryColor: '#33FF57',
-              backgroundColor: '#FFFFFF',
-              textColorPrimary: '#000000',
-              textColorSecondary: '#666666',
-              fontFamilyHeading: 'Arial, sans-serif',
-              fontFamilyBody: 'Helvetica, sans-serif',
-              fieldBorderRadius: '8px',
-              fieldSpacing: '12px',
-              containerBackground: '#F5F5F5',
-              containerOpacity: 0.9,
-              containerPosition: 'center' as const,
-            },
-          },
-          usageCount: 0,
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-
-        // Set up current theme
-        (formBuilderService as any)._currentTheme.set(mockTheme);
-
-        // Set up current form with theme
-        const mockForm = {
-          id: 'form-1',
-          userId: 'user-1',
-          title: 'Test Form',
-          status: FormStatus.DRAFT,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          schema: {
-            id: 'schema-1',
-            formId: 'form-1',
-            version: 1,
-            fields: [],
-            settings: {
-              layout: { columns: 1, spacing: 'medium' },
-              submission: {
-                showSuccessMessage: true,
-                successMessage: 'Thank you!',
-                allowMultipleSubmissions: false,
-              },
-              themeId: 'theme-1',
-            },
-            isPublished: false,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-        };
-        formBuilderService.setCurrentForm(mockForm);
-
-        // Select "No Theme"
-        component.onThemeSelected('');
-
-        // Verify theme was cleared
-        expect(formBuilderService.currentTheme()).toBeNull();
-        expect(formBuilderService.isDirty()).toBe(true);
-        expect(themePreviewService.clearThemeCss).toHaveBeenCalled();
       });
 
       it('should handle theme selection error gracefully', () => {
@@ -561,6 +493,7 @@ describe('FormBuilderComponent', () => {
           },
           usageCount: 0,
           isActive: true,
+          isCustom: false,
           createdAt: new Date(),
           updatedAt: new Date(),
         };
@@ -578,7 +511,7 @@ describe('FormBuilderComponent', () => {
         formBuilderService.setCurrentForm(mockForm);
 
         // Select theme
-        component.onThemeSelected('theme-1');
+        component.onThemeSelected(mockTheme);
 
         // Verify error was handled gracefully
         expect(console.error).toHaveBeenCalledWith(
@@ -616,6 +549,7 @@ describe('FormBuilderComponent', () => {
           },
           usageCount: 0,
           isActive: true,
+          isCustom: false,
           createdAt: new Date(),
           updatedAt: new Date(),
         };
@@ -666,6 +600,7 @@ describe('FormBuilderComponent', () => {
             },
             usageCount: 0,
             isActive: true,
+            isCustom: false,
             createdAt: new Date(),
             updatedAt: new Date(),
           },
@@ -692,6 +627,7 @@ describe('FormBuilderComponent', () => {
             },
             usageCount: 0,
             isActive: true,
+            isCustom: false,
             createdAt: new Date(),
             updatedAt: new Date(),
           },

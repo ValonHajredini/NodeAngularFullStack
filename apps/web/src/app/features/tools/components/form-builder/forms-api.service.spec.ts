@@ -20,13 +20,13 @@ describe('FormsApiService', () => {
   const mockForm: FormMetadata = {
     id: 'form-123',
     userId: 'user-456',
-    tenantId: null,
+    tenantId: undefined,
     title: 'Test Form',
     description: 'Test Description',
     status: FormStatus.DRAFT,
     createdAt: new Date('2025-01-01'),
     updatedAt: new Date('2025-01-02'),
-    qrCodeUrl: null,
+    qrCodeUrl: undefined,
   };
 
   beforeEach(() => {
@@ -293,7 +293,15 @@ describe('FormsApiService', () => {
       formId: mockFormId,
       version: 1,
       fields: [],
-      settings: {},
+      settings: {
+        layout: { columns: 1, spacing: 'medium' },
+        submission: {
+          showSuccessMessage: true,
+          successMessage: 'Thank you!',
+          allowMultipleSubmissions: false,
+        },
+      },
+      isPublished: false,
       createdAt: new Date(),
       updatedAt: new Date(),
       expiresAt: new Date('2025-12-31'),
@@ -307,11 +315,12 @@ describe('FormsApiService', () => {
         renderUrl: mockRenderUrl,
         qrCodeUrl: mockQrCodeUrl,
         qrCodeGenerated: true,
+        shortUrl: mockRenderUrl,
+        shortCode: 'abc123',
       };
 
       const mockApiResponse: ApiResponse<PublishFormResponse> = {
         success: true,
-        message: 'Form published successfully',
         data: mockPublishResponse,
         timestamp: new Date().toISOString(),
       };
@@ -336,16 +345,17 @@ describe('FormsApiService', () => {
     it('should handle publish response when QR generation fails', (done) => {
       const expirationDate = new Date('2025-12-31');
       const mockPublishResponse: PublishFormResponse = {
-        form: { ...mockForm, qrCodeUrl: null },
+        form: { ...mockForm, qrCodeUrl: undefined },
         formSchema: mockFormSchema,
         renderUrl: mockRenderUrl,
         qrCodeUrl: undefined,
         qrCodeGenerated: false,
+        shortUrl: mockRenderUrl,
+        shortCode: 'abc123',
       };
 
       const mockApiResponse: ApiResponse<PublishFormResponse> = {
         success: true,
-        message: 'Form published successfully',
         data: mockPublishResponse,
         timestamp: new Date().toISOString(),
       };
@@ -368,11 +378,12 @@ describe('FormsApiService', () => {
         renderUrl: mockRenderUrl,
         qrCodeUrl: mockQrCodeUrl,
         qrCodeGenerated: true,
+        shortUrl: mockRenderUrl,
+        shortCode: 'abc123',
       };
 
       const mockApiResponse: ApiResponse<PublishFormResponse> = {
         success: true,
-        message: 'Form published successfully',
         data: mockPublishResponse,
         timestamp: new Date().toISOString(),
       };
@@ -400,7 +411,6 @@ describe('FormsApiService', () => {
 
       const mockApiResponse: ApiResponse<PublishFormResponse> = {
         success: true,
-        message: 'Form published successfully',
         data: mockPublishResponse,
         timestamp: new Date().toISOString(),
       };
@@ -436,7 +446,6 @@ describe('FormsApiService', () => {
 
       const mockApiResponse: ApiResponse<PublishFormResponse> = {
         success: true,
-        message: 'Form published successfully',
         data: mockPublishResponse as any,
         timestamp: new Date().toISOString(),
       };
@@ -461,10 +470,9 @@ describe('FormsApiService', () => {
 
   describe('unpublishForm with QR cleanup', () => {
     it('should unpublish form and clear QR code URL', (done) => {
-      const unpublishedForm = { ...mockForm, qrCodeUrl: null, status: FormStatus.DRAFT };
+      const unpublishedForm = { ...mockForm, qrCodeUrl: undefined, status: FormStatus.DRAFT };
       const mockApiResponse: ApiResponse<FormMetadata> = {
         success: true,
-        message: 'Form unpublished successfully',
         data: unpublishedForm,
         timestamp: new Date().toISOString(),
       };
@@ -485,7 +493,6 @@ describe('FormsApiService', () => {
       const formWithQR = { ...mockForm, qrCodeUrl: 'https://cdn.example.com/qr-codes/test.png' };
       const mockApiResponse: ApiResponse<FormMetadata> = {
         success: true,
-        message: 'Form retrieved successfully',
         data: formWithQR,
         timestamp: new Date().toISOString(),
       };
@@ -500,10 +507,9 @@ describe('FormsApiService', () => {
     });
 
     it('should handle forms without QR code URL', (done) => {
-      const formWithoutQR = { ...mockForm, qrCodeUrl: null };
+      const formWithoutQR = { ...mockForm, qrCodeUrl: undefined };
       const mockApiResponse: ApiResponse<FormMetadata> = {
         success: true,
-        message: 'Form retrieved successfully',
         data: formWithoutQR,
         timestamp: new Date().toISOString(),
       };

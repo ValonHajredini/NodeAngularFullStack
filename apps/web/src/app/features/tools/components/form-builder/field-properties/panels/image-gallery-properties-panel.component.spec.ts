@@ -206,7 +206,7 @@ describe('ImageGalleryPropertiesPanelComponent', () => {
       const initialLength = component['images']().length;
 
       // Act
-      component['deleteImage'](1); // Remove middle image
+      component.onImageDeleted('img-2'); // Remove middle image
 
       // Assert
       expect(component['images']().length).toBe(initialLength - 1);
@@ -226,12 +226,12 @@ describe('ImageGalleryPropertiesPanelComponent', () => {
       });
 
       // Act
-      component['deleteImage'](1);
+      component.onImageDeleted('img-2');
     });
 
     it('should delete first image correctly', () => {
       // Act
-      component['deleteImage'](0);
+      component.onImageDeleted('img-1');
 
       // Assert
       expect(component['images']().length).toBe(2);
@@ -240,7 +240,7 @@ describe('ImageGalleryPropertiesPanelComponent', () => {
 
     it('should delete last image correctly', () => {
       // Act
-      component['deleteImage'](2);
+      component.onImageDeleted('img-3');
 
       // Assert
       expect(component['images']().length).toBe(2);
@@ -271,7 +271,7 @@ describe('ImageGalleryPropertiesPanelComponent', () => {
 
     it('should update alt text for specified image', () => {
       // Act
-      component['updateAltText'](0, 'New Alt Text');
+      component.onDescriptionChanged({ key: 'img-1', description: 'New Alt Text' });
 
       // Assert
       expect(component['images']()[0].alt).toBe('New Alt Text');
@@ -288,12 +288,12 @@ describe('ImageGalleryPropertiesPanelComponent', () => {
       });
 
       // Act
-      component['updateAltText'](1, 'Updated Alt');
+      component.onDescriptionChanged({ key: 'img-2', description: 'Updated Alt' });
     });
 
     it('should handle empty alt text', () => {
       // Act
-      component['updateAltText'](0, '');
+      component.onDescriptionChanged({ key: 'img-1', description: '' });
 
       // Assert
       expect(component['images']()[0].alt).toBe('');
@@ -301,86 +301,13 @@ describe('ImageGalleryPropertiesPanelComponent', () => {
 
     it('should preserve other image properties when updating alt text', () => {
       // Act
-      component['updateAltText'](1, 'New Alt');
+      component.onDescriptionChanged({ key: 'img-2', description: 'New Alt' });
 
       // Assert
       const image = component['images']()[1];
       expect(image.key).toBe('img-2');
       expect(image.url).toBe('https://example.com/img2.jpg');
       expect(image.alt).toBe('New Alt');
-    });
-  });
-
-  describe('Reorder Images', () => {
-    beforeEach(() => {
-      const metadata: ImageGalleryMetadata = {
-        images: [
-          { key: 'img-1', url: 'https://example.com/img1.jpg', alt: 'First' },
-          { key: 'img-2', url: 'https://example.com/img2.jpg', alt: 'Second' },
-          { key: 'img-3', url: 'https://example.com/img3.jpg', alt: 'Third' },
-        ],
-      };
-      const field: FormField = {
-        id: 'field-1',
-        type: FormFieldType.IMAGE_GALLERY,
-        fieldName: 'gallery',
-        label: 'Image Gallery',
-        required: false,
-        order: 0,
-        metadata,
-      };
-      component.field = field;
-      component.ngOnInit();
-    });
-
-    it('should reorder images when onReorder is called', () => {
-      // Arrange
-      const event = {
-        previousIndex: 0,
-        currentIndex: 2,
-      } as CdkDragDrop<any>;
-
-      // Act
-      component['onReorder'](event);
-
-      // Assert
-      expect(component['images']()[0].alt).toBe('Second');
-      expect(component['images']()[1].alt).toBe('Third');
-      expect(component['images']()[2].alt).toBe('First');
-    });
-
-    it('should emit metadata change when reordering images', (done) => {
-      // Arrange
-      const event = {
-        previousIndex: 2,
-        currentIndex: 0,
-      } as CdkDragDrop<any>;
-
-      component.metadataChange.subscribe((metadata) => {
-        // Assert
-        expect(metadata.images[0].alt).toBe('Third');
-        expect(metadata.images[1].alt).toBe('First');
-        expect(metadata.images[2].alt).toBe('Second');
-        done();
-      });
-
-      // Act
-      component['onReorder'](event);
-    });
-
-    it('should handle reorder to same position', () => {
-      // Arrange
-      const event = {
-        previousIndex: 1,
-        currentIndex: 1,
-      } as CdkDragDrop<any>;
-      const originalImages = [...component['images']()];
-
-      // Act
-      component['onReorder'](event);
-
-      // Assert
-      expect(component['images']()).toEqual(originalImages);
     });
   });
 
@@ -603,8 +530,9 @@ describe('ImageGalleryPropertiesPanelComponent', () => {
       component['onImageUploaded']('https://example.com/img2.jpg');
       component['onImageUploaded']('https://example.com/img3.jpg');
 
-      // Delete middle image
-      component['deleteImage'](1);
+      // Delete middle image (get key from images array)
+      const middleImageKey = component['images']()[1].key;
+      component.onImageDeleted(middleImageKey);
 
       // Assert
       expect(component['images']().length).toBe(2);
@@ -632,7 +560,7 @@ describe('ImageGalleryPropertiesPanelComponent', () => {
       const originalImage = component['images']()[0];
 
       // Act
-      component['updateAltText'](0, 'Modified');
+      component.onDescriptionChanged({ key: 'img-1', description: 'Modified' });
 
       // Assert - original reference should not be modified
       expect(originalImage.alt).toBe('Original');

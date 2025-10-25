@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RadioPreviewComponent } from './radio-preview.component';
-import { FormField, FormFieldType, FieldOption } from '@nodeangularfullstack/shared';
+import { FormField, FormFieldType } from '@nodeangularfullstack/shared';
 import { RadioButton } from 'primeng/radiobutton';
 import { FormsModule } from '@angular/forms';
 
@@ -8,7 +8,7 @@ describe('RadioPreviewComponent', () => {
   let component: RadioPreviewComponent;
   let fixture: ComponentFixture<RadioPreviewComponent>;
 
-  const mockRadioOptions: FieldOption[] = [
+  const mockRadioOptions: { label: string; value: string }[] = [
     { label: 'Option A', value: 'optionA' },
     { label: 'Option B', value: 'optionB' },
     { label: 'Option C', value: 'optionC' },

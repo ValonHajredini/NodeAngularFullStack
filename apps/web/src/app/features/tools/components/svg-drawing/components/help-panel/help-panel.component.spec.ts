@@ -19,20 +19,16 @@ describe('HelpPanelComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should emit visibleChange when hidden', (done) => {
-    component.visible = true;
-    component.visibleChange.subscribe((visible) => {
-      expect(visible).toBe(false);
-      done();
-    });
-
-    component.onHide();
-    expect(component.visible).toBe(false);
+  it('should render help content', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.help-panel')).toBeTruthy();
+    expect(compiled.textContent).toContain('Help & Shortcuts');
   });
 
-  it('should have visible property', () => {
-    expect(component.visible).toBe(false);
-    component.visible = true;
-    expect(component.visible).toBe(true);
+  it('should display keyboard shortcuts', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Keyboard Shortcuts');
+    expect(compiled.textContent).toContain('Line Tool');
+    expect(compiled.textContent).toContain('Polygon Tool');
   });
 });

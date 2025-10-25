@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CheckboxPreviewComponent } from './checkbox-preview.component';
-import { FormField, FormFieldType, FieldOption } from '@nodeangularfullstack/shared';
+import { FormField, FormFieldType } from '@nodeangularfullstack/shared';
 import { Checkbox } from 'primeng/checkbox';
 import { FormsModule } from '@angular/forms';
 
@@ -8,7 +8,7 @@ describe('CheckboxPreviewComponent', () => {
   let component: CheckboxPreviewComponent;
   let fixture: ComponentFixture<CheckboxPreviewComponent>;
 
-  const mockCheckboxOptions: FieldOption[] = [
+  const mockCheckboxOptions: { label: string; value: string }[] = [
     { label: 'Option X', value: 'optionX' },
     { label: 'Option Y', value: 'optionY' },
     { label: 'Option Z', value: 'optionZ' },

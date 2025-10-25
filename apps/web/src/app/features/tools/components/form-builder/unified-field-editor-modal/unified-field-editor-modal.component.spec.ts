@@ -250,7 +250,7 @@ describe('UnifiedFieldEditorModalComponent', () => {
     });
 
     it('should emit cancel event on Cancel button click', () => {
-      spyOn(component.cancel, 'emit');
+      spyOn(component.cancelModal, 'emit');
       component.onCancel();
 
       // Since form is clean, it should close immediately
@@ -260,7 +260,8 @@ describe('UnifiedFieldEditorModalComponent', () => {
     it('should emit fieldDeleted event on Delete button click after confirmation', () => {
       spyOn(component.fieldDeleted, 'emit');
       confirmationService.confirm.and.callFake((config: any) => {
-        config.accept();
+        if (config.accept) config.accept();
+        return confirmationService;
       });
 
       component.onDeleteField();
