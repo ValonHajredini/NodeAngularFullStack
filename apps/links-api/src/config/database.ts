@@ -5,7 +5,7 @@ dotenv.config();
 
 const config: PoolConfig = {
   host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5435'),
+  port: parseInt(process.env.DB_PORT || '5432'),
   database: process.env.DB_NAME || 'links_db',
   user: process.env.DB_USER || 'dbuser',
   password: process.env.DB_PASSWORD || 'dbpassword',

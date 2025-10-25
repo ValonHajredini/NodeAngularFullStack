@@ -4,6 +4,8 @@ export {
   toolGuard,
   anyToolGuard,
   allToolsGuard,
+  slugToolGuard,
+  toolIdGuard,
   shortLinkToolGuard,
   qrGeneratorToolGuard,
   analyticsToolGuard,

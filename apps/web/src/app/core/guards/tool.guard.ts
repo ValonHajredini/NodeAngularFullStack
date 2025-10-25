@@ -1,8 +1,9 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router, ActivatedRouteSnapshot } from '@angular/router';
 import { map, catchError, timeout } from 'rxjs/operators';
-import { of } from 'rxjs';
+import { of, Observable } from 'rxjs';
 import { ToolsService } from '../services/tools.service';
+import { ToolRegistryService } from '../services/tool-registry.service';
 
 /**
  * Tool availability guard that protects routes requiring specific tools to be enabled.
@@ -477,3 +478,69 @@ export const qrGeneratorToolGuard: CanActivateFn = toolGuard('qr-generator');
  * }
  */
 export const analyticsToolGuard: CanActivateFn = toolGuard('analytics');
+
+/**
+ * Tool ID guard for Epic 32.2 dynamic routing.
+ * Validates tool existence by toolId from route parameters (e.g., /tools/:toolId).
+ * Redirects to 404 page if tool not found.
+ *
+ * **Usage:** For tool detail pages that use toolId instead of slug.
+ *
+ * @param redirectRoute - Route to redirect to if tool not found (default: '/404')
+ * @returns CanActivateFn that validates toolId from route params
+ *
+ * @example
+ * ```typescript
+ * // In route configuration
+ * {
+ *   path: 'tools/:toolId',
+ *   component: ToolDetailComponent,
+ *   canActivate: [toolIdGuard]
+ * }
+ * ```
+ */
+export const toolIdGuard: CanActivateFn = (
+  route: ActivatedRouteSnapshot,
+  state,
+): Observable<boolean> => {
+  const toolRegistryService = inject(ToolRegistryService);
+  const router = inject(Router);
+
+  const redirectRoute = '/404';
+  const toolId = route.paramMap.get('toolId');
+
+  if (!toolId) {
+    console.error('ToolIdGuard: No toolId parameter found in route');
+    router.navigate([redirectRoute]);
+    return of(false);
+  }
+
+  console.log(`[ToolIdGuard] Validating tool: ${toolId}`);
+
+  // Fetch tool by ID from registry
+  return toolRegistryService.getToolById(toolId).pipe(
+    timeout(5000), // 5 second timeout
+    map((tool) => {
+      if (!tool) {
+        console.warn(`ToolIdGuard: Tool '${toolId}' not found`);
+        router.navigate([redirectRoute]);
+        return false;
+      }
+
+      // Check if tool is active (not beta or deprecated)
+      if (tool.status !== 'active') {
+        console.info(`ToolIdGuard: Tool '${toolId}' is not active (status: ${tool.status})`);
+        router.navigate([redirectRoute]);
+        return false;
+      }
+
+      console.log(`[ToolIdGuard] Tool '${toolId}' validated successfully`);
+      return true;
+    }),
+    catchError((error) => {
+      console.error(`ToolIdGuard: Failed to validate tool '${toolId}':`, error);
+      router.navigate([redirectRoute]);
+      return of(false);
+    }),
+  );
+};
