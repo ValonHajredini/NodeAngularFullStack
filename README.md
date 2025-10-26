@@ -1,5 +1,8 @@
 # NodeAngularFullStack
 
+[![Epic 33.1 Tests](https://github.com/yourusername/NodeAngularFullStack/actions/workflows/test-epic-33.1.yml/badge.svg)](https://github.com/yourusername/NodeAngularFullStack/actions/workflows/test-epic-33.1.yml)
+[![CI](https://github.com/yourusername/NodeAngularFullStack/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/NodeAngularFullStack/actions/workflows/ci.yml)
+
 A modern full-stack application built with Angular 20+ and Express.js, featuring TypeScript
 throughout, shared types, and a monorepo structure.
 

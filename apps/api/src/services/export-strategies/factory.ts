@@ -3,10 +3,10 @@
  * Epic 33.1: Export Core Infrastructure
  */
 
-import { IExportStrategy } from './base.strategy.js';
-import { FormsExportStrategy } from './forms.strategy.js';
-import { WorkflowsExportStrategy } from './workflows.strategy.js';
-import { ThemesExportStrategy } from './themes.strategy.js';
+import { IExportStrategy } from './base.strategy';
+import { FormsExportStrategy } from './forms.strategy';
+import { WorkflowsExportStrategy } from './workflows.strategy';
+import { ThemesExportStrategy } from './themes.strategy';
 
 /**
  * Factory class for creating export strategies based on tool type.

@@ -30,6 +30,7 @@ import { formsRoutes } from './routes/forms.routes';
 import { publicFormsRoutes } from './routes/public-forms.routes';
 import { themesRoutes } from './routes/themes.routes';
 import { toolRegistryRoutes } from './routes/tool-registry.routes';
+import { exportRoutes } from './routes/export.routes';
 import { shortLinksController } from './controllers/short-links.controller';
 import { resolveShortLinkValidator } from './validators/url.validators';
 
@@ -189,6 +190,7 @@ class Server {
     this.app.use('/api/v1/tools', publicToolsRoutes);
     this.app.use('/api/tools/test-tool', testToolRoutes);
     this.app.use('/api/tools', toolRegistryRoutes); // Tool Registry API (Epic 30)
+    this.app.use('/api/tool-registry', exportRoutes); // Export Job API (Epic 33.1)
     this.app.use('/api/v1', healthRoutes);
 
     // API root endpoint

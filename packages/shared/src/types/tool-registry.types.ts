@@ -99,6 +99,12 @@ export interface ToolRegistryRecord {
   /** Tool lifecycle status */
   status: ToolStatus;
 
+  /** Tool type for categorization and validation (Epic 33.1) */
+  toolType: 'forms' | 'workflows' | 'themes';
+
+  /** Tool-specific metadata (formSchemaId, workflowId, themeId, etc.) */
+  toolMetadata: Record<string, any>;
+
   /** Whether tool has been exported as microservice (Epic 33) */
   is_exported: boolean;
 
@@ -156,6 +162,12 @@ export interface CreateToolInput {
   /** Tool lifecycle status (defaults to 'beta' in database) */
   status?: ToolStatus;
 
+  /** Tool type for categorization and validation */
+  toolType: 'forms' | 'workflows' | 'themes';
+
+  /** Tool-specific metadata (formSchemaId, workflowId, themeId, etc.) */
+  toolMetadata: Record<string, any>;
+
   /** Complete tool manifest */
   manifest_json?: ToolManifest;
 
@@ -191,6 +203,12 @@ export interface UpdateToolInput {
 
   /** Tool lifecycle status */
   status?: ToolStatus;
+
+  /** Tool type for categorization and validation */
+  toolType?: 'forms' | 'workflows' | 'themes';
+
+  /** Tool-specific metadata */
+  toolMetadata?: Record<string, any>;
 
   /** Whether tool has been exported as microservice */
   is_exported?: boolean;

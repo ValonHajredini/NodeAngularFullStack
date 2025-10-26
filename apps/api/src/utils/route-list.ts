@@ -32,7 +32,7 @@ export class RouteList {
    * Recursively extract routes from router layers
    */
   private extractRoutes(router: any, basePath = ''): void {
-    if (!router || !router.stack) return;
+    if (!router?.stack) return;
 
     router.stack.forEach((layer: any) => {
       if (layer.route) {
@@ -50,10 +50,7 @@ export class RouteList {
             });
           }
         });
-      } else if (
-        layer.name === 'router' ||
-        (layer.handle && layer.handle.stack)
-      ) {
+      } else if (layer.name === 'router' || layer.handle?.stack) {
         // Nested router - extract path
         let routePath = '';
 

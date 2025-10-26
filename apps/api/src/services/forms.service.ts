@@ -216,7 +216,7 @@ export class FormsService {
       // Generate or reuse short link for easy sharing
       let shortCode = '';
       let shortUrl = renderUrl; // Fallback to JWT token URL
-      let maxAttempts = 10;
+      const maxAttempts = 10;
       let attempts = 0;
 
       try {
@@ -442,7 +442,7 @@ export class FormsService {
     const stepFormConfig = schema.settings?.stepForm;
 
     // Should not reach here if stepForm is undefined (checked by isStepFormEnabled)
-    if (!stepFormConfig || !stepFormConfig.steps) {
+    if (!stepFormConfig?.steps) {
       errors.push('Step form configuration is missing or invalid');
       return;
     }

@@ -9,16 +9,15 @@ import {
   ExportJobStatus,
   ToolRegistryRecord,
 } from '@nodeangularfullstack/shared';
-import { ToolRegistryRepository } from '../repositories/tool-registry.repository.js';
-import { ExportJobRepository } from '../repositories/export-job.repository.js';
-import {
-  ExportContext,
-  IExportStep,
-} from './export-strategies/base.strategy.js';
-import { ExportStrategyFactory } from './export-strategies/factory.js';
+import { ToolRegistryRepository } from '../repositories/tool-registry.repository';
+import { ExportJobRepository } from '../repositories/export-job.repository';
+import { ExportContext, IExportStep } from './export-strategies/base.strategy';
+import { ExportStrategyFactory } from './export-strategies/factory';
+import { PreFlightValidator } from './pre-flight-validator.service';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { logger } from '../utils/logger.utils';
 
 /**
  * Export orchestrator service.
@@ -39,31 +38,62 @@ export class ExportOrchestratorService {
    * Create export orchestrator service.
    * @param toolRegistryRepo - Tool registry repository for tool data access
    * @param exportJobRepo - Export job repository for job persistence
+   * @param preFlightValidator - Pre-flight validation service
    */
   constructor(
     private readonly toolRegistryRepo: ToolRegistryRepository,
-    private readonly exportJobRepo: ExportJobRepository
+    private readonly exportJobRepo: ExportJobRepository,
+    private readonly preFlightValidator: PreFlightValidator
   ) {}
 
   /**
    * Start export job for a tool.
-   * Creates job record and executes export asynchronously.
+   * Creates job record and executes export asynchronously with pre-flight validation.
    * @param toolId - Tool registry ID to export
    * @param userId - User ID initiating export
    * @returns Export job record (job executes in background)
-   * @throws Error if tool not found or user lacks permission
+   * @throws Error if tool not found, validation fails, or user lacks permission
    */
   async startExport(toolId: string, userId: string): Promise<ExportJob> {
-    // Step 1: Validate tool exists
+    // Step 1: Run pre-flight validation
+    logger.info('Running pre-flight validation before export', {
+      toolId,
+      userId,
+    });
+    const validationResult = await this.preFlightValidator.validate(toolId);
+
+    // Step 2: Check validation result
+    if (!validationResult.success) {
+      const errorMessages = validationResult.errors
+        .map((e) => e.message)
+        .join('; ');
+      logger.error('Pre-flight validation failed', {
+        toolId,
+        userId,
+        errors: validationResult.errors,
+      });
+      throw new Error(`Export validation failed: ${errorMessages}`);
+    }
+
+    // Log warnings but allow export to proceed
+    if (validationResult.warnings.length > 0) {
+      logger.warn('Pre-flight validation warnings', {
+        toolId,
+        userId,
+        warnings: validationResult.warnings,
+      });
+    }
+
+    // Step 3: Get tool record (already validated, but needed for export)
     const tool = await this.toolRegistryRepo.findById(toolId);
     if (!tool) {
       throw new Error(`Tool ${toolId} not found`);
     }
 
-    // Step 2: Validate user has export permission
+    // Step 4: Validate user has export permission
     await this.validateExportPermission(userId, toolId);
 
-    // Step 3: Create export job record
+    // Step 5: Create export job record
     const jobId = randomUUID();
     const job = await this.exportJobRepo.create({
       jobId: jobId,

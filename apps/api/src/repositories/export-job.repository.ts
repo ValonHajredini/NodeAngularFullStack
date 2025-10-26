@@ -220,12 +220,12 @@ export class ExportJobRepository {
   async deleteOldJobs(retentionDays: number): Promise<number> {
     const query = `
       DELETE FROM export_jobs
-      WHERE created_at < NOW() - INTERVAL $1
+      WHERE created_at < NOW() - make_interval(days => $1)
         AND status IN ('completed', 'failed', 'cancelled', 'rolled_back')
       RETURNING job_id
     `;
 
-    const result = await this.dbPool.query(query, [`${retentionDays} days`]);
+    const result = await this.dbPool.query(query, [retentionDays]);
     return result.rowCount || 0;
   }
 

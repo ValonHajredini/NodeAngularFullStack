@@ -412,6 +412,8 @@ export class ToolRegistryRepository {
       api_base: row.api_base,
       permissions: row.permissions,
       status: row.status,
+      toolType: row.manifest_json?.toolType || null,
+      toolMetadata: row.manifest_json?.toolMetadata || {},
       is_exported: row.is_exported,
       exported_at: row.exported_at,
       service_url: row.service_url,

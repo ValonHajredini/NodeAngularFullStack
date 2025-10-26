@@ -498,5 +498,37 @@ export const loggingMiddleware = (req: any, res: any, next: any): void => {
   next();
 };
 
+/**
+ * Logger class wrapper for scoped logging.
+ * Provides a simple interface for logging with consistent context.
+ *
+ * @example
+ * const logger = new Logger('UserService');
+ * logger.info('User created', { userId: '123' });
+ */
+export class Logger {
+  constructor(private readonly context: string) {}
+
+  info(message: string, meta?: Record<string, any>): void {
+    logger.info(message, { ...meta, context: this.context });
+  }
+
+  warn(message: string, meta?: Record<string, any>): void {
+    logger.warn(message, { ...meta, context: this.context });
+  }
+
+  error(message: string, meta?: Record<string, any>): void {
+    logger.error(message, { ...meta, context: this.context });
+  }
+
+  debug(message: string, meta?: Record<string, any>): void {
+    logger.debug(message, { ...meta, context: this.context });
+  }
+
+  http(message: string, meta?: Record<string, any>): void {
+    logger.http(message, { ...meta, context: this.context });
+  }
+}
+
 // Export configured logger as default
 export default logger;

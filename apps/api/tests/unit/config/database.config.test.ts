@@ -25,7 +25,7 @@ jest.mock('pg', () => {
 });
 
 // Now import the module - this will use our mocked Pool
-// eslint-disable-next-line @typescript-eslint/no-require-imports -- Required for Jest mocking
+
 const {
   pool,
   checkDatabaseConnection,

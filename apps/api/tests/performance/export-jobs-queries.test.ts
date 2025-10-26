@@ -24,7 +24,7 @@ describe('Export Jobs Query Performance Tests', () => {
   let repository: ExportJobRepository;
   let testToolId: string;
   let testUserId: string;
-  let testJobIds: string[] = [];
+  const testJobIds: string[] = [];
   const DATASET_SIZE = 10000; // 10K rows for realistic performance testing
 
   beforeAll(async () => {

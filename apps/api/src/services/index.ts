@@ -6,6 +6,7 @@
 export { ToolRegistryService } from './tool-registry.service.js';
 export { TestToolService } from './test-tool.service';
 export { ExportOrchestratorService } from './export-orchestrator.service.js';
+export { PreFlightValidator } from './pre-flight-validator.service.js';
 
 // Export strategies
 export {

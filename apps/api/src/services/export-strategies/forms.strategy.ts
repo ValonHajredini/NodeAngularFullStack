@@ -8,7 +8,7 @@ import {
   BaseExportStrategy,
   IExportStep,
   ExportContext,
-} from './base.strategy.js';
+} from './base.strategy';
 import { ToolRegistryRecord } from '@nodeangularfullstack/shared';
 import * as fs from 'fs/promises';
 import * as path from 'path';

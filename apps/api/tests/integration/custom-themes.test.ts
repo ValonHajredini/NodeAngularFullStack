@@ -9,7 +9,7 @@ import {
 describe('Custom Themes Integration Tests', () => {
   let pool: Pool;
   let testUserId: string;
-  let createdThemeIds: string[] = [];
+  const createdThemeIds: string[] = [];
 
   beforeAll(async () => {
     pool = databaseService.getPool();

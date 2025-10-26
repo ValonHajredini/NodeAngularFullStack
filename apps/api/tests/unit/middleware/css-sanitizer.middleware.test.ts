@@ -93,7 +93,6 @@ describe('CSS Sanitizer Middleware', () => {
 
     describe('Blacklist Pattern Detection', () => {
       it('should reject javascript: protocol', () => {
-        // eslint-disable-next-line no-script-url
         const css = 'background: url(javascript:alert(1));';
         const result = validateCustomCSS(css);
 
@@ -104,7 +103,6 @@ describe('CSS Sanitizer Middleware', () => {
       });
 
       it('should reject javascript: protocol (case insensitive)', () => {
-        // eslint-disable-next-line no-script-url
         const css = 'background: url(JAVASCRIPT:alert(1));';
         const result = validateCustomCSS(css);
 
@@ -257,7 +255,6 @@ describe('CSS Sanitizer Middleware', () => {
 
     describe('Multiple Violations', () => {
       it('should detect both blacklist and whitelist violations', () => {
-        // eslint-disable-next-line no-script-url
         const css = 'background: url(javascript:alert(1)); position: absolute;';
         const result = validateCustomCSS(css);
 
@@ -267,7 +264,6 @@ describe('CSS Sanitizer Middleware', () => {
       });
 
       it('should detect length violation and dangerous patterns', () => {
-        // eslint-disable-next-line no-script-url
         const css = 'javascript:alert(1);'.repeat(300); // >5000 chars + dangerous pattern
         const result = validateCustomCSS(css);
 
@@ -330,13 +326,11 @@ describe('CSS Sanitizer Middleware', () => {
 
     describe('XSS Attack Vectors', () => {
       it('should block CSS-based XSS with javascript protocol', () => {
-        /* eslint-disable no-script-url */
         const attacks = [
           'background-image: url(javascript:alert("XSS"));',
           'list-style-image: url(javascript:void(alert(1)));',
           'background: url("javascript:alert(\'XSS\')");',
         ];
-        /* eslint-enable no-script-url */
 
         attacks.forEach((attack) => {
           const result = validateCustomCSS(attack);
@@ -563,7 +557,7 @@ describe('CSS Sanitizer Middleware', () => {
                 id: 'field1',
                 fieldName: 'username',
                 type: 'text',
-                // eslint-disable-next-line no-script-url
+
                 metadata: {
                   customStyle: 'background: url(javascript:alert(1));',
                 },
@@ -687,7 +681,7 @@ describe('CSS Sanitizer Middleware', () => {
               {
                 id: 'field2',
                 type: 'text',
-                // eslint-disable-next-line no-script-url
+
                 metadata: {
                   customStyle: 'background: url(javascript:alert(1));',
                 }, // Invalid
