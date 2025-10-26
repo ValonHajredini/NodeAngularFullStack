@@ -15,3 +15,4 @@ export { ToolConfigsRepository } from './tool-configs.repository';
 export { DrawingProjectsRepository } from './drawing-projects.repository';
 export { ToolRegistryRepository } from './tool-registry.repository';
 export { TestToolRepository } from './test-tool.repository';
+export { ExportJobRepository } from './export-job.repository';

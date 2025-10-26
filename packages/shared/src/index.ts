@@ -12,4 +12,5 @@ export * from './types/forms.types';
 export * from './types/theme.types';
 export * from './types/tool-registry.types';
 export * from './types/test-tool.types';
+export * from './types/export.types';
 export * from './utils/validation';
