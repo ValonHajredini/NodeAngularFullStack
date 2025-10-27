@@ -55,6 +55,17 @@ export const toolsRoutes: Routes = [
     pathMatch: 'full',
   },
   {
+    path: 'export-history',
+    loadComponent: () =>
+      import('./pages/export-history/export-history.component').then(
+        (m) => m.ExportHistoryComponent,
+      ),
+    data: {
+      title: 'Export History',
+      description: 'View and manage export jobs',
+    },
+  },
+  {
     path: ':slug',
     loadComponent: () =>
       import('./components/tool-container/tool-container.component').then(

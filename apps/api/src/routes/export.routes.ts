@@ -85,7 +85,8 @@ const orchestratorService = new ExportOrchestratorService(
 
 const controller = new ExportController(
   orchestratorService,
-  preFlightValidator
+  preFlightValidator,
+  exportJobRepository
 );
 
 // ============================================================================
@@ -152,9 +153,99 @@ const exportStatusRateLimiter = rateLimit({
   // Note: For per-user rate limiting in future, use express-rate-limit's ipKeyGenerator helper
 });
 
+/**
+ * Rate Limiter for Package Checksum Endpoint
+ *
+ * Protects checksum endpoint from abuse by limiting request frequency
+ * to 10 requests per minute per user.
+ *
+ * Why Rate Limit:
+ * - Checksum requests are infrequent (typically once per export)
+ * - Prevents excessive database queries from rapid polling
+ * - Checksum is immutable once generated (can be cached client-side)
+ *
+ * Configuration:
+ * - Window: 60 seconds (1 minute)
+ * - Max Requests: 10 per window per user
+ * - Response: 429 Too Many Requests with retry-after header
+ * - Skip: OPTIONS requests (CORS preflight)
+ *
+ * @example
+ * // Client pattern (respects rate limit):
+ * const checksum = await fetch(`/api/tool-registry/export-jobs/${jobId}/checksum`, {
+ *   headers: { Authorization: `Bearer ${token}` }
+ * });
+ * // Cache checksum client-side for future verifications
+ */
+const CHECKSUM_RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+const CHECKSUM_RATE_LIMIT_MAX_REQUESTS = 10; // Maximum 10 requests per minute
+
+const checksumRateLimiter = rateLimit({
+  windowMs: CHECKSUM_RATE_LIMIT_WINDOW_MS,
+  max: CHECKSUM_RATE_LIMIT_MAX_REQUESTS,
+  message: createErrorResponse(
+    'Rate limit exceeded for checksum endpoint. Please wait before retrying.',
+    'RATE_LIMIT_EXCEEDED',
+    { retryAfter: 60 }
+  ),
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS',
+});
+
 // ============================================================================
 // Route Definitions
 // ============================================================================
+
+/**
+ * @route GET /api/tool-registry/export-jobs
+ * @description List export jobs with pagination, filtering, and sorting
+ * @access Protected - Requires JWT authentication
+ * @middleware
+ *   1. AuthMiddleware.authenticate - Validates JWT token
+ * @query {number} limit - Number of jobs per page (default: 20, max: 100)
+ * @query {number} offset - Number of jobs to skip (default: 0)
+ * @query {string} sort_by - Field to sort by (default: created_at)
+ * @query {string} sort_order - Sort direction asc/desc (default: desc)
+ * @query {string} status_filter - Filter by status (comma-separated)
+ * @query {string} tool_type_filter - Filter by tool type
+ * @query {string} start_date - Filter by start date (ISO 8601)
+ * @query {string} end_date - Filter by end date (ISO 8601)
+ * @returns {Object} 200 OK with paginated export jobs list
+ * @example
+ * GET /api/tool-registry/export-jobs?limit=20&offset=0&sort_by=created_at&sort_order=desc
+ * Authorization: Bearer <jwt-token>
+ *
+ * Response 200:
+ * {
+ *   "jobs": [
+ *     {
+ *       "jobId": "job-abc-123",
+ *       "toolId": "tool-forms-456",
+ *       "toolName": "Customer Registration Form",
+ *       "toolType": "forms",
+ *       "status": "completed",
+ *       "stepsCompleted": 8,
+ *       "stepsTotal": 8,
+ *       "progressPercentage": 100,
+ *       "packageSizeBytes": 12582912,
+ *       "downloadCount": 5,
+ *       "createdAt": "2025-10-24T10:00:00Z",
+ *       "completedAt": "2025-10-24T10:02:30Z"
+ *     }
+ *   ],
+ *   "total": 45,
+ *   "limit": 20,
+ *   "offset": 0,
+ *   "page": 1,
+ *   "totalPages": 3
+ * }
+ */
+router.get(
+  '/export-jobs',
+  AuthMiddleware.authenticate,
+  controller.listExportJobs
+);
 
 /**
  * @route POST /api/tool-registry/tools/:toolId/export/validate
@@ -264,6 +355,55 @@ router.get(
 );
 
 /**
+ * @route GET /api/tool-registry/export-jobs/:jobId/checksum
+ * @description Get package checksum for verification
+ * @access Protected - Requires JWT authentication
+ * @middleware
+ *   1. AuthMiddleware.authenticate - Validates JWT token
+ *   2. checksumRateLimiter - Limits to 10 req/min per user
+ *   3. validateJobId - Validates jobId is UUID
+ *   4. validationMiddleware - Processes validation errors
+ * @param {string} jobId - Export job ID (UUID)
+ * @returns {Object} 200 OK with checksum metadata
+ * @example
+ * GET /api/tool-registry/export-jobs/job-abc-123/checksum
+ * Authorization: Bearer <jwt-token>
+ *
+ * Response 200:
+ * {
+ *   "jobId": "job-abc-123",
+ *   "packageChecksum": "a3f5b1c2d4e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2",
+ *   "algorithm": "sha256",
+ *   "packageSizeBytes": 12582912,
+ *   "packageSizeMB": "12.0 MB",
+ *   "createdAt": "2025-10-26T10:30:00Z",
+ *   "verifiedAt": "2025-10-26T10:35:00Z"
+ * }
+ *
+ * Response 400 (Job not completed):
+ * {
+ *   "status": "error",
+ *   "message": "Cannot get checksum for job with status: in_progress. Job must be completed.",
+ *   "code": "JOB_NOT_COMPLETED"
+ * }
+ *
+ * Response 400 (Checksum not available):
+ * {
+ *   "status": "error",
+ *   "message": "Package checksum not available. The package may have been generated before checksum support was added.",
+ *   "code": "CHECKSUM_NOT_AVAILABLE"
+ * }
+ */
+router.get(
+  '/export-jobs/:jobId/checksum',
+  AuthMiddleware.authenticate,
+  checksumRateLimiter,
+  validateJobId,
+  ValidationMiddleware.handleValidationErrors,
+  controller.getPackageChecksum
+);
+
+/**
  * @route POST /api/tool-registry/export-jobs/:jobId/cancel
  * @description Cancel export job
  * @access Protected - Requires JWT authentication and job ownership or admin role
@@ -290,6 +430,43 @@ router.post(
   validateJobId,
   ValidationMiddleware.handleValidationErrors,
   controller.cancelExport
+);
+
+/**
+ * @route GET /api/tool-registry/export-jobs/:jobId/download
+ * @description Download completed export package
+ * @access Protected - Requires JWT authentication and job ownership or admin role
+ * @middleware
+ *   1. AuthMiddleware.authenticate - Validates JWT token
+ *   2. validateJobId - Validates jobId is UUID
+ *   3. validationMiddleware - Processes validation errors
+ * @param {string} jobId - Export job ID (UUID)
+ * @returns {Stream} 200 OK with .tar.gz file stream
+ * @returns {Object} 403 Forbidden if user unauthorized
+ * @returns {Object} 404 Not Found if package not found or not ready
+ * @returns {Object} 410 Gone if package expired
+ * @example
+ * GET /api/tool-registry/export-jobs/job-abc-123/download
+ * Authorization: Bearer <jwt-token>
+ *
+ * Response 200:
+ * Headers:
+ *   Content-Type: application/gzip
+ *   Content-Disposition: attachment; filename="export-customer-form-2025-10-26.tar.gz"
+ *   Content-Length: 12582912
+ *   Cache-Control: private, max-age=3600
+ *   X-Package-Size: 12 MB
+ * Body: <binary file stream>
+ *
+ * Response 403:
+ * { "status": "error", "message": "Only job creator or admin can download this package", "code": "DOWNLOAD_UNAUTHORIZED" }
+ */
+router.get(
+  '/export-jobs/:jobId/download',
+  AuthMiddleware.authenticate,
+  validateJobId,
+  ValidationMiddleware.handleValidationErrors,
+  controller.downloadPackage
 );
 
 // ============================================================================

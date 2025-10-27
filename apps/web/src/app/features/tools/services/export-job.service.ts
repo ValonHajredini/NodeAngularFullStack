@@ -37,7 +37,50 @@ export interface ExportJob {
   updatedAt: string;
   completedAt?: string;
   errorMessage?: string;
-  exportPackageUrl?: string;
+  exportPackageUrl?: string; // Deprecated: Use packagePath instead
+  // New fields from Story 33.2.1 (Export Package Download)
+  packagePath?: string | null;
+  packageSizeBytes?: number | null;
+  downloadCount?: number;
+  lastDownloadedAt?: string | null;
+  packageExpiresAt?: string | null;
+  packageRetentionDays?: number;
+}
+
+/**
+ * Export job with enriched tool metadata (Story 33.2.3).
+ * Extends ExportJob with tool name and type for display purposes.
+ */
+export interface ExportJobWithTool extends ExportJob {
+  toolName: string;
+  toolType: string;
+  toolDescription?: string;
+}
+
+/**
+ * Query options for listing export jobs (Story 33.2.3).
+ */
+export interface ListExportJobsOptions {
+  limit?: number;
+  offset?: number;
+  sortBy?: 'created_at' | 'completed_at' | 'download_count' | 'package_size_bytes';
+  sortOrder?: 'asc' | 'desc';
+  statusFilter?: string;
+  toolTypeFilter?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+/**
+ * Paginated export jobs list response (Story 33.2.3).
+ */
+export interface ExportJobsListResponse {
+  jobs: ExportJobWithTool[];
+  total: number;
+  limit: number;
+  offset: number;
+  page: number;
+  totalPages: number;
 }
 
 /**
@@ -169,14 +212,139 @@ export class ExportJobService {
   }
 
   /**
-   * Downloads the export package for a completed job.
+   * Downloads the export package for a completed job (Story 33.2.1).
    *
+   * Uses the new download endpoint that streams .tar.gz files efficiently.
+   * Supports HTTP range requests for resume capability.
+   *
+   * @param jobId - The unique job identifier
+   * @returns Observable<Blob> The export package file (.tar.gz)
+   * @throws ApiError if download fails (404, 403, 410 Gone if expired)
+   *
+   * @example
+   * ```typescript
+   * exportJobService.downloadPackage('job-123').subscribe({
+   *   next: (blob) => {
+   *     // Create download link
+   *     const url = window.URL.createObjectURL(blob);
+   *     const link = document.createElement('a');
+   *     link.href = url;
+   *     link.download = 'export-package.tar.gz';
+   *     link.click();
+   *     window.URL.revokeObjectURL(url);
+   *   },
+   *   error: (err) => console.error('Download failed:', err)
+   * });
+   * ```
+   */
+  downloadPackage(jobId: string): Observable<Blob> {
+    if (!jobId || jobId.trim().length === 0) {
+      return throwError(() => new Error('Job ID is required'));
+    }
+
+    console.log(`[ExportJobService] Downloading export package: ${jobId}`);
+
+    return this.http
+      .get(`${this.apiUrl}/export-jobs/${jobId}/download`, {
+        responseType: 'blob',
+        headers: this.getAuthHeaders(),
+        // No timeout for large file downloads (browser will handle)
+      })
+      .pipe(catchError(this.handleDownloadError.bind(this)));
+  }
+
+  /**
+   * Lists export jobs with pagination, filtering, and sorting (Story 33.2.3).
+   *
+   * Returns user's export history with tool metadata. Admin users see all jobs,
+   * while regular users only see their own jobs.
+   *
+   * @param options - Query options for filtering, sorting, and pagination
+   * @returns Observable<ExportJobsListResponse> Paginated list of export jobs
+   * @throws ApiError if list fetch fails
+   *
+   * @example
+   * ```typescript
+   * exportJobService.listExportJobs({
+   *   limit: 20,
+   *   offset: 0,
+   *   sortBy: 'created_at',
+   *   sortOrder: 'desc',
+   *   statusFilter: 'completed'
+   * }).subscribe({
+   *   next: (response) => {
+   *     console.log(`Found ${response.total} jobs, showing page ${response.page} of ${response.totalPages}`);
+   *     console.log('Jobs:', response.jobs);
+   *   },
+   *   error: (err) => console.error('Failed to load export history:', err)
+   * });
+   * ```
+   */
+  listExportJobs(options: ListExportJobsOptions = {}): Observable<ExportJobsListResponse> {
+    // Build query parameters
+    const params: any = {};
+
+    if (options.limit !== undefined) params.limit = options.limit.toString();
+    if (options.offset !== undefined) params.offset = options.offset.toString();
+    if (options.sortBy) params.sort_by = options.sortBy;
+    if (options.sortOrder) params.sort_order = options.sortOrder;
+    if (options.statusFilter) params.status_filter = options.statusFilter;
+    if (options.toolTypeFilter) params.tool_type_filter = options.toolTypeFilter;
+    if (options.startDate) params.start_date = options.startDate;
+    if (options.endDate) params.end_date = options.endDate;
+
+    console.log('[ExportJobService] Listing export jobs with options:', options);
+
+    return this.http
+      .get<ExportJobsListResponse>(`${this.apiUrl}/export-jobs`, {
+        params,
+        headers: this.getAuthHeaders(),
+      })
+      .pipe(timeout(this.REQUEST_TIMEOUT), catchError(this.handleError.bind(this)));
+  }
+
+  /**
+   * Deletes an export job (Story 33.2.3, admin only).
+   *
+   * Performs soft delete (sets deleted_at timestamp) to maintain audit trail.
+   * Only available to admin users.
+   *
+   * @param jobId - The unique job identifier
+   * @returns Observable<void> Success indicator
+   * @throws ApiError if deletion fails (403 if not admin)
+   *
+   * @example
+   * ```typescript
+   * exportJobService.deleteExportJob('job-123').subscribe({
+   *   next: () => console.log('Export job deleted successfully'),
+   *   error: (err) => console.error('Delete failed:', err)
+   * });
+   * ```
+   */
+  deleteExportJob(jobId: string): Observable<void> {
+    if (!jobId || jobId.trim().length === 0) {
+      return throwError(() => new Error('Job ID is required'));
+    }
+
+    console.log(`[ExportJobService] Deleting export job: ${jobId}`);
+
+    return this.http
+      .delete<void>(`${this.apiUrl}/export-jobs/${jobId}`, {
+        headers: this.getAuthHeaders(),
+      })
+      .pipe(timeout(this.REQUEST_TIMEOUT), catchError(this.handleError.bind(this)));
+  }
+
+  /**
+   * Downloads the export package for a completed job (deprecated).
+   *
+   * @deprecated Use downloadPackage(jobId) instead
    * @param jobId - The unique job identifier
    * @param exportPackageUrl - URL to the export package
    * @returns Observable<Blob> The export package file
    */
   downloadExportPackage(jobId: string, exportPackageUrl: string): Observable<Blob> {
-    console.log(`[ExportJobService] Downloading export package: ${jobId}`);
+    console.log(`[ExportJobService] Downloading export package (deprecated): ${jobId}`);
 
     return this.http
       .get(exportPackageUrl, {
@@ -228,6 +396,46 @@ export class ExportJobService {
       status: error.status,
       message: errorMessage,
       error: error.error,
+    }));
+  }
+
+  /**
+   * Handles download-specific HTTP errors with user-friendly messages.
+   * Includes special handling for 410 Gone (expired packages).
+   */
+  private handleDownloadError(error: HttpErrorResponse): Observable<never> {
+    let errorMessage = 'Download failed. Please try again.';
+
+    if (error.error instanceof ErrorEvent) {
+      // Client-side or network error
+      errorMessage = `Network error: ${error.error.message}`;
+      console.error('[ExportJobService] Client-side download error:', error.error.message);
+    } else {
+      // Backend error
+      console.error(
+        `[ExportJobService] Download error: ${error.status} - ${error.error?.message || error.message}`,
+      );
+
+      // Handle specific error codes
+      if (error.status === 401 || error.status === 403) {
+        errorMessage = 'You do not have permission to download this package';
+      } else if (error.status === 404) {
+        errorMessage = 'Export package not found or not ready';
+      } else if (error.status === 410) {
+        // Package expired (HTTP 410 Gone)
+        errorMessage = 'Export package has expired and was deleted. Please re-export the tool.';
+      } else if (error.status === 500) {
+        errorMessage = 'Server error occurred during download. Please try again later.';
+      } else {
+        errorMessage = error.error?.message || 'Download failed. Please try again.';
+      }
+    }
+
+    return throwError(() => ({
+      status: error.status,
+      message: errorMessage,
+      error: error.error,
+      code: error.error?.code,
     }));
   }
 }

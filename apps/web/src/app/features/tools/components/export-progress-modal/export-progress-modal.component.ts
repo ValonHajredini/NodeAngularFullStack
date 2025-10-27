@@ -6,6 +6,7 @@ import { ButtonModule } from 'primeng/button';
 import { MessageModule } from 'primeng/message';
 import { DividerModule } from 'primeng/divider';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { TooltipModule } from 'primeng/tooltip';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { interval, Subscription, Subject } from 'rxjs';
 import { takeUntil, switchMap, catchError } from 'rxjs/operators';
@@ -49,6 +50,7 @@ import { ExportJobService, ExportJob } from '../../services/export-job.service';
     MessageModule,
     DividerModule,
     ConfirmDialogModule,
+    TooltipModule,
   ],
   providers: [ConfirmationService],
   templateUrl: './export-progress-modal.component.html',
@@ -110,6 +112,27 @@ export class ExportProgressModalComponent implements OnDestroy {
   });
 
   readonly canCancel = computed(() => this.isInProgress());
+
+  readonly canDownload = computed(() => {
+    const job = this.exportJob();
+    if (!job || !this.isCompleted()) return false;
+
+    // Check if package path exists
+    if (!job.packagePath) return false;
+
+    // Check if package expired
+    if (job.packageExpiresAt && new Date(job.packageExpiresAt) < new Date()) {
+      return false;
+    }
+
+    return true;
+  });
+
+  readonly packageExpired = computed(() => {
+    const job = this.exportJob();
+    if (!job || !job.packageExpiresAt) return false;
+    return new Date(job.packageExpiresAt) < new Date();
+  });
 
   readonly statusMessage = computed(() => {
     const job = this.exportJob();
@@ -279,40 +302,80 @@ export class ExportProgressModalComponent implements OnDestroy {
   }
 
   /**
-   * Downloads the export package.
+   * Downloads the export package (Story 33.2.1).
+   * Uses the new streaming download endpoint.
    */
   downloadPackage(): void {
     const job = this.exportJob();
-    if (!job || !job.exportPackageUrl) {
-      console.error('[ExportProgressModal] No export package URL available');
+    if (!job || !job.jobId) {
+      console.error('[ExportProgressModal] No export job available');
       return;
     }
 
-    console.log('[ExportProgressModal] Downloading export package');
+    // Check if package is available
+    if (!job.packagePath) {
+      console.error('[ExportProgressModal] No package path available');
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Download Not Available',
+        detail: 'Export package is not available. It may have expired.',
+        life: 5000,
+      });
+      return;
+    }
 
-    this.exportJobService.downloadExportPackage(job.jobId, job.exportPackageUrl).subscribe({
+    // Check if package expired
+    if (job.packageExpiresAt && new Date(job.packageExpiresAt) < new Date()) {
+      console.warn('[ExportProgressModal] Package expired');
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Package Expired',
+        detail: 'Export package has expired. Please re-export the tool.',
+        life: 5000,
+      });
+      return;
+    }
+
+    console.log('[ExportProgressModal] Downloading export package:', job.jobId);
+
+    this.exportJobService.downloadPackage(job.jobId).subscribe({
       next: (blob) => {
+        // Generate filename with tool name and timestamp
+        const toolName = this.toolName().replace(/\s+/g, '-').toLowerCase();
+        const timestamp = job.completedAt
+          ? new Date(job.completedAt).toISOString().split('T')[0]
+          : new Date().toISOString().split('T')[0];
+        const filename = `export-${toolName}-${timestamp}.tar.gz`;
+
         // Create download link
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `${this.toolId()}-export-${Date.now()}.zip`;
+        link.download = filename;
+        document.body.appendChild(link); // Required for Firefox
         link.click();
+        document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
+
+        console.log('[ExportProgressModal] Download started:', filename);
 
         this.messageService.add({
           severity: 'success',
           summary: 'Download Started',
-          detail: 'Export package download started',
+          detail: `Export package download started: ${filename}`,
           life: 3000,
         });
       },
       error: (err) => {
         console.error('[ExportProgressModal] Download failed:', err);
+
+        // Display specific error message from backend
+        const errorDetail = err.message || 'Failed to download export package. Please try again.';
+
         this.messageService.add({
           severity: 'error',
           summary: 'Download Failed',
-          detail: 'Failed to download export package',
+          detail: errorDetail,
           life: 5000,
         });
       },

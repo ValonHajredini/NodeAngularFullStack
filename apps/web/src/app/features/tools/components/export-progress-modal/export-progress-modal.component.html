@@ -129,6 +129,22 @@
         ></p-message>
       }
 
+      <!-- Package Expired Warning -->
+      @if (isCompleted() && packageExpired()) {
+        <div class="expiration-warning mb-4 p-4 bg-orange-50 rounded-lg border border-orange-200">
+          <div class="flex items-start gap-3">
+            <i class="pi pi-exclamation-triangle text-2xl text-orange-600 mt-0.5"></i>
+            <div class="flex-1">
+              <h4 class="font-semibold text-orange-900 mb-1">Package Expired</h4>
+              <p class="text-sm text-orange-700">
+                This export package has expired and was deleted. You can re-export the tool to
+                generate a new package.
+              </p>
+            </div>
+          </div>
+        </div>
+      }
+
       <!-- Action Buttons -->
       <div class="flex justify-end gap-2 mt-6">
         @if (isInProgress()) {
@@ -140,12 +156,14 @@
           ></p-button>
         }
 
-        @if (isCompleted() && exportJob()!.exportPackageUrl) {
+        @if (canDownload()) {
           <p-button
             label="Download Package"
             icon="pi pi-download"
             severity="success"
             (click)="downloadPackage()"
+            [pTooltip]="'Download export package (.tar.gz)'"
+            tooltipPosition="top"
           ></p-button>
         }
 

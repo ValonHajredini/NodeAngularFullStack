@@ -189,8 +189,8 @@ class Server {
     this.app.use('/api/v1/admin/tools', toolsRoutes);
     this.app.use('/api/v1/tools', publicToolsRoutes);
     this.app.use('/api/tools/test-tool', testToolRoutes);
-    this.app.use('/api/tools', toolRegistryRoutes); // Tool Registry API (Epic 30)
-    this.app.use('/api/tool-registry', exportRoutes); // Export Job API (Epic 33.1)
+    this.app.use('/api/v1/tools/registry', toolRegistryRoutes); // Tool Registry API (Epic 30)
+    this.app.use('/api/v1/tool-registry', exportRoutes); // Export Job API (Epic 33.1)
     this.app.use('/api/v1', healthRoutes);
 
     // API root endpoint

@@ -9,9 +9,17 @@ This is a modern full-stack TypeScript monorepo with Angular 20+ frontend and Ex
 The project uses npm workspaces for monorepo management and includes shared types, local PostgreSQL
 setup, and comprehensive testing.
 
-**Key Feature**: Visual form builder with drag-and-drop interface, row-based multi-column layouts,
-real-time analytics, data visualization (bar/line/pie charts), and WCAG AA accessibility. Forms are
-shareable via short links with QR codes.
+**Architecture**: Monolith-first with export capabilities for gradual service extraction. The core
+system remains monolithic while providing infrastructure to export tools as standalone deployable
+packages (see Epics 30-33 for details).
+
+**Key Features**:
+
+- **Visual Form Builder**: Drag-and-drop interface, row-based multi-column layouts, real-time
+  analytics, data visualization (bar/line/pie charts), WCAG AA accessibility, shareable via short
+  links with QR codes
+- **Tool Registry & Export System**: Export registered tools (forms, workflows, themes) as
+  standalone microservice packages with Docker configs, migrations, and boilerplate code
 
 ## Development Commands
 
@@ -371,6 +379,87 @@ packages/
       - Real-time validation errors for custom width inputs
     - **Backward compatibility**: Existing step form functionality unchanged, no service method
       changes required
+
+### Tool Registry & Export System Development (Epics 30-33)
+
+**Architecture Note**: The project is currently a **monolith with export capabilities**, NOT a
+microservices architecture. The export system generates standalone service packages that can be
+deployed separately, but the core system remains monolithic.
+
+**Tool Registry System (Epic 30)**:
+
+- **Database schema**: `tool_registry` table tracks all registered tools (forms, workflows, themes)
+- **Status tracking**: Tools can be registered, draft, archived, or exported
+- **Repository pattern**: `ToolRegistryRepository` in
+  `apps/api/src/repositories/tool-registry.repository.ts`
+- **REST API**: CRUD endpoints in `apps/api/src/controllers/tool-registry.controller.ts`
+- **Validation**: Input validation with express-validator middleware
+- **Frontend UI**: `ToolCard` component in `apps/web/src/app/features/admin/components/tool-card/`
+- **Shared types**: `ToolRegistryRecord` in `packages/shared/src/types/tool-registry.types.ts`
+
+**Export Infrastructure (Epic 33)**:
+
+- **Export orchestrator**: `ExportOrchestratorService` coordinates multi-step export process
+- **Strategy Pattern**: `IExportStrategy` interface with 3 implementations:
+  - `FormsExportStrategy` (8 steps) - exports form builder tools
+  - `WorkflowsExportStrategy` (7 steps) - exports workflow tools
+  - `ThemesExportStrategy` (6 steps) - exports theme tools
+- **Location**: `apps/api/src/services/export-orchestrator.service.ts` and
+  `apps/api/src/services/export-strategies/`
+- **Export Jobs schema**: `export_jobs` table tracks export lifecycle (pending → in_progress →
+  completed/failed)
+- **Progress tracking**: Real-time progress updates with step completion percentage
+- **Package generation**: Creates .tar.gz archives containing:
+  - Express.js/Node.js service boilerplate
+  - Docker configuration (Dockerfile, docker-compose.yml)
+  - Database migrations and schemas
+  - Environment configuration (.env.example)
+  - Tool-specific data (form schemas, theme configs, etc.)
+  - README with deployment instructions
+- **Download API**: `GET /api/tool-registry/export-jobs/:jobId/download` endpoint
+- **Security**: SHA-256 checksums for package integrity, download tracking, 30-day retention
+- **Rollback support**: Automatic cleanup on export failure with step-by-step rollback
+- **Repository**: `ExportJobRepository` in `apps/api/src/repositories/export-job.repository.ts`
+- **Shared types**: `ExportJob`, `ExportJobStatus` in `packages/shared/src/types/export.types.ts`
+
+**CLI Scaffolding Tool (Epic 31)**:
+
+- **Package**: `@nodeangularfullstack/create-tool` in `packages/create-tool/`
+- **Usage**: `npx @nodeangularfullstack/create-tool` to generate new service boilerplate
+- **Commander.js**: CLI framework for command parsing
+- **Inquirer.js**: Interactive prompts for configuration
+- **EJS templates**: Template generation system for boilerplate
+
+**Export History UI (Epic 32)**:
+
+- **Export progress modal**: `ExportProgressModalComponent` shows real-time export progress
+- **Export history page**: View past exports, re-download packages, monitor status
+- **Location**: `apps/web/src/app/features/admin/pages/export-history/`
+- **Service**: `ExportJobService` in
+  `apps/web/src/app/features/tools/services/export-job.service.ts`
+
+**Testing**:
+
+- Integration tests: `apps/api/tests/integration/export-download.test.ts`,
+  `export-history-list.test.ts`, `package-verification.test.ts`
+- Unit tests: `apps/api/tests/unit/utils/checksum.utils.test.ts`
+- E2E tests: `tests/e2e/export-history-complete-workflow.spec.ts`
+- Quality gates: `docs/qa/gates/33.2.1-export-package-download.yml`,
+  `33.2.2-package-verification-security.yml`
+
+**Story Documentation**:
+
+- `docs/stories/30/` - Tool Registry System stories
+- `docs/stories/31/` - CLI Scaffolding Tool stories
+- `docs/stories/32/` - Tool Registry UI stories
+- `docs/stories/33/` - Export Core Infrastructure stories
+
+**Migration Planning**:
+
+- `MicroserviceDock/` - Contains comprehensive microservices migration plans
+- `MicroserviceDock/microservices_implementation_plan.md` - 11-week migration roadmap
+- `MicroserviceDock/convert_to_microservices_doc.md` - Architecture proposal
+- Git branch: `features/multi_service_architecture`
 
 ### Prerequisites
 

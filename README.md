@@ -4,7 +4,39 @@
 [![CI](https://github.com/yourusername/NodeAngularFullStack/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/NodeAngularFullStack/actions/workflows/ci.yml)
 
 A modern full-stack application built with Angular 20+ and Express.js, featuring TypeScript
-throughout, shared types, and a monorepo structure.
+throughout, shared types, and a monorepo structure with tool export capabilities for gradual service
+extraction.
+
+## Architecture
+
+### Monolith-First with Export Capability
+
+This project uses a **monolith-first architecture** with infrastructure for gradual service
+extraction:
+
+- **Core System**: Monolithic Express.js backend + Angular frontend (apps/api and apps/web)
+- **Export Infrastructure**: Generate standalone service packages from registered tools
+- **Database**: Single PostgreSQL instance for core system
+- **Deployment Strategy**: Monolith remains primary system; exported tools can run independently
+
+**Key Capabilities (Epics 30-33)**:
+
+- **Tool Registry**: Track forms, workflows, and themes registered in the monolith
+- **Export Orchestrator**: Multi-step export process using Strategy Pattern (Forms/Workflows/Themes)
+- **Package Generation**: Creates .tar.gz archives with Express.js boilerplate, Docker configs,
+  migrations, and tool data
+- **CLI Scaffolding**: `npx @nodeangularfullstack/create-tool` to generate new service boilerplate
+- **Download & Deploy**: Export packages can be deployed as standalone microservices externally
+
+**Why Monolith-First?**
+
+- Lower operational complexity during development
+- Shared database simplifies transactions and data consistency
+- Export system allows gradual extraction when needed (e.g., scaling, team autonomy)
+- Backward compatible: existing features continue working while new tools can be exported
+
+**Future Roadmap**: See `/MicroserviceDock/` for full microservices migration plans (API Gateway,
+service mesh, distributed tracing).
 
 ## Tech Stack
 
@@ -62,6 +94,38 @@ Create stunning, branded forms with the powerful theme customization system:
 - [Theme Creation Guide](docs/user-guides/theme-creation-guide.md)
 - [Theme System Architecture](docs/architecture/theme-system.md)
 
+### Tool Registry & Export System
+
+Export tools as standalone, deployable microservice packages:
+
+- **Tool Registry**: Track all registered tools (forms, workflows, themes) with metadata and status
+- **Export Infrastructure**: Multi-step orchestration using Strategy Pattern for different tool
+  types
+- **Package Generation**: Creates complete .tar.gz archives containing:
+  - Express.js/Node.js service boilerplate
+  - Docker configuration (Dockerfile, docker-compose.yml)
+  - Database migrations and schemas
+  - Environment configuration templates
+  - Tool-specific data (form schemas, theme configs, etc.)
+  - README with deployment instructions
+- **Progress Tracking**: Real-time export progress with step completion percentage
+- **Security & Verification**: SHA-256 checksums for package integrity, download tracking, 30-day
+  retention
+- **CLI Scaffolding**: `npx @nodeangularfullstack/create-tool` to generate new service templates
+- **Export History**: View past exports, re-download packages, monitor export status
+- **Role-Based Access**: Export permissions based on tool ownership and admin roles
+- **Rollback Support**: Automatic cleanup on export failure with step-by-step rollback
+
+**Use Cases**:
+
+- Extract high-traffic tools to separate services for independent scaling
+- Deploy exported tools on different infrastructure (AWS, Azure, on-premise)
+- Share tool packages with external teams or customers
+- Create isolated microservices without breaking the monolith
+
+📖 **Learn More**: See `docs/stories/30/`, `docs/stories/31/`, `docs/stories/32/`,
+`docs/stories/33/` for detailed story documentation
+
 ### Authentication & Security
 
 - JWT-based authentication with refresh tokens
@@ -83,14 +147,36 @@ Create stunning, branded forms with the powerful theme customization system:
 ```
 nodeangularfullstack/
 ├── apps/
-│   ├── web/         # Angular frontend application
-│   └── api/         # Express.js backend API
+│   ├── web/                    # Angular frontend application
+│   │   └── src/app/features/
+│   │       ├── admin/          # Tool Registry UI (ToolCard, Export History)
+│   │       └── tools/          # Form Builder, Theme Designer
+│   └── api/                    # Express.js backend API
+│       ├── src/
+│       │   ├── controllers/    # REST API endpoints (export, tool-registry)
+│       │   ├── services/       # Export orchestrator, strategies
+│       │   ├── repositories/   # Database access layer
+│       │   └── jobs/           # Background job processors
+│       └── database/
+│           └── migrations/     # Tool Registry & Export Jobs schemas
 ├── packages/
-│   ├── shared/      # Shared types and utilities
-│   └── config/      # Shared configuration
-├── infrastructure/    # Deployment infrastructure definitions
-├── scripts/         # Build and development scripts
-└── docs/           # Documentation
+│   ├── shared/                 # Shared types and utilities
+│   │   └── src/types/
+│   │       ├── export.types.ts         # ExportJob, ExportJobStatus
+│   │       └── tool-registry.types.ts  # ToolRegistryRecord
+│   ├── config/                 # Shared configuration
+│   └── create-tool/            # CLI tool for scaffolding services (Epic 31)
+├── infrastructure/             # Deployment infrastructure definitions
+├── scripts/                    # Build and development scripts
+├── docs/
+│   ├── stories/                # User stories by epic (30-33: Export system)
+│   │   ├── 30/                 # Tool Registry System
+│   │   ├── 31/                 # CLI Scaffolding Tool
+│   │   ├── 32/                 # Tool Registry UI
+│   │   └── 33/                 # Export Core Infrastructure
+│   ├── qa/gates/               # Quality gate validation files
+│   └── architecture/           # System architecture documentation
+└── MicroserviceDock/           # Microservices migration planning docs
 ```
 
 ## Getting Started

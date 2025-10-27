@@ -18,6 +18,8 @@ import { randomUUID } from 'crypto';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { logger } from '../utils/logger.utils';
+import { generateFileChecksum } from '../utils/checksum.utils';
+import { logTamperDetection } from '../utils/security-events.utils';
 
 /**
  * Export orchestrator service.
@@ -284,13 +286,56 @@ export class ExportOrchestratorService {
       }
 
       // Step 8: All steps completed successfully
+      const completedAt = new Date();
+      const packageExpiresAt = this.calculatePackageExpiration(
+        completedAt,
+        job.packageRetentionDays
+      );
+
+      // Step 9: Generate package checksum for integrity verification
+      let packageChecksum: string | null = null;
+      const packagePath = context?.metadata.packagePath as string;
+
+      if (packagePath) {
+        try {
+          await this.exportJobRepo.update(job.jobId, {
+            currentStep: 'Generating package checksum...',
+          });
+
+          logger.info('Generating SHA-256 checksum for export package', {
+            jobId: job.jobId,
+            packagePath,
+          });
+
+          packageChecksum = await generateFileChecksum(packagePath);
+
+          logger.info('Package checksum generated successfully', {
+            jobId: job.jobId,
+            checksum: packageChecksum,
+            algorithm: 'sha256',
+          });
+        } catch (error) {
+          // Log error but don't fail the export - checksum is optional
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          logger.error('Failed to generate package checksum', {
+            jobId: job.jobId,
+            error: errorMessage,
+          });
+          // Continue without checksum
+        }
+      }
+
       await this.exportJobRepo.update(job.jobId, {
         status: ExportJobStatus.COMPLETED,
         currentStep: 'Export completed successfully',
         progressPercentage: 100,
         packagePath: context?.metadata.packagePath as string,
         packageSizeBytes: context?.metadata.packageSize as number,
-        completedAt: new Date(),
+        packageChecksum: packageChecksum,
+        packageAlgorithm: packageChecksum ? 'sha256' : 'sha256', // Always set to sha256 (default)
+        completedAt: completedAt,
+        packageExpiresAt: packageExpiresAt,
       });
 
       console.log(`Export job ${job.jobId} completed successfully`);
@@ -470,6 +515,139 @@ export class ExportOrchestratorService {
     console.log(
       `Permission validated for user ${userId} to export tool ${toolId}`
     );
+  }
+
+  /**
+   * Update download tracking for export job.
+   * Atomically increments download count and updates last downloaded timestamp.
+   * Called after successful package download (both full and range requests).
+   *
+   * @param jobId - Export job UUID
+   * @param currentDownloadCount - Current download count (for atomic increment)
+   * @returns Updated export job record
+   * @throws Error if job not found
+   *
+   * @example
+   * await orchestrator.updateDownloadTracking('job-123', 5);
+   * // Result: download_count = 6, last_downloaded_at = NOW()
+   */
+  async updateDownloadTracking(
+    jobId: string,
+    _currentDownloadCount: number // Unused - kept for backwards compatibility
+  ): Promise<ExportJob> {
+    try {
+      // Use atomic repository method for race-condition-safe increment
+      const updatedJob = await this.exportJobRepo.incrementDownloadCount(jobId);
+
+      console.log(
+        `Download tracking updated: jobId=${jobId}, downloadCount=${updatedJob.downloadCount}`
+      );
+
+      return updatedJob;
+    } catch (error) {
+      console.error(
+        `Failed to update download tracking: jobId=${jobId}`,
+        error
+      );
+      throw new Error(
+        `Failed to update download tracking: ${(error as Error).message}`
+      );
+    }
+  }
+
+  /**
+   * Verify package integrity before download.
+   * Computes current file checksum and compares with stored checksum.
+   * Updates checksum_verified_at timestamp on successful verification.
+   *
+   * @param jobId - Export job UUID
+   * @param packagePath - Absolute path to export package file
+   * @param expectedChecksum - Expected SHA-256 checksum from database
+   * @returns True if checksum matches, false if mismatch
+   * @throws Error if file not found or checksum computation fails
+   *
+   * @example
+   * const isValid = await orchestrator.verifyPackageIntegrity(
+   *   'job-123',
+   *   '/tmp/exports/export-customer-form.tar.gz',
+   *   'a3f5b1c2d4e6f7a8b9c0d1e2f3a4b5c6...'
+   * );
+   * if (!isValid) {
+   *   throw new Error('Package tampered');
+   * }
+   */
+  async verifyPackageIntegrity(
+    jobId: string,
+    packagePath: string,
+    expectedChecksum: string,
+    userId: string
+  ): Promise<boolean> {
+    try {
+      logger.info('Verifying package integrity before download', {
+        jobId,
+        packagePath,
+      });
+
+      // Compute current file checksum
+      const actualChecksum = await generateFileChecksum(packagePath);
+
+      // Compare checksums (case-insensitive)
+      const checksumMatches =
+        actualChecksum.toLowerCase() === expectedChecksum.toLowerCase();
+
+      if (checksumMatches) {
+        // Update verification timestamp on success
+        await this.exportJobRepo.update(jobId, {
+          checksumVerifiedAt: new Date(),
+        });
+
+        logger.info('Package integrity verified successfully', {
+          jobId,
+          packagePath,
+        });
+      } else {
+        // Log checksum mismatch with administrator alert (potential tampering)
+        logTamperDetection(
+          jobId,
+          userId,
+          packagePath,
+          expectedChecksum,
+          actualChecksum
+        );
+      }
+
+      return checksumMatches;
+    } catch (error) {
+      logger.error('Failed to verify package integrity', {
+        jobId,
+        packagePath,
+        error: (error as Error).message,
+      });
+      throw new Error(
+        `Failed to verify package integrity: ${(error as Error).message}`
+      );
+    }
+  }
+
+  /**
+   * Calculate package expiration timestamp.
+   * Adds retention days to completion timestamp.
+   *
+   * @param completedAt - Job completion timestamp
+   * @param retentionDays - Number of days to retain package (default: 30)
+   * @returns Package expiration timestamp
+   *
+   * @example
+   * const expiresAt = calculatePackageExpiration(new Date(), 30);
+   * // Returns date 30 days in future
+   */
+  private calculatePackageExpiration(
+    completedAt: Date,
+    retentionDays: number = 30
+  ): Date {
+    const expirationDate = new Date(completedAt);
+    expirationDate.setDate(expirationDate.getDate() + retentionDays);
+    return expirationDate;
   }
 
   /**

@@ -14,6 +14,8 @@ import {
   CreateExportJobDto,
   UpdateExportJobDto,
   ExportJobStatus,
+  ExportJobWithTool,
+  ListExportJobsOptions,
 } from '@nodeangularfullstack/shared';
 import { pool } from '../config/database.config';
 
@@ -32,6 +34,13 @@ interface ExportJobRow {
   progress_percentage: number;
   package_path: string | null;
   package_size_bytes: string | null; // PostgreSQL BIGINT returns as string
+  download_count: number;
+  last_downloaded_at: Date | null;
+  package_expires_at: Date | null;
+  package_retention_days: number;
+  package_checksum: string | null;
+  package_algorithm: string;
+  checksum_verified_at: Date | null;
   error_message: string | null;
   created_at: Date;
   updated_at: Date;
@@ -246,6 +255,180 @@ export class ExportJobRepository {
   }
 
   /**
+   * Find export jobs with expired packages.
+   * Returns jobs where package_expires_at < NOW() and package_path is not null.
+   * Used by package cleanup job to identify packages for deletion.
+   * @returns Array of expired export jobs with packages
+   * @example
+   * const expiredJobs = await repository.findExpiredPackages();
+   * console.log(`Found ${expiredJobs.length} expired packages`);
+   */
+  async findExpiredPackages(): Promise<ExportJob[]> {
+    const query = `
+      SELECT * FROM export_jobs
+      WHERE package_expires_at < NOW()
+        AND package_path IS NOT NULL
+      ORDER BY package_expires_at ASC
+    `;
+
+    const result = await this.dbPool.query(query);
+    return result.rows.map((row) => this.mapRowToJob(row));
+  }
+
+  /**
+   * Increment download count and update last downloaded timestamp for an export job.
+   * Atomically increments the download_count column by 1 and sets last_downloaded_at to NOW().
+   * @param jobId - Unique identifier of the export job
+   * @returns Updated export job with incremented download count
+   * @example
+   * const job = await repository.incrementDownloadCount('abc-123');
+   * console.log(`Download count: ${job.downloadCount}`);
+   */
+  async incrementDownloadCount(jobId: string): Promise<ExportJob> {
+    const query = `
+      UPDATE export_jobs
+      SET
+        download_count = COALESCE(download_count, 0) + 1,
+        last_downloaded_at = NOW(),
+        updated_at = NOW()
+      WHERE job_id = $1
+      RETURNING *
+    `;
+
+    const result = await this.dbPool.query(query, [jobId]);
+    if (!result.rows[0]) {
+      throw new Error(`Export job not found: ${jobId}`);
+    }
+    return this.mapRowToJob(result.rows[0]);
+  }
+
+  /**
+   * List export jobs with pagination, filtering, and sorting.
+   * Joins with tool_registry table to include tool metadata.
+   * Supports admin users seeing all jobs or regular users seeing only their own.
+   *
+   * @param userId - User ID to filter by (null for admin viewing all jobs)
+   * @param options - Query options for filtering, sorting, and pagination
+   * @returns Object with jobs array and total count
+   * @throws Error if invalid sort field or order specified
+   * @example
+   * const result = await repository.list('user-123', {
+   *   limit: 20,
+   *   offset: 0,
+   *   sortBy: 'created_at',
+   *   sortOrder: 'desc',
+   *   statusFilter: 'completed,failed'
+   * });
+   * console.log(`Found ${result.total} jobs, showing ${result.jobs.length}`);
+   */
+  async list(
+    userId: string | null,
+    options: ListExportJobsOptions = {}
+  ): Promise<{ jobs: ExportJobWithTool[]; total: number }> {
+    // Extract and validate options with defaults
+    const limit = Math.min(options.limit || 20, 100); // Max 100 per page
+    const offset = options.offset || 0;
+    const sortBy = options.sortBy || 'created_at';
+    const sortOrder = options.sortOrder || 'desc';
+
+    // Validate sort parameters
+    const validSortFields = [
+      'created_at',
+      'completed_at',
+      'download_count',
+      'package_size_bytes',
+    ];
+    if (!validSortFields.includes(sortBy)) {
+      throw new Error(`Invalid sort field: ${sortBy}`);
+    }
+    if (sortOrder !== 'asc' && sortOrder !== 'desc') {
+      throw new Error(`Invalid sort order: ${sortOrder}`);
+    }
+
+    // Build WHERE clauses
+    const whereClauses: string[] = [];
+    const values: unknown[] = [];
+    let paramIndex = 1;
+
+    // Filter by user ID (null for admin viewing all jobs)
+    if (userId !== null) {
+      whereClauses.push(`ej.user_id = $${paramIndex}`);
+      values.push(userId);
+      paramIndex++;
+    }
+
+    // Filter by status (comma-separated list)
+    if (options.statusFilter) {
+      const statuses = options.statusFilter.split(',').map((s) => s.trim());
+      const placeholders = statuses.map(() => `$${paramIndex++}`).join(', ');
+      whereClauses.push(`ej.status IN (${placeholders})`);
+      values.push(...statuses);
+    }
+
+    // Filter by tool ID (using tool_id since tool_type column doesn't exist)
+    if (options.toolTypeFilter) {
+      whereClauses.push(`tr.tool_id = $${paramIndex}`);
+      values.push(options.toolTypeFilter);
+      paramIndex++;
+    }
+
+    // Filter by date range
+    if (options.startDate) {
+      whereClauses.push(`ej.created_at >= $${paramIndex}`);
+      values.push(options.startDate);
+      paramIndex++;
+    }
+    if (options.endDate) {
+      whereClauses.push(`ej.created_at <= $${paramIndex}`);
+      values.push(options.endDate);
+      paramIndex++;
+    }
+
+    // Build WHERE clause string
+    const whereClause =
+      whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+    // Query for total count (without LIMIT/OFFSET)
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM export_jobs ej
+      INNER JOIN tool_registry tr ON ej.tool_id = tr.tool_id
+      ${whereClause}
+    `;
+
+    const countResult = await this.dbPool.query(countQuery, values);
+    const total = parseInt(countResult.rows[0].total, 10);
+
+    // Query for paginated results with tool metadata
+    const dataQuery = `
+      SELECT
+        ej.*,
+        tr.name as tool_name,
+        tr.tool_id as tool_type,
+        tr.description as tool_description
+      FROM export_jobs ej
+      INNER JOIN tool_registry tr ON ej.tool_id = tr.tool_id
+      ${whereClause}
+      ORDER BY ej.${sortBy} ${sortOrder}
+      LIMIT $${paramIndex}
+      OFFSET $${paramIndex + 1}
+    `;
+
+    const dataValues = [...values, limit, offset];
+    const dataResult = await this.dbPool.query(dataQuery, dataValues);
+
+    // Map results to ExportJobWithTool interface
+    const jobs: ExportJobWithTool[] = dataResult.rows.map((row) => ({
+      ...this.mapRowToJob(row),
+      toolName: row.tool_name,
+      toolType: row.tool_type,
+      toolDescription: row.tool_description,
+    }));
+
+    return { jobs, total };
+  }
+
+  /**
    * Map database row to ExportJob interface.
    * Converts snake_case database columns to camelCase TypeScript properties.
    * @param row - Database row from pg query result
@@ -265,6 +448,13 @@ export class ExportJobRepository {
       packageSizeBytes: row.package_size_bytes
         ? parseInt(row.package_size_bytes, 10)
         : null,
+      downloadCount: row.download_count,
+      lastDownloadedAt: row.last_downloaded_at,
+      packageExpiresAt: row.package_expires_at,
+      packageRetentionDays: row.package_retention_days,
+      packageChecksum: row.package_checksum,
+      packageAlgorithm: row.package_algorithm,
+      checksumVerifiedAt: row.checksum_verified_at,
       errorMessage: row.error_message,
       createdAt: row.created_at,
       updatedAt: row.updated_at,

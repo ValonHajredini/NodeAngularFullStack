@@ -62,6 +62,27 @@ export interface ExportJob {
   /** Size of export package in bytes */
   packageSizeBytes: number | null;
 
+  /** Number of times package has been downloaded */
+  downloadCount: number;
+
+  /** Timestamp of most recent download */
+  lastDownloadedAt: Date | null;
+
+  /** Package expiration timestamp (for automatic cleanup) */
+  packageExpiresAt: Date | null;
+
+  /** Number of days to retain package after completion */
+  packageRetentionDays: number;
+
+  /** SHA-256 checksum of export package (64 lowercase hex characters) */
+  packageChecksum: string | null;
+
+  /** Hashing algorithm used for checksum generation (default: sha256) */
+  packageAlgorithm: string;
+
+  /** Timestamp of last successful integrity verification */
+  checksumVerifiedAt: Date | null;
+
   /** Error details if job failed */
   errorMessage: string | null;
 
@@ -127,11 +148,32 @@ export interface UpdateExportJobDto {
   /** Progress percentage */
   progressPercentage?: number;
 
-  /** Package file path */
-  packagePath?: string;
+  /** Package file path (null to clear) */
+  packagePath?: string | null;
 
-  /** Package file size in bytes */
-  packageSizeBytes?: number;
+  /** Package file size in bytes (null to clear) */
+  packageSizeBytes?: number | null;
+
+  /** Number of times package has been downloaded */
+  downloadCount?: number;
+
+  /** Timestamp of most recent download */
+  lastDownloadedAt?: Date;
+
+  /** Package expiration timestamp */
+  packageExpiresAt?: Date;
+
+  /** Number of days to retain package after completion */
+  packageRetentionDays?: number;
+
+  /** SHA-256 checksum of export package */
+  packageChecksum?: string | null;
+
+  /** Hashing algorithm used for checksum generation */
+  packageAlgorithm?: string;
+
+  /** Timestamp of last successful integrity verification */
+  checksumVerifiedAt?: Date | null;
 
   /** Error message */
   errorMessage?: string;
@@ -141,4 +183,77 @@ export interface UpdateExportJobDto {
 
   /** Job completion timestamp */
   completedAt?: Date;
+}
+
+/**
+ * Export job with enriched tool metadata.
+ * Extends ExportJob with denormalized tool data from tool_registry table.
+ * Used by list endpoints to avoid N+1 query problems.
+ */
+export interface ExportJobWithTool extends ExportJob {
+  /** Tool name from tool_registry */
+  toolName: string;
+
+  /** Tool type (forms, workflows, themes) from tool_registry */
+  toolType: string;
+
+  /** Tool description from tool_registry */
+  toolDescription?: string;
+}
+
+/**
+ * Export jobs list query options.
+ * Parameters for filtering, sorting, and pagination.
+ */
+export interface ListExportJobsOptions {
+  /** Maximum number of jobs to return (default: 20, max: 100) */
+  limit?: number;
+
+  /** Number of jobs to skip (default: 0) */
+  offset?: number;
+
+  /** Field to sort by (default: created_at) */
+  sortBy?: 'created_at' | 'completed_at' | 'download_count' | 'package_size_bytes';
+
+  /** Sort order (default: desc) */
+  sortOrder?: 'asc' | 'desc';
+
+  /** Filter by job status (comma-separated for multiple: "completed,failed") */
+  statusFilter?: string;
+
+  /** Filter by tool type (forms, workflows, themes) */
+  toolTypeFilter?: string;
+
+  /** Filter by date range - start date (ISO 8601) */
+  startDate?: string;
+
+  /** Filter by date range - end date (ISO 8601) */
+  endDate?: string;
+
+  /** Filter by user ID (admin only, regular users always filtered to their own jobs) */
+  userId?: string;
+}
+
+/**
+ * Paginated export jobs list response.
+ * Contains jobs array, total count, and pagination metadata.
+ */
+export interface ExportJobsListResponse {
+  /** Array of export jobs with tool metadata */
+  jobs: ExportJobWithTool[];
+
+  /** Total number of jobs matching filters (not just current page) */
+  total: number;
+
+  /** Number of jobs per page */
+  limit: number;
+
+  /** Number of jobs skipped */
+  offset: number;
+
+  /** Current page number (1-indexed) */
+  page: number;
+
+  /** Total number of pages */
+  totalPages: number;
 }
