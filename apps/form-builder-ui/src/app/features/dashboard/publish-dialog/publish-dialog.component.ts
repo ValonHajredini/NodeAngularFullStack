@@ -7,9 +7,9 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { CheckboxModule } from 'primeng/checkbox';
-import { QrCodeDisplayComponent } from '../../tools/components/short-link/components/qr-code-display/qr-code-display.component';
 import { IframeEmbedGeneratorComponent } from '../iframe-embed-generator/iframe-embed-generator.component';
 import { AccordionModule } from 'primeng/accordion';
+import {QrCodeDisplayComponent} from '@features/admin/components/qr-code-display.component';
 
 /**
  * Publish dialog component for form publishing workflow.

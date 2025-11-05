@@ -22,8 +22,9 @@ import { FormsApiService } from '../forms-api.service';
 import { FormSettingsComponent, FormSettings } from '../form-settings/form-settings.component';
 import { ToolConfigService } from '@core/services/tool-config.service';
 import { FormCardComponent, FormCardAction } from '../form-card/form-card.component';
-import { QrCodeDisplayComponent } from '../../tools/components/short-link/components/qr-code-display/qr-code-display.component';
+// import { QrCodeDisplayComponent } from '../../tools/components/short-link/components/qr-code-display/qr-code-display.component';
 import { Dialog } from 'primeng/dialog';
+import {QrCodeDisplayComponent} from '@features/admin/components/qr-code-display.component';
 
 /**
  * Forms list component displaying all user's forms with enhanced QR code functionality.

@@ -251,7 +251,7 @@ describe('FormsListComponent', () => {
 
       // Wait for navigation timeout
       setTimeout(() => {
-        expect(routerSpy.navigate).toHaveBeenCalledWith(['/tools/form-builder', 'new-form-id']);
+        expect(routerSpy.navigate).toHaveBeenCalledWith(['/Dashboard', 'new-form-id']);
         done();
       }, 600);
     });

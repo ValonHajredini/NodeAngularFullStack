@@ -94,10 +94,10 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./features/settings/settings.routes').then((m) => m.settingsRoutes),
       },
-      {
-        path: 'tools',
-        loadChildren: () => import('./features/tools/tools.routes').then((m) => m.toolsRoutes),
-      },
+      // {
+      //   path: 'tools',
+      //   loadChildren: () => import('./features/tools/tools.routes').then((m) => m.toolsRoutes),
+      // },
       {
         path: 'documentation',
         loadComponent: () =>
