@@ -37,8 +37,8 @@ import { Router } from '@angular/router';
           Test Authentication
         </button>
         <button (click)="clearStorage()" style="padding: 10px; margin: 5px;">Clear Storage</button>
-        <button (click)="navigateToDashboard()" style="padding: 10px; margin: 5px;">
-          Go to Dashboard
+        <button (click)="navigateToFormBuilder()" style="padding: 10px; margin: 5px;">
+          Go to Form Builder
         </button>
         <button (click)="refresh()" style="padding: 10px; margin: 5px;">Refresh Debug</button>
       </div>
@@ -80,8 +80,8 @@ export class AuthDebugComponent {
     this.refresh();
   }
 
-  navigateToDashboard(): void {
-    void this.router.navigate(['/app/dashboard']);
+  navigateToFormBuilder(): void {
+    void this.router.navigate(['/app/tools/form-builder']);
   }
 
   refresh(): void {

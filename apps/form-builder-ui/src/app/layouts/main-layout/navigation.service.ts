@@ -58,18 +58,11 @@ export class NavigationService {
     string,
     { title: string; parent?: string; icon?: string }
   > = {
-    '/dashboard': { title: 'Dashboard', icon: 'pi pi-home' },
-    '/profile': { title: 'Profile', parent: '/dashboard', icon: 'pi pi-user' },
-    '/projects': { title: 'Projects', icon: 'pi pi-folder' },
-    '/projects/new': { title: 'New Project', parent: '/projects', icon: 'pi pi-plus' },
-    '/tasks': { title: 'Tasks', icon: 'pi pi-check-square' },
-    '/team': { title: 'Team', icon: 'pi pi-users' },
-    '/reports': { title: 'Reports', icon: 'pi pi-chart-bar' },
+    '/profile': { title: 'Profile', icon: 'pi pi-user' },
     '/admin': { title: 'Administration', icon: 'pi pi-cog' },
     '/admin/users': { title: 'User Management', parent: '/admin', icon: 'pi pi-users' },
     '/admin/settings': { title: 'System Settings', parent: '/admin', icon: 'pi pi-cog' },
-    '/settings': { title: 'Settings', parent: '/dashboard', icon: 'pi pi-cog' },
-    '/support': { title: 'Help & Support', parent: '/dashboard', icon: 'pi pi-question-circle' },
+    '/settings': { title: 'Settings', icon: 'pi pi-cog' },
   };
 
   constructor() {
@@ -153,7 +146,7 @@ export class NavigationService {
     const metadata = this.routeMetadata[currentRoute];
 
     if (!metadata) {
-      return [{ label: 'Home', route: '/dashboard', icon: 'pi pi-home' }];
+      return [{ label: 'Home', route: '/app/tools/form-builder', icon: 'pi pi-home' }];
     }
 
     // Build breadcrumb chain
@@ -229,14 +222,14 @@ export class NavigationService {
 
     const suggestions = [
       {
-        label: 'Dashboard',
-        route: '/dashboard',
-        icon: 'pi pi-home',
-        description: 'Overview of your workspace',
+        label: 'Form Builder',
+        route: '/app/tools/form-builder',
+        icon: 'pi pi-file-edit',
+        description: 'Create and manage forms',
       },
       {
         label: 'Profile',
-        route: '/profile',
+        route: '/app/profile',
         icon: 'pi pi-user',
         description: 'Manage your account settings',
       },
@@ -247,26 +240,17 @@ export class NavigationService {
       suggestions.push(
         {
           label: 'User Management',
-          route: '/admin/users',
+          route: '/app/admin/users',
           icon: 'pi pi-users',
           description: 'Manage system users',
         },
         {
           label: 'System Settings',
-          route: '/admin/settings',
+          route: '/app/admin/settings',
           icon: 'pi pi-cog',
           description: 'Configure system preferences',
         },
       );
-    }
-
-    if (['admin', 'user'].includes(user.role)) {
-      suggestions.push({
-        label: 'Reports',
-        route: '/reports',
-        icon: 'pi pi-chart-bar',
-        description: 'View analytics and reports',
-      });
     }
 
     return suggestions;

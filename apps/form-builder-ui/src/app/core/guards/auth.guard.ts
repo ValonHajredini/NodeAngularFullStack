@@ -14,8 +14,8 @@ import { User } from '../auth/auth.service';
  * @example
  * // In route configuration
  * {
- *   path: 'dashboard',
- *   component: DashboardComponent,
+ *   path: 'tools/form-builder',
+ *   component: FormBuilderComponent,
  *   canActivate: [authGuard]
  * }
  */
@@ -66,8 +66,8 @@ export function roleGuard(allowedRoles: string[]): CanActivateFn {
     // Check if user has required role
     const user = authService.user();
     if (!user || !allowedRoles.includes(user.role)) {
-      // Redirect to dashboard with unauthorized message
-      router.navigate(['/app/dashboard'], {
+      // Redirect to form-builder with unauthorized message
+      router.navigate(['/app/tools/form-builder'], {
         queryParams: { unauthorized: 'true' }
       });
       return false;

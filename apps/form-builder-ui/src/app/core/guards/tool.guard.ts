@@ -15,7 +15,7 @@ import { ToolRegistryService } from '../services/tool-registry.service';
  * Checks if the specified tool is enabled before allowing route activation.
  *
  * @param toolKey - The unique key of the tool to check
- * @param redirectRoute - Optional route to redirect to if tool is disabled (default: '/app/dashboard')
+ * @param redirectRoute - Optional route to redirect to if tool is disabled (default: '/app/tools/form-builder')
  * @param showError - Whether to show an error message in query params (default: true)
  * @returns CanActivateFn that checks tool availability
  *
@@ -37,7 +37,7 @@ import { ToolRegistryService } from '../services/tool-registry.service';
  */
 export function toolGuard(
   toolKey: string,
-  redirectRoute = '/app/dashboard',
+  redirectRoute = '/app/tools/form-builder',
   showError = true,
 ): CanActivateFn {
   return (route: ActivatedRouteSnapshot, state) => {
@@ -126,7 +126,7 @@ export function toolGuard(
  */
 export function anyToolGuard(
   toolKeys: string[],
-  redirectRoute = '/app/dashboard',
+  redirectRoute = '/app/tools/form-builder',
   showError = true,
 ): CanActivateFn {
   return (route, state) => {
@@ -214,7 +214,7 @@ export function anyToolGuard(
  */
 export function allToolsGuard(
   toolKeys: string[],
-  redirectRoute = '/app/dashboard',
+  redirectRoute = '/app/tools/form-builder',
   showError = true,
 ): CanActivateFn {
   return (route, state) => {
@@ -320,7 +320,7 @@ export const slugToolGuard: CanActivateFn = (route: ActivatedRouteSnapshot, stat
   const toolsService = inject(ToolsService);
   const router = inject(Router);
 
-  const redirectRoute = '/app/dashboard';
+  const redirectRoute = '/app/tools/form-builder';
   const showError = true;
 
   // Check if route data specifies to skip slug check and use toolId instead

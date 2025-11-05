@@ -80,35 +80,9 @@ export const routes: Routes = [
     canActivate: [authGuard],
     children: [
       {
-        path: 'dashboard',
-        loadComponent: () =>
-          import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
-      },
-      {
         path: 'profile',
         loadComponent: () =>
           import('./features/profile/profile.component').then((m) => m.ProfileComponent),
-      },
-      {
-        path: 'projects',
-        loadComponent: () =>
-          import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent), // Placeholder
-      },
-      {
-        path: 'tasks',
-        loadComponent: () =>
-          import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent), // Placeholder
-      },
-      {
-        path: 'team',
-        loadComponent: () =>
-          import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent), // Placeholder
-      },
-      {
-        path: 'reports',
-        loadComponent: () =>
-          import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent), // Placeholder
-        canActivate: [userGuard], // Only users and admins can access reports
       },
       {
         path: 'settings',
@@ -118,11 +92,6 @@ export const routes: Routes = [
       {
         path: 'tools',
         loadChildren: () => import('./features/tools/tools.routes').then((m) => m.toolsRoutes),
-      },
-      {
-        path: 'support',
-        loadComponent: () =>
-          import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent), // Placeholder
       },
       {
         path: 'documentation',
@@ -138,7 +107,7 @@ export const routes: Routes = [
       },
       {
         path: '',
-        redirectTo: 'dashboard',
+        redirectTo: 'tools/form-builder',
         pathMatch: 'full',
       },
     ],

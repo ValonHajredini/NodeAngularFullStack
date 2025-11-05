@@ -36,7 +36,7 @@ export interface NavigationItem {
             <div class="flex">
               <!-- Logo -->
               <div class="flex-shrink-0 flex items-center">
-                <a routerLink="/app/dashboard" class="flex items-center">
+                <a routerLink="/app/tools/form-builder" class="flex items-center">
                   <div class="h-8 w-8 bg-primary-600 rounded-lg flex items-center justify-center">
                     <i class="pi pi-home text-white text-lg"></i>
                   </div>
@@ -359,11 +359,6 @@ export class MainLayoutComponent implements OnInit {
    * Items are filtered based on user roles and authentication status.
    */
   protected readonly navigationItems: NavigationItem[] = [
-    {
-      label: 'Dashboard',
-      route: '/app/dashboard',
-      icon: 'pi pi-home',
-    },
     // {
     //   label: 'Projects',
     //   route: '/app/projects',
@@ -374,11 +369,6 @@ export class MainLayoutComponent implements OnInit {
     //   route: '/app/tasks',
     //   icon: 'pi pi-check-square',
     // },
-    {
-      label: 'Team',
-      route: '/app/team',
-      icon: 'pi pi-users',
-    },
     // {
     //   label: 'Reports',
     //   route: '/app/reports',

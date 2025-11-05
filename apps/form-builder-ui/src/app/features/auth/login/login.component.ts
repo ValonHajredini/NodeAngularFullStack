@@ -397,7 +397,7 @@ export class LoginComponent implements OnInit {
   private readonly authService = inject(AuthService);
   readonly themeService = inject(ThemeService);
 
-  private returnUrl = '/dashboard';
+  private returnUrl = '/app/tools/form-builder';
 
   protected readonly loginForm: FormGroup;
   protected readonly loading = signal(false);
@@ -413,8 +413,8 @@ export class LoginComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Get return URL from query parameters or default to dashboard
-    this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/app/dashboard';
+    // Get return URL from query parameters or default to form-builder
+    this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/app/tools/form-builder';
 
     // If user is already authenticated, redirect to return URL
     if (this.authService.isAuthenticated()) {

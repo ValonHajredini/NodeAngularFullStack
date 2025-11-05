@@ -269,11 +269,6 @@ export class UserDropdownMenuComponent implements OnInit, OnDestroy {
       icon: 'pi pi-cog',
     },
     {
-      label: 'Help & Support',
-      route: '/app/support',
-      icon: 'pi pi-question-circle',
-    },
-    {
       separator: true,
     },
     {

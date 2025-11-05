@@ -73,11 +73,11 @@ import { Dialog } from 'primeng/dialog';
         [class.mx-auto]="!isFullWidth()"
       >
         <a
-          routerLink="/app/dashboard"
+          routerLink="/app/tools/form-builder"
           class="hover:text-blue-600 transition-colors flex items-center"
         >
-          <i class="pi pi-home mr-1"></i>
-          Dashboard
+          <i class="pi pi-file-edit mr-1"></i>
+          Form Builder
         </a>
         <i class="pi pi-angle-right mx-2 text-gray-400"></i>
         <a routerLink="/app/tools" class="hover:text-blue-600 transition-colors"> Tools </a>

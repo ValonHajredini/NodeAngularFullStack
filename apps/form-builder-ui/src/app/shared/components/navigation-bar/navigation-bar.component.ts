@@ -46,15 +46,15 @@ import { UserDropdownMenuComponent } from '../user-dropdown-menu/user-dropdown-m
         <!-- Navigation Links -->
         <div class="nav-links">
           <p-button
-            routerLink="/app/dashboard"
+            routerLink="/app/tools/form-builder"
             [text]="true"
             severity="secondary"
             class="nav-link"
-            [attr.aria-label]="'Go to Dashboard'"
+            [attr.aria-label]="'Go to Form Builder'"
           >
             <div class="nav-link-content">
               <i class="pi pi-home" aria-hidden="true"></i>
-              <span class="nav-link-text">Dashboard</span>
+              <span class="nav-link-text">Form Builder</span>
             </div>
           </p-button>
           <p-button
