@@ -80,6 +80,11 @@ export const routes: Routes = [
     canActivate: [authGuard],
     children: [
       {
+        path: 'dashboard',
+        loadChildren: () =>
+          import('./features/dashboard/dashboard.routes').then((m) => m.dashboardRoutes),
+      },
+      {
         path: 'profile',
         loadComponent: () =>
           import('./features/profile/profile.component').then((m) => m.ProfileComponent),
@@ -107,7 +112,7 @@ export const routes: Routes = [
       },
       {
         path: '',
-        redirectTo: 'tools/form-builder',
+        redirectTo: 'dashboard',
         pathMatch: 'full',
       },
     ],

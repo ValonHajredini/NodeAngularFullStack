@@ -478,7 +478,7 @@ git commit --no-verify -m "message"</code></pre>
               </p>
               <div class="doc-footer-links">
                 <a routerLink="/welcome" class="doc-footer-link">Welcome</a>
-                <a routerLink="/app/tools/form-builder" class="doc-footer-link">Form Builder</a>
+                <a routerLink="/app/dashboard" class="doc-footer-link">Form Builder</a>
                 <a routerLink="/app/profile" class="doc-footer-link">Profile</a>
                 <a href="https://github.com" target="_blank" rel="noopener" class="doc-footer-link">
                   <i class="pi pi-github"></i>

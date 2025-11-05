@@ -81,7 +81,7 @@ export class AuthService {
       map((response: ApiAuthResponse) => response.data),
       tap((authData: AuthResponse) => {
         this.setAuthData(authData);
-        this.router.navigate(['/app/tools/form-builder']);
+        this.router.navigate(['/app/dashboard']);
       }),
       catchError((error) => {
         this.errorSignal.set(error.error?.message || 'Login failed');
@@ -106,7 +106,7 @@ export class AuthService {
       map((response: ApiAuthResponse) => response.data),
       tap((authData: AuthResponse) => {
         this.setAuthData(authData);
-        this.router.navigate(['/app/tools/form-builder']);
+        this.router.navigate(['/app/dashboard']);
       }),
       catchError((error) => {
         this.errorSignal.set(error.error?.message || 'Registration failed');

@@ -36,7 +36,7 @@ export interface NavigationItem {
             <div class="flex">
               <!-- Logo -->
               <div class="flex-shrink-0 flex items-center">
-                <a routerLink="/app/tools/form-builder" class="flex items-center">
+                <a routerLink="/app/dashboard" class="flex items-center">
                   <div class="h-8 w-8 bg-primary-600 rounded-lg flex items-center justify-center">
                     <i class="pi pi-home text-white text-lg"></i>
                   </div>

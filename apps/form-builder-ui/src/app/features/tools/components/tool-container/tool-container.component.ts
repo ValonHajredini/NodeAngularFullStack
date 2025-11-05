@@ -218,7 +218,7 @@ export class ToolContainerComponent implements OnInit {
   // Breadcrumb home item
   readonly homeItem: MenuItem = {
     icon: 'pi pi-file-edit',
-    routerLink: '/app/tools/form-builder',
+    routerLink: '/app/dashboard',
   };
 
   ngOnInit(): void {

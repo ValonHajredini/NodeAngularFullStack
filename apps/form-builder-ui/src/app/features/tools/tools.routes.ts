@@ -23,38 +23,6 @@ export const toolsRoutes: Routes = [
     },
   },
   {
-    path: 'form-builder/list',
-    loadComponent: () =>
-      import('./components/form-builder/forms-list/forms-list.component').then(
-        (m) => m.FormsListComponent,
-      ),
-  },
-  {
-    path: 'form-builder/:id/analytics',
-    loadComponent: () =>
-      import('./components/form-builder/form-analytics/form-analytics.component').then(
-        (m) => m.FormAnalyticsComponent,
-      ),
-    canActivate: [slugToolGuard],
-    data: {
-      checkToolBySlug: false,
-      toolId: 'form-builder',
-    },
-  },
-  {
-    path: 'form-builder/:id',
-    loadComponent: () =>
-      import('./components/form-builder/form-builder.component').then(
-        (m) => m.FormBuilderComponent,
-      ),
-    canDeactivate: [unsavedChangesGuard],
-  },
-  {
-    path: 'form-builder',
-    redirectTo: 'form-builder/list',
-    pathMatch: 'full',
-  },
-  {
     path: 'export-history',
     loadComponent: () =>
       import('./pages/export-history/export-history.component').then(

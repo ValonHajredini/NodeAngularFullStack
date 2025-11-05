@@ -1,0 +1,73 @@
+/* Token Reuse Confirmation Component Styles */
+
+.token-reuse-confirmation-dialog {
+  .token-reuse-content {
+    .token-details {
+      background: var(--surface-50);
+      border: 1px solid var(--surface-200);
+
+      .grid {
+        gap: 0.75rem;
+      }
+    }
+
+    .options-explanation {
+      .option-card {
+        background: var(--surface-0);
+        transition: all 0.2s ease;
+        cursor: default;
+
+        &:hover {
+          background: var(--surface-50);
+          border-color: var(--primary-300);
+        }
+
+        i {
+          font-size: 1.1rem;
+        }
+
+        h5 {
+          color: var(--text-color);
+          margin-bottom: 0.25rem;
+        }
+
+        p {
+          color: var(--text-color-secondary);
+          line-height: 1.4;
+        }
+      }
+    }
+  }
+
+  .p-dialog-footer {
+    padding-top: 1rem;
+    border-top: 1px solid var(--surface-200);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .token-reuse-confirmation-dialog {
+    width: 95% !important;
+    margin: 1rem;
+
+    .token-reuse-content {
+      .options-explanation {
+        .option-card {
+          padding: 0.75rem;
+        }
+      }
+    }
+
+    .p-dialog-footer {
+      .flex {
+        flex-direction: column;
+        gap: 0.5rem;
+
+        button {
+          width: 100%;
+        }
+      }
+    }
+  }
+}

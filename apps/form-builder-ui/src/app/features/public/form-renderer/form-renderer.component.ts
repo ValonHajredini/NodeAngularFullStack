@@ -41,7 +41,7 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
 // Service
 import { FormRendererService, FormRenderError, FormRenderErrorType } from './form-renderer.service';
-import { ThemePreviewService } from '../../tools/components/form-builder/theme-preview.service';
+import { ThemePreviewService } from '../../dashboard/theme-preview.service';
 
 // Field Renderers
 import { ImageGalleryRendererComponent } from './image-gallery-renderer.component';

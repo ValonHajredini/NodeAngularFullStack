@@ -1,0 +1,24 @@
+// TEXT_BLOCK preview component theme styling (Story 24.6)
+.text-block-preview {
+  font-family: var(--theme-body-font, system-ui);
+  color: var(--theme-text-primary, #1f2937);
+  line-height: 1.6;
+  margin-bottom: var(--theme-field-spacing, 1rem);
+
+  p {
+    margin-bottom: 0.75rem;
+    font-family: var(--theme-body-font, system-ui);
+    color: var(--theme-text-primary, #1f2937);
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  // Optional background padding (when backgroundColor is set in metadata)
+  &.has-background {
+    background-color: var(--theme-container-background, #f9fafb);
+    padding: 1rem;
+    border-radius: var(--theme-border-radius, 0.375rem);
+  }
+}

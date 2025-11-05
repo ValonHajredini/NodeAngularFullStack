@@ -81,7 +81,7 @@ export class AuthDebugComponent {
   }
 
   navigateToFormBuilder(): void {
-    void this.router.navigate(['/app/tools/form-builder']);
+    void this.router.navigate(['/app/dashboard']);
   }
 
   refresh(): void {

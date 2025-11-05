@@ -67,7 +67,7 @@ export function roleGuard(allowedRoles: string[]): CanActivateFn {
     const user = authService.user();
     if (!user || !allowedRoles.includes(user.role)) {
       // Redirect to form-builder with unauthorized message
-      router.navigate(['/app/tools/form-builder'], {
+      router.navigate(['/app/dashboard'], {
         queryParams: { unauthorized: 'true' }
       });
       return false;

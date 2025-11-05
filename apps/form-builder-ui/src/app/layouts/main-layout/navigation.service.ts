@@ -146,7 +146,7 @@ export class NavigationService {
     const metadata = this.routeMetadata[currentRoute];
 
     if (!metadata) {
-      return [{ label: 'Home', route: '/app/tools/form-builder', icon: 'pi pi-home' }];
+      return [{ label: 'Home', route: '/app/dashboard', icon: 'pi pi-home' }];
     }
 
     // Build breadcrumb chain
@@ -222,10 +222,10 @@ export class NavigationService {
 
     const suggestions = [
       {
-        label: 'Form Builder',
-        route: '/app/tools/form-builder',
-        icon: 'pi pi-file-edit',
-        description: 'Create and manage forms',
+        label: 'Dashboard',
+        route: '/app/dashboard',
+        icon: 'pi pi-home',
+        description: 'View and manage forms',
       },
       {
         label: 'Profile',

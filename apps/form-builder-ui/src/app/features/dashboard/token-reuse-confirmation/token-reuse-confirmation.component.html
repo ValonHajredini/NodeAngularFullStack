@@ -1,0 +1,120 @@
+<p-dialog
+  header="Existing Token Found"
+  [visible]="visible"
+  (onHide)="onHide()"
+  [modal]="true"
+  [resizable]="false"
+  [draggable]="false"
+  [closable]="true"
+  styleClass="token-reuse-confirmation-dialog"
+  [style]="{ width: '500px' }"
+>
+  <div class="token-reuse-content">
+    <!-- Token Information -->
+    <div class="mb-4">
+      <p-message severity="info" [closable]="false" styleClass="w-full">
+        <div class="flex items-center">
+          <i class="pi pi-info-circle mr-2"></i>
+          <span>This form already has a valid public token.</span>
+        </div>
+      </p-message>
+    </div>
+
+    <!-- Token Details -->
+    <div class="token-details bg-gray-50 p-4 rounded-lg mb-4">
+      <div class="grid grid-cols-1 gap-3">
+        <!-- Expiration Status -->
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-medium text-gray-700">Status:</span>
+          <span
+            class="text-sm px-2 py-1 rounded-full"
+            [class]="
+              tokenStatus?.tokenExpiration === null
+                ? 'bg-green-100 text-green-700'
+                : 'bg-blue-100 text-blue-700'
+            "
+          >
+            {{ expirationText }}
+          </span>
+        </div>
+
+        <!-- Creation Date -->
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-medium text-gray-700">Created:</span>
+          <span class="text-sm text-gray-600">{{ creationText }}</span>
+        </div>
+
+        <!-- Form URL Preview -->
+        <div class="mt-2">
+          <span class="text-sm font-medium text-gray-700 block mb-1">Form URL:</span>
+          <div
+            class="text-xs text-blue-600 bg-blue-50 p-2 rounded border font-mono break-all"
+            [title]="tokenStatus?.formUrl"
+          >
+            {{ displayUrl }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Options Explanation -->
+    <div class="options-explanation mb-4">
+      <h4 class="text-sm font-semibold text-gray-900 mb-2">Choose an option:</h4>
+
+      <div class="grid grid-cols-1 gap-3">
+        <!-- Reuse Option -->
+        <div
+          class="option-card border border-gray-200 rounded-lg p-3 hover:border-blue-300 transition-colors"
+        >
+          <div class="flex items-start">
+            <i class="pi pi-refresh text-green-600 mt-1 mr-3"></i>
+            <div>
+              <h5 class="font-medium text-gray-900 mb-1">Use Existing Token</h5>
+              <p class="text-sm text-gray-600">
+                Keep the current form URL and token. No changes to existing links.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Generate New Option -->
+        <div
+          class="option-card border border-gray-200 rounded-lg p-3 hover:border-blue-300 transition-colors"
+        >
+          <div class="flex items-start">
+            <i class="pi pi-plus-circle text-blue-600 mt-1 mr-3"></i>
+            <div>
+              <h5 class="font-medium text-gray-900 mb-1">Generate New Token</h5>
+              <p class="text-sm text-gray-600">
+                Create a new form URL and token. Previous links will no longer work.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dialog Footer with Action Buttons -->
+  <ng-template pTemplate="footer">
+    <div class="flex justify-end gap-2">
+      <button
+        pButton
+        label="Use Existing Token"
+        icon="pi pi-refresh"
+        severity="success"
+        size="small"
+        (click)="onReuseToken()"
+        [outlined]="true"
+      ></button>
+      <button
+        pButton
+        label="Generate New Token"
+        icon="pi pi-plus-circle"
+        severity="primary"
+        size="small"
+        (click)="onGenerateNewToken()"
+      ></button>
+    </div>
+  </ng-template>
+</p-dialog>

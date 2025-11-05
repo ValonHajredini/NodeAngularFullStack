@@ -6,7 +6,7 @@ import { MessageService } from 'primeng/api';
 import { FormRendererComponent } from './form-renderer.component';
 import { FormRendererService, FormRenderError, FormRenderErrorType } from './form-renderer.service';
 import { FormFieldType, FormSchema, FormSettings, FormTheme } from '@nodeangularfullstack/shared';
-import { ThemePreviewService } from '../../tools/components/form-builder/theme-preview.service';
+import { ThemePreviewService } from '../../dashboard/theme-preview.service';
 
 describe('FormRendererComponent', () => {
   let component: FormRendererComponent;
