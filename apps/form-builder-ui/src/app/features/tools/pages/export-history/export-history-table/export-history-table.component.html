@@ -1,0 +1,199 @@
+<div class="export-history-table-container">
+  <!-- Empty State -->
+  @if (jobs.length === 0) {
+    <div class="empty-state">
+      <i class="pi pi-inbox empty-icon"></i>
+      <p class="empty-message">No export jobs to display</p>
+    </div>
+  }
+
+  <!-- Export Jobs Table -->
+  @if (jobs.length > 0) {
+    <p-table
+      [value]="jobs"
+      responsiveLayout="scroll"
+      styleClass="p-datatable-sm"
+      [tableStyle]="{ 'min-width': '60rem' }"
+    >
+      <ng-template pTemplate="header">
+        <tr>
+          <th class="sortable-column" (click)="onSort('created_at')">
+            <div class="column-header">
+              <span>Tool Name</span>
+              <i [class]="getSortIcon('created_at')"></i>
+            </div>
+          </th>
+          <th>Status</th>
+          <th class="sortable-column" (click)="onSort('created_at')">
+            <div class="column-header">
+              <span>Created</span>
+              <i [class]="getSortIcon('created_at')"></i>
+            </div>
+          </th>
+          <th class="sortable-column" (click)="onSort('completed_at')">
+            <div class="column-header">
+              <span>Completed</span>
+              <i [class]="getSortIcon('completed_at')"></i>
+            </div>
+          </th>
+          <th class="sortable-column" (click)="onSort('download_count')">
+            <div class="column-header">
+              <span>Downloads</span>
+              <i [class]="getSortIcon('download_count')"></i>
+            </div>
+          </th>
+          <th class="sortable-column" (click)="onSort('package_size_bytes')">
+            <div class="column-header">
+              <span>Package Size</span>
+              <i [class]="getSortIcon('package_size_bytes')"></i>
+            </div>
+          </th>
+          <th>Package Expires</th>
+          <th class="actions-column">Actions</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-job>
+        <tr>
+          <!-- Tool Name & Type -->
+          <td>
+            <div class="tool-info">
+              <span class="tool-name">{{ job.toolName }}</span>
+              <span class="tool-type">{{ job.toolType }}</span>
+            </div>
+          </td>
+
+          <!-- Status Badge -->
+          <td>
+            <p-tag
+              [value]="getStatusLabel(job.status)"
+              [severity]="getStatusSeverity(job.status)"
+            ></p-tag>
+          </td>
+
+          <!-- Created Date -->
+          <td>
+            <span [pTooltip]="formatDate(job.createdAt)" tooltipPosition="top">
+              {{ formatDate(job.createdAt) }}
+            </span>
+          </td>
+
+          <!-- Completed Date -->
+          <td>
+            <span [pTooltip]="formatDate(job.completedAt)" tooltipPosition="top">
+              {{ formatDate(job.completedAt) }}
+            </span>
+          </td>
+
+          <!-- Download Count -->
+          <td class="text-center">
+            <span class="download-count">{{ formatDownloadCount(job.downloadCount) }}</span>
+            @if (job.lastDownloadedAt) {
+              <div class="last-download">Last: {{ formatDate(job.lastDownloadedAt) }}</div>
+            }
+          </td>
+
+          <!-- Package Size -->
+          <td class="text-right">
+            {{ formatSize(job.packageSizeBytes) }}
+          </td>
+
+          <!-- Package Expires -->
+          <td>
+            @if (job.packageExpiresAt) {
+              <span
+                [pTooltip]="formatDate(job.packageExpiresAt)"
+                tooltipPosition="top"
+                [class.expired]="isExpired(job.packageExpiresAt)"
+              >
+                {{ formatDate(job.packageExpiresAt) }}
+              </span>
+            } @else {
+              <span class="text-muted">-</span>
+            }
+          </td>
+
+          <!-- Actions -->
+          <td class="actions-cell">
+            <div class="action-buttons">
+              <!-- Download Button -->
+              @if (canDownload(job)) {
+                <button
+                  pButton
+                  type="button"
+                  icon="pi pi-download"
+                  class="p-button-rounded p-button-outlined p-button-sm"
+                  pTooltip="Download Export Package"
+                  tooltipPosition="top"
+                  (click)="onDownloadClick(job)"
+                ></button>
+              }
+
+              <!-- Re-export Button (for expired packages) -->
+              @if (canReexport(job)) {
+                <button
+                  pButton
+                  type="button"
+                  icon="pi pi-refresh"
+                  class="p-button-rounded p-button-outlined p-button-warning p-button-sm"
+                  pTooltip="Package Expired - Re-export Tool"
+                  tooltipPosition="top"
+                  (click)="onReexportClick(job)"
+                ></button>
+              }
+
+              <!-- Progress Indicator for In-Progress Jobs -->
+              @if (job.status === 'in_progress') {
+                <span
+                  class="progress-indicator"
+                  pTooltip="Export in progress..."
+                  tooltipPosition="top"
+                >
+                  <i class="pi pi-spin pi-spinner"></i>
+                  {{ job.progressPercentage }}%
+                </span>
+              }
+
+              <!-- Error Indicator for Failed Jobs -->
+              @if (job.status === 'failed') {
+                <button
+                  pButton
+                  type="button"
+                  icon="pi pi-exclamation-triangle"
+                  class="p-button-rounded p-button-outlined p-button-danger p-button-sm"
+                  [pTooltip]="job.errorMessage || 'Export failed'"
+                  tooltipPosition="top"
+                ></button>
+              }
+
+              <!-- Delete Button (Admin Only) -->
+              @if (isAdmin) {
+                <button
+                  pButton
+                  type="button"
+                  icon="pi pi-trash"
+                  class="p-button-rounded p-button-outlined p-button-danger p-button-sm"
+                  pTooltip="Delete Export Job (Admin Only)"
+                  tooltipPosition="top"
+                  (click)="onDeleteClick(job)"
+                ></button>
+              }
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+
+      <!-- Empty Message (fallback) -->
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="8" class="text-center">
+            <div class="empty-state-inline">
+              <i class="pi pi-inbox"></i>
+              <span>No export jobs found</span>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  }
+</div>

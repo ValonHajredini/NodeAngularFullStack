@@ -1,0 +1,1635 @@
+<div
+  class="form-renderer-container min-h-screen py-8 px-4 relative theme-transition"
+  [ngClass]="{ 'theme-form-outer-background': !hasBackgroundImage() }"
+>
+  @if (hasBackgroundImage()) {
+    <div
+      class="background-image-layer absolute inset-0 z-0"
+      [ngStyle]="getBackgroundLayerStyles()"
+    ></div>
+  }
+
+  @if (shouldShowBackgroundOverlay()) {
+    <div
+      class="background-overlay absolute inset-0 pointer-events-none z-10 bg-white"
+      [style.opacity]="1 - getBackgroundOpacity()"
+    ></div>
+  }
+
+  <div class="relative z-20">
+    <!-- Loading State -->
+    @if (state.loading) {
+      <div class="flex justify-center items-center min-h-[400px]">
+        <p-progress-spinner />
+      </div>
+    }
+
+    <!-- Error State -->
+    @else if (state.error) {
+      <div class="max-w-2xl mx-auto">
+        <p-card>
+          <div class="text-center py-8">
+            @switch (state.errorType) {
+              @case (errorTypes.NOT_FOUND) {
+                <i class="pi pi-exclamation-circle text-6xl text-orange-500 mb-4"></i>
+                <h2 class="theme-heading mb-2">Form Not Found</h2>
+              }
+              @case (errorTypes.EXPIRED) {
+                <i class="pi pi-clock text-6xl text-red-500 mb-4"></i>
+                <h2 class="theme-heading mb-2">Form Expired</h2>
+              }
+              @case (errorTypes.INVALID_TOKEN) {
+                <i class="pi pi-times-circle text-6xl text-red-500 mb-4"></i>
+                <h2 class="theme-heading mb-2">Invalid Form Link</h2>
+              }
+              @case (errorTypes.RATE_LIMITED) {
+                <i class="pi pi-ban text-6xl text-orange-500 mb-4"></i>
+                <h2 class="theme-heading mb-2">Too Many Requests</h2>
+              }
+              @default {
+                <i class="pi pi-exclamation-triangle text-6xl text-gray-500 mb-4"></i>
+                <h2 class="theme-heading mb-2">Error Loading Form</h2>
+              }
+            }
+            <p class="theme-text-secondary mb-4">{{ state.error }}</p>
+            <p class="text-sm theme-help-text">
+              Please contact the form creator if you believe this is an error.
+            </p>
+          </div>
+        </p-card>
+      </div>
+    }
+
+    <!-- Success State -->
+    @else if (state.submitted) {
+      <div class="max-w-2xl mx-auto">
+        <p-card>
+          <div class="text-center py-8">
+            <i class="pi pi-check-circle text-6xl text-green-500 mb-4"></i>
+            <h2 class="theme-heading mb-2">Success!</h2>
+            <p class="theme-text-secondary mb-6">{{ state.submissionMessage }}</p>
+
+            @if (settings?.submission?.redirectUrl) {
+              <p class="text-sm theme-help-text mb-4">
+                <i class="pi pi-external-link mr-2"></i>
+                Redirecting in 3 seconds...
+              </p>
+            }
+
+            @if (settings?.submission?.allowMultipleSubmissions) {
+              <button
+                type="button"
+                pButton
+                (click)="submitAnother()"
+                class="theme-button-primary theme-transition"
+              >
+                <i class="pi pi-plus mr-2"></i>
+                Submit Another Response
+              </button>
+            }
+          </div>
+        </p-card>
+
+        <!-- Promotional Footer -->
+        <div class="form-footer text-center mt-8 mb-4">
+          <p class="text-xs text-gray-400">
+            This form was created with
+            <a
+              href="/"
+              class="text-gray-500 hover:text-gray-600 underline"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Form Builder
+            </a>
+            — Build your own custom forms in minutes
+          </p>
+        </div>
+      </div>
+    }
+
+    <!-- Form Content -->
+    @else if (formGroup && schema) {
+      <div [class]="containerPositionClass()">
+        <!-- Preview Mode Banner -->
+        @if (isPreview) {
+          <div
+            class="preview-banner bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 mb-6 flex items-center gap-3 rounded-md"
+          >
+            <i class="pi pi-info-circle text-2xl"></i>
+            <div>
+              <p class="font-semibold">PREVIEW MODE</p>
+              <p class="text-sm">This is a temporary preview. Changes are not saved.</p>
+            </div>
+          </div>
+        }
+
+        <p-card
+          class="theme-form-container-wrapper theme-transition form-container-themed"
+          [ngStyle]="{ position: 'relative', 'z-index': '10' }"
+        >
+          <div class="form-content-wrapper">
+            <!-- Step Name Display at Top (New Design) -->
+            @if (isStepFormEnabled() && currentStep()) {
+              <div class="step-name-display text-center mb-6 pb-4 border-b border-gray-200">
+                <h2 class="text-2xl font-semibold text-gray-800">
+                  {{ currentStep().title || 'Step ' + (currentStepIndex() + 1) }}
+                </h2>
+                @if (currentStep().description) {
+                  <p class="text-sm text-gray-600 mt-2">{{ currentStep().description }}</p>
+                }
+              </div>
+            }
+
+            <form [formGroup]="formGroup" (ngSubmit)="onSubmit()" class="space-y-6">
+              <!-- Form Fields: Row-Based Layout or Global Grid -->
+              @if (isRowLayoutEnabled()) {
+                <!-- Row-Based Layout Mode -->
+                <div class="row-layout-container">
+                  @for (row of getRowConfigs(); track row.rowId) {
+                    <div class="row-wrapper">
+                      <!-- Row columns grid -->
+                      <div
+                        class="row-grid theme-row-container theme-transition"
+                        [style.grid-template-columns]="getGridColumns(row)"
+                      >
+                        @for (columnIndex of getColumnIndices(row.columnCount); track columnIndex) {
+                          <div class="column-container theme-column-container theme-transition">
+                            <!-- Sub-Column Rendering (Story 27.6) -->
+                            @if (hasSubColumns(row.rowId, columnIndex)) {
+                              <!-- Sub-columns grid container -->
+                              <div
+                                class="sub-columns-grid"
+                                [style.grid-template-columns]="
+                                  subColumnGridTemplate(row.rowId, columnIndex)
+                                "
+                              >
+                                @for (
+                                  subColumnIndex of subColumnIndexes(row.rowId, columnIndex);
+                                  track subColumnIndex
+                                ) {
+                                  <div
+                                    class="sub-column-container"
+                                    role="group"
+                                    [attr.aria-label]="'Sub-column ' + (subColumnIndex + 1)"
+                                  >
+                                    @for (
+                                      field of fieldsForSubColumn(
+                                        row.rowId,
+                                        columnIndex,
+                                        subColumnIndex
+                                      );
+                                      track field.id
+                                    ) {
+                                      @if (isFieldVisible(field)) {
+                                        <!-- Field rendering content will be added below -->
+                                        <div
+                                          class="form-field"
+                                          [ngStyle]="getFieldCustomStyles(field)"
+                                        >
+                                          <div class="field-wrapper">
+                                            @if (
+                                              field.type !== fieldTypes.DIVIDER &&
+                                              field.type !== fieldTypes.HEADING &&
+                                              field.type !== fieldTypes.TEXT_BLOCK &&
+                                              field.type !== fieldTypes.IMAGE &&
+                                              field.type !== fieldTypes.CHECKBOX &&
+                                              field.type !== fieldTypes.TOGGLE &&
+                                              field.type !== fieldTypes.IMAGE_GALLERY
+                                            ) {
+                                              <label [for]="field.fieldName" class="theme-label">
+                                                {{ field.label }}
+                                                @if (field.required) {
+                                                  <span class="text-red-500">*</span>
+                                                }
+                                              </label>
+                                            }
+
+                                            <!-- Text Input -->
+                                            @if (field.type === fieldTypes.TEXT) {
+                                              <input
+                                                type="text"
+                                                [id]="field.fieldName"
+                                                [formControlName]="field.fieldName"
+                                                [placeholder]="field.placeholder || ''"
+                                                class="w-full theme-input theme-transition"
+                                              />
+                                            }
+
+                                            <!-- Email Input -->
+                                            @if (field.type === fieldTypes.EMAIL) {
+                                              <input
+                                                type="email"
+                                                [id]="field.fieldName"
+                                                [formControlName]="field.fieldName"
+                                                [placeholder]="field.placeholder || ''"
+                                                class="w-full theme-input theme-transition"
+                                              />
+                                            }
+
+                                            <!-- Number Input -->
+                                            @if (field.type === fieldTypes.NUMBER) {
+                                              <input
+                                                type="number"
+                                                [id]="field.fieldName"
+                                                [formControlName]="field.fieldName"
+                                                [placeholder]="field.placeholder || ''"
+                                                [min]="field.validation?.min ?? null"
+                                                [max]="field.validation?.max ?? null"
+                                                class="w-full theme-input theme-transition"
+                                              />
+                                            }
+
+                                            <!-- Textarea -->
+                                            @if (field.type === fieldTypes.TEXTAREA) {
+                                              <textarea
+                                                [id]="field.fieldName"
+                                                [formControlName]="field.fieldName"
+                                                [placeholder]="field.placeholder || ''"
+                                                rows="5"
+                                                class="w-full theme-textarea theme-transition"
+                                              ></textarea>
+                                            }
+
+                                            <!-- Select Dropdown -->
+                                            @if (field.type === fieldTypes.SELECT) {
+                                              <select
+                                                [id]="field.fieldName"
+                                                [formControlName]="field.fieldName"
+                                                class="w-full theme-select theme-transition"
+                                              >
+                                                <option value="">
+                                                  {{ field.placeholder || 'Select an option' }}
+                                                </option>
+                                                @for (option of field.options; track option.value) {
+                                                  <option [value]="option.value">
+                                                    {{ option.label }}
+                                                  </option>
+                                                }
+                                              </select>
+                                            }
+
+                                            <!-- Radio Button Group -->
+                                            @if (field.type === fieldTypes.RADIO) {
+                                              <div class="space-y-2">
+                                                @for (option of field.options; track option.value) {
+                                                  <div class="flex items-center">
+                                                    <input
+                                                      type="radio"
+                                                      [id]="field.fieldName + '-' + option.value"
+                                                      [formControlName]="field.fieldName"
+                                                      [value]="option.value"
+                                                      class="mr-2"
+                                                    />
+                                                    <label
+                                                      [for]="field.fieldName + '-' + option.value"
+                                                    >
+                                                      {{ option.label }}
+                                                    </label>
+                                                  </div>
+                                                }
+                                              </div>
+                                            }
+
+                                            <!-- Checkbox Group -->
+                                            @if (field.type === fieldTypes.CHECKBOX) {
+                                              <div class="space-y-2">
+                                                <label class="theme-label">
+                                                  {{ field.label }}
+                                                  @if (field.required) {
+                                                    <span class="text-red-500">*</span>
+                                                  }
+                                                </label>
+                                                @for (option of field.options; track option.value) {
+                                                  <div class="flex items-center">
+                                                    <input
+                                                      type="checkbox"
+                                                      [id]="field.fieldName + '-' + option.value"
+                                                      [value]="option.value"
+                                                      [checked]="
+                                                        isCheckboxOptionSelected(
+                                                          field.fieldName,
+                                                          option.value
+                                                        )
+                                                      "
+                                                      (change)="
+                                                        onCheckboxChange(
+                                                          $event,
+                                                          field.fieldName,
+                                                          option.value
+                                                        )
+                                                      "
+                                                      class="mr-2"
+                                                    />
+                                                    <label
+                                                      [for]="field.fieldName + '-' + option.value"
+                                                    >
+                                                      {{ option.label }}
+                                                    </label>
+                                                  </div>
+                                                }
+                                              </div>
+                                            }
+
+                                            <!-- Toggle Switch -->
+                                            @if (field.type === fieldTypes.TOGGLE) {
+                                              <div class="flex items-center gap-3">
+                                                <input
+                                                  type="checkbox"
+                                                  [id]="field.fieldName"
+                                                  [formControlName]="field.fieldName"
+                                                  class="toggle-switch"
+                                                />
+                                                <label [for]="field.fieldName">
+                                                  {{ field.label }}
+                                                  @if (field.required) {
+                                                    <span class="text-red-500">*</span>
+                                                  }
+                                                </label>
+                                              </div>
+                                            }
+
+                                            <!-- Date Picker -->
+                                            @if (field.type === fieldTypes.DATE) {
+                                              <input
+                                                type="date"
+                                                [id]="field.fieldName"
+                                                [formControlName]="field.fieldName"
+                                                class="w-full theme-input theme-transition"
+                                              />
+                                            }
+
+                                            <!-- DateTime Picker -->
+                                            @if (field.type === fieldTypes.DATETIME) {
+                                              <input
+                                                type="datetime-local"
+                                                [id]="field.fieldName"
+                                                [formControlName]="field.fieldName"
+                                                class="w-full theme-input theme-transition"
+                                              />
+                                            }
+
+                                            <!-- File Upload -->
+                                            @if (field.type === fieldTypes.FILE) {
+                                              <input
+                                                type="file"
+                                                [id]="field.fieldName"
+                                                [accept]="
+                                                  field.validation?.acceptedFileTypes?.join(',') ||
+                                                  '*'
+                                                "
+                                                class="w-full theme-input theme-transition"
+                                              />
+                                            }
+
+                                            <!-- Divider -->
+                                            @if (field.type === fieldTypes.DIVIDER) {
+                                              <hr class="col-span-full my-4 border-gray-300" />
+                                            }
+
+                                            <!-- Heading -->
+                                            @if (field.type === fieldTypes.HEADING) {
+                                              <div class="heading-field col-span-full mb-4">
+                                                @switch (
+                                                  $any(field.metadata)?.headingLevel || 'h2'
+                                                ) {
+                                                  @case ('h1') {
+                                                    <h1
+                                                      class="text-4xl font-bold"
+                                                      [style.text-align]="
+                                                        $any(field.metadata)?.alignment || 'left'
+                                                      "
+                                                      [style.color]="
+                                                        $any(field.metadata)?.color || 'inherit'
+                                                      "
+                                                      [style.font-weight]="
+                                                        $any(field.metadata)?.fontWeight || 'bold'
+                                                      "
+                                                    >
+                                                      {{ field.label }}
+                                                    </h1>
+                                                  }
+                                                  @case ('h2') {
+                                                    <h2
+                                                      class="text-3xl font-bold"
+                                                      [style.text-align]="
+                                                        $any(field.metadata)?.alignment || 'left'
+                                                      "
+                                                      [style.color]="
+                                                        $any(field.metadata)?.color || 'inherit'
+                                                      "
+                                                      [style.font-weight]="
+                                                        $any(field.metadata)?.fontWeight || 'bold'
+                                                      "
+                                                    >
+                                                      {{ field.label }}
+                                                    </h2>
+                                                  }
+                                                  @case ('h3') {
+                                                    <h3
+                                                      class="text-2xl font-bold"
+                                                      [style.text-align]="
+                                                        $any(field.metadata)?.alignment || 'left'
+                                                      "
+                                                      [style.color]="
+                                                        $any(field.metadata)?.color || 'inherit'
+                                                      "
+                                                      [style.font-weight]="
+                                                        $any(field.metadata)?.fontWeight || 'bold'
+                                                      "
+                                                    >
+                                                      {{ field.label }}
+                                                    </h3>
+                                                  }
+                                                  @case ('h4') {
+                                                    <h4
+                                                      class="text-xl font-bold"
+                                                      [style.text-align]="
+                                                        $any(field.metadata)?.alignment || 'left'
+                                                      "
+                                                      [style.color]="
+                                                        $any(field.metadata)?.color || 'inherit'
+                                                      "
+                                                      [style.font-weight]="
+                                                        $any(field.metadata)?.fontWeight || 'bold'
+                                                      "
+                                                    >
+                                                      {{ field.label }}
+                                                    </h4>
+                                                  }
+                                                  @case ('h5') {
+                                                    <h5
+                                                      class="text-lg font-bold"
+                                                      [style.text-align]="
+                                                        $any(field.metadata)?.alignment || 'left'
+                                                      "
+                                                      [style.color]="
+                                                        $any(field.metadata)?.color || 'inherit'
+                                                      "
+                                                      [style.font-weight]="
+                                                        $any(field.metadata)?.fontWeight || 'bold'
+                                                      "
+                                                    >
+                                                      {{ field.label }}
+                                                    </h5>
+                                                  }
+                                                  @case ('h6') {
+                                                    <h6
+                                                      class="text-base font-bold"
+                                                      [style.text-align]="
+                                                        $any(field.metadata)?.alignment || 'left'
+                                                      "
+                                                      [style.color]="
+                                                        $any(field.metadata)?.color || 'inherit'
+                                                      "
+                                                      [style.font-weight]="
+                                                        $any(field.metadata)?.fontWeight || 'bold'
+                                                      "
+                                                    >
+                                                      {{ field.label }}
+                                                    </h6>
+                                                  }
+                                                }
+                                              </div>
+                                            }
+
+                                            <!-- Text Block -->
+                                            @if (field.type === fieldTypes.TEXT_BLOCK) {
+                                              <div
+                                                class="text-block-field col-span-full rounded"
+                                                [class.text-left]="
+                                                  $any(field.metadata)?.alignment === 'left'
+                                                "
+                                                [class.text-center]="
+                                                  $any(field.metadata)?.alignment === 'center'
+                                                "
+                                                [class.text-right]="
+                                                  $any(field.metadata)?.alignment === 'right'
+                                                "
+                                                [class.text-justify]="
+                                                  $any(field.metadata)?.alignment === 'justify'
+                                                "
+                                                [style.background-color]="
+                                                  $any(field.metadata)?.backgroundColor ||
+                                                  'transparent'
+                                                "
+                                                [class.p-0]="
+                                                  $any(field.metadata)?.padding === 'none'
+                                                "
+                                                [class.p-2]="
+                                                  $any(field.metadata)?.padding === 'small'
+                                                "
+                                                [class.p-4]="
+                                                  $any(field.metadata)?.padding === 'medium'
+                                                "
+                                                [class.p-6]="
+                                                  $any(field.metadata)?.padding === 'large'
+                                                "
+                                              >
+                                                <!-- Multi-Paragraph Mode -->
+                                                @if (hasMultipleParagraphs(field)) {
+                                                  <div class="space-y-4">
+                                                    @for (
+                                                      paragraph of getTextBlockParagraphs(field);
+                                                      track paragraph.id
+                                                    ) {
+                                                      <div
+                                                        class="text-block-content prose prose-sm max-w-none"
+                                                        [innerHTML]="
+                                                          getSanitizedParagraphContent(
+                                                            paragraph.content
+                                                          )
+                                                        "
+                                                      ></div>
+                                                    }
+                                                  </div>
+                                                } @else {
+                                                  <!-- Legacy Single Content Mode -->
+                                                  <div
+                                                    class="text-block-content prose prose-sm max-w-none"
+                                                    [class.line-clamp-6]="
+                                                      isTextBlockCollapsed(field.id) &&
+                                                      $any(field.metadata)?.collapsible
+                                                    "
+                                                    [innerHTML]="getSanitizedContent(field)"
+                                                  ></div>
+                                                  @if (
+                                                    $any(field.metadata)?.collapsible &&
+                                                    isTextBlockLong(field)
+                                                  ) {
+                                                    <button
+                                                      type="button"
+                                                      class="read-more-btn theme-button-primary theme-transition mt-2 text-sm"
+                                                      (click)="toggleTextBlockCollapse(field.id)"
+                                                    >
+                                                      {{
+                                                        isTextBlockCollapsed(field.id)
+                                                          ? 'Read more ▼'
+                                                          : 'Read less ▲'
+                                                      }}
+                                                    </button>
+                                                  }
+                                                }
+                                              </div>
+                                            }
+
+                                            <!-- Image Display -->
+                                            @if (field.type === fieldTypes.IMAGE) {
+                                              <div
+                                                class="image-field col-span-full"
+                                                [class.text-left]="
+                                                  $any(field.metadata)?.alignment === 'left'
+                                                "
+                                                [class.text-center]="
+                                                  $any(field.metadata)?.alignment === 'center'
+                                                "
+                                                [class.text-right]="
+                                                  $any(field.metadata)?.alignment === 'right'
+                                                "
+                                                [class.w-full]="
+                                                  $any(field.metadata)?.alignment === 'full'
+                                                "
+                                              >
+                                                @if ($any(field.metadata)?.imageUrl) {
+                                                  <img
+                                                    [src]="$any(field.metadata)?.imageUrl"
+                                                    [alt]="
+                                                      $any(field.metadata)?.altText || field.label
+                                                    "
+                                                    [style.width]="
+                                                      $any(field.metadata)?.width || '100%'
+                                                    "
+                                                    [style.height]="
+                                                      $any(field.metadata)?.height || 'auto'
+                                                    "
+                                                    [style.object-fit]="
+                                                      $any(field.metadata)?.objectFit || 'contain'
+                                                    "
+                                                    [style]="
+                                                      $any(field.metadata)?.customStyle || ''
+                                                    "
+                                                    class="rounded-lg max-w-full"
+                                                  />
+                                                  @if ($any(field.metadata)?.caption) {
+                                                    <p
+                                                      class="mt-2 text-sm theme-text-secondary italic"
+                                                      [class.text-left]="
+                                                        $any(field.metadata)?.alignment === 'left'
+                                                      "
+                                                      [class.text-center]="
+                                                        $any(field.metadata)?.alignment ===
+                                                          'center' ||
+                                                        $any(field.metadata)?.alignment === 'full'
+                                                      "
+                                                      [class.text-right]="
+                                                        $any(field.metadata)?.alignment === 'right'
+                                                      "
+                                                    >
+                                                      {{ $any(field.metadata)?.caption }}
+                                                    </p>
+                                                  }
+                                                } @else {
+                                                  <div
+                                                    class="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center"
+                                                  >
+                                                    <i
+                                                      class="pi pi-image text-4xl text-gray-400 mb-2"
+                                                    ></i>
+                                                    <p class="text-gray-500 text-sm">
+                                                      No image uploaded
+                                                    </p>
+                                                  </div>
+                                                }
+                                              </div>
+                                            }
+
+                                            <!-- Image Gallery Selector -->
+                                            @if (field.type === fieldTypes.IMAGE_GALLERY) {
+                                              <app-image-gallery-renderer
+                                                [field]="field"
+                                                [control]="
+                                                  $any(formGroup.controls[field.fieldName])
+                                                "
+                                              />
+                                            }
+
+                                            @if (field.helpText) {
+                                              <small class="theme-help-text text-sm">{{
+                                                field.helpText
+                                              }}</small>
+                                            }
+
+                                            @if (shouldShowError(field.fieldName)) {
+                                              <div class="theme-error-text text-sm mt-1">
+                                                {{ getErrorMessage(field) }}
+                                              </div>
+                                            }
+                                          </div>
+                                        </div>
+                                      }
+                                    }
+                                  </div>
+                                }
+                              </div>
+                            } @else {
+                              <!-- Regular Column Fields (No Sub-Columns) - Story 14.1 -->
+                              @for (
+                                field of getFieldsInColumn(row.rowId, columnIndex);
+                                track field.id
+                              ) {
+                                @if (isFieldVisible(field)) {
+                                  <div class="form-field" [ngStyle]="getFieldCustomStyles(field)">
+                                    <div class="field-wrapper">
+                                      @if (
+                                        field.type !== fieldTypes.DIVIDER &&
+                                        field.type !== fieldTypes.HEADING &&
+                                        field.type !== fieldTypes.TEXT_BLOCK &&
+                                        field.type !== fieldTypes.IMAGE &&
+                                        field.type !== fieldTypes.CHECKBOX &&
+                                        field.type !== fieldTypes.TOGGLE &&
+                                        field.type !== fieldTypes.IMAGE_GALLERY
+                                      ) {
+                                        <label [for]="field.fieldName" class="theme-label">
+                                          {{ field.label }}
+                                          @if (field.required) {
+                                            <span class="text-red-500">*</span>
+                                          }
+                                        </label>
+                                      }
+
+                                      <!-- Text Input -->
+                                      @if (field.type === fieldTypes.TEXT) {
+                                        <input
+                                          type="text"
+                                          [id]="field.fieldName"
+                                          [formControlName]="field.fieldName"
+                                          [placeholder]="field.placeholder || ''"
+                                          class="w-full theme-input theme-transition"
+                                        />
+                                      }
+
+                                      <!-- Email Input -->
+                                      @if (field.type === fieldTypes.EMAIL) {
+                                        <input
+                                          type="email"
+                                          [id]="field.fieldName"
+                                          [formControlName]="field.fieldName"
+                                          [placeholder]="field.placeholder || ''"
+                                          class="w-full theme-input theme-transition"
+                                        />
+                                      }
+
+                                      <!-- Number Input -->
+                                      @if (field.type === fieldTypes.NUMBER) {
+                                        <input
+                                          type="number"
+                                          [id]="field.fieldName"
+                                          [formControlName]="field.fieldName"
+                                          [placeholder]="field.placeholder || ''"
+                                          [min]="field.validation?.min ?? null"
+                                          [max]="field.validation?.max ?? null"
+                                          class="w-full theme-input theme-transition"
+                                        />
+                                      }
+
+                                      <!-- Textarea -->
+                                      @if (field.type === fieldTypes.TEXTAREA) {
+                                        <textarea
+                                          [id]="field.fieldName"
+                                          [formControlName]="field.fieldName"
+                                          [placeholder]="field.placeholder || ''"
+                                          rows="5"
+                                          class="w-full theme-textarea theme-transition"
+                                        ></textarea>
+                                      }
+
+                                      <!-- Select Dropdown -->
+                                      @if (field.type === fieldTypes.SELECT) {
+                                        <select
+                                          [id]="field.fieldName"
+                                          [formControlName]="field.fieldName"
+                                          class="w-full theme-select theme-transition"
+                                        >
+                                          <option value="">
+                                            {{ field.placeholder || 'Select an option' }}
+                                          </option>
+                                          @for (option of field.options; track option.value) {
+                                            <option [value]="option.value">
+                                              {{ option.label }}
+                                            </option>
+                                          }
+                                        </select>
+                                      }
+
+                                      <!-- Radio Button Group -->
+                                      @if (field.type === fieldTypes.RADIO) {
+                                        <div class="space-y-2">
+                                          @for (option of field.options; track option.value) {
+                                            <div class="flex items-center">
+                                              <input
+                                                type="radio"
+                                                [id]="field.fieldName + '-' + option.value"
+                                                [formControlName]="field.fieldName"
+                                                [value]="option.value"
+                                                class="mr-2"
+                                              />
+                                              <label [for]="field.fieldName + '-' + option.value">
+                                                {{ option.label }}
+                                              </label>
+                                            </div>
+                                          }
+                                        </div>
+                                      }
+
+                                      <!-- Checkbox Group -->
+                                      @if (field.type === fieldTypes.CHECKBOX) {
+                                        <div class="space-y-2">
+                                          <label class="theme-label">
+                                            {{ field.label }}
+                                            @if (field.required) {
+                                              <span class="text-red-500">*</span>
+                                            }
+                                          </label>
+                                          @for (option of field.options; track option.value) {
+                                            <div class="flex items-center">
+                                              <input
+                                                type="checkbox"
+                                                [id]="field.fieldName + '-' + option.value"
+                                                [value]="option.value"
+                                                [checked]="
+                                                  isCheckboxOptionSelected(
+                                                    field.fieldName,
+                                                    option.value
+                                                  )
+                                                "
+                                                (change)="
+                                                  onCheckboxChange(
+                                                    $event,
+                                                    field.fieldName,
+                                                    option.value
+                                                  )
+                                                "
+                                                class="mr-2"
+                                              />
+                                              <label [for]="field.fieldName + '-' + option.value">
+                                                {{ option.label }}
+                                              </label>
+                                            </div>
+                                          }
+                                        </div>
+                                      }
+
+                                      <!-- Toggle Switch -->
+                                      @if (field.type === fieldTypes.TOGGLE) {
+                                        <div class="flex items-center gap-3">
+                                          <input
+                                            type="checkbox"
+                                            [id]="field.fieldName"
+                                            [formControlName]="field.fieldName"
+                                            class="toggle-switch"
+                                          />
+                                          <label [for]="field.fieldName">
+                                            {{ field.label }}
+                                            @if (field.required) {
+                                              <span class="text-red-500">*</span>
+                                            }
+                                          </label>
+                                        </div>
+                                      }
+
+                                      <!-- Date Picker -->
+                                      @if (field.type === fieldTypes.DATE) {
+                                        <input
+                                          type="date"
+                                          [id]="field.fieldName"
+                                          [formControlName]="field.fieldName"
+                                          class="w-full theme-input theme-transition"
+                                        />
+                                      }
+
+                                      <!-- DateTime Picker -->
+                                      @if (field.type === fieldTypes.DATETIME) {
+                                        <input
+                                          type="datetime-local"
+                                          [id]="field.fieldName"
+                                          [formControlName]="field.fieldName"
+                                          class="w-full theme-input theme-transition"
+                                        />
+                                      }
+
+                                      <!-- File Upload -->
+                                      @if (field.type === fieldTypes.FILE) {
+                                        <input
+                                          type="file"
+                                          [id]="field.fieldName"
+                                          [accept]="
+                                            field.validation?.acceptedFileTypes?.join(',') || '*'
+                                          "
+                                          class="w-full theme-input theme-transition"
+                                        />
+                                      }
+
+                                      <!-- Divider -->
+                                      @if (field.type === fieldTypes.DIVIDER) {
+                                        <hr class="col-span-full my-4 border-gray-300" />
+                                      }
+
+                                      <!-- Heading -->
+                                      @if (field.type === fieldTypes.HEADING) {
+                                        <div class="heading-field col-span-full mb-4">
+                                          @switch ($any(field.metadata)?.headingLevel || 'h2') {
+                                            @case ('h1') {
+                                              <h1
+                                                class="text-4xl font-bold"
+                                                [style.text-align]="
+                                                  $any(field.metadata)?.alignment || 'left'
+                                                "
+                                                [style.color]="
+                                                  $any(field.metadata)?.color || 'inherit'
+                                                "
+                                                [style.font-weight]="
+                                                  $any(field.metadata)?.fontWeight || 'bold'
+                                                "
+                                              >
+                                                {{ field.label }}
+                                              </h1>
+                                            }
+                                            @case ('h2') {
+                                              <h2
+                                                class="text-3xl font-bold"
+                                                [style.text-align]="
+                                                  $any(field.metadata)?.alignment || 'left'
+                                                "
+                                                [style.color]="
+                                                  $any(field.metadata)?.color || 'inherit'
+                                                "
+                                                [style.font-weight]="
+                                                  $any(field.metadata)?.fontWeight || 'bold'
+                                                "
+                                              >
+                                                {{ field.label }}
+                                              </h2>
+                                            }
+                                            @case ('h3') {
+                                              <h3
+                                                class="text-2xl font-bold"
+                                                [style.text-align]="
+                                                  $any(field.metadata)?.alignment || 'left'
+                                                "
+                                                [style.color]="
+                                                  $any(field.metadata)?.color || 'inherit'
+                                                "
+                                                [style.font-weight]="
+                                                  $any(field.metadata)?.fontWeight || 'bold'
+                                                "
+                                              >
+                                                {{ field.label }}
+                                              </h3>
+                                            }
+                                            @case ('h4') {
+                                              <h4
+                                                class="text-xl font-bold"
+                                                [style.text-align]="
+                                                  $any(field.metadata)?.alignment || 'left'
+                                                "
+                                                [style.color]="
+                                                  $any(field.metadata)?.color || 'inherit'
+                                                "
+                                                [style.font-weight]="
+                                                  $any(field.metadata)?.fontWeight || 'bold'
+                                                "
+                                              >
+                                                {{ field.label }}
+                                              </h4>
+                                            }
+                                            @case ('h5') {
+                                              <h5
+                                                class="text-lg font-bold"
+                                                [style.text-align]="
+                                                  $any(field.metadata)?.alignment || 'left'
+                                                "
+                                                [style.color]="
+                                                  $any(field.metadata)?.color || 'inherit'
+                                                "
+                                                [style.font-weight]="
+                                                  $any(field.metadata)?.fontWeight || 'bold'
+                                                "
+                                              >
+                                                {{ field.label }}
+                                              </h5>
+                                            }
+                                            @case ('h6') {
+                                              <h6
+                                                class="text-base font-bold"
+                                                [style.text-align]="
+                                                  $any(field.metadata)?.alignment || 'left'
+                                                "
+                                                [style.color]="
+                                                  $any(field.metadata)?.color || 'inherit'
+                                                "
+                                                [style.font-weight]="
+                                                  $any(field.metadata)?.fontWeight || 'bold'
+                                                "
+                                              >
+                                                {{ field.label }}
+                                              </h6>
+                                            }
+                                          }
+                                        </div>
+                                      }
+
+                                      <!-- Text Block -->
+                                      @if (field.type === fieldTypes.TEXT_BLOCK) {
+                                        <div
+                                          class="text-block-field col-span-full rounded"
+                                          [class.text-left]="
+                                            $any(field.metadata)?.alignment === 'left'
+                                          "
+                                          [class.text-center]="
+                                            $any(field.metadata)?.alignment === 'center'
+                                          "
+                                          [class.text-right]="
+                                            $any(field.metadata)?.alignment === 'right'
+                                          "
+                                          [class.text-justify]="
+                                            $any(field.metadata)?.alignment === 'justify'
+                                          "
+                                          [style.background-color]="
+                                            $any(field.metadata)?.backgroundColor || 'transparent'
+                                          "
+                                          [class.p-0]="$any(field.metadata)?.padding === 'none'"
+                                          [class.p-2]="$any(field.metadata)?.padding === 'small'"
+                                          [class.p-4]="$any(field.metadata)?.padding === 'medium'"
+                                          [class.p-6]="$any(field.metadata)?.padding === 'large'"
+                                        >
+                                          <!-- Multi-Paragraph Mode -->
+                                          @if (hasMultipleParagraphs(field)) {
+                                            <div class="space-y-4">
+                                              @for (
+                                                paragraph of getTextBlockParagraphs(field);
+                                                track paragraph.id
+                                              ) {
+                                                <div
+                                                  class="text-block-content prose prose-sm max-w-none"
+                                                  [innerHTML]="
+                                                    getSanitizedParagraphContent(paragraph.content)
+                                                  "
+                                                ></div>
+                                              }
+                                            </div>
+                                          } @else {
+                                            <!-- Legacy Single Content Mode -->
+                                            <div
+                                              class="text-block-content prose prose-sm max-w-none"
+                                              [class.line-clamp-6]="
+                                                isTextBlockCollapsed(field.id) &&
+                                                $any(field.metadata)?.collapsible
+                                              "
+                                              [innerHTML]="getSanitizedContent(field)"
+                                            ></div>
+                                            @if (
+                                              $any(field.metadata)?.collapsible &&
+                                              isTextBlockLong(field)
+                                            ) {
+                                              <button
+                                                type="button"
+                                                class="read-more-btn theme-button-primary theme-transition mt-2 text-sm"
+                                                (click)="toggleTextBlockCollapse(field.id)"
+                                              >
+                                                {{
+                                                  isTextBlockCollapsed(field.id)
+                                                    ? 'Read more ▼'
+                                                    : 'Read less ▲'
+                                                }}
+                                              </button>
+                                            }
+                                          }
+                                        </div>
+                                      }
+
+                                      <!-- Image Display -->
+                                      @if (field.type === fieldTypes.IMAGE) {
+                                        <div
+                                          class="image-field col-span-full"
+                                          [class.text-left]="
+                                            $any(field.metadata)?.alignment === 'left'
+                                          "
+                                          [class.text-center]="
+                                            $any(field.metadata)?.alignment === 'center'
+                                          "
+                                          [class.text-right]="
+                                            $any(field.metadata)?.alignment === 'right'
+                                          "
+                                          [class.w-full]="
+                                            $any(field.metadata)?.alignment === 'full'
+                                          "
+                                        >
+                                          @if ($any(field.metadata)?.imageUrl) {
+                                            <img
+                                              [src]="$any(field.metadata)?.imageUrl"
+                                              [alt]="$any(field.metadata)?.altText || field.label"
+                                              [style.width]="$any(field.metadata)?.width || '100%'"
+                                              [style.height]="
+                                                $any(field.metadata)?.height || 'auto'
+                                              "
+                                              [style.object-fit]="
+                                                $any(field.metadata)?.objectFit || 'contain'
+                                              "
+                                              [style]="$any(field.metadata)?.customStyle || ''"
+                                              class="rounded-lg max-w-full"
+                                            />
+                                            @if ($any(field.metadata)?.caption) {
+                                              <p
+                                                class="mt-2 text-sm theme-text-secondary italic"
+                                                [class.text-left]="
+                                                  $any(field.metadata)?.alignment === 'left'
+                                                "
+                                                [class.text-center]="
+                                                  $any(field.metadata)?.alignment === 'center' ||
+                                                  $any(field.metadata)?.alignment === 'full'
+                                                "
+                                                [class.text-right]="
+                                                  $any(field.metadata)?.alignment === 'right'
+                                                "
+                                              >
+                                                {{ $any(field.metadata)?.caption }}
+                                              </p>
+                                            }
+                                          } @else {
+                                            <div
+                                              class="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center"
+                                            >
+                                              <i
+                                                class="pi pi-image text-4xl text-gray-400 mb-2"
+                                              ></i>
+                                              <p class="text-gray-500 text-sm">No image uploaded</p>
+                                            </div>
+                                          }
+                                        </div>
+                                      }
+
+                                      <!-- Image Gallery Selector -->
+                                      @if (field.type === fieldTypes.IMAGE_GALLERY) {
+                                        <app-image-gallery-renderer
+                                          [field]="field"
+                                          [control]="$any(formGroup.controls[field.fieldName])"
+                                        />
+                                      }
+
+                                      @if (field.helpText) {
+                                        <small class="theme-help-text text-sm">{{
+                                          field.helpText
+                                        }}</small>
+                                      }
+
+                                      @if (shouldShowError(field.fieldName)) {
+                                        <div class="theme-error-text text-sm mt-1">
+                                          {{ getErrorMessage(field) }}
+                                        </div>
+                                      }
+                                    </div>
+                                  </div>
+                                }
+                              }
+                            }
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              } @else {
+                <!-- Global Grid Layout Mode (Backward Compatible) -->
+                <div class="form-fields-grid" [ngClass]="getGridClass()">
+                  @for (field of getFieldsWithoutPosition(); track field.id) {
+                    @if (isFieldVisible(field)) {
+                      <div
+                        class="form-field"
+                        [ngClass]="getFieldSpacingClass()"
+                        [ngStyle]="getFieldCustomStyles(field)"
+                      >
+                        <div class="field-wrapper">
+                          @if (
+                            field.type !== fieldTypes.DIVIDER &&
+                            field.type !== fieldTypes.HEADING &&
+                            field.type !== fieldTypes.TEXT_BLOCK &&
+                            field.type !== fieldTypes.IMAGE &&
+                            field.type !== fieldTypes.CHECKBOX &&
+                            field.type !== fieldTypes.TOGGLE &&
+                            field.type !== fieldTypes.IMAGE_GALLERY
+                          ) {
+                            <label [for]="field.fieldName" class="theme-label">
+                              {{ field.label }}
+                              @if (field.required) {
+                                <span class="text-red-500">*</span>
+                              }
+                            </label>
+                          }
+
+                          <!-- Text Input -->
+                          @if (field.type === fieldTypes.TEXT) {
+                            <input
+                              type="text"
+                              [id]="field.fieldName"
+                              [formControlName]="field.fieldName"
+                              [placeholder]="field.placeholder || ''"
+                              class="w-full theme-input theme-transition"
+                            />
+                          }
+
+                          <!-- Email Input -->
+                          @if (field.type === fieldTypes.EMAIL) {
+                            <input
+                              type="email"
+                              [id]="field.fieldName"
+                              [formControlName]="field.fieldName"
+                              [placeholder]="field.placeholder || ''"
+                              class="w-full theme-input theme-transition"
+                            />
+                          }
+
+                          <!-- Number Input -->
+                          @if (field.type === fieldTypes.NUMBER) {
+                            <input
+                              type="number"
+                              [id]="field.fieldName"
+                              [formControlName]="field.fieldName"
+                              [placeholder]="field.placeholder || ''"
+                              [min]="field.validation?.min ?? null"
+                              [max]="field.validation?.max ?? null"
+                              class="w-full theme-input theme-transition"
+                            />
+                          }
+
+                          <!-- Textarea -->
+                          @if (field.type === fieldTypes.TEXTAREA) {
+                            <textarea
+                              [id]="field.fieldName"
+                              [formControlName]="field.fieldName"
+                              [placeholder]="field.placeholder || ''"
+                              rows="5"
+                              class="w-full theme-textarea theme-transition"
+                            ></textarea>
+                          }
+
+                          <!-- Select Dropdown -->
+                          @if (field.type === fieldTypes.SELECT) {
+                            <select
+                              [id]="field.fieldName"
+                              [formControlName]="field.fieldName"
+                              class="w-full theme-select theme-transition"
+                            >
+                              <option value="">
+                                {{ field.placeholder || 'Select an option' }}
+                              </option>
+                              @for (option of field.options; track option.value) {
+                                <option [value]="option.value">{{ option.label }}</option>
+                              }
+                            </select>
+                          }
+
+                          <!-- Radio Button Group -->
+                          @if (field.type === fieldTypes.RADIO) {
+                            <div class="space-y-2">
+                              @for (option of field.options; track option.value) {
+                                <div class="flex items-center">
+                                  <input
+                                    type="radio"
+                                    [id]="field.fieldName + '-' + option.value"
+                                    [formControlName]="field.fieldName"
+                                    [value]="option.value"
+                                    class="mr-2"
+                                  />
+                                  <label [for]="field.fieldName + '-' + option.value">
+                                    {{ option.label }}
+                                  </label>
+                                </div>
+                              }
+                            </div>
+                          }
+
+                          <!-- Checkbox Group -->
+                          @if (field.type === fieldTypes.CHECKBOX) {
+                            <div class="space-y-2">
+                              <label class="theme-label">
+                                {{ field.label }}
+                                @if (field.required) {
+                                  <span class="text-red-500">*</span>
+                                }
+                              </label>
+                              @for (option of field.options; track option.value) {
+                                <div class="flex items-center">
+                                  <input
+                                    type="checkbox"
+                                    [id]="field.fieldName + '-' + option.value"
+                                    [value]="option.value"
+                                    [checked]="
+                                      isCheckboxOptionSelected(field.fieldName, option.value)
+                                    "
+                                    (change)="
+                                      onCheckboxChange($event, field.fieldName, option.value)
+                                    "
+                                    class="mr-2"
+                                  />
+                                  <label [for]="field.fieldName + '-' + option.value">
+                                    {{ option.label }}
+                                  </label>
+                                </div>
+                              }
+                            </div>
+                          }
+
+                          <!-- Toggle Switch -->
+                          @if (field.type === fieldTypes.TOGGLE) {
+                            <div class="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                [id]="field.fieldName"
+                                [formControlName]="field.fieldName"
+                                class="toggle-switch"
+                              />
+                              <label [for]="field.fieldName">
+                                {{ field.label }}
+                                @if (field.required) {
+                                  <span class="text-red-500">*</span>
+                                }
+                              </label>
+                            </div>
+                          }
+
+                          <!-- Date Picker -->
+                          @if (field.type === fieldTypes.DATE) {
+                            <input
+                              type="date"
+                              [id]="field.fieldName"
+                              [formControlName]="field.fieldName"
+                              class="w-full theme-input theme-transition"
+                            />
+                          }
+
+                          <!-- DateTime Picker -->
+                          @if (field.type === fieldTypes.DATETIME) {
+                            <input
+                              type="datetime-local"
+                              [id]="field.fieldName"
+                              [formControlName]="field.fieldName"
+                              class="w-full theme-input theme-transition"
+                            />
+                          }
+
+                          <!-- File Upload -->
+                          @if (field.type === fieldTypes.FILE) {
+                            <input
+                              type="file"
+                              [id]="field.fieldName"
+                              [accept]="field.validation?.acceptedFileTypes?.join(',') || '*'"
+                              class="w-full theme-input theme-transition"
+                            />
+                          }
+
+                          <!-- Divider -->
+                          @if (field.type === fieldTypes.DIVIDER) {
+                            <hr class="col-span-full my-4 border-gray-300" />
+                          }
+
+                          <!-- Heading -->
+                          @if (field.type === fieldTypes.HEADING) {
+                            <div class="heading-field col-span-full mb-4">
+                              @switch ($any(field.metadata)?.headingLevel || 'h2') {
+                                @case ('h1') {
+                                  <h1
+                                    class="text-4xl font-bold"
+                                    [style.text-align]="$any(field.metadata)?.alignment || 'left'"
+                                    [style.color]="$any(field.metadata)?.color || 'inherit'"
+                                    [style.font-weight]="$any(field.metadata)?.fontWeight || 'bold'"
+                                  >
+                                    {{ field.label }}
+                                  </h1>
+                                }
+                                @case ('h2') {
+                                  <h2
+                                    class="text-3xl font-bold"
+                                    [style.text-align]="$any(field.metadata)?.alignment || 'left'"
+                                    [style.color]="$any(field.metadata)?.color || 'inherit'"
+                                    [style.font-weight]="$any(field.metadata)?.fontWeight || 'bold'"
+                                  >
+                                    {{ field.label }}
+                                  </h2>
+                                }
+                                @case ('h3') {
+                                  <h3
+                                    class="text-2xl font-bold"
+                                    [style.text-align]="$any(field.metadata)?.alignment || 'left'"
+                                    [style.color]="$any(field.metadata)?.color || 'inherit'"
+                                    [style.font-weight]="$any(field.metadata)?.fontWeight || 'bold'"
+                                  >
+                                    {{ field.label }}
+                                  </h3>
+                                }
+                                @case ('h4') {
+                                  <h4
+                                    class="text-xl font-bold"
+                                    [style.text-align]="$any(field.metadata)?.alignment || 'left'"
+                                    [style.color]="$any(field.metadata)?.color || 'inherit'"
+                                    [style.font-weight]="$any(field.metadata)?.fontWeight || 'bold'"
+                                  >
+                                    {{ field.label }}
+                                  </h4>
+                                }
+                                @case ('h5') {
+                                  <h5
+                                    class="text-lg font-bold"
+                                    [style.text-align]="$any(field.metadata)?.alignment || 'left'"
+                                    [style.color]="$any(field.metadata)?.color || 'inherit'"
+                                    [style.font-weight]="$any(field.metadata)?.fontWeight || 'bold'"
+                                  >
+                                    {{ field.label }}
+                                  </h5>
+                                }
+                                @case ('h6') {
+                                  <h6
+                                    class="text-base font-bold"
+                                    [style.text-align]="$any(field.metadata)?.alignment || 'left'"
+                                    [style.color]="$any(field.metadata)?.color || 'inherit'"
+                                    [style.font-weight]="$any(field.metadata)?.fontWeight || 'bold'"
+                                  >
+                                    {{ field.label }}
+                                  </h6>
+                                }
+                              }
+                            </div>
+                          }
+
+                          <!-- Text Block -->
+                          @if (field.type === fieldTypes.TEXT_BLOCK) {
+                            <div
+                              class="text-block-field col-span-full rounded"
+                              [class.text-left]="$any(field.metadata)?.alignment === 'left'"
+                              [class.text-center]="$any(field.metadata)?.alignment === 'center'"
+                              [class.text-right]="$any(field.metadata)?.alignment === 'right'"
+                              [class.text-justify]="$any(field.metadata)?.alignment === 'justify'"
+                              [style.background-color]="
+                                $any(field.metadata)?.backgroundColor || 'transparent'
+                              "
+                              [class.p-0]="$any(field.metadata)?.padding === 'none'"
+                              [class.p-2]="$any(field.metadata)?.padding === 'small'"
+                              [class.p-4]="$any(field.metadata)?.padding === 'medium'"
+                              [class.p-6]="$any(field.metadata)?.padding === 'large'"
+                            >
+                              <!-- Multi-Paragraph Mode -->
+                              @if (hasMultipleParagraphs(field)) {
+                                <div class="space-y-4">
+                                  @for (
+                                    paragraph of getTextBlockParagraphs(field);
+                                    track paragraph.id
+                                  ) {
+                                    <div
+                                      class="text-block-content prose prose-sm max-w-none"
+                                      [innerHTML]="getSanitizedParagraphContent(paragraph.content)"
+                                    ></div>
+                                  }
+                                </div>
+                              } @else {
+                                <!-- Legacy Single Content Mode -->
+                                <div
+                                  class="text-block-content prose prose-sm max-w-none"
+                                  [class.line-clamp-6]="
+                                    isTextBlockCollapsed(field.id) &&
+                                    $any(field.metadata)?.collapsible
+                                  "
+                                  [innerHTML]="getSanitizedContent(field)"
+                                ></div>
+                                @if ($any(field.metadata)?.collapsible && isTextBlockLong(field)) {
+                                  <button
+                                    type="button"
+                                    class="read-more-btn text-blue-600 hover:text-blue-700 mt-2 text-sm font-medium"
+                                    (click)="toggleTextBlockCollapse(field.id)"
+                                  >
+                                    {{
+                                      isTextBlockCollapsed(field.id) ? 'Read more ▼' : 'Read less ▲'
+                                    }}
+                                  </button>
+                                }
+                              }
+                            </div>
+                          }
+
+                          <!-- Image Display -->
+                          @if (field.type === fieldTypes.IMAGE) {
+                            <div
+                              class="image-field col-span-full"
+                              [class.text-left]="$any(field.metadata)?.alignment === 'left'"
+                              [class.text-center]="$any(field.metadata)?.alignment === 'center'"
+                              [class.text-right]="$any(field.metadata)?.alignment === 'right'"
+                              [class.w-full]="$any(field.metadata)?.alignment === 'full'"
+                            >
+                              @if ($any(field.metadata)?.imageUrl) {
+                                <img
+                                  [src]="$any(field.metadata)?.imageUrl"
+                                  [alt]="$any(field.metadata)?.altText || field.label"
+                                  [style.width]="$any(field.metadata)?.width || '100%'"
+                                  [style.height]="$any(field.metadata)?.height || 'auto'"
+                                  [style.object-fit]="$any(field.metadata)?.objectFit || 'contain'"
+                                  [style]="$any(field.metadata)?.customStyle || ''"
+                                  class="rounded-lg max-w-full"
+                                />
+                                @if ($any(field.metadata)?.caption) {
+                                  <p
+                                    class="mt-2 text-sm text-gray-600 italic"
+                                    [class.text-left]="$any(field.metadata)?.alignment === 'left'"
+                                    [class.text-center]="
+                                      $any(field.metadata)?.alignment === 'center' ||
+                                      $any(field.metadata)?.alignment === 'full'
+                                    "
+                                    [class.text-right]="$any(field.metadata)?.alignment === 'right'"
+                                  >
+                                    {{ $any(field.metadata)?.caption }}
+                                  </p>
+                                }
+                              } @else {
+                                <div
+                                  class="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center"
+                                >
+                                  <i class="pi pi-image text-4xl text-gray-400 mb-2"></i>
+                                  <p class="text-gray-500 text-sm">No image uploaded</p>
+                                </div>
+                              }
+                            </div>
+                          }
+
+                          <!-- Image Gallery Selector -->
+                          @if (field.type === fieldTypes.IMAGE_GALLERY) {
+                            <app-image-gallery-renderer
+                              [field]="field"
+                              [control]="$any(formGroup.controls[field.fieldName])"
+                            />
+                          }
+
+                          @if (field.helpText) {
+                            <small class="theme-help-text text-sm">{{ field.helpText }}</small>
+                          }
+
+                          @if (shouldShowError(field.fieldName)) {
+                            <div class="theme-error-text text-sm mt-1">
+                              {{ getErrorMessage(field) }}
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    }
+                  }
+                </div>
+              }
+
+              <!-- Step Navigation Buttons with Pagination Dots (New Design) -->
+              @if (isStepFormEnabled() && !isPreview) {
+                <div
+                  class="step-navigation-buttons flex flex-col md:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t border-gray-200"
+                >
+                  <!-- Previous Button -->
+                  <button
+                    type="button"
+                    pButton
+                    label="Previous"
+                    icon="pi pi-arrow-left"
+                    class="p-button-secondary w-full md:w-auto order-1"
+                    [disabled]="isFirstStep()"
+                    [attr.aria-label]="'Go to previous step'"
+                    (click)="goToPreviousStep()"
+                  ></button>
+
+                  <!-- Pagination Dots with Smart Window (centered) -->
+                  <div class="flex items-center justify-center gap-2 order-2 md:order-2">
+                    @for (item of visibleStepDots(); track $index) {
+                      @if (item.type === 'dot') {
+                        <button
+                          type="button"
+                          [attr.aria-label]="'Go to step ' + (item.index! + 1)"
+                          class="pagination-dot transition-all duration-200"
+                          [class.active]="item.index === currentStepIndex()"
+                          [class.completed]="stepValidationStates().has(item.index!)"
+                          [class.clickable]="
+                            item.index! < currentStepIndex() ||
+                            stepValidationStates().has(item.index!)
+                          "
+                          (click)="goToStep(item.index!)"
+                        >
+                          <span class="sr-only">Step {{ item.index! + 1 }}</span>
+                        </button>
+                      } @else {
+                        <span class="pagination-ellipsis" aria-hidden="true">...</span>
+                      }
+                    }
+                  </div>
+
+                  <!-- Next/Submit Button -->
+                  @if (!isLastStep()) {
+                    <button
+                      type="button"
+                      pButton
+                      label="Next"
+                      icon="pi pi-arrow-right"
+                      iconPos="right"
+                      class="p-button-primary w-full md:w-auto order-3"
+                      [attr.aria-label]="'Go to next step'"
+                      (click)="goToNextStep()"
+                    ></button>
+                  } @else {
+                    <button
+                      type="submit"
+                      pButton
+                      [label]="settings?.submission?.submitButtonText || 'Submit'"
+                      icon="pi pi-check"
+                      class="p-button-success w-full md:w-auto order-3"
+                      [loading]="state.submitting"
+                      [attr.aria-label]="'Submit form'"
+                      (click)="onSubmit()"
+                    ></button>
+                  }
+                </div>
+              } @else {
+                <!-- Single-Page Form Submit Button -->
+                <div class="flex justify-end mt-6">
+                  @if (!isPreview) {
+                    <button
+                      type="submit"
+                      pButton
+                      [disabled]="formGroup.invalid || state.submitting"
+                      class="theme-button-primary theme-transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      @if (state.submitting) {
+                        <i class="pi pi-spin pi-spinner mr-2"></i>
+                        Submitting...
+                      } @else {
+                        <i class="pi pi-check mr-2"></i>
+                        {{ settings?.submission?.submitButtonText || 'Submit' }}
+                      }
+                    </button>
+                  }
+                </div>
+              }
+            </form>
+          </div>
+        </p-card>
+
+        <!-- Promotional Footer -->
+        @if (!isPreview) {
+          <div class="form-footer text-center mt-8 mb-4">
+            <p class="text-xs text-gray-400">
+              This form was created with
+              <a
+                href="/"
+                class="text-gray-500 hover:text-gray-600 underline"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Form Builder
+              </a>
+              — Build your own custom forms in minutes
+            </p>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>

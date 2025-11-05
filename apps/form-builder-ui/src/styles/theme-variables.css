@@ -1,0 +1,476 @@
+/**
+ * Theme CSS Variables Stylesheet
+ *
+ * This stylesheet defines complete theme utility classes for all form elements.
+ * CSS variables are dynamically injected by ThemePreviewService on :root.
+ *
+ * Architecture Overview:
+ * - ThemePreviewService injects CSS variables on :root element
+ * - Theme utility classes consume these variables
+ * - Classes applied in Form Builder canvas, public renderer, and preview contexts
+ * - Responsive variants handle mobile/tablet/desktop breakpoints
+ * - Smooth transitions for seamless theme switching
+ *
+ * CSS Variable Naming Convention:
+ * - Container/Background: --theme-background-*, --theme-container-*
+ * - Typography: --theme-font-*, --theme-heading-*, --theme-text-*
+ * - Colors: --theme-primary-color, --theme-secondary-color
+ * - Layout: --theme-row-*, --theme-column-*
+ * - Fields: --theme-input-*, --theme-label-*, --theme-button-*
+ * - Navigation: --theme-step-*
+ *
+ * Theme Utility Classes Work With ThemePreviewService:
+ * 1. User selects/creates a theme in admin or form builder
+ * 2. ThemePreviewService.applyThemeCss(theme) injects CSS variables on :root
+ * 3. Theme utility classes reference these variables via var(--theme-*)
+ * 4. Elements with theme classes render with applied theme styles
+ * 5. Theme changes trigger smooth CSS transitions
+ *
+ * IMPORTANT: This file rebuilt in Epic 23.3 after Epic 21/22 rollback (Story 23.1).
+ * Complete implementation covering ALL form elements, backgrounds, containers, and navigation.
+ */
+
+/* ============================================
+   CONTAINER & BACKGROUND CLASSES
+   ============================================ */
+
+/**
+ * Full page background for public forms.
+ * Supports solid color, linear gradient, radial gradient, and background images.
+ * Usage: Apply to outermost wrapper div in public form renderer
+ * Example: <div class="theme-form-outer-background">...</div>
+ */
+.theme-form-outer-background {
+  background-color: var(--theme-background-color, var(--theme-bg-color, #ffffff));
+  background-image: var(--theme-background-image, none);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  min-height: 100vh;
+}
+
+/**
+ * Outer form wrapper container.
+ * Centers form content with padding, border radius, and box shadow.
+ * Usage: Apply to main form container div
+ * Example: <div class="theme-form-container-wrapper">...</div>
+ */
+.theme-form-container-wrapper {
+  background-color: var(--theme-container-background, var(--theme-container-bg, #ffffff));
+  border-radius: var(--theme-container-border-radius, var(--theme-field-radius, 8px));
+  padding: var(--theme-container-padding, 24px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/**
+ * Form Builder canvas background.
+ * Matches public form background for consistent preview experience.
+ * Usage: Apply to canvas preview area in form builder
+ * Example: <div class="theme-form-canvas-background">...</div>
+ */
+.theme-form-canvas-background {
+  background-color: var(--theme-background-color, var(--theme-bg-color, #f9fafb));
+  background-image: var(--theme-background-image, none);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  min-height: 600px;
+  padding: 24px;
+}
+
+/* ============================================
+   ROW LAYOUT CONTAINER CLASSES
+   ============================================ */
+
+/**
+ * Row layout wrapper for multi-column forms.
+ * Enables row-based layout with configurable columns (2-4 columns per row).
+ * Uses CSS Grid for responsive column distribution.
+ * Usage: Apply to row wrapper div in row-based forms
+ * Example: <div class="theme-row-container" style="grid-template-columns: repeat(3, 1fr)">...</div>
+ */
+.theme-row-container {
+  display: grid;
+  gap: var(--theme-row-spacing, var(--theme-field-spacing, 16px));
+  margin-bottom: var(--theme-row-spacing, var(--theme-field-spacing, 16px));
+  background-color: var(--theme-row-background, transparent);
+}
+
+/**
+ * Individual column within a row.
+ * Supports multiple fields stacked vertically within a single column.
+ * Flexbox layout for vertical field stacking with consistent spacing.
+ * Usage: Apply to column div within row container
+ * Example: <div class="theme-column-container">...</div>
+ */
+.theme-column-container {
+  padding: var(--theme-column-padding, 12px);
+  gap: var(--theme-column-gap, 16px);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================================
+   FIELD ELEMENT CLASSES
+   ============================================ */
+
+/**
+ * Text input field styling.
+ * Applies to text, email, number, url, tel input types.
+ * Usage: <input type="text" class="theme-input" />
+ */
+.theme-input {
+  background-color: var(--theme-input-background, #ffffff);
+  border: 1px solid var(--theme-input-border-color, #d1d5db);
+  color: var(--theme-input-text-color, var(--theme-text-primary, #1f2937));
+  border-radius: var(--theme-border-radius, var(--theme-field-radius, 6px));
+  padding: 10px 12px;
+  font-family: var(--theme-body-font, var(--theme-font-body, 'Inter'));
+  font-size: var(--theme-font-size-base, 16px);
+  width: 100%;
+}
+
+.theme-input:focus {
+  outline: none;
+  border-color: var(--theme-primary-color, #3b82f6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/**
+ * Textarea field styling.
+ * Applies to multi-line text input fields.
+ * Usage: <textarea class="theme-textarea"></textarea>
+ */
+.theme-textarea {
+  background-color: var(--theme-input-background, #ffffff);
+  border: 1px solid var(--theme-input-border-color, #d1d5db);
+  color: var(--theme-input-text-color, var(--theme-text-primary, #1f2937));
+  border-radius: var(--theme-border-radius, var(--theme-field-radius, 6px));
+  padding: 10px 12px;
+  font-family: var(--theme-body-font, var(--theme-font-body, 'Inter'));
+  font-size: var(--theme-font-size-base, 16px);
+  width: 100%;
+  min-height: 100px;
+  resize: vertical;
+}
+
+.theme-textarea:focus {
+  outline: none;
+  border-color: var(--theme-primary-color, #3b82f6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/**
+ * Select dropdown styling.
+ * Applies to dropdown select elements.
+ * Usage: <select class="theme-select">...</select>
+ */
+.theme-select {
+  background-color: var(--theme-input-background, #ffffff);
+  border: 1px solid var(--theme-input-border-color, #d1d5db);
+  color: var(--theme-input-text-color, var(--theme-text-primary, #1f2937));
+  border-radius: var(--theme-border-radius, var(--theme-field-radius, 6px));
+  padding: 10px 12px;
+  font-family: var(--theme-body-font, var(--theme-font-body, 'Inter'));
+  font-size: var(--theme-font-size-base, 16px);
+  width: 100%;
+}
+
+.theme-select:focus {
+  outline: none;
+  border-color: var(--theme-primary-color, #3b82f6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/**
+ * Checkbox input styling.
+ * Uses CSS accent-color for modern browser theme integration.
+ * Usage: <input type="checkbox" class="theme-checkbox" />
+ */
+.theme-checkbox {
+  accent-color: var(--theme-primary-color, #3b82f6);
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+/**
+ * Radio button input styling.
+ * Uses CSS accent-color for modern browser theme integration.
+ * Usage: <input type="radio" class="theme-radio" />
+ */
+.theme-radio {
+  accent-color: var(--theme-primary-color, #3b82f6);
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+/**
+ * Field label styling.
+ * Applies to form field labels.
+ * Usage: <label class="theme-label">Field Name</label>
+ */
+.theme-label {
+  color: var(--theme-label-color, var(--theme-text-primary, #374151));
+  font-family: var(--theme-body-font, var(--theme-font-body, 'Inter'));
+  font-size: var(--theme-font-size-base, 16px);
+  font-weight: 500;
+  margin-bottom: 6px;
+  display: block;
+}
+
+/**
+ * Heading text styling.
+ * Applies to form headings and titles.
+ * Usage: <h1 class="theme-heading">Form Title</h1>
+ */
+.theme-heading {
+  color: var(--theme-heading-color, var(--theme-text-primary, #111827));
+  font-family: var(--theme-heading-font, var(--theme-font-heading, 'Inter'));
+  font-size: calc(var(--theme-font-size-base, 16px) * 1.5);
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+/**
+ * Help text styling.
+ * Applies to field help text and descriptions.
+ * Usage: <small class="theme-help-text">Enter your email address</small>
+ */
+.theme-help-text {
+  color: var(--theme-help-text-color, var(--theme-text-secondary, #6b7280));
+  font-family: var(--theme-body-font, var(--theme-font-body, 'Inter'));
+  font-size: calc(var(--theme-font-size-base, 16px) * 0.875);
+  margin-top: 4px;
+  display: block;
+}
+
+/**
+ * Error text styling.
+ * Applies to validation error messages.
+ * IMPORTANT: Always red (#dc2626) for WCAG AA accessibility compliance.
+ * Usage: <span class="theme-error-text">This field is required</span>
+ */
+.theme-error-text {
+  color: #dc2626; /* Always red for accessibility - not themeable */
+  font-family: var(--theme-body-font, var(--theme-font-body, 'Inter'));
+  font-size: calc(var(--theme-font-size-base, 16px) * 0.875);
+  margin-top: 4px;
+  display: block;
+}
+
+/**
+ * Primary button styling.
+ * Applies to submit buttons and primary actions.
+ * Usage: <button class="theme-button-primary">Submit</button>
+ */
+.theme-button-primary {
+  background-color: var(--theme-button-primary-background, var(--theme-primary-color, #3b82f6));
+  color: var(--theme-button-primary-text, #ffffff);
+  border: none;
+  border-radius: var(--theme-border-radius, var(--theme-field-radius, 6px));
+  padding: 10px 20px;
+  font-family: var(--theme-body-font, var(--theme-font-body, 'Inter'));
+  font-size: var(--theme-font-size-base, 16px);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.theme-button-primary:hover {
+  opacity: 0.9;
+}
+
+.theme-button-primary:active {
+  opacity: 0.8;
+}
+
+/**
+ * Secondary button styling.
+ * Applies to cancel buttons and secondary actions.
+ * Usage: <button class="theme-button-secondary">Cancel</button>
+ */
+.theme-button-secondary {
+  background-color: var(--theme-button-secondary-background, var(--theme-secondary-color, #6b7280));
+  color: var(--theme-button-secondary-text, #ffffff);
+  border: none;
+  border-radius: var(--theme-border-radius, var(--theme-field-radius, 6px));
+  padding: 10px 20px;
+  font-family: var(--theme-body-font, var(--theme-font-body, 'Inter'));
+  font-size: var(--theme-font-size-base, 16px);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.theme-button-secondary:hover {
+  opacity: 0.9;
+}
+
+.theme-button-secondary:active {
+  opacity: 0.8;
+}
+
+/* ============================================
+   STEP FORM NAVIGATION CLASSES
+   ============================================ */
+
+/**
+ * Step indicator styling for multi-step forms.
+ * Displays step number or icon in circular badge.
+ * Usage: <div class="theme-step-indicator">1</div>
+ *        <div class="theme-step-indicator active">2</div>
+ */
+.theme-step-indicator {
+  background-color: var(--theme-step-inactive-color, #9ca3af);
+  color: #ffffff;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.theme-step-indicator.active {
+  background-color: var(--theme-step-active-color, var(--theme-primary-color, #3b82f6));
+}
+
+/**
+ * Step navigation button styling.
+ * Applies to Next/Previous buttons in step forms.
+ * Usage: <button class="theme-step-button">Next</button>
+ */
+.theme-step-button {
+  background-color: var(--theme-button-primary-background, var(--theme-primary-color, #3b82f6));
+  color: var(--theme-button-primary-text, #ffffff);
+  border: none;
+  border-radius: var(--theme-border-radius, var(--theme-field-radius, 6px));
+  padding: 10px 24px;
+  font-family: var(--theme-body-font, var(--theme-font-body, 'Inter'));
+  font-size: var(--theme-font-size-base, 16px);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.theme-step-button:hover {
+  opacity: 0.9;
+}
+
+.theme-step-button:active {
+  opacity: 0.8;
+}
+
+/* ============================================
+   RESPONSIVE VARIANTS
+   ============================================ */
+
+/**
+ * Mobile breakpoint: < 768px
+ * - Reduce container padding
+ * - Remove border radius for edge-to-edge layout
+ * - Stack all row columns vertically
+ * - Reduce gaps and spacing for narrow screens
+ */
+@media (max-width: 767px) {
+  .theme-form-container-wrapper {
+    padding: 16px;
+    border-radius: 0;
+    max-width: 100%;
+  }
+
+  .theme-row-container {
+    grid-template-columns: 1fr !important; /* Stack all columns vertically */
+    gap: 12px;
+  }
+
+  .theme-column-container {
+    padding: 8px;
+    gap: 12px;
+  }
+
+  .theme-form-canvas-background {
+    padding: 16px;
+    min-height: 400px;
+  }
+}
+
+/**
+ * Tablet breakpoint: 768px - 1023px
+ * - Medium container width (700px)
+ * - Limit row layouts to max 2 columns
+ * - Moderate padding and spacing
+ */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .theme-form-container-wrapper {
+    max-width: 700px;
+    padding: 20px;
+  }
+
+  .theme-row-container {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Max 2 columns */
+  }
+}
+
+/**
+ * Desktop breakpoint: >= 1024px
+ * - Full container width (900px)
+ * - Support full 2-4 column row layouts
+ * - Maximum padding and spacing
+ */
+@media (min-width: 1024px) {
+  .theme-form-container-wrapper {
+    max-width: 900px;
+    padding: 24px;
+  }
+
+  /* Full column support based on row configuration (2-4 columns) */
+  /* Grid template columns set dynamically via inline styles in components */
+}
+
+/* ============================================
+   TRANSITIONS
+   ============================================ */
+
+/**
+ * Smooth transitions for theme changes.
+ * Provides seamless visual feedback when user switches themes.
+ * Applies 300ms ease-in-out transitions to color/background properties.
+ * Usage: Automatically applied to all themeable classes via extension below
+ */
+.theme-transition {
+  transition:
+    background-color 300ms ease-in-out,
+    color 300ms ease-in-out,
+    border-color 300ms ease-in-out,
+    box-shadow 300ms ease-in-out;
+}
+
+/**
+ * Apply transition to all themeable classes.
+ * Ensures smooth theme switching across all elements.
+ */
+.theme-form-outer-background,
+.theme-form-container-wrapper,
+.theme-form-canvas-background,
+.theme-row-container,
+.theme-column-container,
+.theme-input,
+.theme-textarea,
+.theme-select,
+.theme-button-primary,
+.theme-button-secondary,
+.theme-step-indicator,
+.theme-step-button,
+.theme-label,
+.theme-heading,
+.theme-help-text {
+  transition:
+    background-color 300ms ease-in-out,
+    color 300ms ease-in-out,
+    border-color 300ms ease-in-out,
+    box-shadow 300ms ease-in-out;
+}

@@ -1,0 +1,27 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.shape-properties-panel {
+  height: 100%;
+  overflow-y: auto;
+  padding: 1rem;
+  background: #f9fafb;
+}
+
+::ng-deep .p-panel {
+  box-shadow: none;
+  border: 1px solid #e5e7eb;
+}
+
+::ng-deep .p-panel .p-panel-header {
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 1rem;
+}
+
+::ng-deep .p-panel .p-panel-content {
+  padding: 1.5rem;
+  background: white;
+}

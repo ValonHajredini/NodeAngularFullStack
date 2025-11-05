@@ -1,0 +1,155 @@
+/**
+ * Export Filters Component Styles (Epic 33.2.3, Task 7)
+ *
+ * Responsive filter controls for export history.
+ * Uses CSS Grid for responsive layout.
+ */
+
+.export-filters-container {
+  padding: 1.5rem;
+  background: var(--surface-0);
+  border-radius: 8px;
+  border: 1px solid var(--surface-border);
+
+  // ===== Filters Grid Layout =====
+
+  .filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+  }
+
+  // ===== Filter Field Styling =====
+
+  .filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    .filter-label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-color);
+      margin-bottom: 0.25rem;
+    }
+  }
+
+  // ===== Filter Actions =====
+
+  .filter-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 1rem;
+    border-top: 1px solid var(--surface-border);
+
+    button {
+      min-width: 150px;
+    }
+
+    @media (max-width: 768px) {
+      justify-content: stretch;
+
+      button {
+        width: 100%;
+      }
+    }
+  }
+
+  // ===== PrimeNG Component Overrides =====
+
+  ::ng-deep {
+    // MultiSelect Styling
+    .filter-multiselect {
+      width: 100%;
+
+      .p-multiselect-label {
+        display: flex;
+        align-items: center;
+      }
+
+      .p-multiselect-trigger {
+        display: flex;
+        align-items: center;
+      }
+
+      .selected-items-display {
+        font-size: 0.875rem;
+        color: var(--text-color);
+      }
+    }
+
+    // Dropdown Styling
+    .filter-dropdown {
+      width: 100%;
+    }
+
+    // Calendar Styling
+    .filter-calendar {
+      width: 100%;
+
+      .p-inputtext {
+        width: 100%;
+      }
+
+      .p-calendar-w-btn {
+        .p-datepicker-trigger {
+          background: var(--surface-100);
+          border-color: var(--surface-300);
+
+          &:hover {
+            background: var(--surface-200);
+          }
+        }
+      }
+    }
+
+    // Chip styling in multiselect
+    .p-multiselect-token {
+      background: var(--primary-50);
+      color: var(--primary-700);
+      padding: 0.25rem 0.5rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+
+      .p-multiselect-token-icon {
+        margin-left: 0.375rem;
+        font-size: 0.75rem;
+      }
+    }
+  }
+}
+
+// ===== Responsive Adjustments =====
+
+@media (max-width: 1024px) {
+  .export-filters-container {
+    padding: 1.25rem;
+
+    .filters-grid {
+      gap: 1.25rem;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .export-filters-container {
+    padding: 1rem;
+
+    .filters-grid {
+      gap: 1rem;
+    }
+
+    .filter-field {
+      .filter-label {
+        font-size: 0.8125rem;
+      }
+    }
+  }
+}
