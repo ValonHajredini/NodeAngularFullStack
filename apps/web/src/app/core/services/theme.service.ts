@@ -150,7 +150,7 @@ export class ThemeService {
     if (stored) {
       this.setTheme(stored, false); // Don't persist again
     } else {
-      this.setTheme('system', true);
+      this.setTheme('light', true);
     }
   }
 

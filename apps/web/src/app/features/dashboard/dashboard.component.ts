@@ -123,6 +123,7 @@ import { ToolsContainerComponent } from './components/tools-container/tools-cont
                   [routerLink]="actionCard.routerLink"
                   [size]="'md'"
                   [ariaLabel]="actionCard.ariaLabel"
+                  (cardClick)="actionCard.title === 'Form Builder' ? openFormBuilder() : null"
                 />
               }
             </div>
@@ -650,15 +651,16 @@ export class DashboardComponent implements OnInit {
 
   /**
    * Configuration for action cards displayed in the Quick Actions section
+   * Note: Form Builder uses external navigation with SSO token passing
    */
   private readonly actionCards: ActionCardData[] = [
     {
       title: 'Form Builder',
-      description: 'Create and manage custom forms.',
+      description: 'Create and manage custom forms (opens in new app).',
       icon: 'pi pi-file-edit',
       iconColor: 'primary',
-      routerLink: '/app/tools/form-builder/list',
-      ariaLabel: 'Access the form builder to create and manage custom forms',
+      // No routerLink - handled by openFormBuilder() method
+      ariaLabel: 'Access the form builder application with SSO authentication',
     },
     {
       title: 'View Tasks',
@@ -732,5 +734,67 @@ export class DashboardComponent implements OnInit {
   protected retryLoadTools(): void {
     // Force refresh tools data which will trigger the deferred component to reload
     this.refreshTools();
+  }
+
+  /**
+   * Opens the Form Builder application with SSO token authentication.
+   * Retrieves the current user's JWT access token and passes it to the Form Builder UI
+   * via URL parameter for seamless cross-app authentication.
+   */
+  protected openFormBuilder(): void {
+    // Check if user is authenticated
+    if (!this.authService.isAuthenticated()) {
+      console.error('Not authenticated for SSO');
+      window.location.href = '/auth/login';
+      return;
+    }
+
+    // Check if token is expired or about to expire
+    if (this.authService.isTokenExpired()) {
+      console.log('Token expired, refreshing before SSO redirect...');
+
+      // Refresh token first, then redirect with fresh token
+      this.authService.refreshAccessToken().subscribe({
+        next: () => {
+          const freshToken = this.authService.getAccessToken();
+          if (freshToken) {
+            this.redirectToFormBuilder(freshToken);
+          } else {
+            console.error('Failed to get fresh token after refresh');
+            window.location.href = '/auth/login';
+          }
+        },
+        error: (error) => {
+          console.error('Token refresh failed for SSO:', error);
+          // Redirect to login if token refresh fails
+          window.location.href = '/auth/login';
+        },
+      });
+    } else {
+      // Token is still valid, use it directly
+      const accessToken = this.authService.getAccessToken();
+      if (accessToken) {
+        this.redirectToFormBuilder(accessToken);
+      } else {
+        console.error('No access token available for SSO');
+        window.location.href = '/auth/login';
+      }
+    }
+  }
+
+  /**
+   * Redirects to Form Builder with SSO token.
+   * @param accessToken - Fresh JWT access token for SSO authentication
+   * @private
+   */
+  private redirectToFormBuilder(accessToken: string): void {
+    // Build Form Builder URL with token parameter
+    // Must go to a protected route (/app/dashboard) so ssoAuthGuard can intercept the token
+    const formBuilderUrl = `http://localhost:4201/app/dashboard?token=${encodeURIComponent(accessToken)}`;
+
+    console.log('Redirecting to Form Builder with fresh token...');
+
+    // Open in same window (user can change to _blank for new tab if desired)
+    window.location.href = formBuilderUrl;
   }
 }

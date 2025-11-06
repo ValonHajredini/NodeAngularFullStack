@@ -608,10 +608,14 @@ git commit --no-verify -m "message"</code></pre>
       }
 
       .nav-icon {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         color: var(--color-text-muted);
         font-size: var(--font-size-base);
         width: 1.25rem;
-        text-align: center;
+        flex-shrink: 0;
       }
 
       .nav-section-button.active .nav-icon {

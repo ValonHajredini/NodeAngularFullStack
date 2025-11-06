@@ -224,10 +224,24 @@ import { SettingsNavItem, SettingsSection } from '@features/settings/types/setti
 
       /* Icon Container */
       .nav-item-icon {
-        @apply flex items-center justify-center w-9 h-9 rounded-lg flex-shrink-0;
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 0.5rem;
+        flex-shrink: 0;
         background: var(--icon-bg);
         color: var(--text-primary);
         font-size: 18px;
+      }
+
+      .nav-item-icon i {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
       }
 
       .nav-item.active .nav-item-icon {

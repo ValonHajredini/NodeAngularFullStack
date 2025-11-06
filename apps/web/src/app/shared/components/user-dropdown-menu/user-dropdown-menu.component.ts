@@ -189,7 +189,15 @@ export interface UserMenuItem {
       }
 
       .dropdown-icon {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         color: var(--color-text-muted);
+        font-size: 1rem;
+        width: 1.25rem;
+        height: 1.25rem;
+        flex-shrink: 0;
       }
 
       /* Animations */

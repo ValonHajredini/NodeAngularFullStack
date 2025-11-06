@@ -2,6 +2,7 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { User } from '../auth/auth.service';
+import { environment } from '@env/environment';
 
 /**
  * Authentication guard that protects routes requiring user authentication.
@@ -21,17 +22,14 @@ import { User } from '../auth/auth.service';
  */
 export const authGuard: CanActivateFn = (route, state) => {
   const authService = inject(AuthService);
-  const router = inject(Router);
 
   if (authService.isAuthenticated()) {
     return true;
   }
 
-  // Store the attempted URL for redirecting after login
-  router.navigate(['/welcome'], {
-    queryParams: { returnUrl: state.url }
-  });
-
+  // Redirect to main app login for SSO authentication
+  console.warn('Not authenticated, redirecting to main app login');
+  window.location.href = `${environment.mainAppUrl}/auth/login`;
   return false;
 };
 
@@ -57,16 +55,16 @@ export function roleGuard(allowedRoles: string[]): CanActivateFn {
 
     // First check if user is authenticated
     if (!authService.isAuthenticated()) {
-      router.navigate(['/welcome'], {
-        queryParams: { returnUrl: state.url }
-      });
+      // Redirect to main app login for SSO authentication
+      console.warn('Not authenticated, redirecting to main app login');
+      window.location.href = `${environment.mainAppUrl}/auth/login`;
       return false;
     }
 
     // Check if user has required role
     const user = authService.user();
     if (!user || !allowedRoles.includes(user.role)) {
-      // Redirect to form-builder with unauthorized message
+      // Redirect to dashboard with unauthorized message
       router.navigate(['/app/dashboard'], {
         queryParams: { unauthorized: 'true' }
       });

@@ -177,23 +177,35 @@ stop_process_on_port "$FORM_BUILDER_PORT" "Form Builder UI"
 stop_process_on_port "$PGWEB_PORT" "pgWeb"
 
 echo -e "${BLUE}🔧 Preparing backend dependencies...${NC}"
-if [ ! -d "apps/api/node_modules" ]; then
-    echo -e "${YELLOW}📦 Installing backend dependencies...${NC}"
-    npm --workspace=apps/api install
+if [ ! -d "apps/dashboard-api/node_modules" ]; then
+    echo -e "${YELLOW}📦 Installing dashboard-api dependencies...${NC}"
+    npm --workspace=apps/dashboard-api install
+fi
+
+if [ ! -d "apps/forms-api/node_modules" ]; then
+    echo -e "${YELLOW}📦 Installing forms-api dependencies...${NC}"
+    npm --workspace=apps/forms-api install
 fi
 
 echo -e "${BLUE}🗄️  Running database migrations...${NC}"
-npm --workspace=apps/api run db:migrate
+npm --workspace=apps/dashboard-api run db:migrate
 
 echo -e "${BLUE}🌱 Seeding database with development data...${NC}"
-npm --workspace=apps/api run db:seed
+npm --workspace=apps/dashboard-api run db:seed
 
-echo -e "${BLUE}🔧 Starting backend API server...${NC}"
-npm --workspace=apps/api run dev > "$LOG_DIR/backend.log" 2>&1 &
-BACKEND_PID=$!
-echo $BACKEND_PID > .backend.pid
+echo -e "${BLUE}🔧 Starting Dashboard API server (port 3000)...${NC}"
+npm --workspace=apps/dashboard-api run dev > "$LOG_DIR/dashboard-api.log" 2>&1 &
+DASHBOARD_API_PID=$!
+echo $DASHBOARD_API_PID > .dashboard-api.pid
 
-wait_for_service "http://localhost:${API_PORT}/health" "Backend API"
+wait_for_service "http://localhost:3000/health" "Dashboard API"
+
+echo -e "${BLUE}🔧 Starting Forms API server (port 3001)...${NC}"
+npm --workspace=apps/forms-api run dev > "$LOG_DIR/forms-api.log" 2>&1 &
+FORMS_API_PID=$!
+echo $FORMS_API_PID > .forms-api.pid
+
+wait_for_service "http://localhost:3001/health" "Forms API"
 
 echo -e "${BLUE}🌐 Starting pgWeb database UI...${NC}"
 PGWEB_CMD=(pgweb "--bind" "127.0.0.1" "--listen" ":${PGWEB_PORT}" "--url" "$PGWEB_DATABASE_URL" "--cors-origin" "$PGWEB_CORS_ORIGIN")
@@ -240,15 +252,22 @@ echo $FORM_BUILDER_PID > .form-builder-ui.pid
 wait_for_service "http://localhost:${FORM_BUILDER_PORT}" "Form Builder UI"
 
 echo ""
-echo -e "${GREEN}🎉 SUCCESS! Local development environment is ready${NC}"
-echo "=================================================="
-echo -e "${BLUE}📋 Service URLs:${NC}"
-echo -e "   Main App (Angular):     ${GREEN}http://localhost:${FRONTEND_PORT}${NC}"
+echo -e "${GREEN}🎉 SUCCESS! Microservices development environment is ready${NC}"
+echo "================================================================"
+echo -e "${BLUE}📋 Frontend Services:${NC}"
+echo -e "   Main Dashboard:         ${GREEN}http://localhost:${FRONTEND_PORT}${NC}"
 echo -e "   Form Builder UI:        ${GREEN}http://localhost:${FORM_BUILDER_PORT}${NC}"
-echo -e "   Backend API:            ${GREEN}http://localhost:${API_PORT}${NC}"
-echo -e "   API Docs:               ${GREEN}http://localhost:${API_PORT}/api-docs${NC}"
+echo ""
+echo -e "${BLUE}📋 Backend Services:${NC}"
+echo -e "   Dashboard API:          ${GREEN}http://localhost:3000${NC}"
+echo -e "   Dashboard API Docs:     ${GREEN}http://localhost:3000/api-docs${NC}"
+echo -e "   Dashboard Health:       ${GREEN}http://localhost:3000/health${NC}"
+echo -e "   Forms API:              ${GREEN}http://localhost:3001${NC}"
+echo -e "   Forms API Docs:         ${GREEN}http://localhost:3001/api-docs${NC}"
+echo -e "   Forms Health:           ${GREEN}http://localhost:3001/health${NC}"
+echo ""
+echo -e "${BLUE}📋 Database:${NC}"
 echo -e "   pgWeb (Database UI):    ${GREEN}http://localhost:${PGWEB_PORT}${NC}"
-echo -e "   API Health Check:       ${GREEN}http://localhost:${API_PORT}/health${NC}"
 echo ""
 echo -e "${BLUE}🧪 Test User Credentials:${NC}"
 echo -e "   Admin:    ${YELLOW}admin@example.com${NC} / ${YELLOW}Admin123!@#${NC}"
@@ -256,7 +275,8 @@ echo -e "   User:     ${YELLOW}user@example.com${NC} / ${YELLOW}User123!@#${NC}"
 echo -e "   ReadOnly: ${YELLOW}readonly@example.com${NC} / ${YELLOW}Read123!@#${NC}"
 echo ""
 echo -e "${BLUE}📝 Logs:${NC}"
-echo -e "   Backend:          ${YELLOW}logs/backend.log${NC}"
+echo -e "   Dashboard API:    ${YELLOW}logs/dashboard-api.log${NC}"
+echo -e "   Forms API:        ${YELLOW}logs/forms-api.log${NC}"
 echo -e "   Main App:         ${YELLOW}logs/frontend.log${NC}"
 echo -e "   Form Builder UI:  ${YELLOW}logs/form-builder-ui.log${NC}"
 echo -e "   pgWeb:            ${YELLOW}logs/pgweb.log${NC}"

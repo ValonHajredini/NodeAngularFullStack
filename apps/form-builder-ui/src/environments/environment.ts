@@ -4,8 +4,8 @@
  */
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:3000/api/v1',
-  shortLinkBaseUrl: 'http://localhost:3000',
+  apiUrl: 'http://localhost:3001/api/v1',
+  shortLinkBaseUrl: 'http://localhost:3001',
   mainAppUrl: 'http://localhost:4200',
   appName: 'NodeAngularFullStack',
   enableMultiTenancy: false,

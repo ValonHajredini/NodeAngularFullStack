@@ -34,6 +34,12 @@ export interface ApiAuthResponse {
   timestamp: string;
 }
 
+export interface ApiTokenResponse {
+  message: string;
+  data: TokenResponse;
+  timestamp: string;
+}
+
 /**
  * Authentication service managing user login, logout, and JWT token lifecycle.
  * Uses Angular signals for reactive state management and provides token
@@ -152,11 +158,12 @@ export class AuthService {
       return throwError(() => new Error('No refresh token available'));
     }
 
-    return this.apiClient.post<TokenResponse>('/auth/refresh', { refreshToken }).pipe(
-      tap((response: TokenResponse) => {
-        this.accessTokenSignal.set(response.accessToken);
-        if (response.refreshToken) {
-          this.refreshTokenSignal.set(response.refreshToken);
+    return this.apiClient.post<ApiTokenResponse>('/auth/refresh', { refreshToken }).pipe(
+      map((response: ApiTokenResponse) => response.data),
+      tap((tokens: TokenResponse) => {
+        this.accessTokenSignal.set(tokens.accessToken);
+        if (tokens.refreshToken) {
+          this.refreshTokenSignal.set(tokens.refreshToken);
         }
         this.saveTokensToStorage();
       }),

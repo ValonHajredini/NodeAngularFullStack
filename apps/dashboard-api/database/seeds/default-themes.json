@@ -1,0 +1,245 @@
+[
+  {
+    "name": "Neon",
+    "description": "Bold pink and purple gradients with modern typography",
+    "thumbnailUrl": "https://nodeangularfullstack.nyc3.digitaloceanspaces.com/themes/thumbnails/neon.webp",
+    "themeConfig": {
+      "desktop": {
+        "primaryColor": "#FF006E",
+        "secondaryColor": "#8338EC",
+        "backgroundColor": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        "textColorPrimary": "#FFFFFF",
+        "textColorSecondary": "#F0F0F0",
+        "fontFamilyHeading": "'Poppins', sans-serif",
+        "fontFamilyBody": "'Inter', sans-serif",
+        "fieldBorderRadius": "12px",
+        "fieldSpacing": "16px",
+        "containerBackground": "rgba(255, 255, 255, 0.1)",
+        "containerOpacity": 0.9,
+        "containerPosition": "center",
+        "backgroundImageUrl": null,
+        "backgroundImagePosition": null
+      },
+      "mobile": {
+        "fieldSpacing": "12px",
+        "containerPosition": "top"
+      }
+    }
+  },
+  {
+    "name": "Desert",
+    "description": "Warm orange and beige tones with serif typography",
+    "thumbnailUrl": "https://nodeangularfullstack.nyc3.digitaloceanspaces.com/themes/thumbnails/desert.webp",
+    "themeConfig": {
+      "desktop": {
+        "primaryColor": "#D2691E",
+        "secondaryColor": "#F4A460",
+        "backgroundColor": "linear-gradient(135deg, #FFE4B5 0%, #DEB887 100%)",
+        "textColorPrimary": "#8B4513",
+        "textColorSecondary": "#A0522D",
+        "fontFamilyHeading": "'Playfair Display', serif",
+        "fontFamilyBody": "'Source Serif Pro', serif",
+        "fieldBorderRadius": "8px",
+        "fieldSpacing": "14px",
+        "containerBackground": "rgba(255, 255, 255, 0.8)",
+        "containerOpacity": 0.95,
+        "containerPosition": "center",
+        "backgroundImageUrl": null,
+        "backgroundImagePosition": null
+      },
+      "mobile": {
+        "fieldSpacing": "10px",
+        "containerPosition": "top"
+      }
+    }
+  },
+  {
+    "name": "Cyber Dawn",
+    "description": "Futuristic cyan and magenta tech aesthetic",
+    "thumbnailUrl": "https://nodeangularfullstack.nyc3.digitaloceanspaces.com/themes/thumbnails/cyber-dawn.webp",
+    "themeConfig": {
+      "desktop": {
+        "primaryColor": "#00FFFF",
+        "secondaryColor": "#FF00FF",
+        "backgroundColor": "linear-gradient(135deg, #0F0F23 0%, #1A1A2E 100%)",
+        "textColorPrimary": "#FFFFFF",
+        "textColorSecondary": "#E0E0E0",
+        "fontFamilyHeading": "'Orbitron', sans-serif",
+        "fontFamilyBody": "'Exo 2', sans-serif",
+        "fieldBorderRadius": "4px",
+        "fieldSpacing": "18px",
+        "containerBackground": "rgba(0, 255, 255, 0.05)",
+        "containerOpacity": 0.9,
+        "containerPosition": "center",
+        "backgroundImageUrl": null,
+        "backgroundImagePosition": null
+      },
+      "mobile": {
+        "fieldSpacing": "14px",
+        "containerPosition": "top"
+      }
+    }
+  },
+  {
+    "name": "Night Blue",
+    "description": "Professional deep blue palette with clean sans-serif",
+    "thumbnailUrl": "https://nodeangularfullstack.nyc3.digitaloceanspaces.com/themes/thumbnails/night-blue.webp",
+    "themeConfig": {
+      "desktop": {
+        "primaryColor": "#1E3A8A",
+        "secondaryColor": "#3B82F6",
+        "backgroundColor": "linear-gradient(135deg, #1E40AF 0%, #1E3A8A 100%)",
+        "textColorPrimary": "#FFFFFF",
+        "textColorSecondary": "#E5E7EB",
+        "fontFamilyHeading": "'Roboto', sans-serif",
+        "fontFamilyBody": "'Open Sans', sans-serif",
+        "fieldBorderRadius": "6px",
+        "fieldSpacing": "16px",
+        "containerBackground": "rgba(255, 255, 255, 0.1)",
+        "containerOpacity": 0.95,
+        "containerPosition": "center",
+        "backgroundImageUrl": null,
+        "backgroundImagePosition": null
+      },
+      "mobile": {
+        "fieldSpacing": "12px",
+        "containerPosition": "top"
+      }
+    }
+  },
+  {
+    "name": "Green Ocean",
+    "description": "Calming teal and turquoise nature theme",
+    "thumbnailUrl": "https://nodeangularfullstack.nyc3.digitaloceanspaces.com/themes/thumbnails/green-ocean.webp",
+    "themeConfig": {
+      "desktop": {
+        "primaryColor": "#0D9488",
+        "secondaryColor": "#14B8A6",
+        "backgroundColor": "linear-gradient(135deg, #0F766E 0%, #134E4A 100%)",
+        "textColorPrimary": "#FFFFFF",
+        "textColorSecondary": "#F0FDFA",
+        "fontFamilyHeading": "'Nunito', sans-serif",
+        "fontFamilyBody": "'Lato', sans-serif",
+        "fieldBorderRadius": "10px",
+        "fieldSpacing": "16px",
+        "containerBackground": "rgba(255, 255, 255, 0.1)",
+        "containerOpacity": 0.9,
+        "containerPosition": "center",
+        "backgroundImageUrl": null,
+        "backgroundImagePosition": null
+      },
+      "mobile": {
+        "fieldSpacing": "12px",
+        "containerPosition": "top"
+      }
+    }
+  },
+  {
+    "name": "Wall Flower",
+    "description": "Soft pastels with floral aesthetic",
+    "thumbnailUrl": "https://nodeangularfullstack.nyc3.digitaloceanspaces.com/themes/thumbnails/wall-flower.webp",
+    "themeConfig": {
+      "desktop": {
+        "primaryColor": "#EC4899",
+        "secondaryColor": "#F472B6",
+        "backgroundColor": "linear-gradient(135deg, #FDF2F8 0%, #FCE7F3 100%)",
+        "textColorPrimary": "#831843",
+        "textColorSecondary": "#9D174D",
+        "fontFamilyHeading": "'Dancing Script', cursive",
+        "fontFamilyBody": "'Crimson Text', serif",
+        "fieldBorderRadius": "16px",
+        "fieldSpacing": "14px",
+        "containerBackground": "rgba(255, 255, 255, 0.7)",
+        "containerOpacity": 0.95,
+        "containerPosition": "center",
+        "backgroundImageUrl": null,
+        "backgroundImagePosition": null
+      },
+      "mobile": {
+        "fieldSpacing": "10px",
+        "containerPosition": "top"
+      }
+    }
+  },
+  {
+    "name": "Angular",
+    "description": "Angular brand colors with geometric design",
+    "thumbnailUrl": "https://nodeangularfullstack.nyc3.digitaloceanspaces.com/themes/thumbnails/angular.webp",
+    "themeConfig": {
+      "desktop": {
+        "primaryColor": "#DD0031",
+        "secondaryColor": "#C3002F",
+        "backgroundColor": "linear-gradient(135deg, #FFFFFF 0%, #F5F5F5 100%)",
+        "textColorPrimary": "#212121",
+        "textColorSecondary": "#424242",
+        "fontFamilyHeading": "'Roboto', sans-serif",
+        "fontFamilyBody": "'Roboto', sans-serif",
+        "fieldBorderRadius": "4px",
+        "fieldSpacing": "16px",
+        "containerBackground": "rgba(255, 255, 255, 0.95)",
+        "containerOpacity": 1.0,
+        "containerPosition": "center",
+        "backgroundImageUrl": null,
+        "backgroundImagePosition": null
+      },
+      "mobile": {
+        "fieldSpacing": "12px",
+        "containerPosition": "top"
+      }
+    }
+  },
+  {
+    "name": "Default",
+    "description": "Neutral grays with minimal styling for baseline",
+    "thumbnailUrl": "https://nodeangularfullstack.nyc3.digitaloceanspaces.com/themes/thumbnails/default.webp",
+    "themeConfig": {
+      "desktop": {
+        "primaryColor": "#6B7280",
+        "secondaryColor": "#9CA3AF",
+        "backgroundColor": "#F9FAFB",
+        "textColorPrimary": "#111827",
+        "textColorSecondary": "#374151",
+        "fontFamilyHeading": "'Inter', sans-serif",
+        "fontFamilyBody": "'Inter', sans-serif",
+        "fieldBorderRadius": "6px",
+        "fieldSpacing": "16px",
+        "containerBackground": "rgba(255, 255, 255, 0.95)",
+        "containerOpacity": 1.0,
+        "containerPosition": "center",
+        "backgroundImageUrl": null,
+        "backgroundImagePosition": null
+      },
+      "mobile": {
+        "fieldSpacing": "12px",
+        "containerPosition": "top"
+      }
+    }
+  },
+  {
+    "name": "Scarlet",
+    "description": "Bold scarlet red with dark gray and black dramatic theme",
+    "thumbnailUrl": "https://nodeangularfullstack.nyc3.digitaloceanspaces.com/themes/thumbnails/scarlet.webp",
+    "themeConfig": {
+      "desktop": {
+        "primaryColor": "#DC143C",
+        "secondaryColor": "#333333",
+        "backgroundColor": "linear-gradient(135deg, #1A1A1A 0%, #000000 100%)",
+        "textColorPrimary": "#FFFFFF",
+        "textColorSecondary": "#CCCCCC",
+        "fontFamilyHeading": "'Montserrat', sans-serif",
+        "fontFamilyBody": "'Raleway', sans-serif",
+        "fieldBorderRadius": "8px",
+        "fieldSpacing": "16px",
+        "containerBackground": "rgba(220, 20, 60, 0.1)",
+        "containerOpacity": 0.95,
+        "containerPosition": "center",
+        "backgroundImageUrl": null,
+        "backgroundImagePosition": null
+      },
+      "mobile": {
+        "fieldSpacing": "12px",
+        "containerPosition": "top"
+      }
+    }
+  }
+]

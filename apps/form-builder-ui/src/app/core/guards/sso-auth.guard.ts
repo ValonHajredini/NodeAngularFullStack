@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router, ActivatedRouteSnapshot } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
+import { environment } from '@env/environment';
 
 /**
  * SSO Authentication Guard for handling token-based authentication from external apps.
@@ -39,13 +40,9 @@ export const ssoAuthGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const token = route.queryParamMap.get('token');
 
   if (!token) {
-    // No token provided, redirect to login
-    router.navigate(['/auth/login'], {
-      queryParams: {
-        returnUrl: route.url.join('/'),
-        reason: 'sso_token_missing'
-      }
-    });
+    // No token provided, redirect to main app login
+    console.warn('SSO token missing, redirecting to main app login');
+    window.location.href = `${environment.mainAppUrl}/auth/login`;
     return false;
   }
 
@@ -55,20 +52,13 @@ export const ssoAuthGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
 
     if (!isValid) {
       console.error('SSO token validation failed: invalid or expired token');
-      router.navigate(['/auth/login'], {
-        queryParams: {
-          returnUrl: route.url.join('/'),
-          reason: 'sso_token_invalid'
-        }
-      });
+      // Redirect to main app login
+      window.location.href = `${environment.mainAppUrl}/auth/login`;
       return false;
     }
 
     // Extract user data from token payload
     const payload = decodeJwtPayload(token);
-
-    // Store token in localStorage for this app's domain
-    localStorage.setItem('access_token', token);
 
     // Store tenant context if available (for multi-tenancy)
     if (payload.tenant) {
@@ -76,6 +66,7 @@ export const ssoAuthGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
     }
 
     // Update auth service with user data and token
+    // The authService will handle storing tokens with proper keys from environment config
     authService.setSsoAuthData({
       user: {
         id: payload.userId,
@@ -107,12 +98,8 @@ export const ssoAuthGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
     return true;
   } catch (error) {
     console.error('SSO authentication failed:', error);
-    router.navigate(['/auth/login'], {
-      queryParams: {
-        returnUrl: route.url.join('/'),
-        reason: 'sso_error'
-      }
-    });
+    // Redirect to main app login
+    window.location.href = `${environment.mainAppUrl}/auth/login`;
     return false;
   }
 };
