@@ -1,3 +1,9 @@
+import dotenv from 'dotenv';
+
+// Load environment variables before any other imports
+const envFile = process.env.NODE_ENV === 'test' ? '.env.test' : '.env';
+dotenv.config({ path: envFile });
+
 import bcrypt from 'bcryptjs';
 import { databaseService, DatabaseService } from '../services/database.service';
 
@@ -201,6 +207,102 @@ export class SeedUtils {
   }
 
   /**
+   * Test tenants with different plans for multi-tenant testing.
+   */
+  private static readonly TEST_TENANTS = [
+    {
+      name: 'Acme Corporation',
+      slug: 'acme-corp',
+      plan: 'professional',
+      status: 'active',
+      settings: {
+        branding: {
+          primaryColor: '#FF6B35',
+          logo: null,
+        },
+        features: {
+          userManagement: true,
+          apiAccess: true,
+          customBranding: true,
+          advancedReports: true,
+          sso: false,
+        },
+        limits: {
+          maxUsers: 100,
+          maxStorage: 10737418240, // 10GB
+          maxApiCalls: 100000,
+        },
+        isolation: {
+          level: 'row',
+          rls: true,
+        },
+      },
+    },
+    {
+      name: 'Tech Startup Inc',
+      slug: 'tech-startup',
+      plan: 'free',
+      status: 'active',
+      settings: {
+        branding: {
+          primaryColor: '#4F46E5',
+          logo: null,
+        },
+        features: {
+          userManagement: true,
+          apiAccess: true,
+          customBranding: false,
+          advancedReports: false,
+          sso: false,
+        },
+        limits: {
+          maxUsers: 10,
+          maxStorage: 1073741824, // 1GB
+          maxApiCalls: 10000,
+        },
+        isolation: {
+          level: 'row',
+          rls: true,
+        },
+      },
+    },
+    {
+      name: 'Global Enterprises',
+      slug: 'global-enterprises',
+      plan: 'enterprise',
+      status: 'active',
+      settings: {
+        branding: {
+          primaryColor: '#10B981',
+          logo: null,
+        },
+        features: {
+          userManagement: true,
+          apiAccess: true,
+          customBranding: true,
+          advancedReports: true,
+          sso: true,
+          whiteLabel: true,
+        },
+        limits: {
+          maxUsers: 10000,
+          maxStorage: 107374182400, // 100GB
+          maxApiCalls: 1000000,
+        },
+        isolation: {
+          level: 'row',
+          rls: true,
+        },
+        security: {
+          requireMFA: true,
+          sessionTimeout: 30,
+          ipWhitelist: [],
+        },
+      },
+    },
+  ];
+
+  /**
    * Creates test tenant data for multi-tenant scenarios.
    * @returns Promise that resolves with created tenant information
    */
@@ -215,11 +317,15 @@ export class SeedUtils {
         INSERT INTO tenants (
           name,
           slug,
+          plan,
+          status,
           settings,
           is_active
-        ) VALUES ($1, $2, $3, $4)
+        ) VALUES ($1, $2, $3, $4, $5, $6)
         ON CONFLICT (slug) DO UPDATE SET
           name = EXCLUDED.name,
+          plan = EXCLUDED.plan,
+          status = EXCLUDED.status,
           settings = EXCLUDED.settings,
           is_active = EXCLUDED.is_active,
           updated_at = CURRENT_TIMESTAMP
@@ -241,6 +347,8 @@ export class SeedUtils {
       const result = await databaseService.query(query, [
         'Test Organization',
         'test-org',
+        'free',
+        'active',
         JSON.stringify(settings),
         true,
       ]);
@@ -250,6 +358,64 @@ export class SeedUtils {
       return tenant;
     } catch (error) {
       console.error('❌ Failed to create test tenant:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Creates multiple test tenants with different plans.
+   * @returns Promise that resolves with array of created tenant information
+   */
+  public static async createTestTenants(): Promise<
+    Array<{ id: string; slug: string; name: string }>
+  > {
+    try {
+      console.log('🏢 Creating multiple test tenants...');
+
+      const query = `
+        INSERT INTO tenants (
+          name,
+          slug,
+          plan,
+          status,
+          settings,
+          is_active
+        ) VALUES ($1, $2, $3, $4, $5, $6)
+        ON CONFLICT (slug) DO UPDATE SET
+          name = EXCLUDED.name,
+          plan = EXCLUDED.plan,
+          status = EXCLUDED.status,
+          settings = EXCLUDED.settings,
+          is_active = EXCLUDED.is_active,
+          updated_at = CURRENT_TIMESTAMP
+        RETURNING id, slug, name
+      `;
+
+      const createdTenants = [];
+
+      for (const tenant of this.TEST_TENANTS) {
+        const result = await databaseService.query(query, [
+          tenant.name,
+          tenant.slug,
+          tenant.plan,
+          tenant.status,
+          JSON.stringify(tenant.settings),
+          true,
+        ]);
+
+        const createdTenant = result.rows[0];
+        console.log(
+          `✅ Created tenant: ${createdTenant.name} (${tenant.plan}) - ID: ${createdTenant.id}`
+        );
+        createdTenants.push(createdTenant);
+      }
+
+      console.log(
+        `🎉 Successfully created ${createdTenants.length} test tenants`
+      );
+      return createdTenants;
+    } catch (error) {
+      console.error('❌ Failed to create test tenants:', error);
       throw error;
     }
   }
@@ -269,15 +435,63 @@ export class SeedUtils {
       const isMultiTenant = process.env.ENABLE_MULTI_TENANCY === 'true';
 
       if (isMultiTenant) {
-        console.log('🏢 Multi-tenancy enabled, creating test tenant...');
-        const tenant = await this.createTestTenant();
-        await this.createTestUsers(tenant.id);
+        console.log('🏢 Multi-tenancy enabled, creating test tenants...');
+        const tenants = await this.createTestTenants();
+
+        // Assign users to different tenants:
+        // - admin@example.com → Acme Corporation (professional)
+        // - user@example.com → Tech Startup Inc (free)
+        // - readonly@example.com → Global Enterprises (enterprise)
+        // - inactive@example.com → Acme Corporation
+        // - unverified@example.com → Tech Startup Inc
+
+        console.log('👥 Creating users for each tenant...');
+
+        // Admin user in Acme Corporation (professional plan)
+        await this.createUser({
+          ...this.TEST_USERS[0],
+          tenantId: tenants[0].id,
+        });
+
+        // Regular user in Tech Startup Inc (free plan)
+        await this.createUser({
+          ...this.TEST_USERS[1],
+          tenantId: tenants[1].id,
+        });
+
+        // Readonly user in Global Enterprises (enterprise plan)
+        await this.createUser({
+          ...this.TEST_USERS[2],
+          tenantId: tenants[2].id,
+        });
+
+        // Inactive user in Acme Corporation
+        await this.createUser({
+          ...this.TEST_USERS[3],
+          tenantId: tenants[0].id,
+        });
+
+        // Unverified user in Tech Startup Inc
+        await this.createUser({
+          ...this.TEST_USERS[4],
+          tenantId: tenants[1].id,
+        });
+
+        console.log('\n📊 Tenant assignments:');
+        console.log(`   ${tenants[0].name} (${tenants[0].slug}):`);
+        console.log(`     - admin@example.com (admin)`);
+        console.log(`     - inactive@example.com (user, inactive)`);
+        console.log(`   ${tenants[1].name} (${tenants[1].slug}):`);
+        console.log(`     - user@example.com (user)`);
+        console.log(`     - unverified@example.com (user, unverified)`);
+        console.log(`   ${tenants[2].name} (${tenants[2].slug}):`);
+        console.log(`     - readonly@example.com (readonly)`);
       } else {
         console.log('👤 Single-tenant mode, creating test users...');
         await this.createTestUsers();
       }
 
-      console.log('🎉 Database seeding completed successfully');
+      console.log('\n🎉 Database seeding completed successfully');
       console.log('📋 Test credentials:');
       this.TEST_USERS.forEach((user) => {
         console.log(`   ${user.email} / ${user.password} (${user.role})`);

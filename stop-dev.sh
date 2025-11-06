@@ -67,6 +67,11 @@ echo -e "${BLUE}🌐 Stopping frontend...${NC}"
 kill_by_pid_file ".frontend.pid" "Frontend Angular"
 kill_by_port 4200 "Frontend (port 4200)"
 
+# Stop Form Builder UI server
+echo -e "${BLUE}🎨 Stopping Form Builder UI...${NC}"
+kill_by_pid_file ".form-builder-ui.pid" "Form Builder UI"
+kill_by_port 4201 "Form Builder UI (port 4201)"
+
 # Stop backend API server
 echo -e "${BLUE}🔧 Stopping backend...${NC}"
 kill_by_pid_file ".backend.pid" "Backend API"
@@ -82,7 +87,7 @@ echo -e "${BLUE}🧹 Cleaning up runtime artifacts...${NC}"
 if [ -d "logs" ]; then
     rm -f logs/*.log
 fi
-rm -f .frontend.pid .backend.pid .pgweb.pid
+rm -f .frontend.pid .form-builder-ui.pid .backend.pid .pgweb.pid
 
 # Provide reminder about PostgreSQL service
 if command -v brew >/dev/null 2>&1; then

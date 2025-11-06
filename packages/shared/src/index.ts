@@ -14,4 +14,5 @@ export * from './types/tool-registry.types';
 export * from './types/test-tool.types';
 export * from './types/export.types';
 export * from './types/validation.types';
+export * from './types/tenant.types';
 export * from './utils/validation';

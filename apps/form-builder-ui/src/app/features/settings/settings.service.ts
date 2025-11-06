@@ -88,15 +88,15 @@ export class SettingsService {
     ];
 
     // Add admin section if user is admin
-    if (user?.role === 'admin') {
-      baseItems.push({
-        id: 'admin',
-        label: 'Administration',
-        icon: 'pi-crown',
-        description: 'Tools management and system settings',
-        requiresRole: 'admin',
-      });
-    }
+    // if (user?.role === 'admin') {
+    //   baseItems.push({
+    //     id: 'admin',
+    //     label: 'Administration',
+    //     icon: 'pi-crown',
+    //     description: 'Tools management and system settings',
+    //     requiresRole: 'admin',
+    //   });
+    // }
 
     return baseItems;
   });

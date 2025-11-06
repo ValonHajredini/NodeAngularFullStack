@@ -149,13 +149,19 @@ export class UsersRepository {
 
       const values: any[] = [email];
 
-      // Add tenant filtering if multi-tenancy is enabled
+      // Add tenant filtering based on multi-tenancy mode
+      const isMultiTenant = process.env.ENABLE_MULTI_TENANCY === 'true';
+
       if (tenantId !== undefined) {
+        // Explicit tenant ID provided - filter by it
         query += ' AND tenant_id = $2';
         values.push(tenantId);
-      } else {
+      } else if (!isMultiTenant) {
+        // Single-tenant mode - only find users with NULL tenant_id
         query += ' AND tenant_id IS NULL';
       }
+      // If multi-tenant mode and no tenantId provided, don't filter by tenant_id
+      // This allows login to work with any tenant (tenant context added later to JWT)
 
       const result = await client.query(query, values);
 

@@ -84,17 +84,15 @@ import { AuthService } from '@core/auth/auth.service';
             [routerLink]="['/app/dashboard']"
             class="hover:text-blue-600 transition-colors flex items-center"
           >
-            <i class="pi pi-file-edit mr-1"></i>
-            Form Builder
+            <i class="pi pi-home mr-1"></i>
+            Dashboard
           </a>
-          <i class="pi pi-angle-right mx-2 text-gray-400"></i>
-          <a [routerLink]="['/app/tools']" class="hover:text-blue-600 transition-colors"> Tools </a>
           <i class="pi pi-angle-right mx-2 text-gray-400"></i>
           <a
             (click)="openFormsDialog()"
             class="hover:text-blue-600 transition-colors cursor-pointer"
           >
-            Form Builder
+            My Forms
           </a>
           <i class="pi pi-angle-right mx-2 text-gray-400"></i>
           <span class="text-gray-900 font-medium">

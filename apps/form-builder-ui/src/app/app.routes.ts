@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
-import { authGuard, userGuard, roleGuard } from './core/guards/auth.guard';
+import { authGuard, userGuard } from './core/guards/auth.guard';
+import { ssoAuthGuard } from './core/guards/sso-auth.guard';
 
 export const routes: Routes = [
   // Debug route for testing
@@ -77,7 +78,7 @@ export const routes: Routes = [
     path: 'app',
     loadComponent: () =>
       import('./layouts/main-layout/main-layout.component').then((m) => m.MainLayoutComponent),
-    canActivate: [authGuard],
+    canActivate: [ssoAuthGuard],
     children: [
       {
         path: 'dashboard',
@@ -104,11 +105,6 @@ export const routes: Routes = [
           import('./features/documentation/documentation.component').then(
             (m) => m.DocumentationComponent,
           ),
-      },
-      {
-        path: 'admin',
-        loadChildren: () => import('./features/admin/admin.routes').then((m) => m.adminRoutes),
-        canActivate: [authGuard, roleGuard(['admin'])],
       },
       {
         path: '',

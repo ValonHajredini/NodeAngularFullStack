@@ -719,6 +719,71 @@ export class UsersController {
       next(error);
     }
   };
+
+  /**
+   * Gets all tenants that the authenticated user belongs to.
+   * Returns array of tenant memberships with role and tenant context.
+   * @route GET /api/users/me/tenants
+   * @param req - Express request object with authenticated user
+   * @param res - Express response object
+   * @param next - Express next function
+   * @returns HTTP response with array of tenant memberships
+   * @throws {ApiError} 401 - Authentication required
+   * @example
+   * GET /api/users/me/tenants
+   * Authorization: Bearer <token>
+   * Response:
+   * {
+   *   "success": true,
+   *   "data": [
+   *     {
+   *       "tenant": {
+   *         "id": "uuid",
+   *         "slug": "acme-corp",
+   *         "name": "Acme Corporation",
+   *         "plan": "professional",
+   *         "features": ["userManagement", "apiAccess"],
+   *         "limits": { "maxUsers": 100, "maxStorage": 10737418240, "maxApiCalls": 100000 },
+   *         "status": "active"
+   *       },
+   *       "role": "admin",
+   *       "joinedAt": "2025-01-01T00:00:00Z",
+   *       "isDefault": true
+   *     }
+   *   ]
+   * }
+   */
+  getUserTenants = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const userId = (req.user as any)?.id;
+
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Authentication required',
+          },
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      const memberships = await usersService.getUserTenants(userId);
+
+      res.status(200).json({
+        success: true,
+        data: memberships,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      next(error);
+    }
+  };
 }
 
 // Export singleton instance

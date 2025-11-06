@@ -280,6 +280,21 @@ export class AuthService {
   }
 
   /**
+   * Sets authentication data from SSO (Single Sign-On) token.
+   * Used by SSO auth guard to authenticate users coming from another application.
+   * @param authResponse - Authentication data containing user and tokens
+   * @example
+   * authService.setSsoAuthData({
+   *   user: decodedUser,
+   *   accessToken: token,
+   *   refreshToken: ''
+   * });
+   */
+  setSsoAuthData(authResponse: AuthResponse): void {
+    this.setAuthData(authResponse);
+  }
+
+  /**
    * Sets authentication data and stores it securely.
    */
   private setAuthData(authResponse: AuthResponse): void {

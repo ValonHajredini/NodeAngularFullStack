@@ -99,6 +99,7 @@ fi
 
 FRONTEND_PORT="${FRONTEND_PORT:-4200}"
 API_PORT="${PORT:-3000}"
+FORM_BUILDER_PORT="${FORM_BUILDER_PORT:-4201}"
 PGWEB_PORT="${PGWEB_PORT:-8080}"
 
 ENV_FILE="${ENV_FILE:-.env.development}"
@@ -114,6 +115,7 @@ fi
 
 FRONTEND_PORT="${FRONTEND_PORT:-4200}"
 API_PORT="${PORT:-3000}"
+FORM_BUILDER_PORT="${FORM_BUILDER_PORT:-4201}"
 PGWEB_PORT="${PGWEB_PORT:-8080}"
 
 DB_HOST="${DB_HOST:-localhost}"
@@ -171,6 +173,7 @@ echo -e "${GREEN}✅ PostgreSQL connection verified${NC}"
 
 stop_process_on_port "$API_PORT" "Backend API"
 stop_process_on_port "$FRONTEND_PORT" "Frontend Angular"
+stop_process_on_port "$FORM_BUILDER_PORT" "Form Builder UI"
 stop_process_on_port "$PGWEB_PORT" "pgWeb"
 
 echo -e "${BLUE}🔧 Preparing backend dependencies...${NC}"
@@ -223,11 +226,25 @@ echo $FRONTEND_PID > .frontend.pid
 
 wait_for_service "http://localhost:${FRONTEND_PORT}" "Frontend Angular"
 
+echo -e "${BLUE}🌐 Preparing Form Builder UI application...${NC}"
+if [ ! -d "apps/form-builder-ui/node_modules" ]; then
+    echo -e "${YELLOW}📦 Installing Form Builder UI dependencies...${NC}"
+    npm --workspace=apps/form-builder-ui install
+fi
+
+echo -e "${BLUE}🚀 Starting Form Builder UI development server...${NC}"
+npm --workspace=apps/form-builder-ui run dev > "$LOG_DIR/form-builder-ui.log" 2>&1 &
+FORM_BUILDER_PID=$!
+echo $FORM_BUILDER_PID > .form-builder-ui.pid
+
+wait_for_service "http://localhost:${FORM_BUILDER_PORT}" "Form Builder UI"
+
 echo ""
 echo -e "${GREEN}🎉 SUCCESS! Local development environment is ready${NC}"
 echo "=================================================="
 echo -e "${BLUE}📋 Service URLs:${NC}"
-echo -e "   Frontend (Angular):     ${GREEN}http://localhost:${FRONTEND_PORT}${NC}"
+echo -e "   Main App (Angular):     ${GREEN}http://localhost:${FRONTEND_PORT}${NC}"
+echo -e "   Form Builder UI:        ${GREEN}http://localhost:${FORM_BUILDER_PORT}${NC}"
 echo -e "   Backend API:            ${GREEN}http://localhost:${API_PORT}${NC}"
 echo -e "   API Docs:               ${GREEN}http://localhost:${API_PORT}/api-docs${NC}"
 echo -e "   pgWeb (Database UI):    ${GREEN}http://localhost:${PGWEB_PORT}${NC}"
@@ -239,9 +256,14 @@ echo -e "   User:     ${YELLOW}user@example.com${NC} / ${YELLOW}User123!@#${NC}"
 echo -e "   ReadOnly: ${YELLOW}readonly@example.com${NC} / ${YELLOW}Read123!@#${NC}"
 echo ""
 echo -e "${BLUE}📝 Logs:${NC}"
-echo -e "   Backend:  ${YELLOW}logs/backend.log${NC}"
-echo -e "   Frontend: ${YELLOW}logs/frontend.log${NC}"
-echo -e "   pgWeb:    ${YELLOW}logs/pgweb.log${NC}"
+echo -e "   Backend:          ${YELLOW}logs/backend.log${NC}"
+echo -e "   Main App:         ${YELLOW}logs/frontend.log${NC}"
+echo -e "   Form Builder UI:  ${YELLOW}logs/form-builder-ui.log${NC}"
+echo -e "   pgWeb:            ${YELLOW}logs/pgweb.log${NC}"
+echo ""
+echo -e "${BLUE}🔗 SSO Multi-Tenant Architecture:${NC}"
+echo -e "   ${YELLOW}Main App → Form Builder${NC} (SSO enabled via JWT token passing)"
+echo -e "   Click 'Form Builder' in navigation to test SSO authentication"
 echo ""
 echo -e "${YELLOW}💡 To stop all services, run: ${NC}./stop-dev.sh"
 echo -e "${GREEN}🚀 Happy coding without Docker!${NC}"

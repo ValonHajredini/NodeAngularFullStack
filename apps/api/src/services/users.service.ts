@@ -5,6 +5,8 @@ import {
   CreateUserData,
   UpdateUserData,
 } from '../repositories/users.repository';
+import { tenantRepository } from '../repositories/tenant.repository';
+import { TenantMembership } from '@nodeangularfullstack/shared';
 import { storageService } from './storage.service';
 
 /**
@@ -415,6 +417,87 @@ export class UsersService {
       console.warn('Failed to extract filename from URL:', url, error);
       return null;
     }
+  }
+
+  /**
+   * Gets all tenants that a user belongs to with their role and membership details.
+   * Returns array of TenantMembership objects containing tenant context and user role.
+   *
+   * @param userId - UUID of the user
+   * @returns Promise resolving to array of tenant memberships
+   * @throws Error if database query fails
+   *
+   * @example
+   * const memberships = await usersService.getUserTenants('user-uuid');
+   * // Returns:
+   * // [
+   * //   {
+   * //     tenant: { id, slug, name, plan, features, limits, status },
+   * //     role: 'admin',
+   * //     joinedAt: Date,
+   * //     isDefault: true
+   * //   }
+   * // ]
+   */
+  async getUserTenants(userId: string): Promise<TenantMembership[]> {
+    // Fetch user to get their tenant_id
+    const user = await usersRepository.findById(userId);
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // If user has no tenant (single-tenant mode or unassigned)
+    if (!user.tenantId) {
+      return [];
+    }
+
+    // Fetch the tenant details
+    const tenant = await tenantRepository.findById(user.tenantId);
+
+    if (!tenant) {
+      return [];
+    }
+
+    // Build TenantMembership response
+    const membership: TenantMembership = {
+      tenant: {
+        id: tenant.id,
+        slug: tenant.slug,
+        name: tenant.name,
+        plan: tenant.plan,
+        features: this.extractEnabledFeatures(tenant.settings?.features),
+        limits: {
+          maxUsers: (tenant as any).maxUsers || 10,
+          maxStorage: tenant.settings?.limits?.maxStorage || 1073741824,
+          maxApiCalls: tenant.settings?.limits?.maxApiCalls || 10000,
+        },
+        status: tenant.status,
+      },
+      role: (user.role || 'user') as 'admin' | 'user' | 'readonly',
+      joinedAt: user.createdAt,
+      isDefault: true, // First implementation: user can only belong to one tenant
+    };
+
+    return [membership];
+  }
+
+  /**
+   * Extracts enabled feature names from tenant settings features object.
+   * @param features - Features object from tenant settings
+   * @returns Array of enabled feature names
+   * @private
+   */
+  private extractEnabledFeatures(
+    features: Record<string, boolean> | undefined
+  ): string[] {
+    if (!features) {
+      return [];
+    }
+
+    return Object.entries(features)
+      .filter(([_, enabled]) => enabled === true)
+      .map(([featureName]) => featureName);
   }
 }
 

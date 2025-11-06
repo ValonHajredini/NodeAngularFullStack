@@ -89,18 +89,6 @@ export const settingsRoutes: Routes = [
         },
       },
       {
-        path: 'administration',
-        loadComponent: () =>
-          import('../admin/pages/tools-settings/tools-settings.page').then(
-            (m) => m.ToolsSettingsPage,
-          ),
-        canActivate: [roleGuard(['admin'])],
-        data: {
-          title: 'Administration',
-          description: 'Tools management and system settings',
-        },
-      },
-      {
         path: '',
         redirectTo: 'general',
         pathMatch: 'full',

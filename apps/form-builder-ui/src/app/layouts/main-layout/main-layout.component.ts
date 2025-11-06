@@ -359,37 +359,15 @@ export class MainLayoutComponent implements OnInit {
    * Items are filtered based on user roles and authentication status.
    */
   protected readonly navigationItems: NavigationItem[] = [
-    // {
-    //   label: 'Projects',
-    //   route: '/app/projects',
-    //   icon: 'pi pi-folder',
-    // },
-    // {
-    //   label: 'Tasks',
-    //   route: '/app/tasks',
-    //   icon: 'pi pi-check-square',
-    // },
-    // {
-    //   label: 'Reports',
-    //   route: '/app/reports',
-    //   icon: 'pi pi-chart-bar',
-    //   roles: ['admin', 'user'],
-    // },
+    {
+      label: 'Dashboard',
+      route: '/app/dashboard',
+      icon: 'pi pi-home',
+    },
     {
       label: 'Documentation',
       route: '/app/documentation',
       icon: 'pi pi-book',
-    },
-    // {
-    //   label: 'Tools',
-    //   route: '/app/tools',
-    //   icon: 'pi pi-folder',
-    // },
-    {
-      label: 'Admin Tools',
-      route: '/app/admin/tools',
-      icon: 'pi pi-folder',
-      roles: ['admin'],
     },
   ];
 

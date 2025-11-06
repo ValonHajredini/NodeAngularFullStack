@@ -115,15 +115,13 @@ const ALL_CHART_TYPE_OPTIONS: ChartTypeOption[] = [
         [class.max-w-7xl]="!isFullWidth()"
         [class.mx-auto]="!isFullWidth()"
       >
-        <a routerLink="/app/dashboard" class="hover:text-blue-600 transition-colors">
-          <i class="pi pi-file-edit mr-1"></i>
-          Form Builder
+        <a routerLink="/app/dashboard" class="hover:text-blue-600 transition-colors flex items-center">
+          <i class="pi pi-home mr-1"></i>
+          Dashboard
         </a>
         <i class="pi pi-angle-right mx-2 text-gray-400"></i>
-        <a routerLink="/app/tools" class="hover:text-blue-600 transition-colors">Tools</a>
-        <i class="pi pi-angle-right mx-2 text-gray-400"></i>
-        <a routerLink="/app/dashboard" class="hover:text-blue-600 transition-colors">
-          Form Builder
+        <a [routerLink]="['/app/dashboard/forms']" class="hover:text-blue-600 transition-colors">
+          My Forms
         </a>
         <i class="pi pi-angle-right mx-2 text-gray-400"></i>
         <span class="text-gray-900 font-medium">Analytics</span>

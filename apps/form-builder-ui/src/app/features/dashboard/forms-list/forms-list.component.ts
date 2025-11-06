@@ -24,7 +24,7 @@ import { ToolConfigService } from '@core/services/tool-config.service';
 import { FormCardComponent, FormCardAction } from '../form-card/form-card.component';
 // import { QrCodeDisplayComponent } from '../../tools/components/short-link/components/qr-code-display/qr-code-display.component';
 import { Dialog } from 'primeng/dialog';
-import {QrCodeDisplayComponent} from '@features/admin/components/qr-code-display.component';
+import {QrCodeDisplayComponent} from '../../tools/components/short-link/components/qr-code-display/qr-code-display.component';
 
 /**
  * Forms list component displaying all user's forms with enhanced QR code functionality.
@@ -77,13 +77,11 @@ import {QrCodeDisplayComponent} from '@features/admin/components/qr-code-display
           routerLink="/app/dashboard"
           class="hover:text-blue-600 transition-colors flex items-center"
         >
-          <i class="pi pi-file-edit mr-1"></i>
-          Form Builder
+          <i class="pi pi-home mr-1"></i>
+          Dashboard
         </a>
         <i class="pi pi-angle-right mx-2 text-gray-400"></i>
-        <a routerLink="/app/tools" class="hover:text-blue-600 transition-colors"> Tools </a>
-        <i class="pi pi-angle-right mx-2 text-gray-400"></i>
-        <span class="text-gray-900 font-medium">Form Builder</span>
+        <span class="text-gray-900 font-medium">My Forms</span>
       </nav>
     </div>
 

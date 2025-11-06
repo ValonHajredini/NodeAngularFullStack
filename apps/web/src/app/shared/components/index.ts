@@ -44,6 +44,7 @@ export {
   ImageGallerySelectorComponent,
   type GalleryImage,
 } from './image-gallery-selector/image-gallery-selector.component';
+export { TenantSelectorComponent } from './tenant-selector/tenant-selector.component';
 
 // Welcome Page Components
 export {

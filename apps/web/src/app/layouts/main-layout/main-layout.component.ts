@@ -4,6 +4,8 @@ import { Router, RouterOutlet, RouterLink, NavigationEnd } from '@angular/router
 import { filter } from 'rxjs/operators';
 import { AuthService, User } from '../../core/auth/auth.service';
 import { UserDropdownMenuComponent } from '../../shared/components/user-dropdown-menu/user-dropdown-menu.component';
+import { TenantSelectorComponent } from '../../shared/components/tenant-selector/tenant-selector.component';
+import { SsoNavigationService } from '../../core/services/sso-navigation.service';
 
 /**
  * Interface for navigation menu items.
@@ -14,6 +16,7 @@ export interface NavigationItem {
   icon: string;
   roles?: string[];
   external?: boolean;
+  onClick?: () => void;
   children?: NavigationItem[];
 }
 
@@ -25,7 +28,13 @@ export interface NavigationItem {
 @Component({
   selector: 'app-main-layout',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, UserDropdownMenuComponent],
+  imports: [
+    CommonModule,
+    RouterOutlet,
+    RouterLink,
+    UserDropdownMenuComponent,
+    TenantSelectorComponent,
+  ],
   template: `
     <div class="min-h-screen main-container">
       <!-- Navigation Header -->
@@ -49,25 +58,40 @@ export interface NavigationItem {
               <!-- Primary Navigation (Desktop) -->
               <div class="hidden md:ml-6 md:flex md:space-x-8">
                 @for (item of getVisibleNavigationItems(); track item.route) {
-                  <a
-                    [routerLink]="item.route"
-                    class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200"
-                    [class.border-primary-500]="isActiveRoute(item.route)"
-                    [class.nav-text-active]="isActiveRoute(item.route)"
-                    [class.border-transparent]="!isActiveRoute(item.route)"
-                    [class.nav-text-inactive]="!isActiveRoute(item.route)"
-                    [class.nav-text-hover]="!isActiveRoute(item.route)"
-                    [class.nav-border-hover]="!isActiveRoute(item.route)"
-                  >
-                    <i [class]="item.icon" class="mr-2"></i>
-                    {{ item.label }}
-                  </a>
+                  @if (item.external) {
+                    <button
+                      type="button"
+                      (click)="handleNavItemClick(item)"
+                      class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200 border-transparent nav-text-inactive nav-text-hover nav-border-hover cursor-pointer"
+                    >
+                      <i [class]="item.icon" class="mr-2"></i>
+                      {{ item.label }}
+                      <i class="pi pi-external-link ml-1 text-xs"></i>
+                    </button>
+                  } @else {
+                    <a
+                      [routerLink]="item.route"
+                      class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200"
+                      [class.border-primary-500]="isActiveRoute(item.route)"
+                      [class.nav-text-active]="isActiveRoute(item.route)"
+                      [class.border-transparent]="!isActiveRoute(item.route)"
+                      [class.nav-text-inactive]="!isActiveRoute(item.route)"
+                      [class.nav-text-hover]="!isActiveRoute(item.route)"
+                      [class.nav-border-hover]="!isActiveRoute(item.route)"
+                    >
+                      <i [class]="item.icon" class="mr-2"></i>
+                      {{ item.label }}
+                    </a>
+                  }
                 }
               </div>
             </div>
 
             <!-- Secondary Navigation (Desktop) -->
             <div class="hidden md:ml-6 md:flex md:items-center md:space-x-4">
+              <!-- Tenant Selector -->
+              <app-tenant-selector />
+
               <!-- Notifications (placeholder for future) -->
               <button type="button" class="nav-button rounded-full p-1 transition-colors">
                 <span class="sr-only">View notifications</span>
@@ -102,22 +126,39 @@ export interface NavigationItem {
           <div class="md:hidden mobile-menu-panel animate-slide-down">
             <div class="pt-2 pb-3 space-y-1">
               @for (item of getVisibleNavigationItems(); track item.route) {
-                <a
-                  [routerLink]="item.route"
-                  (click)="closeMobileMenu()"
-                  class="mobile-menu-item"
-                  [class.mobile-menu-item-active]="isActiveRoute(item.route)"
-                  [class.mobile-menu-item-inactive]="!isActiveRoute(item.route)"
-                >
-                  <i [class]="item.icon" class="mr-3"></i>
-                  {{ item.label }}
-                </a>
+                @if (item.external) {
+                  <button
+                    type="button"
+                    (click)="handleNavItemClick(item); closeMobileMenu()"
+                    class="mobile-menu-item mobile-menu-item-inactive w-full text-left"
+                  >
+                    <i [class]="item.icon" class="mr-3"></i>
+                    {{ item.label }}
+                    <i class="pi pi-external-link ml-1 text-xs"></i>
+                  </button>
+                } @else {
+                  <a
+                    [routerLink]="item.route"
+                    (click)="closeMobileMenu()"
+                    class="mobile-menu-item"
+                    [class.mobile-menu-item-active]="isActiveRoute(item.route)"
+                    [class.mobile-menu-item-inactive]="!isActiveRoute(item.route)"
+                  >
+                    <i [class]="item.icon" class="mr-3"></i>
+                    {{ item.label }}
+                  </a>
+                }
               }
             </div>
 
             <!-- Mobile User Section -->
             @if (user()) {
               <div class="pt-4 pb-3 mobile-user-section">
+                <!-- Tenant Selector for Mobile -->
+                <div class="px-4 py-2 mb-2">
+                  <app-tenant-selector />
+                </div>
+
                 <!-- User Dropdown for Mobile -->
                 <div class="px-4 py-2">
                   <app-user-dropdown-menu />
@@ -348,6 +389,7 @@ export interface NavigationItem {
 export class MainLayoutComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
+  private readonly ssoNavigationService = inject(SsoNavigationService);
 
   protected readonly user = this.authService.user;
   protected readonly mobileMenuOpen = signal(false);
@@ -363,6 +405,13 @@ export class MainLayoutComponent implements OnInit {
       label: 'Dashboard',
       route: '/app/dashboard',
       icon: 'pi pi-home',
+    },
+    {
+      label: 'Form Builder',
+      route: 'http://localhost:4201/dashboard',
+      icon: 'pi pi-pencil',
+      external: true,
+      onClick: () => this.openFormBuilder(),
     },
     // {
     //   label: 'Projects',
@@ -525,5 +574,26 @@ export class MainLayoutComponent implements OnInit {
     }
 
     return '??';
+  }
+
+  /**
+   * Handles navigation item click (for external links).
+   * @param item - Navigation item that was clicked
+   */
+  public handleNavItemClick(item: NavigationItem): void {
+    if (item.onClick) {
+      item.onClick();
+    }
+  }
+
+  /**
+   * Opens Form Builder application with SSO authentication.
+   * Uses SsoNavigationService to pass JWT token in URL.
+   */
+  private openFormBuilder(): void {
+    this.ssoNavigationService.openFormBuilder().catch((error) => {
+      console.error('Failed to open Form Builder:', error);
+      // Optionally show error message to user
+    });
   }
 }

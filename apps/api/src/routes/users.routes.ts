@@ -722,4 +722,94 @@ router.delete(
   usersController.deleteAvatar
 );
 
+/**
+ * @swagger
+ * /api/v1/users/me/tenants:
+ *   get:
+ *     summary: Get user's tenant memberships
+ *     description: Get all tenants that the authenticated user belongs to with role and membership details
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User tenant memberships retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       tenant:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                             example: "11111111-1111-1111-1111-111111111111"
+ *                           slug:
+ *                             type: string
+ *                             example: "acme-corp"
+ *                           name:
+ *                             type: string
+ *                             example: "Acme Corporation"
+ *                           plan:
+ *                             type: string
+ *                             enum: [free, starter, professional, enterprise]
+ *                             example: "professional"
+ *                           features:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                             example: ["userManagement", "apiAccess", "customBranding"]
+ *                           limits:
+ *                             type: object
+ *                             properties:
+ *                               maxUsers:
+ *                                 type: number
+ *                                 example: 100
+ *                               maxStorage:
+ *                                 type: number
+ *                                 example: 10737418240
+ *                               maxApiCalls:
+ *                                 type: number
+ *                                 example: 100000
+ *                           status:
+ *                             type: string
+ *                             enum: [active, suspended, inactive, pending]
+ *                             example: "active"
+ *                       role:
+ *                         type: string
+ *                         enum: [admin, user, readonly]
+ *                         example: "admin"
+ *                       joinedAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-01-01T00:00:00.000Z"
+ *                       isDefault:
+ *                         type: boolean
+ *                         example: true
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get(
+  '/me/tenants',
+  AuthMiddleware.authenticate,
+  usersController.getUserTenants
+);
+
 export { router as usersRoutes };
