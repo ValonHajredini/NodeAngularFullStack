@@ -101,8 +101,7 @@ export const routes: Routes = [
       },
       {
         path: 'team',
-        loadComponent: () =>
-          import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent), // Placeholder
+        loadComponent: () => import('./features/team/team.component').then((m) => m.TeamComponent),
       },
       {
         path: 'reports',

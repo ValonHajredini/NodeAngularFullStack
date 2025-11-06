@@ -4,6 +4,7 @@ import { Router, RouterOutlet, RouterLink, NavigationEnd } from '@angular/router
 import { filter } from 'rxjs/operators';
 import { AuthService, User } from '../../core/auth/auth.service';
 import { UserDropdownMenuComponent } from '../../shared/components/user-dropdown-menu/user-dropdown-menu.component';
+import { environment } from '@env/environment';
 
 /**
  * Interface for navigation menu items.
@@ -49,19 +50,29 @@ export interface NavigationItem {
               <!-- Primary Navigation (Desktop) -->
               <div class="hidden md:ml-6 md:flex md:space-x-8">
                 @for (item of getVisibleNavigationItems(); track item.route) {
-                  <a
-                    [routerLink]="item.route"
-                    class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200"
-                    [class.border-primary-500]="isActiveRoute(item.route)"
-                    [class.nav-text-active]="isActiveRoute(item.route)"
-                    [class.border-transparent]="!isActiveRoute(item.route)"
-                    [class.nav-text-inactive]="!isActiveRoute(item.route)"
-                    [class.nav-text-hover]="!isActiveRoute(item.route)"
-                    [class.nav-border-hover]="!isActiveRoute(item.route)"
-                  >
-                    <i [class]="item.icon" class="mr-2"></i>
-                    {{ item.label }}
-                  </a>
+                  @if (item.external) {
+                    <a
+                      (click)="handleExternalNavigation(item.route)"
+                      class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200 cursor-pointer border-transparent nav-text-inactive nav-text-hover nav-border-hover"
+                    >
+                      <i [class]="item.icon" class="mr-2"></i>
+                      {{ item.label }}
+                    </a>
+                  } @else {
+                    <a
+                      [routerLink]="item.route"
+                      class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200"
+                      [class.border-primary-500]="isActiveRoute(item.route)"
+                      [class.nav-text-active]="isActiveRoute(item.route)"
+                      [class.border-transparent]="!isActiveRoute(item.route)"
+                      [class.nav-text-inactive]="!isActiveRoute(item.route)"
+                      [class.nav-text-hover]="!isActiveRoute(item.route)"
+                      [class.nav-border-hover]="!isActiveRoute(item.route)"
+                    >
+                      <i [class]="item.icon" class="mr-2"></i>
+                      {{ item.label }}
+                    </a>
+                  }
                 }
               </div>
             </div>
@@ -102,16 +113,26 @@ export interface NavigationItem {
           <div class="md:hidden mobile-menu-panel animate-slide-down">
             <div class="pt-2 pb-3 space-y-1">
               @for (item of getVisibleNavigationItems(); track item.route) {
-                <a
-                  [routerLink]="item.route"
-                  (click)="closeMobileMenu()"
-                  class="mobile-menu-item"
-                  [class.mobile-menu-item-active]="isActiveRoute(item.route)"
-                  [class.mobile-menu-item-inactive]="!isActiveRoute(item.route)"
-                >
-                  <i [class]="item.icon" class="mr-3"></i>
-                  {{ item.label }}
-                </a>
+                @if (item.external) {
+                  <a
+                    (click)="handleExternalNavigation(item.route); closeMobileMenu()"
+                    class="mobile-menu-item mobile-menu-item-inactive cursor-pointer"
+                  >
+                    <i [class]="item.icon" class="mr-3"></i>
+                    {{ item.label }}
+                  </a>
+                } @else {
+                  <a
+                    [routerLink]="item.route"
+                    (click)="closeMobileMenu()"
+                    class="mobile-menu-item"
+                    [class.mobile-menu-item-active]="isActiveRoute(item.route)"
+                    [class.mobile-menu-item-inactive]="!isActiveRoute(item.route)"
+                  >
+                    <i [class]="item.icon" class="mr-3"></i>
+                    {{ item.label }}
+                  </a>
+                }
               }
             </div>
 
@@ -360,6 +381,12 @@ export class MainLayoutComponent implements OnInit {
    */
   protected readonly navigationItems: NavigationItem[] = [
     {
+      label: 'Main Dashboard',
+      route: `${environment.mainAppUrl}/app/dashboard`,
+      icon: 'pi pi-th-large',
+      external: true,
+    },
+    {
       label: 'Dashboard',
       route: '/app/dashboard',
       icon: 'pi pi-home',
@@ -493,5 +520,14 @@ export class MainLayoutComponent implements OnInit {
     }
 
     return '??';
+  }
+
+  /**
+   * Handles navigation to external URLs (e.g., main app dashboard).
+   * Uses window.location.href for cross-application navigation.
+   * @param url - External URL to navigate to
+   */
+  public handleExternalNavigation(url: string): void {
+    window.location.href = url;
   }
 }

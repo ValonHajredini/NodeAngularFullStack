@@ -653,12 +653,12 @@ export class DashboardComponent implements OnInit {
    */
   private readonly actionCards: ActionCardData[] = [
     {
-      title: 'New Project',
-      description: 'Start a new project with your team.',
-      icon: 'pi pi-plus',
+      title: 'Form Builder',
+      description: 'Create and manage custom forms.',
+      icon: 'pi pi-file-edit',
       iconColor: 'primary',
-      routerLink: '/projects/new',
-      ariaLabel: 'Create a new project and start collaborating with your team',
+      routerLink: '/app/tools/form-builder/list',
+      ariaLabel: 'Access the form builder to create and manage custom forms',
     },
     {
       title: 'View Tasks',
@@ -673,7 +673,7 @@ export class DashboardComponent implements OnInit {
       description: 'Collaborate with your team members.',
       icon: 'pi pi-users',
       iconColor: 'info',
-      routerLink: '/team',
+      routerLink: '/app/team',
       ariaLabel: 'View team members and collaborate on projects',
     },
     {
@@ -681,7 +681,7 @@ export class DashboardComponent implements OnInit {
       description: 'View analytics and insights.',
       icon: 'pi pi-chart-bar',
       iconColor: 'warning',
-      routerLink: '/reports',
+      routerLink: '/app/reports',
       ariaLabel: 'Access reports, analytics and project insights',
     },
   ];

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
 import { ThemeService } from '../../../core/services/theme.service';
+import { TenantContextService } from '../../../core/services/tenant-context.service';
 
 /**
  * Interface for user menu items.
@@ -87,17 +88,25 @@ export interface UserMenuItem {
                 {{ user()!.firstName }} {{ user()!.lastName }}
               </p>
               <p class="text-sm dropdown-text-secondary">{{ user()!.email }}</p>
-              <span
-                class="inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs font-medium"
-                [class.bg-blue-100]="user()!.role === 'admin'"
-                [class.text-blue-800]="user()!.role === 'admin'"
-                [class.bg-green-100]="user()!.role === 'user'"
-                [class.text-green-800]="user()!.role === 'user'"
-                [class.bg-gray-100]="user()!.role === 'readonly'"
-                [class.text-gray-800]="user()!.role === 'readonly'"
-              >
-                {{ getRoleDisplayName(user()!.role) }}
-              </span>
+              <div class="flex items-center gap-2 mt-1">
+                <span
+                  class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                  [class.bg-blue-100]="user()!.role === 'admin'"
+                  [class.text-blue-800]="user()!.role === 'admin'"
+                  [class.bg-green-100]="user()!.role === 'user'"
+                  [class.text-green-800]="user()!.role === 'user'"
+                  [class.bg-gray-100]="user()!.role === 'readonly'"
+                  [class.text-gray-800]="user()!.role === 'readonly'"
+                >
+                  {{ getRoleDisplayName(user()!.role) }}
+                </span>
+              </div>
+              @if (currentTenant()) {
+                <p class="text-xs dropdown-text-secondary mt-2 flex items-center gap-1">
+                  <i class="pi pi-building text-xs"></i>
+                  {{ currentTenant()!.name }}
+                </p>
+              }
             </div>
           }
 
@@ -246,11 +255,13 @@ export class UserDropdownMenuComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
   private readonly themeService = inject(ThemeService);
+  private readonly tenantService = inject(TenantContextService);
 
   protected readonly user = this.authService.user;
   protected readonly userMenuOpen = signal(false);
   protected readonly imageLoadError = signal(false);
   protected readonly currentTheme = this.themeService.currentTheme;
+  protected readonly currentTenant = this.tenantService.currentTenant;
 
   private clickOutsideHandler: ((event: Event) => void) | null = null;
 

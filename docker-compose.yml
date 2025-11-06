@@ -39,8 +39,8 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:-dbpassword}
       JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your-super-secret-jwt-refresh-key-change-in-production}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
-      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-1h}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-8d}
       FORM_RENDER_TOKEN_SECRET: ${FORM_RENDER_TOKEN_SECRET:-change-this-secret}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:4200,http://localhost,http://localhost:80,http://localhost:8080}
       RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-900000}

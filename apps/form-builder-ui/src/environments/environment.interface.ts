@@ -12,6 +12,9 @@ export interface EnvironmentConfig {
   /** Base URL used when constructing public short links */
   shortLinkBaseUrl: string;
 
+  /** Base URL for main app (for SSO logout redirect) */
+  mainAppUrl: string;
+
   /** Application name for display */
   appName: string;
 

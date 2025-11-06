@@ -4,7 +4,7 @@ import { Router, RouterOutlet, RouterLink, NavigationEnd } from '@angular/router
 import { filter } from 'rxjs/operators';
 import { AuthService, User } from '../../core/auth/auth.service';
 import { UserDropdownMenuComponent } from '../../shared/components/user-dropdown-menu/user-dropdown-menu.component';
-import { TenantSelectorComponent } from '../../shared/components/tenant-selector/tenant-selector.component';
+// import { TenantSelectorComponent } from '../../shared/components/tenant-selector/tenant-selector.component';
 import { SsoNavigationService } from '../../core/services/sso-navigation.service';
 
 /**
@@ -33,7 +33,7 @@ export interface NavigationItem {
     RouterOutlet,
     RouterLink,
     UserDropdownMenuComponent,
-    TenantSelectorComponent,
+    // TenantSelectorComponent,
   ],
   template: `
     <div class="min-h-screen main-container">
@@ -90,7 +90,7 @@ export interface NavigationItem {
             <!-- Secondary Navigation (Desktop) -->
             <div class="hidden md:ml-6 md:flex md:items-center md:space-x-4">
               <!-- Tenant Selector -->
-              <app-tenant-selector />
+              <!-- <app-tenant-selector /> -->
 
               <!-- Notifications (placeholder for future) -->
               <button type="button" class="nav-button rounded-full p-1 transition-colors">
@@ -155,9 +155,9 @@ export interface NavigationItem {
             @if (user()) {
               <div class="pt-4 pb-3 mobile-user-section">
                 <!-- Tenant Selector for Mobile -->
-                <div class="px-4 py-2 mb-2">
+                <!-- <div class="px-4 py-2 mb-2">
                   <app-tenant-selector />
-                </div>
+                </div> -->
 
                 <!-- User Dropdown for Mobile -->
                 <div class="px-4 py-2">
@@ -406,13 +406,13 @@ export class MainLayoutComponent implements OnInit {
       route: '/app/dashboard',
       icon: 'pi pi-home',
     },
-    {
-      label: 'Form Builder',
-      route: 'http://localhost:4201/dashboard',
-      icon: 'pi pi-pencil',
-      external: true,
-      onClick: () => this.openFormBuilder(),
-    },
+    // {
+    //   label: 'Form Builder',
+    //   route: 'http://localhost:4201/dashboard',
+    //   icon: 'pi pi-pencil',
+    //   external: true,
+    //   onClick: () => this.openFormBuilder(),
+    // },
     // {
     //   label: 'Projects',
     //   route: '/app/projects',

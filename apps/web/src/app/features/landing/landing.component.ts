@@ -1,5 +1,5 @@
-import { Component, inject, computed } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, inject, computed, OnInit } from '@angular/core';
+import { Router, ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { ThemeService } from '../../core/services/theme.service';
 import { AuthService } from '../../core/auth/auth.service';
@@ -24,10 +24,42 @@ import {
   `,
   styles: [],
 })
-export class LandingComponent {
+export class LandingComponent implements OnInit {
   readonly themeService = inject(ThemeService);
   readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+
+  /**
+   * Lifecycle hook - handles SSO logout from external apps
+   */
+  ngOnInit(): void {
+    // Check for SSO logout parameter from Form Builder or other satellite apps
+    this.route.queryParams.subscribe((params) => {
+      if (params['logout'] === 'sso') {
+        console.log('SSO logout triggered from external app');
+
+        // Log out the user from the main app
+        if (this.authService.isAuthenticated()) {
+          this.authService.logout().subscribe({
+            next: () => {
+              console.log('Main app logout completed');
+              // Clean up URL by removing the logout parameter
+              this.router.navigate(['/welcome'], { replaceUrl: true });
+            },
+            error: (error) => {
+              console.error('Main app logout failed:', error);
+              // Force navigation even if logout fails
+              this.router.navigate(['/welcome'], { replaceUrl: true });
+            },
+          });
+        } else {
+          // User already logged out, just clean up URL
+          this.router.navigate(['/welcome'], { replaceUrl: true });
+        }
+      }
+    });
+  }
 
   /**
    * Welcome page configuration - computed to adapt to authentication state

@@ -306,7 +306,9 @@ export class AuthService {
   }
 
   /**
-   * Clears all authentication data and redirects to login.
+   * Clears all authentication data and redirects to main app welcome page.
+   * In SSO architecture, logout redirects to the main app rather than local login.
+   * Passes logout=true parameter to trigger logout in main app as well.
    */
   private clearAuthData(): void {
     this.userSignal.set(null);
@@ -315,7 +317,9 @@ export class AuthService {
     this.errorSignal.set(null);
 
     this.clearStorage();
-    this.router.navigate(['/welcome']);
+
+    // Redirect to main app welcome page with logout parameter to trigger SSO logout
+    window.location.href = `${environment.mainAppUrl}/welcome?logout=sso`;
   }
 
   /**

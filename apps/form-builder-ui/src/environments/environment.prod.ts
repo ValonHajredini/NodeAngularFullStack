@@ -6,6 +6,7 @@ export const environment = {
   production: true,
   apiUrl: 'https://api.yourapp.com/api/v1',
   shortLinkBaseUrl: 'https://api.yourapp.com',
+  mainAppUrl: 'https://yourapp.com',
   appName: 'NodeAngularFullStack',
   enableMultiTenancy: false,
   showTestCredentials: false,
