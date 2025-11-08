@@ -518,6 +518,8 @@ export interface FormSchema {
   expiresAt?: Date;
   /** Optional theme ID reference for form styling */
   themeId?: string;
+  /** Optional iframe embed configuration for published forms */
+  iframeEmbedOptions?: IframeEmbedOptions;
   /** Schema creation timestamp */
   createdAt: Date;
   /** Schema last update timestamp */
@@ -849,5 +851,16 @@ export interface IframeEmbedCode {
   previewUrl: string;
   /** Embed options used to generate this code */
   options: IframeEmbedOptions;
+}
+
+/**
+ * Request payload for publishing a form
+ * Includes optional expiration and iframe embed configuration
+ */
+export interface PublishFormRequest {
+  /** Optional expiration duration in days (null for permanent) */
+  expiresInDays?: number;
+  /** Optional iframe embed configuration */
+  iframeEmbedOptions?: IframeEmbedOptions;
 }
 

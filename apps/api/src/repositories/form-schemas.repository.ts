@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import { FormSchema } from '@nodeangularfullstack/shared';
+import { FormSchema, IframeEmbedOptions } from '@nodeangularfullstack/shared';
 import { databaseService } from '../services/database.service';
 
 /**
@@ -92,6 +92,7 @@ export class FormSchemasRepository {
           // Copy themeId from DB column into settings for frontend compatibility
           themeId: row.themeId || parsedSchemaJson.settings?.themeId,
         },
+        iframeEmbedOptions: parsedSchemaJson.iframeEmbedOptions,
         isPublished: row.isPublished,
         renderToken: row.renderToken,
         expiresAt: row.expiresAt,
@@ -166,6 +167,7 @@ export class FormSchemasRepository {
           // Copy themeId from DB column into settings for frontend compatibility
           themeId: row.themeId || parsedSchemaJson.settings?.themeId,
         },
+        iframeEmbedOptions: parsedSchemaJson.iframeEmbedOptions,
         isPublished: row.isPublished,
         renderToken: row.renderToken,
         expiresAt: row.expiresAt,
@@ -243,6 +245,7 @@ export class FormSchemasRepository {
             // Copy themeId from DB column into settings for frontend compatibility
             themeId: row.themeId || parsedSchemaJson.settings?.themeId,
           },
+          iframeEmbedOptions: parsedSchemaJson.iframeEmbedOptions,
           isPublished: row.isPublished,
           renderToken: row.renderToken,
           expiresAt: row.expiresAt,
@@ -318,6 +321,7 @@ export class FormSchemasRepository {
           // Copy themeId from DB column into settings for frontend compatibility
           themeId: row.themeId || parsedSchemaJson.settings?.themeId,
         },
+        iframeEmbedOptions: parsedSchemaJson.iframeEmbedOptions,
         isPublished: row.isPublished,
         renderToken: row.renderToken,
         expiresAt: row.expiresAt,
@@ -475,6 +479,7 @@ export class FormSchemasRepository {
           // Copy themeId from DB column into settings for frontend compatibility
           themeId: row.themeId || parsedSchemaJson.settings?.themeId,
         },
+        iframeEmbedOptions: parsedSchemaJson.iframeEmbedOptions,
         isPublished: row.isPublished,
         renderToken: row.renderToken,
         expiresAt: row.expiresAt,
@@ -557,6 +562,7 @@ export class FormSchemasRepository {
           // Copy themeId from DB column into settings for frontend compatibility
           themeId: row.themeId || parsedSchemaJson.settings?.themeId,
         },
+        iframeEmbedOptions: parsedSchemaJson.iframeEmbedOptions,
         isPublished: row.isPublished,
         renderToken: row.renderToken,
         expiresAt: row.expiresAt,
@@ -621,6 +627,7 @@ export class FormSchemasRepository {
           // Copy themeId from DB column into settings for frontend compatibility
           themeId: row.themeId || parsedSchemaJson.settings?.themeId,
         },
+        iframeEmbedOptions: parsedSchemaJson.iframeEmbedOptions,
         isPublished: row.isPublished,
         renderToken: row.renderToken,
         expiresAt: row.expiresAt,
@@ -630,6 +637,106 @@ export class FormSchemasRepository {
       } as FormSchema;
     } catch (error: any) {
       throw new Error(`Failed to unpublish form schema: ${error.message}`);
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Updates iframe embed options for a published form schema.
+   * @param id - Schema ID to update
+   * @param iframeEmbedOptions - Iframe embed configuration
+   * @returns Promise containing the updated schema
+   * @throws {Error} When update fails or schema not found
+   * @example
+   * const schema = await formSchemasRepository.updateSchemaIframeOptions('schema-uuid', {
+   *   width: '600px',
+   *   height: '800px',
+   *   responsive: true,
+   *   showBorder: false,
+   *   allowScrolling: true,
+   *   title: 'My Form'
+   * });
+   */
+  async updateSchemaIframeOptions(
+    id: string,
+    iframeEmbedOptions: IframeEmbedOptions
+  ): Promise<FormSchema> {
+    const client = await this.pool.connect();
+
+    try {
+      // Get current schema JSON
+      const currentResult = await client.query(
+        'SELECT schema_json FROM form_schemas WHERE id = $1',
+        [id]
+      );
+
+      if (currentResult.rows.length === 0) {
+        throw new Error('Form schema not found');
+      }
+
+      const currentSchemaJson = currentResult.rows[0].schema_json;
+
+      // Update schema JSON with iframe embed options
+      const updatedSchemaJson = {
+        ...currentSchemaJson,
+        iframeEmbedOptions,
+      };
+
+      // Update the schema_json column
+      const query = `
+        UPDATE form_schemas
+        SET
+          schema_json = $2,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+        RETURNING
+          id,
+          form_id as "formId",
+          schema_version as version,
+          schema_json,
+          is_published as "isPublished",
+          render_token as "renderToken",
+          expires_at as "expiresAt",
+          theme_id as "themeId",
+          created_at as "createdAt",
+          updated_at as "updatedAt"
+      `;
+
+      const result = await client.query(query, [
+        id,
+        JSON.stringify(updatedSchemaJson),
+      ]);
+
+      if (result.rows.length === 0) {
+        throw new Error('Form schema not found');
+      }
+
+      const row = result.rows[0];
+      const parsedSchemaJson = row.schema_json;
+
+      return {
+        id: row.id,
+        formId: row.formId,
+        version: row.version,
+        fields: parsedSchemaJson.fields || [],
+        settings: {
+          ...(parsedSchemaJson.settings || {}),
+          // Copy themeId from DB column into settings for frontend compatibility
+          themeId: row.themeId || parsedSchemaJson.settings?.themeId,
+        },
+        iframeEmbedOptions: parsedSchemaJson.iframeEmbedOptions,
+        isPublished: row.isPublished,
+        renderToken: row.renderToken,
+        expiresAt: row.expiresAt,
+        themeId: row.themeId,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      } as FormSchema;
+    } catch (error: any) {
+      throw new Error(
+        `Failed to update schema iframe options: ${error.message}`
+      );
     } finally {
       client.release();
     }

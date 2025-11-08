@@ -8,6 +8,7 @@ import {
   FormBackgroundSettings,
   TokenStatusResponse,
   PublishFormResponse,
+  IframeEmbedOptions,
 } from '@nodeangularfullstack/shared';
 import { formsRepository } from '../repositories/forms.repository';
 import { formSchemasRepository } from '../repositories/form-schemas.repository';
@@ -133,24 +134,26 @@ export class FormsService {
   }
 
   /**
-   * Publishes a form with generated render token.
+   * Publishes a form with generated render token and optional iframe embed configuration.
    * @param formId - Form ID to publish
    * @param userId - User ID requesting publish (must be owner)
    * @param expirationDate - Optional expiration date for token (null for permanent)
+   * @param iframeEmbedOptions - Optional iframe embed configuration
    * @returns Promise containing form, schema, and render URL
    * @throws {ApiError} 400 - When validation fails
    * @throws {ApiError} 404 - When form or schema not found
    * @throws {ApiError} 403 - When user is not the owner
    * @throws {ApiError} 500 - When publish fails
    * @example
-   * const result = await formsService.publishForm('form-uuid', 'user-uuid', new Date('2025-12-31'));
+   * const result = await formsService.publishForm('form-uuid', 'user-uuid', new Date('2025-12-31'), iframeOptions);
    * @example
    * const result = await formsService.publishForm('form-uuid', 'user-uuid', null);
    */
   async publishForm(
     formId: string,
     userId: string,
-    expirationDate: Date | null
+    expirationDate: Date | null,
+    iframeEmbedOptions?: IframeEmbedOptions
   ): Promise<PublishFormResponse> {
     try {
       // Find the form
@@ -197,11 +200,19 @@ export class FormsService {
       const renderToken = this.generateRenderToken(latestSchema.id, expiresAt);
 
       // Publish the schema
-      const publishedSchema = await this.formSchemasRepo.publishSchema(
+      let publishedSchema = await this.formSchemasRepo.publishSchema(
         latestSchema.id,
         renderToken,
         expiresAt
       );
+
+      // Save iframe embed options if provided
+      if (iframeEmbedOptions) {
+        publishedSchema = await this.formSchemasRepo.updateSchemaIframeOptions(
+          latestSchema.id,
+          iframeEmbedOptions
+        );
+      }
 
       // Update form status to published
       const updatedForm = await this.formsRepo.update(formId, {

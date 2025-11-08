@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import { FormSchema } from '@nodeangularfullstack/shared';
+import { FormSchema, IframeEmbedOptions } from '@nodeangularfullstack/shared';
 import { formsPool } from '../config/multi-database.config';
 
 /**
@@ -631,6 +631,108 @@ export class FormSchemasRepository {
       } as FormSchema;
     } catch (error: any) {
       throw new Error(`Failed to unpublish form schema: ${error.message}`);
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Updates iframe embed options for a form schema.
+   * Stores iframe settings in the schema_json JSONB column.
+   * @param id - Schema ID to update
+   * @param iframeEmbedOptions - Iframe embed configuration
+   * @returns Promise containing the updated schema
+   * @throws {Error} When update fails or schema not found
+   * @example
+   * const schema = await formSchemasRepository.updateSchemaIframeOptions('schema-uuid', {
+   *   width: '600px',
+   *   height: '800px',
+   *   responsive: true,
+   *   showBorder: false,
+   *   allowScrolling: true,
+   *   title: 'Contact Form'
+   * });
+   */
+  async updateSchemaIframeOptions(
+    id: string,
+    iframeEmbedOptions: IframeEmbedOptions
+  ): Promise<FormSchema> {
+    const client = await this.pool.connect();
+
+    try {
+      // First, get the current schema_json
+      const selectQuery = `
+        SELECT schema_json
+        FROM form_schemas
+        WHERE id = $1
+      `;
+      const selectResult = await client.query(selectQuery, [id]);
+
+      if (selectResult.rows.length === 0) {
+        throw new Error('Form schema not found');
+      }
+
+      const currentSchemaJson = selectResult.rows[0].schema_json;
+
+      // Merge iframe options into schema_json
+      const updatedSchemaJson = {
+        ...currentSchemaJson,
+        iframeEmbedOptions,
+      };
+
+      // Update the schema_json
+      const updateQuery = `
+        UPDATE form_schemas
+        SET
+          schema_json = $1,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+        RETURNING
+          id,
+          form_id as "formId",
+          schema_version as version,
+          schema_json,
+          is_published as "isPublished",
+          render_token as "renderToken",
+          expires_at as "expiresAt",
+          theme_id as "themeId",
+          created_at as "createdAt",
+          updated_at as "updatedAt"
+      `;
+
+      const result = await client.query(updateQuery, [
+        JSON.stringify(updatedSchemaJson),
+        id,
+      ]);
+
+      if (result.rows.length === 0) {
+        throw new Error('Failed to update schema');
+      }
+
+      const row = result.rows[0];
+      const parsedSchemaJson = row.schema_json;
+
+      return {
+        id: row.id,
+        formId: row.formId,
+        version: row.version,
+        fields: parsedSchemaJson.fields || [],
+        settings: {
+          ...(parsedSchemaJson.settings || {}),
+          themeId: row.themeId || parsedSchemaJson.settings?.themeId,
+        },
+        iframeEmbedOptions: parsedSchemaJson.iframeEmbedOptions,
+        isPublished: row.isPublished,
+        renderToken: row.renderToken,
+        expiresAt: row.expiresAt,
+        themeId: row.themeId,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      } as FormSchema;
+    } catch (error: any) {
+      throw new Error(
+        `Failed to update schema iframe options: ${error.message}`
+      );
     } finally {
       client.release();
     }

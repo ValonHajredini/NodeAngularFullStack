@@ -12,8 +12,8 @@
     [closable]="false"
   ></p-message>
 
-  <!-- Embed Options Form -->
-  <form [formGroup]="embedForm" class="space-y-4">
+  <!-- Embed Options Form (hidden after publishing) -->
+  <form *ngIf="!hideCustomization" [formGroup]="embedForm" class="space-y-4">
     <!-- Dimension Preset Selector -->
     <div class="flex flex-col gap-2">
       <label for="preset" class="font-medium text-gray-700">Size Preset</label>
@@ -139,8 +139,8 @@
     </div>
   </form>
 
-  <!-- Live Preview Dimensions -->
-  <div class="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+  <!-- Live Preview Dimensions (hidden after publishing) -->
+  <div *ngIf="!hideCustomization" class="p-3 bg-gray-50 border border-gray-200 rounded-lg">
     <div class="flex items-center gap-2 mb-2">
       <i class="pi pi-eye text-gray-600"></i>
       <span class="font-medium text-gray-700">Preview Dimensions</span>

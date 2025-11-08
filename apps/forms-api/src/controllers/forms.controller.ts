@@ -9,6 +9,7 @@ import {
   FormStatus,
   FormSubmission,
   SubmissionFilterOptions,
+  IframeEmbedOptions,
 } from '@nodeangularfullstack/shared';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { AsyncHandler } from '../utils/async-handler.utils';
@@ -351,9 +352,9 @@ export class FormsController {
   );
 
   /**
-   * Publishes a form and generates render token.
+   * Publishes a form and generates render token with optional iframe embed configuration.
    * @route POST /api/forms/:id/publish
-   * @param req - Express request object with form ID and expiration days
+   * @param req - Express request object with form ID, expiration days, and optional iframe settings
    * @param res - Express response object
    * @param next - Express next function
    * @returns HTTP response with published form data and render URL
@@ -365,7 +366,15 @@ export class FormsController {
    * POST /api/forms/form-uuid/publish
    * Authorization: Bearer <token>
    * {
-   *   "expiresInDays": 30
+   *   "expiresInDays": 30,
+   *   "iframeEmbedOptions": {
+   *     "width": "600px",
+   *     "height": "800px",
+   *     "responsive": true,
+   *     "showBorder": false,
+   *     "allowScrolling": true,
+   *     "title": "Contact Form"
+   *   }
    * }
    */
   publishForm = AsyncHandler(
@@ -397,8 +406,17 @@ export class FormsController {
         expirationDate.setDate(expirationDate.getDate() + expiresInDays);
       }
 
+      // Extract optional iframe embed options from request body
+      const iframeEmbedOptions: IframeEmbedOptions | undefined =
+        req.body.iframeEmbedOptions;
+
       // Publish form using service
-      const result = await formsService.publishForm(id, userId, expirationDate);
+      const result = await formsService.publishForm(
+        id,
+        userId,
+        expirationDate,
+        iframeEmbedOptions
+      );
 
       res.status(200).json({
         success: true,

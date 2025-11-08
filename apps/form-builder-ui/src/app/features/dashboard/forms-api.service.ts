@@ -12,6 +12,7 @@ import {
   PaginatedResponse,
   TokenStatusResponse,
   PublishFormResponse,
+  IframeEmbedOptions,
 } from '@nodeangularfullstack/shared';
 
 /**
@@ -113,20 +114,25 @@ export class FormsApiService {
   }
 
   /**
-   * Publishes a form and generates a render token.
+   * Publishes a form and generates a render token with optional iframe embed configuration.
    * @param formId - Form ID to publish
    * @param expiresAt - Token expiration date (null for no expiration)
+   * @param iframeEmbedOptions - Optional iframe embed configuration
    * @returns Observable containing form, schema, and render URL
    * @throws {HttpErrorResponse} When publish fails or validation errors
    * @example
-   * formsApiService.publishForm('form-123', new Date('2025-12-31'))
+   * formsApiService.publishForm('form-123', new Date('2025-12-31'), iframeOptions)
    *   .subscribe(result => console.log('Render URL:', result.renderUrl));
    * @example
    * formsApiService.publishForm('form-123', null)
    *   .subscribe(result => console.log('Permanent form URL:', result.renderUrl));
    */
-  publishForm(formId: string, expiresAt: Date | null): Observable<PublishFormResponse> {
-    const requestBody: { expiresInDays?: number } = {};
+  publishForm(
+    formId: string,
+    expiresAt: Date | null,
+    iframeEmbedOptions?: IframeEmbedOptions
+  ): Observable<PublishFormResponse> {
+    const requestBody: { expiresInDays?: number; iframeEmbedOptions?: IframeEmbedOptions } = {};
 
     // Only include expiration if a date is provided
     if (expiresAt) {
@@ -134,6 +140,11 @@ export class FormsApiService {
       const diffTime = expiresAt.getTime() - now.getTime();
       const expiresInDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       requestBody.expiresInDays = expiresInDays;
+    }
+
+    // Include iframe embed options if provided
+    if (iframeEmbedOptions) {
+      requestBody.iframeEmbedOptions = iframeEmbedOptions;
     }
 
     return this.apiClient

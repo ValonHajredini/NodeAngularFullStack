@@ -24,7 +24,7 @@ import { FieldPaletteComponent } from './field-palette/field-palette.component';
 import { FormCanvasComponent } from './form-canvas/form-canvas.component';
 import { FieldPropertiesModalComponent } from '../../shared/components/field-properties-modal';
 import { FormSettingsModalComponent, FormSettings } from '../../shared/components/form-settings-modal';
-import { PublishDialogComponent } from './publish-dialog/publish-dialog.component';
+import { PublishDialogComponent, PublishFormData } from './publish-dialog/publish-dialog.component';
 import { RowLayoutSidebarComponent } from './row-layout-sidebar/row-layout-sidebar.component';
 import { StepFormSidebarComponent } from './step-form-sidebar/step-form-sidebar.component';
 import { PreviewDialogComponent } from './preview-dialog/preview-dialog.component';
@@ -1466,10 +1466,10 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
   }
 
   /**
-   * Handles form publish with optional expiration date.
-   * @param expiresAt - Expiration date for the render token (null for no expiration)
+   * Handles form publish with optional expiration date and iframe embed settings.
+   * @param data - Form publish data containing expiration date and iframe embed options
    */
-  onPublish(expiresAt: Date | null): void {
+  onPublish(data: PublishFormData): void {
     const currentForm = this.formBuilderService.currentForm();
     if (!currentForm?.id) return;
 
@@ -1477,7 +1477,11 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
     // Story 26.3: Set QR code loading state
     this.qrCodeLoading.set(true);
 
-    this.formsApiService.publishForm(currentForm.id, expiresAt).subscribe({
+    this.formsApiService.publishForm(
+      currentForm.id,
+      data.expirationDate,
+      data.iframeEmbedOptions
+    ).subscribe({
       next: (result) => {
         // Update current form with published status
         this.formBuilderService.setCurrentForm(result.form);

@@ -34,6 +34,141 @@
         </p>
       </div>
 
+      <!-- Iframe Embed Settings -->
+      <div class="flex flex-col gap-3 border-t pt-4">
+        <div class="flex items-center gap-2">
+          <p-checkbox
+            formControlName="useIframeEmbed"
+            [binary]="true"
+            inputId="useIframeEmbed"
+            [disabled]="loading"
+          ></p-checkbox>
+          <label for="useIframeEmbed" class="font-semibold cursor-pointer">
+            Generate iframe embed code for this form
+          </label>
+        </div>
+
+        <!-- Iframe Settings (conditional) -->
+        <div
+          *ngIf="isIframeEmbedEnabled"
+          class="flex flex-col gap-3 ml-6 p-3 bg-gray-50 rounded-lg"
+        >
+          <!-- Size Preset -->
+          <div class="flex flex-col gap-2">
+            <label for="preset" class="font-medium text-gray-700">Size Preset</label>
+            <p-select
+              id="preset"
+              formControlName="preset"
+              [options]="sizePresets"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Select size preset"
+              [disabled]="loading"
+              class="w-full"
+            />
+          </div>
+
+          <!-- Width & Height Inputs (shown for all presets) -->
+          <div class="grid grid-cols-2 gap-3">
+            <div class="flex flex-col gap-2">
+              <label for="width" class="font-medium text-gray-700">Width</label>
+              <input
+                type="text"
+                pInputText
+                id="width"
+                formControlName="width"
+                placeholder="e.g., 600px"
+                [disabled]="loading || !isCustomPreset"
+                class="w-full"
+              />
+            </div>
+
+            <div class="flex flex-col gap-2">
+              <label for="height" class="font-medium text-gray-700">Height</label>
+              <input
+                type="text"
+                pInputText
+                id="height"
+                formControlName="height"
+                placeholder="e.g., 800px"
+                [disabled]="loading || !isCustomPreset"
+                class="w-full"
+              />
+            </div>
+          </div>
+
+          <!-- Iframe Options Checkboxes -->
+          <div class="flex flex-col gap-2">
+            <label class="font-medium text-gray-700">Iframe Options</label>
+
+            <div class="flex items-center gap-2">
+              <p-checkbox
+                formControlName="fullWidth"
+                [binary]="true"
+                inputId="fullWidth"
+                [disabled]="loading"
+              ></p-checkbox>
+              <label for="fullWidth" class="cursor-pointer">
+                Full width (100% of parent container)
+              </label>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <p-checkbox
+                formControlName="responsive"
+                [binary]="true"
+                inputId="responsive"
+                [disabled]="loading"
+              ></p-checkbox>
+              <label for="responsive" class="cursor-pointer">
+                Responsive width (uses percentage-based width)
+              </label>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <p-checkbox
+                formControlName="showBorder"
+                [binary]="true"
+                inputId="showBorder"
+                [disabled]="loading"
+              ></p-checkbox>
+              <label for="showBorder" class="cursor-pointer">Show iframe border</label>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <p-checkbox
+                formControlName="allowScrolling"
+                [binary]="true"
+                inputId="allowScrolling"
+                [disabled]="loading"
+              ></p-checkbox>
+              <label for="allowScrolling" class="cursor-pointer">
+                Allow scrolling within iframe
+              </label>
+            </div>
+          </div>
+
+          <!-- Title for Accessibility -->
+          <div class="flex flex-col gap-2">
+            <label for="iframeTitle" class="font-medium text-gray-700">
+              Title (for accessibility)
+            </label>
+            <input
+              type="text"
+              pInputText
+              id="iframeTitle"
+              formControlName="title"
+              placeholder="Form title"
+              [disabled]="loading"
+              class="w-full"
+            />
+            <small class="text-gray-600">
+              Used for screen readers. Defaults to form title if not specified.
+            </small>
+          </div>
+        </div>
+      </div>
+
       <!-- Custom Expiration Toggle -->
       <div class="flex flex-col gap-3">
         <div class="flex items-center gap-2">
@@ -172,6 +307,8 @@
               [formUrl]="shortUrl || renderUrl"
               [formTitle]="formTitle"
               [shortCode]="shortCode"
+              [initialOptions]="publishedIframeOptions"
+              [hideCustomization]="true"
             ></app-iframe-embed-generator>
 
             <!-- Error State for Missing Data -->

@@ -44,6 +44,12 @@ export class IframeEmbedGeneratorComponent implements OnInit {
   /** Form short code for URL construction */
   @Input({ required: true }) shortCode!: string;
 
+  /** Optional initial iframe embed options (from published form) */
+  @Input() initialOptions?: IframeEmbedOptions;
+
+  /** Whether to hide the customization form (show only generated code) */
+  @Input() hideCustomization = false;
+
   /** Reactive form for iframe options */
   embedForm!: FormGroup;
 
@@ -76,17 +82,25 @@ export class IframeEmbedGeneratorComponent implements OnInit {
   }
 
   /**
-   * Initializes the reactive form with default values.
+   * Initializes the reactive form with default values or initial options from published form.
    */
   private initializeForm(): void {
+    // Use initial options from published form if available, otherwise use defaults
+    const defaultWidth = this.initialOptions?.width?.replace('px', '') || '600';
+    const defaultHeight = this.initialOptions?.height?.replace('px', '') || '800';
+    const defaultResponsive = this.initialOptions?.responsive ?? false;
+    const defaultShowBorder = this.initialOptions?.showBorder ?? false;
+    const defaultAllowScrolling = this.initialOptions?.allowScrolling ?? true;
+    const defaultTitle = this.initialOptions?.title || this.formTitle || 'Form';
+
     this.embedForm = new FormGroup({
-      preset: new FormControl('medium'),
-      width: new FormControl('600', [Validators.required, Validators.pattern(/^\d+(%|px)?$/)]),
-      height: new FormControl('800', [Validators.required, Validators.pattern(/^\d+(%|px)?$/)]),
-      responsive: new FormControl(false),
-      showBorder: new FormControl(false),
-      allowScrolling: new FormControl(true),
-      title: new FormControl(this.formTitle || 'Form', [
+      preset: new FormControl('custom'), // Always start with custom when initial options provided
+      width: new FormControl(defaultWidth, [Validators.required, Validators.pattern(/^\d+(%|px)?$/)]),
+      height: new FormControl(defaultHeight, [Validators.required, Validators.pattern(/^\d+(%|px)?$/)]),
+      responsive: new FormControl(defaultResponsive),
+      showBorder: new FormControl(defaultShowBorder),
+      allowScrolling: new FormControl(defaultAllowScrolling),
+      title: new FormControl(defaultTitle, [
         Validators.required,
         Validators.maxLength(100),
       ]),
