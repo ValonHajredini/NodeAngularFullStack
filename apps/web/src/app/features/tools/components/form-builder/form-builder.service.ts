@@ -1548,6 +1548,7 @@ export class FormBuilderService {
     description: string;
     columnLayout: 1 | 2 | 3;
     fieldSpacing: 'compact' | 'normal' | 'relaxed';
+    submitButtonText?: string;
     successMessage: string;
     redirectUrl: string;
     allowMultipleSubmissions: boolean;
@@ -1602,6 +1603,7 @@ export class FormBuilderService {
           successMessage: formSettings.successMessage,
           redirectUrl: formSettings.redirectUrl || undefined,
           allowMultipleSubmissions: formSettings.allowMultipleSubmissions,
+          submitButtonText: formSettings.submitButtonText || 'Submit',
         },
         // Include row layout configuration with sub-columns if enabled
         rowLayout: this._rowLayoutEnabled()

@@ -1548,6 +1548,7 @@ export class FormBuilderService {
     description: string;
     columnLayout: 1 | 2 | 3;
     fieldSpacing: 'compact' | 'normal' | 'relaxed';
+    submitButtonText?: string;
     successMessage: string;
     redirectUrl: string;
     allowMultipleSubmissions: boolean;
@@ -1599,6 +1600,7 @@ export class FormBuilderService {
         },
         submission: {
           showSuccessMessage: true,
+          submitButtonText: formSettings.submitButtonText || 'Submit',
           successMessage: formSettings.successMessage,
           redirectUrl: formSettings.redirectUrl || undefined,
           allowMultipleSubmissions: formSettings.allowMultipleSubmissions,

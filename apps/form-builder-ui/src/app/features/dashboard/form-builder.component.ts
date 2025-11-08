@@ -550,6 +550,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
     description: '',
     columnLayout: 1,
     fieldSpacing: 'normal',
+    submitButtonText: 'Submit',
     successMessage: 'Thank you for your submission!',
     redirectUrl: '',
     allowMultipleSubmissions: true,
@@ -677,6 +678,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
                 : form.schema.settings.layout.spacing === 'medium'
                   ? 'normal'
                   : 'relaxed',
+            submitButtonText: form.schema.settings.submission.submitButtonText || 'Submit',
             successMessage:
               form.schema.settings.submission.successMessage || 'Thank you for your submission!',
             redirectUrl: form.schema.settings.submission.redirectUrl || '',
@@ -698,6 +700,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
             description: form.description || '',
             columnLayout: 1,
             fieldSpacing: 'normal',
+            submitButtonText: 'Submit',
             successMessage: 'Thank you for your submission!',
             redirectUrl: '',
             allowMultipleSubmissions: true,
@@ -887,6 +890,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
         },
         submission: {
           showSuccessMessage: true,
+          submitButtonText: settings.submitButtonText || 'Submit',
           successMessage: settings.successMessage,
           redirectUrl: settings.redirectUrl || undefined,
           allowMultipleSubmissions: settings.allowMultipleSubmissions,
