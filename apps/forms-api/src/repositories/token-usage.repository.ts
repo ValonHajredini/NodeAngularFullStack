@@ -1,13 +1,15 @@
 import { BaseRepository, TenantContext } from './base.repository';
 import { TokenUsage, TokenUsageFilters } from '@nodeangularfullstack/shared';
+import { DatabaseType } from '../config/multi-database.config';
 
 /**
  * Repository for managing API token usage records.
  * Provides database operations for token usage tracking and analytics.
+ * Uses AUTH database for read-only access to token usage data.
  */
 export class TokenUsageRepository extends BaseRepository<TokenUsage> {
   constructor() {
-    super('api_token_usage');
+    super('api_token_usage', DatabaseType.AUTH);
   }
 
   /**

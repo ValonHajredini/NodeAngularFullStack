@@ -331,10 +331,15 @@ export class AuthService {
       const storedAccessToken = localStorage.getItem(environment.jwt.tokenKey);
       const storedRefreshToken = localStorage.getItem(environment.jwt.refreshTokenKey);
 
-      if (storedUser && storedAccessToken && storedRefreshToken) {
+      // Only user and accessToken are required for authentication
+      // Refresh token is optional (might not be available in SSO scenarios)
+      if (storedUser && storedAccessToken) {
         this.userSignal.set(JSON.parse(storedUser));
         this.accessTokenSignal.set(storedAccessToken);
-        this.refreshTokenSignal.set(storedRefreshToken);
+        // Set refresh token only if available
+        if (storedRefreshToken) {
+          this.refreshTokenSignal.set(storedRefreshToken);
+        }
       }
     } catch (error) {
       console.error('Error loading auth data from storage:', error);

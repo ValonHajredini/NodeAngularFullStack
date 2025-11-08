@@ -1,5 +1,3 @@
-import { Pool } from 'pg';
-import { databaseService } from '../services/database.service';
 import { BaseRepository } from './base.repository';
 import {
   DrawingProject,
@@ -7,6 +5,7 @@ import {
   UpdateDrawingProjectRequest,
   DrawingTemplate,
 } from '@nodeangularfullstack/shared';
+import { DatabaseType } from '../config/multi-database.config';
 
 /**
  * Drawing project database entity interface matching the database schema.
@@ -30,11 +29,7 @@ export interface DrawingProjectEntity {
  */
 export class DrawingProjectsRepository extends BaseRepository<DrawingProjectEntity> {
   constructor() {
-    super('drawing_projects');
-  }
-
-  protected get pool(): Pool {
-    return databaseService.getPool();
+    super('drawing_projects', DatabaseType.FORMS);
   }
 
   /**

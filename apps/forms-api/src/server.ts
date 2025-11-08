@@ -15,19 +15,22 @@ import path from 'path';
 
 import { config } from './utils/config.utils';
 import { appConfig } from './config/app.config';
-import { databaseService, DatabaseService } from './services/database.service';
+// DEPRECATED: Legacy monolithic database service - now using multi-database pools
+// import { databaseService, DatabaseService } from './services/database.service';
 import swaggerSpec from './config/swagger.config';
 import healthRoutes from './routes/health.routes';
-import { testToolRoutes } from './routes/test-tool.routes';
-import toolsRoutes from './routes/tools.routes';
-import publicToolsRoutes from './routes/public-tools.routes';
+// REMOVED: Tools, drawing projects, tool registry, and exports belong in dashboard-api
+// These routes query dashboard database tables, not forms database tables
+// import { testToolRoutes } from './routes/test-tool.routes';
+// import toolsRoutes from './routes/tools.routes';
+// import publicToolsRoutes from './routes/public-tools.routes';
+// import drawingProjectsRoutes from './routes/drawing-projects.routes';
+// import { toolRegistryRoutes } from './routes/tool-registry.routes';
+// import { exportRoutes } from './routes/export.routes';
 import shortLinksRoutes from './routes/short-links.routes';
-import drawingProjectsRoutes from './routes/drawing-projects.routes';
 import { formsRoutes } from './routes/forms.routes';
 import { publicFormsRoutes } from './routes/public-forms.routes';
 import { themesRoutes } from './routes/themes.routes';
-import { toolRegistryRoutes } from './routes/tool-registry.routes';
-import { exportRoutes } from './routes/export.routes';
 import { shortLinksController } from './controllers/short-links.controller';
 import { resolveShortLinkValidator } from './validators/url.validators';
 
@@ -165,27 +168,13 @@ class Server {
       shortLinksController.redirectToOriginalUrl
     );
 
-    // API v1 routes - Forms API (Forms, Themes, Tool Registry, Exports)
-    // Auth route kept for JWT validation middleware
+    // API v1 routes - Forms API (Forms, Themes, Short Links for Forms)
+    // Multi-database architecture: Forms-API only serves forms database tables
+    // Tools, drawing projects, registry, and exports are served by dashboard-api
     this.app.use('/api/v1/forms', formsRoutes);
     this.app.use('/api/v1/themes', themesRoutes);
     this.app.use('/api/v1/public', publicFormsRoutes);
-    this.app.use('/api/v1/tools/short-links', shortLinksRoutes);
-    console.log(
-      '📐 Registering drawing project routes at /api/v1/drawing-projects'
-    );
-    console.log(
-      '   Route type:',
-      typeof drawingProjectsRoutes,
-      'keys:',
-      Object.keys(drawingProjectsRoutes as any)
-    );
-    this.app.use('/api/v1/drawing-projects', drawingProjectsRoutes);
-    this.app.use('/api/v1/admin/tools', toolsRoutes);
-    this.app.use('/api/v1/tools', publicToolsRoutes);
-    this.app.use('/api/tools/test-tool', testToolRoutes);
-    this.app.use('/api/v1/tools/registry', toolRegistryRoutes); // Tool Registry API (Epic 30)
-    this.app.use('/api/v1/tool-registry', exportRoutes); // Export Job API (Epic 33.1)
+    this.app.use('/api/v1/tools/short-links', shortLinksRoutes); // Form short links only
     this.app.use('/api/v1', healthRoutes);
 
     // API root endpoint
@@ -246,37 +235,39 @@ class Server {
   }
 
   /**
-   * Initializes database connection.
-   * @returns Promise that resolves when database is connected
+   * DEPRECATED: Legacy monolithic database initialization.
+   * Multi-database pools (authPool, dashboardPool, formsPool) are now initialized
+   * automatically via imports in multi-database.config.ts and used directly by repositories.
    */
-  private async initializeDatabase(): Promise<void> {
-    try {
-      const dbConfig = DatabaseService.parseConnectionUrl(config.DATABASE_URL);
-      await databaseService.initialize(dbConfig);
-    } catch (error) {
-      console.error('❌ Failed to initialize database:', error);
-      console.warn(
-        '⚠️  Continuing without database for development testing...'
-      );
-      // In development, continue without database for Swagger testing
-      if (config.NODE_ENV === 'development') {
-        console.log(
-          '🔧 Running in development mode without database connection'
-        );
-        return;
-      }
-      throw error;
-    }
-  }
+  // private async initializeDatabase(): Promise<void> {
+  //   try {
+  //     const dbConfig = DatabaseService.parseConnectionUrl(config.DATABASE_URL);
+  //     await databaseService.initialize(dbConfig);
+  //   } catch (error) {
+  //     console.error('❌ Failed to initialize database:', error);
+  //     console.warn(
+  //       '⚠️  Continuing without database for development testing...'
+  //     );
+  //     // In development, continue without database for Swagger testing
+  //     if (config.NODE_ENV === 'development') {
+  //       console.log(
+  //         '🔧 Running in development mode without database connection'
+  //       );
+  //       return;
+  //     }
+  //     throw error;
+  //   }
+  // }
 
   /**
-   * Starts the Express server with database initialization.
+   * Starts the Express server.
+   * Multi-database pools are initialized automatically via imports.
    * @returns Promise that resolves when server is listening
    */
   public async start(): Promise<void> {
     try {
-      // Initialize database connection
-      await this.initializeDatabase();
+      // DEPRECATED: Legacy database initialization - pools now auto-initialized via imports
+      // await this.initializeDatabase();
 
       // Start the server
       return new Promise((resolve, reject) => {
@@ -372,7 +363,8 @@ class Server {
    */
   public async shutdown(): Promise<void> {
     console.log('\n🔄 Shutting down server...');
-    await databaseService.close();
+    // DEPRECATED: Legacy database service - pools will be closed by Node.js process exit
+    // await databaseService.close();
     console.log('✅ Server shutdown complete');
   }
 }

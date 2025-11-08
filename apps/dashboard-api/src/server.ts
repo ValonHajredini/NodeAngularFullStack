@@ -15,7 +15,8 @@ import path from 'path';
 
 import { config } from './utils/config.utils';
 import { appConfig } from './config/app.config';
-import { databaseService, DatabaseService } from './services/database.service';
+// DEPRECATED: Legacy monolithic database service - now using multi-database pools
+// import { databaseService, DatabaseService } from './services/database.service';
 import swaggerSpec from './config/swagger.config';
 import healthRoutes from './routes/health.routes';
 import authRoutes from './routes/auth.routes';
@@ -217,37 +218,39 @@ class Server {
   }
 
   /**
-   * Initializes database connection.
-   * @returns Promise that resolves when database is connected
+   * DEPRECATED: Legacy monolithic database initialization.
+   * Multi-database pools (authPool, dashboardPool, formsPool) are now initialized
+   * automatically via imports in multi-database.config.ts and used directly by repositories.
    */
-  private async initializeDatabase(): Promise<void> {
-    try {
-      const dbConfig = DatabaseService.parseConnectionUrl(config.DATABASE_URL);
-      await databaseService.initialize(dbConfig);
-    } catch (error) {
-      console.error('❌ Failed to initialize database:', error);
-      console.warn(
-        '⚠️  Continuing without database for development testing...'
-      );
-      // In development, continue without database for Swagger testing
-      if (config.NODE_ENV === 'development') {
-        console.log(
-          '🔧 Running in development mode without database connection'
-        );
-        return;
-      }
-      throw error;
-    }
-  }
+  // private async initializeDatabase(): Promise<void> {
+  //   try {
+  //     const dbConfig = DatabaseService.parseConnectionUrl(config.DATABASE_URL);
+  //     await databaseService.initialize(dbConfig);
+  //   } catch (error) {
+  //     console.error('❌ Failed to initialize database:', error);
+  //     console.warn(
+  //       '⚠️  Continuing without database for development testing...'
+  //     );
+  //     // In development, continue without database for Swagger testing
+  //     if (config.NODE_ENV === 'development') {
+  //       console.log(
+  //         '🔧 Running in development mode without database connection'
+  //       );
+  //       return;
+  //     }
+  //     throw error;
+  //   }
+  // }
 
   /**
-   * Starts the Express server with database initialization.
+   * Starts the Express server.
+   * Multi-database pools are initialized automatically via imports.
    * @returns Promise that resolves when server is listening
    */
   public async start(): Promise<void> {
     try {
-      // Initialize database connection
-      await this.initializeDatabase();
+      // DEPRECATED: Legacy database initialization - pools now auto-initialized via imports
+      // await this.initializeDatabase();
 
       // Start the server
       return new Promise((resolve, reject) => {
@@ -343,7 +346,8 @@ class Server {
    */
   public async shutdown(): Promise<void> {
     console.log('\n🔄 Shutting down server...');
-    await databaseService.close();
+    // DEPRECATED: Legacy database service - pools will be closed by Node.js process exit
+    // await databaseService.close();
     console.log('✅ Server shutdown complete');
   }
 }

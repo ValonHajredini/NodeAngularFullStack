@@ -1,5 +1,8 @@
 import { Pool } from 'pg';
-import { databaseService } from '../services/database.service';
+import {
+  DatabaseType,
+  getPoolForDatabase,
+} from '../config/multi-database.config';
 
 /**
  * Tenant context interface for multi-tenant operations.
@@ -12,22 +15,39 @@ export interface TenantContext {
 }
 
 /**
- * Base repository class providing common database operations with tenant awareness.
- * All repositories should extend this class to inherit tenant isolation capabilities.
+ * Base repository class providing common database operations with tenant awareness
+ * and multi-database support.
+ *
+ * Supports three database types:
+ * - AUTH: Read-only access to user/tenant data
+ * - DASHBOARD: Read-write access to dashboard-specific tables (tools, exports, drawings)
+ *
+ * All repositories should extend this class to inherit tenant isolation capabilities
+ * and proper database pool selection.
  */
 export abstract class BaseRepository<T> {
   protected readonly tableName: string;
+  protected readonly databaseType: DatabaseType;
+  private readonly poolInstance: Pool;
 
-  constructor(tableName: string) {
+  /**
+   * Creates a new BaseRepository instance.
+   * @param tableName - The database table name
+   * @param databaseType - The database type (auth or dashboard)
+   */
+  constructor(tableName: string, databaseType: DatabaseType) {
     this.tableName = tableName;
+    this.databaseType = databaseType;
+    this.poolInstance = getPoolForDatabase(databaseType);
   }
 
   /**
-   * Gets the database connection pool.
+   * Gets the database connection pool for this repository.
+   * Uses the pool specified by databaseType in constructor.
    * @returns PostgreSQL connection pool
    */
   protected get pool(): Pool {
-    return databaseService.getPool();
+    return this.poolInstance;
   }
 
   /**

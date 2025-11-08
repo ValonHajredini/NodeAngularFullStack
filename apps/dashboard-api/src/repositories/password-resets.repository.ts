@@ -1,4 +1,4 @@
-import { databaseService } from '../services/database.service';
+import { authPool } from '../config/multi-database.config';
 
 /**
  * Password reset token interface
@@ -42,7 +42,7 @@ export class PasswordResetRepository {
       `;
 
       const values = [resetData.userId, resetData.token, resetData.expiresAt];
-      const result = await databaseService.query(query, values);
+      const result = await authPool.query(query, values);
 
       if (result.rows.length === 0) {
         throw new Error('Failed to create password reset token');
@@ -83,7 +83,7 @@ export class PasswordResetRepository {
       `;
 
       const values = [token];
-      const result = await databaseService.query(query, values);
+      const result = await authPool.query(query, values);
 
       if (result.rows.length === 0) {
         return null;
@@ -128,7 +128,7 @@ export class PasswordResetRepository {
       query += ' ORDER BY created_at DESC';
 
       const values = [userId];
-      const result = await databaseService.query(query, values);
+      const result = await authPool.query(query, values);
 
       return result.rows.map(row => ({
         id: row.id,
@@ -162,7 +162,7 @@ export class PasswordResetRepository {
       `;
 
       const values = [tokenId];
-      const result = await databaseService.query(query, values);
+      const result = await authPool.query(query, values);
 
       if (result.rows.length === 0) {
         throw new Error('Password reset token not found');
@@ -195,7 +195,7 @@ export class PasswordResetRepository {
     try {
       const query = 'DELETE FROM password_resets WHERE id = $1';
       const values = [tokenId];
-      const result = await databaseService.query(query, values);
+      const result = await authPool.query(query, values);
 
       return result.rowCount !== null && result.rowCount > 0;
     } catch (error) {
@@ -216,7 +216,7 @@ export class PasswordResetRepository {
     try {
       const query = 'DELETE FROM password_resets WHERE user_id = $1';
       const values = [userId];
-      const result = await databaseService.query(query, values);
+      const result = await authPool.query(query, values);
 
       return result.rowCount || 0;
     } catch (error) {
@@ -240,7 +240,7 @@ export class PasswordResetRepository {
         WHERE expires_at < CURRENT_TIMESTAMP OR used = true
       `;
 
-      const result = await databaseService.query(query);
+      const result = await authPool.query(query);
       return result.rowCount || 0;
     } catch (error) {
       console.error('Error cleaning up password reset tokens:', error);

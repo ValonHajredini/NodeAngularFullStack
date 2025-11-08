@@ -1,23 +1,15 @@
-import { Pool } from 'pg';
 import { FormMetadata } from '@nodeangularfullstack/shared';
 import { BaseRepository, TenantContext } from './base.repository';
-import { databaseService } from '../services/database.service';
+import { DatabaseType } from '../config/multi-database.config';
 
 /**
  * Repository for form metadata database operations.
  * Handles CRUD operations for forms with tenant isolation support.
+ * Uses FORMS database for read-write operations.
  */
 export class FormsRepository extends BaseRepository<FormMetadata> {
   constructor() {
-    super('forms');
-  }
-
-  /**
-   * Gets the database connection pool.
-   * @returns PostgreSQL connection pool
-   */
-  protected get pool(): Pool {
-    return databaseService.getPool();
+    super('forms', DatabaseType.FORMS);
   }
 
   /**

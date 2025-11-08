@@ -1,7 +1,6 @@
-import { Pool } from 'pg';
-import { databaseService } from '../services/database.service';
 import { BaseRepository } from './base.repository';
 import { CreateShortLinkData } from '@nodeangularfullstack/shared';
+import { DatabaseType } from '../config/multi-database.config';
 
 /**
  * Short link database entity interface matching the database schema.
@@ -24,14 +23,14 @@ export interface ShortLinkEntity {
  * Short links repository for database operations.
  * Handles all short link-related database queries with proper error handling.
  * Short links are not tenant-specific and are globally accessible.
+ *
+ * WARNING: Architectural debt - short links belong to forms-api, not dashboard-api.
+ * This repository should be DELETED and dashboard-api should call forms-api HTTP endpoints instead.
+ * See TYPESCRIPT_FIXES.md for details.
  */
 export class ShortLinksRepository extends BaseRepository<ShortLinkEntity> {
   constructor() {
-    super('short_links');
-  }
-
-  protected get pool(): Pool {
-    return databaseService.getPool();
+    super('short_links', DatabaseType.FORMS);
   }
 
   /**

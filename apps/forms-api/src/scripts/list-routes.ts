@@ -17,11 +17,12 @@ import { createRouteList } from '../utils/route-list';
 // Load environment variables
 dotenv.config();
 
-// Import routes
+// Import routes (forms-api only imports forms-specific routes)
 import healthRoutes from '../routes/health.routes';
-import authRoutes from '../routes/auth.routes';
-import { usersRoutes } from '../routes/users.routes';
-import tokensRoutes from '../routes/tokens.routes';
+// Note: authRoutes, usersRoutes, tokensRoutes belong in dashboard-api/auth database
+// import authRoutes from '../routes/auth.routes';
+// import { usersRoutes } from '../routes/users.routes';
+// import tokensRoutes from '../routes/tokens.routes';
 import shortLinksRoutes from '../routes/short-links.routes';
 import { formsRoutes } from '../routes/forms.routes';
 import { publicFormsRoutes } from '../routes/public-forms.routes';
@@ -42,11 +43,11 @@ async function main() {
     // Create minimal Express app with routes (no middleware)
     const app = express();
 
-    // Register routes (matching server.ts route registration)
+    // Register forms-api routes only (auth/users/tokens are in dashboard-api)
     app.use('/api', healthRoutes);
-    app.use('/api/v1/auth', authRoutes);
-    app.use('/api/v1/users', usersRoutes);
-    app.use('/api/v1/tokens', tokensRoutes);
+    // app.use('/api/v1/auth', authRoutes);
+    // app.use('/api/v1/users', usersRoutes);
+    // app.use('/api/v1/tokens', tokensRoutes);
     app.use('/api/v1/tools/short-links', shortLinksRoutes);
     app.use('/api/v1/forms', formsRoutes);
     app.use('/api/v1/public/forms', publicFormsRoutes);

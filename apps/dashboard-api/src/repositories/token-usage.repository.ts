@@ -1,4 +1,5 @@
 import { BaseRepository, TenantContext } from './base.repository';
+import { DatabaseType } from '../config/multi-database.config';
 import { TokenUsage, TokenUsageFilters } from '@nodeangularfullstack/shared';
 
 /**
@@ -7,7 +8,7 @@ import { TokenUsage, TokenUsageFilters } from '@nodeangularfullstack/shared';
  */
 export class TokenUsageRepository extends BaseRepository<TokenUsage> {
   constructor() {
-    super('api_token_usage');
+    super('api_token_usage', DatabaseType.AUTH);
   }
 
   /**

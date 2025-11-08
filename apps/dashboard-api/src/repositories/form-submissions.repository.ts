@@ -3,15 +3,19 @@ import {
   FormSubmission,
   SubmissionFilterOptions,
 } from '@nodeangularfullstack/shared';
-import { databaseService } from '../services/database.service';
+import { formsPool } from '../config/multi-database.config';
 
 /**
  * Repository for form submission database operations.
  * Handles submission creation, retrieval, and statistics.
+ *
+ * WARNING: Architectural debt - form submissions belong to forms-api, not dashboard-api.
+ * This repository should be DELETED and dashboard-api should call forms-api HTTP endpoints instead.
+ * See TYPESCRIPT_FIXES.md for details.
  */
 export class FormSubmissionsRepository {
   private get pool(): Pool {
-    return databaseService.getPool();
+    return formsPool;
   }
 
   /**

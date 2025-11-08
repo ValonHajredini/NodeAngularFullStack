@@ -25,7 +25,7 @@ import {
   ChartTypeOption,
 } from '@nodeangularfullstack/shared';
 import { FormsApiService } from '../forms-api.service';
-import { ToolConfigService } from '@core/services/tool-config.service';
+// REMOVED: ToolConfigService not needed in form-builder-ui (tool config is for dashboard-api)
 import { StatisticsEngineService } from './statistics-engine.service';
 import { ChartPreferenceService } from './chart-preference.service';
 import { BarChartComponent } from './charts/bar-chart.component';
@@ -473,7 +473,7 @@ export class FormAnalyticsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly formsApiService = inject(FormsApiService);
-  private readonly toolConfigService = inject(ToolConfigService);
+  // REMOVED: toolConfigService not needed in form-builder-ui
   private readonly messageService = inject(MessageService);
   private readonly statisticsEngine = inject(StatisticsEngineService);
   private readonly chartPreferenceService = inject(ChartPreferenceService);
@@ -493,12 +493,9 @@ export class FormAnalyticsComponent implements OnInit {
   readonly totalRecords = signal<number>(0);
   readonly currentPage = signal<number>(0);
 
-  // Tool configuration
-  readonly toolConfig = signal<{ displayMode?: string } | null>(null);
-  readonly isFullWidth = computed(() => {
-    const config = this.toolConfig();
-    return config?.displayMode === 'full-width';
-  });
+  // REMOVED: toolConfig signal - not needed in form-builder-ui
+  // Form-builder-ui always uses standard layout (not full-width)
+  readonly isFullWidth = computed(() => false);
 
   // Field visibility configuration
   readonly visibleFieldIds = signal<Set<string>>(new Set());
@@ -673,25 +670,12 @@ export class FormAnalyticsComponent implements OnInit {
     }
 
     this.formId.set(id);
-    this.loadToolConfig();
+    // REMOVED: loadToolConfig() - not needed in form-builder-ui
     this.loadFormDetails();
     this.loadVisibleFieldsPreference();
   }
 
-  /**
-   * Loads the tool configuration to determine display mode.
-   */
-  private loadToolConfig(): void {
-    this.toolConfigService.getActiveConfig('form-builder').subscribe({
-      next: (config) => {
-        this.toolConfig.set(config || null);
-      },
-      error: (error) => {
-        console.error('Failed to load tool configuration:', error);
-        this.toolConfig.set(null);
-      },
-    });
-  }
+  // REMOVED: loadToolConfig() method - form-builder-ui doesn't need dynamic display mode config
 
   /**
    * Loads form details including title and schema fields.

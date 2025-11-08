@@ -3,13 +3,21 @@ import {
   FormTheme,
   CreateThemeRequest,
   UpdateThemeRequest,
+  SharedAuthService,
 } from '@nodeangularfullstack/shared';
+import { authPool } from '../config/multi-database.config';
 
 /**
  * Theme service for business logic operations.
  * Handles theme management with proper validation and security.
+ * Uses SharedAuthService for cross-database user validation.
  */
 export class ThemesService {
+  private readonly sharedAuthService: SharedAuthService;
+
+  constructor() {
+    this.sharedAuthService = new SharedAuthService(authPool);
+  }
   /**
    * Finds all themes with optional active filtering.
    * @param activeOnly - If true, returns only active themes
@@ -40,7 +48,7 @@ export class ThemesService {
    * @param themeData - Theme creation data
    * @param userId - ID of the user creating the theme
    * @returns Promise containing the created theme
-   * @throws {Error} When theme creation fails
+   * @throws {Error} When theme creation fails or user validation fails
    * @example
    * const theme = await themesService.create({
    *   name: 'Modern Blue',
@@ -50,6 +58,18 @@ export class ThemesService {
    * }, 'user-uuid');
    */
   async create(themeData: CreateThemeRequest): Promise<FormTheme> {
+    // Validate user exists and is active (cross-database validation)
+    if (themeData.creatorId) {
+      const isValidUser = await this.sharedAuthService.validateUser(
+        themeData.creatorId
+      );
+      if (!isValidUser) {
+        throw new Error(
+          'Invalid or inactive user. Theme creation requires valid creator.'
+        );
+      }
+    }
+
     // Validate theme configuration
     this.validateThemeConfig(themeData.themeConfig);
 

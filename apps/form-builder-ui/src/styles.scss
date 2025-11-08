@@ -21,7 +21,7 @@
 /* Enhanced Global Styles with Theme Variables */
 html {
   scroll-behavior: smooth;
-  color-scheme: light dark;
+  color-scheme: light; /* Force light theme only */
 }
 
 body {

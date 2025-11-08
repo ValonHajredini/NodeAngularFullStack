@@ -49,6 +49,13 @@ export const routes: Routes = [
 
   // Authentication routes (no layout)
   {
+    path: 'auth/sso-callback',
+    loadComponent: () =>
+      import('./features/auth/sso-callback/sso-callback.component').then(
+        (m) => m.SsoCallbackComponent,
+      ),
+  },
+  {
     path: 'auth/login',
     loadComponent: () =>
       import('./features/auth/login/login.component').then((m) => m.LoginComponent),
@@ -115,11 +122,11 @@ export const routes: Routes = [
   },
   {
     path: '',
-    redirectTo: '/welcome',
+    redirectTo: '/app/dashboard',
     pathMatch: 'full',
   },
   {
     path: '**',
-    redirectTo: '/welcome',
+    redirectTo: '/app/dashboard',
   },
 ];

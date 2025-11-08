@@ -6,14 +6,18 @@ import {
   ThemeValidationResult,
 } from '@nodeangularfullstack/shared';
 import { BaseRepository } from './base.repository';
+import { DatabaseType } from '../config/multi-database.config';
 
 /**
  * Repository for form theme database operations.
  * Handles theme CRUD operations, usage tracking, and soft deletion.
+ *
+ * NOTE: This is architectural debt - themes belong to forms-api.
+ * Consider moving this to forms-api or use HTTP calls to forms-api instead.
  */
 export class ThemesRepository extends BaseRepository<FormTheme> {
   constructor() {
-    super('form_themes');
+    super('form_themes', DatabaseType.FORMS);
   }
 
   /**

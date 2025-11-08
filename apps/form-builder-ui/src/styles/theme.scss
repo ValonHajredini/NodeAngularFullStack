@@ -326,12 +326,12 @@
 }
 
 /* ==========================================================================
-   Dark Theme
+   Dark Theme - DISABLED (Forcing light theme only)
    ========================================================================== */
 
+/* Commented out to force light theme regardless of system preference
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Dark theme color overrides */
     --color-background: var(--color-gray-900);
     --color-surface: var(--color-gray-800);
     --color-text-primary: var(--color-gray-100);
@@ -342,6 +342,7 @@
     --color-border-dark: var(--color-gray-500);
   }
 }
+*/
 
 /* Manual light theme class - Force light theme regardless of system preference */
 [data-theme='light'] {

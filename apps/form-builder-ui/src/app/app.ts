@@ -1,7 +1,8 @@
-import { Component, signal, inject, OnInit } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
 import { RouterOutlet, Router } from '@angular/router';
 import { ConfirmDialog } from 'primeng/confirmdialog';
-import { ToolsService } from './core/services/tools.service';
+// REMOVED: ToolsService not needed in form-builder-ui (tools management is in dashboard-api)
+// import { ToolsService } from './core/services/tools.service';
 
 @Component({
   selector: 'app-root',
@@ -11,38 +12,19 @@ import { ToolsService } from './core/services/tools.service';
   styleUrl: './app.scss',
 })
 // eslint-disable-next-line @angular-eslint/component-class-suffix
-export class App implements OnInit {
+export class App {
   readonly title = signal('web');
   currentUrl = '';
 
-  private readonly toolsService = inject(ToolsService);
+  // REMOVED: ToolsService not needed - form-builder-ui only handles forms
+  // private readonly toolsService = inject(ToolsService);
   private readonly router = inject(Router);
 
   constructor() {
     this.currentUrl = this.router.url;
   }
 
-  ngOnInit(): void {
-    // Initialize tools cache on app start for optimal performance
-    this.initializeToolsCache();
-  }
-
-  /**
-   * Preloads tool status data to enable immediate responses from directives and guards.
-   * Runs silently in the background to avoid blocking app initialization.
-   */
-  private initializeToolsCache(): void {
-    // Fire and forget - let it load in background
-    this.toolsService.refreshAllTools().subscribe({
-      next: (tools) => {
-        // eslint-disable-next-line no-console
-        console.debug(`ToolsService: Preloaded ${tools.length} tools during app initialization`);
-      },
-      error: (error) => {
-        // eslint-disable-next-line no-console
-        console.warn('ToolsService: Failed to preload tools during app initialization:', error);
-        // Not critical - tools will be fetched on-demand
-      },
-    });
-  }
+  // REMOVED: Tools cache initialization - not needed in form-builder-ui
+  // The form-builder-ui is focused on form building, not tools management
+  // Tools API (/api/v1/tools) is served by dashboard-api for the main dashboard app
 }

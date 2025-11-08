@@ -9,11 +9,13 @@ import {
   TokenStatusResponse,
   PublishFormResponse,
 } from '@nodeangularfullstack/shared';
+import { SharedAuthService } from '@nodeangularfullstack/shared/dist/services/shared-auth.service';
 import { formsRepository } from '../repositories/forms.repository';
 import { formSchemasRepository } from '../repositories/form-schemas.repository';
 import { themesRepository } from '../repositories/themes.repository';
 import { formQrCodeService } from './form-qr-code.service';
 import { shortLinksRepository } from '../repositories/short-links.repository';
+import { authPool } from '../config/multi-database.config';
 
 /**
  * API Error class for form-related errors.
@@ -59,13 +61,18 @@ export interface SchemaValidationResult {
 /**
  * Form service for business logic operations.
  * Handles form creation, publishing, schema validation, and token generation.
+ * Uses SharedAuthService for cross-database user/tenant validation.
  */
 export class FormsService {
+  private readonly sharedAuthService: SharedAuthService;
+
   constructor(
     private readonly formsRepo = formsRepository,
     private readonly formSchemasRepo = formSchemasRepository,
     private readonly themesRepo = themesRepository
-  ) {}
+  ) {
+    this.sharedAuthService = new SharedAuthService(authPool);
+  }
 
   /**
    * Creates a new form.
@@ -91,6 +98,28 @@ export class FormsService {
       // Validate required fields
       if (!formData.title) {
         throw new ApiError('Form title is required', 400, 'VALIDATION_ERROR');
+      }
+
+      // Validate user exists and is active (cross-database validation)
+      const isValidUser = await this.sharedAuthService.validateUser(userId);
+      if (!isValidUser) {
+        throw new ApiError(
+          'Invalid or inactive user',
+          403,
+          'INVALID_USER'
+        );
+      }
+
+      // Validate tenant if provided (cross-database validation)
+      if (tenantId) {
+        const tenant = await this.sharedAuthService.getTenant(tenantId);
+        if (!tenant || !tenant.isActive) {
+          throw new ApiError(
+            'Invalid or inactive tenant',
+            403,
+            'INVALID_TENANT'
+          );
+        }
       }
 
       // Validate theme ID if provided

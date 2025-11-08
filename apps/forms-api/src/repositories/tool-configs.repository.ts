@@ -1,7 +1,6 @@
-import { Pool } from 'pg';
-import { databaseService } from '../services/database.service';
 import { BaseRepository } from './base.repository';
 import { DisplayMode, LayoutSettings } from '@nodeangularfullstack/shared';
+import { DatabaseType } from '../config/multi-database.config';
 
 /**
  * Tool config database entity interface matching the database schema.
@@ -44,11 +43,7 @@ export interface UpdateToolConfigData {
  */
 export class ToolConfigsRepository extends BaseRepository<ToolConfigEntity> {
   constructor() {
-    super('tool_configs');
-  }
-
-  protected get pool(): Pool {
-    return databaseService.getPool();
+    super('tool_configs', DatabaseType.FORMS);
   }
 
   /**

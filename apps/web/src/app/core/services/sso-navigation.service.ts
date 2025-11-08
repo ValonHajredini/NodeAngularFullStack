@@ -97,10 +97,12 @@ export class SsoNavigationService {
   }
 
   /**
-   * Performs the actual navigation with token in URL.
+   * Performs the actual navigation using SSO callback pattern.
+   * Redirects to /auth/sso-callback which processes the token and redirects to final destination.
+   * This prevents tokens from being visible in the final URL.
    *
    * @param baseUrl - Base URL of the target application
-   * @param route - Route path within the target app
+   * @param route - Route path within the target app (will be passed as redirectTo parameter)
    * @param token - JWT access token to pass
    * @param openInNewTab - Whether to open in new tab
    * @private
@@ -114,8 +116,9 @@ export class SsoNavigationService {
     // Ensure route starts with /
     const normalizedRoute = route.startsWith('/') ? route : `/${route}`;
 
-    // Build full URL with token as query parameter
-    const url = `${baseUrl}${normalizedRoute}?token=${encodeURIComponent(token)}`;
+    // Build SSO callback URL with token and redirectTo parameters
+    // The callback page will process authentication and redirect to the final destination
+    const url = `${baseUrl}/auth/sso-callback?token=${encodeURIComponent(token)}&redirectTo=${encodeURIComponent(normalizedRoute)}`;
 
     if (openInNewTab) {
       // Open in new tab
@@ -125,15 +128,18 @@ export class SsoNavigationService {
       window.location.href = url;
     }
 
-    console.log(`SSO navigation to ${baseUrl}${normalizedRoute}`);
+    console.log(
+      `SSO navigation to ${baseUrl}/auth/sso-callback (will redirect to ${normalizedRoute})`,
+    );
   }
 
   /**
-   * Creates an SSO navigation link that can be used in templates.
+   * Creates an SSO navigation link using callback pattern.
+   * Returns URL to /auth/sso-callback which will process token and redirect to final destination.
    *
    * @param baseUrl - Base URL of the target application
-   * @param route - Route path within the target app
-   * @returns Full URL with token, or null if user is not authenticated
+   * @param route - Route path within the target app (will be passed as redirectTo parameter)
+   * @returns Full URL with SSO callback pattern, or null if user is not authenticated
    *
    * @example
    * // In component
@@ -153,7 +159,7 @@ export class SsoNavigationService {
     }
 
     const normalizedRoute = route.startsWith('/') ? route : `/${route}`;
-    return `${baseUrl}${normalizedRoute}?token=${encodeURIComponent(token)}`;
+    return `${baseUrl}/auth/sso-callback?token=${encodeURIComponent(token)}&redirectTo=${encodeURIComponent(normalizedRoute)}`;
   }
 
   /**

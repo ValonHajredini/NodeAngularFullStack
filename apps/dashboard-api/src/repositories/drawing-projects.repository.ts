@@ -1,6 +1,5 @@
-import { Pool } from 'pg';
-import { databaseService } from '../services/database.service';
 import { BaseRepository } from './base.repository';
+import { DatabaseType } from '../config/multi-database.config';
 import {
   DrawingProject,
   CreateDrawingProjectRequest,
@@ -30,11 +29,7 @@ export interface DrawingProjectEntity {
  */
 export class DrawingProjectsRepository extends BaseRepository<DrawingProjectEntity> {
   constructor() {
-    super('drawing_projects');
-  }
-
-  protected get pool(): Pool {
-    return databaseService.getPool();
+    super('drawing_projects', DatabaseType.DASHBOARD);
   }
 
   /**

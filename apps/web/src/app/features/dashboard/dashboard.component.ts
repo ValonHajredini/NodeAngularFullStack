@@ -783,16 +783,18 @@ export class DashboardComponent implements OnInit {
   }
 
   /**
-   * Redirects to Form Builder with SSO token.
+   * Redirects to Form Builder using SSO callback pattern.
+   * Navigates to /auth/sso-callback which processes the token and redirects to final destination.
+   * This prevents the token from being visible in the final URL for security.
    * @param accessToken - Fresh JWT access token for SSO authentication
    * @private
    */
   private redirectToFormBuilder(accessToken: string): void {
-    // Build Form Builder URL with token parameter
-    // Must go to a protected route (/app/dashboard) so ssoAuthGuard can intercept the token
-    const formBuilderUrl = `http://localhost:4201/app/dashboard?token=${encodeURIComponent(accessToken)}`;
+    // Build SSO callback URL with token and redirectTo parameters
+    // The callback page will process authentication and redirect to /app/dashboard
+    const formBuilderUrl = `http://localhost:4201/auth/sso-callback?token=${encodeURIComponent(accessToken)}&redirectTo=${encodeURIComponent('/app/dashboard')}`;
 
-    console.log('Redirecting to Form Builder with fresh token...');
+    console.log('Redirecting to Form Builder SSO callback...');
 
     // Open in same window (user can change to _blank for new tab if desired)
     window.location.href = formBuilderUrl;

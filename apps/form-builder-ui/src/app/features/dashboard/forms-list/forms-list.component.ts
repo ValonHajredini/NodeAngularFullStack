@@ -17,10 +17,10 @@ import { InputText } from 'primeng/inputtext';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { Toast } from 'primeng/toast';
-import { FormMetadata, FormStatus, ToolConfig } from '@nodeangularfullstack/shared';
+import { FormMetadata, FormStatus } from '@nodeangularfullstack/shared';
 import { FormsApiService } from '../forms-api.service';
 import { FormSettingsComponent, FormSettings } from '../form-settings/form-settings.component';
-import { ToolConfigService } from '@core/services/tool-config.service';
+// REMOVED: ToolConfigService not needed in form-builder-ui (tool config is for dashboard-api)
 import { FormCardComponent, FormCardAction } from '../form-card/form-card.component';
 // import { QrCodeDisplayComponent } from '../../tools/components/short-link/components/qr-code-display/qr-code-display.component';
 import { Dialog } from 'primeng/dialog';
@@ -242,19 +242,16 @@ import {QrCodeDisplayComponent} from '../../tools/components/short-link/componen
 })
 export class FormsListComponent implements OnInit {
   private readonly formsApiService = inject(FormsApiService);
-  private readonly toolConfigService = inject(ToolConfigService);
+  // REMOVED: toolConfigService not needed in form-builder-ui
   private readonly messageService = inject(MessageService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly router = inject(Router);
 
   readonly FormStatus = FormStatus;
-  readonly toolConfig = signal<ToolConfig | null>(null);
+  // REMOVED: toolConfig signal - not needed in form-builder-ui
 
-  // Computed property to check if tool is in full width mode
-  readonly isFullWidth = computed(() => {
-    const config = this.toolConfig();
-    return config?.displayMode === 'full-width';
-  });
+  // Form-builder-ui always uses standard layout (not full-width)
+  readonly isFullWidth = computed(() => false);
 
   readonly forms = signal<FormMetadata[]>([]);
   readonly isLoading = signal<boolean>(false);
@@ -293,25 +290,11 @@ export class FormsListComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.loadToolConfig();
+    // REMOVED: loadToolConfig() - not needed in form-builder-ui
     this.loadForms();
   }
 
-  /**
-   * Loads the tool configuration to determine display mode.
-   */
-  private loadToolConfig(): void {
-    this.toolConfigService.getActiveConfig('form-builder').subscribe({
-      next: (config) => {
-        this.toolConfig.set(config || null);
-      },
-      error: (error) => {
-        console.error('Failed to load tool configuration:', error);
-        // Don't show error to user, just use default layout
-        this.toolConfig.set(null);
-      },
-    });
-  }
+  // REMOVED: loadToolConfig() method - form-builder-ui doesn't need dynamic display mode config
 
   /**
    * Loads forms from the API with pagination.

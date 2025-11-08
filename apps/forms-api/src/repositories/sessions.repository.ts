@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import { databaseService } from '../services/database.service';
+import { authPool } from '../config/multi-database.config';
 
 /**
  * Session interface matching the database schema.
@@ -28,10 +28,11 @@ export interface CreateSessionData {
 /**
  * Sessions repository for managing user sessions and refresh tokens.
  * Handles all session-related database operations.
+ * Uses AUTH database for read-only access to session data.
  */
 export class SessionsRepository {
   private get pool(): Pool {
-    return databaseService.getPool();
+    return authPool;
   }
 
   /**

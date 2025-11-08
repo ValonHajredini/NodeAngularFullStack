@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import { databaseService } from '../services/database.service';
+import { authPool } from '../config/multi-database.config';
 
 /**
  * Tenant interface matching the enhanced database schema.
@@ -77,10 +77,11 @@ export interface TenantMetrics {
 /**
  * Tenant repository for database operations.
  * Handles all tenant-related database queries with proper validation.
+ * Uses AUTH database for read-only access to tenant data.
  */
 export class TenantRepository {
   private get pool(): Pool {
-    return databaseService.getPool();
+    return authPool;
   }
 
   /**

@@ -34,7 +34,7 @@ export interface ApiAuthResponse {
   timestamp: string;
 }
 
-export interface ApiTokenResponse {
+export interface RefreshTokenApiResponse {
   message: string;
   data: TokenResponse;
   timestamp: string;
@@ -158,8 +158,8 @@ export class AuthService {
       return throwError(() => new Error('No refresh token available'));
     }
 
-    return this.apiClient.post<ApiTokenResponse>('/auth/refresh', { refreshToken }).pipe(
-      map((response: ApiTokenResponse) => response.data),
+    return this.apiClient.post<RefreshTokenApiResponse>('/auth/refresh', { refreshToken }).pipe(
+      map((response: RefreshTokenApiResponse) => response.data),
       tap((tokens: TokenResponse) => {
         this.accessTokenSignal.set(tokens.accessToken);
         if (tokens.refreshToken) {

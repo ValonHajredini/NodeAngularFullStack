@@ -1,14 +1,15 @@
 import { Pool } from 'pg';
 import { FormSchema } from '@nodeangularfullstack/shared';
-import { databaseService } from '../services/database.service';
+import { formsPool } from '../config/multi-database.config';
 
 /**
  * Repository for form schema database operations.
  * Handles schema versioning, publishing, and token management.
+ * Uses FORMS database for read-write operations.
  */
 export class FormSchemasRepository {
   private get pool(): Pool {
-    return databaseService.getPool();
+    return formsPool;
   }
 
   /**

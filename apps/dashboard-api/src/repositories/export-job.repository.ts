@@ -17,7 +17,7 @@ import {
   ExportJobWithTool,
   ListExportJobsOptions,
 } from '@nodeangularfullstack/shared';
-import { pool } from '../config/database.config';
+import { dashboardPool as pool } from '../config/multi-database.config';
 
 /**
  * Database row structure for export_jobs table.

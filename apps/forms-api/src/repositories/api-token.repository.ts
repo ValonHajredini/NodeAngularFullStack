@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import { databaseService } from '../services/database.service';
+import { authPool } from '../config/multi-database.config';
 
 /**
  * API token database entity interface matching the database schema.
@@ -46,7 +46,7 @@ export interface UpdateApiTokenData {
  */
 export class ApiTokenRepository {
   private get pool(): Pool {
-    return databaseService.getPool();
+    return authPool;
   }
 
   /**

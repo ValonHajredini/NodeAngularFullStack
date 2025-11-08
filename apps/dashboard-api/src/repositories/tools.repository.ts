@@ -1,6 +1,5 @@
-import { Pool } from 'pg';
-import { databaseService } from '../services/database.service';
 import { BaseRepository } from './base.repository';
+import { DatabaseType } from '../config/multi-database.config';
 
 /**
  * Tool database entity interface matching the database schema.
@@ -47,11 +46,7 @@ export interface UpdateToolData {
  */
 export class ToolsRepository extends BaseRepository<ToolEntity> {
   constructor() {
-    super('tools');
-  }
-
-  protected get pool(): Pool {
-    return databaseService.getPool();
+    super('tools', DatabaseType.DASHBOARD);
   }
 
   /**

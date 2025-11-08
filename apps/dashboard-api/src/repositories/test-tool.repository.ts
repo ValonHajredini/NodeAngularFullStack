@@ -4,15 +4,21 @@ import {
   CreateTestToolInput,
   UpdateTestToolInput,
 } from '@nodeangularfullstack/shared';
+import { dashboardPool } from '../config/multi-database.config';
 
 /**
  * Test Tool Repository
  *
  * Data access layer for test_tool table.
  * Handles PostgreSQL queries and row mapping.
+ * Uses dashboard database pool.
  */
 export class TestToolRepository {
-  constructor(private pool: Pool) {}
+  private pool: Pool;
+
+  constructor(pool?: Pool) {
+    this.pool = pool || dashboardPool;
+  }
 
   /**
    * Find all Test Tool records.

@@ -1,14 +1,18 @@
 import { Pool } from 'pg';
 import { FormSchema } from '@nodeangularfullstack/shared';
-import { databaseService } from '../services/database.service';
+import { formsPool } from '../config/multi-database.config';
 
 /**
  * Repository for form schema database operations.
  * Handles schema versioning, publishing, and token management.
+ *
+ * WARNING: Architectural debt - form schemas belong to forms-api, not dashboard-api.
+ * This repository should be DELETED and dashboard-api should call forms-api HTTP endpoints instead.
+ * See TYPESCRIPT_FIXES.md for details.
  */
 export class FormSchemasRepository {
   private get pool(): Pool {
-    return databaseService.getPool();
+    return formsPool;
   }
 
   /**

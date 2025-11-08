@@ -5,7 +5,7 @@ import {
   UpdateToolInput,
   ToolStatus,
 } from '@nodeangularfullstack/shared';
-import { databaseService } from '../services/database.service';
+import { dashboardPool } from '../config/multi-database.config';
 
 /**
  * Repository for tool registry data access.
@@ -17,11 +17,12 @@ import { databaseService } from '../services/database.service';
  */
 export class ToolRegistryRepository {
   /**
-   * Gets the database connection pool.
+   * Gets the dashboard database connection pool.
+   * Tool registry table is in the dashboard database.
    * @returns PostgreSQL connection pool
    */
   protected get pool(): Pool {
-    return databaseService.getPool();
+    return dashboardPool;
   }
 
   /**

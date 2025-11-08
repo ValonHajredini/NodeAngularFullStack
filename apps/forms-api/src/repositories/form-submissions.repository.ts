@@ -3,15 +3,16 @@ import {
   FormSubmission,
   SubmissionFilterOptions,
 } from '@nodeangularfullstack/shared';
-import { databaseService } from '../services/database.service';
+import { formsPool } from '../config/multi-database.config';
 
 /**
  * Repository for form submission database operations.
  * Handles submission creation, retrieval, and statistics.
+ * Uses FORMS database for read-write operations.
  */
 export class FormSubmissionsRepository {
   private get pool(): Pool {
-    return databaseService.getPool();
+    return formsPool;
   }
 
   /**

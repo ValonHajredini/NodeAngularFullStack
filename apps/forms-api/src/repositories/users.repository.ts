@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import { databaseService } from '../services/database.service';
+import { authPool } from '../config/multi-database.config';
 
 /**
  * User interface matching the database schema.
@@ -48,10 +48,11 @@ export interface UpdateUserData {
 /**
  * User repository for database operations.
  * Handles all user-related database queries with proper error handling.
+ * Uses AUTH database for read-only access to user data.
  */
 export class UsersRepository {
   private get pool(): Pool {
-    return databaseService.getPool();
+    return authPool;
   }
 
   /**
