@@ -31,6 +31,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { ButtonModule, ButtonDirective } from 'primeng/button';
 import { Select, SelectModule } from 'primeng/select';
 import { InputNumber, InputNumberModule } from 'primeng/inputnumber';
+import { Slider, SliderModule } from 'primeng/slider';
 import { AccordionModule } from 'primeng/accordion';
 import { TooltipModule } from 'primeng/tooltip';
 import { TabsModule } from 'primeng/tabs';
@@ -81,6 +82,8 @@ import { ValidationPresetsService, ValidationPreset } from '../../../features/da
     Select,
     InputNumberModule,
     InputNumber,
+    SliderModule,
+    Slider,
     AccordionModule,
     TooltipModule,
     TabsModule,
@@ -128,6 +131,53 @@ import { ValidationPresetsService, ValidationPreset } from '../../../features/da
     ::ng-deep .p-checkbox:focus-visible .p-checkbox-box {
       outline: 2px solid #3b82f6;
       outline-offset: 2px;
+    }
+
+    // InputNumber spinner button styling - fit arrows within input height
+    ::ng-deep .p-inputnumber {
+      width: 100%;
+    }
+
+    ::ng-deep .p-inputnumber .p-inputtext {
+      height: 38px;
+      padding-right: 2rem;
+      font-size: 0.875rem;
+    }
+
+    ::ng-deep .p-inputnumber-buttons-stacked .p-inputnumber-button-group {
+      display: flex;
+      flex-direction: column;
+      position: absolute;
+      top: 1px;
+      right: 1px;
+      height: calc(100% - 2px);
+      width: 1.75rem;
+    }
+
+    ::ng-deep .p-inputnumber-buttons-stacked .p-inputnumber-button {
+      flex: 1 1 50%;
+      border-radius: 0;
+      width: 100%;
+      padding: 0;
+      min-height: 0;
+      height: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    ::ng-deep .p-inputnumber-buttons-stacked .p-inputnumber-button:first-child {
+      border-top-right-radius: 0.375rem;
+      border-bottom: 1px solid #d1d5db;
+    }
+
+    ::ng-deep .p-inputnumber-buttons-stacked .p-inputnumber-button:last-child {
+      border-bottom-right-radius: 0.375rem;
+    }
+
+    ::ng-deep .p-inputnumber-buttons-stacked .p-button-icon {
+      font-size: 0.625rem;
+      line-height: 1;
     }
   `],
   template: `
@@ -328,28 +378,38 @@ import { ValidationPresetsService, ValidationPreset } from '../../../features/da
               <p-tabpanel value="1">
                 <div class="space-y-4 pt-4">
                   @if (isNumberField()) {
-                    <div class="field">
-                      <label for="minValue" class="block text-sm font-medium text-gray-700 mb-1">
-                        Minimum Value
-                      </label>
-                      <p-inputNumber
-                        formControlName="minValue"
-                        inputId="minValue"
-                        [showButtons]="true"
-                        class="w-full"
-                      />
-                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                      <div class="field">
+                        <label for="minValue" class="flex justify-between text-sm font-medium text-gray-700 mb-2">
+                          <span>Minimum Value</span>
+                          <span class="text-blue-600 font-semibold">{{ propertiesForm.get('minValue')?.value ?? 0 }}</span>
+                        </label>
+                        <p-slider
+                          formControlName="minValue"
+                          inputId="minValue"
+                          [min]="0"
+                          [max]="25"
+                          [step]="1"
+                          class="w-full"
+                          (onChange)="onMinValueChange()"
+                        />
+                      </div>
 
-                    <div class="field">
-                      <label for="maxValue" class="block text-sm font-medium text-gray-700 mb-1">
-                        Maximum Value
-                      </label>
-                      <p-inputNumber
-                        formControlName="maxValue"
-                        inputId="maxValue"
-                        [showButtons]="true"
-                        class="w-full"
-                      />
+                      <div class="field">
+                        <label for="maxValue" class="flex justify-between text-sm font-medium text-gray-700 mb-2">
+                          <span>Maximum Value</span>
+                          <span class="text-blue-600 font-semibold">{{ propertiesForm.get('maxValue')?.value ?? 100 }}</span>
+                        </label>
+                        <p-slider
+                          formControlName="maxValue"
+                          inputId="maxValue"
+                          [min]="5"
+                          [max]="250"
+                          [step]="1"
+                          class="w-full"
+                          (onChange)="onMaxValueChange()"
+                        />
+                      </div>
                     </div>
 
                     @if (
@@ -367,30 +427,38 @@ import { ValidationPresetsService, ValidationPreset } from '../../../features/da
                   }
 
                   @if (isTextField()) {
-                    <div class="field">
-                      <label for="minLength" class="block text-sm font-medium text-gray-700 mb-1">
-                        Minimum Length
-                      </label>
-                      <p-inputNumber
-                        formControlName="minLength"
-                        inputId="minLength"
-                        [showButtons]="true"
-                        [min]="0"
-                        class="w-full"
-                      />
-                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                      <div class="field">
+                        <label for="minLength" class="flex justify-between text-sm font-medium text-gray-700 mb-2">
+                          <span>Minimum Length</span>
+                          <span class="text-blue-600 font-semibold">{{ propertiesForm.get('minLength')?.value ?? 0 }}</span>
+                        </label>
+                        <p-slider
+                          formControlName="minLength"
+                          inputId="minLength"
+                          [min]="0"
+                          [max]="25"
+                          [step]="1"
+                          class="w-full"
+                          (onChange)="onMinLengthChange()"
+                        />
+                      </div>
 
-                    <div class="field">
-                      <label for="maxLength" class="block text-sm font-medium text-gray-700 mb-1">
-                        Maximum Length
-                      </label>
-                      <p-inputNumber
-                        formControlName="maxLength"
-                        inputId="maxLength"
-                        [showButtons]="true"
-                        [min]="1"
-                        class="w-full"
-                      />
+                      <div class="field">
+                        <label for="maxLength" class="flex justify-between text-sm font-medium text-gray-700 mb-2">
+                          <span>Maximum Length</span>
+                          <span class="text-blue-600 font-semibold">{{ propertiesForm.get('maxLength')?.value ?? 100 }}</span>
+                        </label>
+                        <p-slider
+                          formControlName="maxLength"
+                          inputId="maxLength"
+                          [min]="5"
+                          [max]="250"
+                          [step]="1"
+                          class="w-full"
+                          (onChange)="onMaxLengthChange()"
+                        />
+                      </div>
                     </div>
 
                     @if (
@@ -932,6 +1000,70 @@ export class FieldPropertiesModalComponent implements OnInit, OnDestroy {
    * Handle field property changes (for checkboxes and other controls)
    */
   onFieldPropertyChange(): void {
+    this.propertiesForm.markAsDirty();
+  }
+
+  /**
+   * Handle minimum value slider change
+   * If min > max, set min = max
+   */
+  onMinValueChange(): void {
+    const minValue = this.propertiesForm.get('minValue')?.value;
+    const maxValue = this.propertiesForm.get('maxValue')?.value;
+
+    if (minValue !== null && maxValue !== null && minValue > maxValue) {
+      this.propertiesForm.patchValue({
+        minValue: maxValue,
+      }, { emitEvent: false });
+    }
+    this.propertiesForm.markAsDirty();
+  }
+
+  /**
+   * Handle maximum value slider change
+   * If max < min, set max = min
+   */
+  onMaxValueChange(): void {
+    const minValue = this.propertiesForm.get('minValue')?.value;
+    const maxValue = this.propertiesForm.get('maxValue')?.value;
+
+    if (minValue !== null && maxValue !== null && maxValue < minValue) {
+      this.propertiesForm.patchValue({
+        maxValue: minValue,
+      }, { emitEvent: false });
+    }
+    this.propertiesForm.markAsDirty();
+  }
+
+  /**
+   * Handle minimum length slider change
+   * If min > max, set min = max
+   */
+  onMinLengthChange(): void {
+    const minLength = this.propertiesForm.get('minLength')?.value;
+    const maxLength = this.propertiesForm.get('maxLength')?.value;
+
+    if (minLength !== null && maxLength !== null && minLength > maxLength) {
+      this.propertiesForm.patchValue({
+        minLength: maxLength,
+      }, { emitEvent: false });
+    }
+    this.propertiesForm.markAsDirty();
+  }
+
+  /**
+   * Handle maximum length slider change
+   * If max < min, set max = min
+   */
+  onMaxLengthChange(): void {
+    const minLength = this.propertiesForm.get('minLength')?.value;
+    const maxLength = this.propertiesForm.get('maxLength')?.value;
+
+    if (minLength !== null && maxLength !== null && maxLength < minLength) {
+      this.propertiesForm.patchValue({
+        maxLength: minLength,
+      }, { emitEvent: false });
+    }
     this.propertiesForm.markAsDirty();
   }
 
