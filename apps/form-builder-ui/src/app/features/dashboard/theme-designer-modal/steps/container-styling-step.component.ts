@@ -1060,7 +1060,7 @@ export class ContainerStylingStepComponent {
    * Computed styles for preview container element.
    */
   protected readonly previewContainerStyles = computed(() => {
-    const styles: { [key: string]: string } = {
+    const styles: Record<string, string> = {
       'max-width': `${this.containerMaxWidthValue()}px`,
       'background-color': this.containerBackgroundColorValue(),
       opacity: (this.containerOpacityValue() / 100).toString(),

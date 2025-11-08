@@ -592,24 +592,24 @@ import { ImageGalleryPropertiesPanelComponent } from './panels/image-gallery-pro
                     <div class="border-b border-gray-200 pb-4">
                       <h4 class="text-sm font-semibold text-gray-700 mb-3">Behavior Settings</h4>
                       <div class="space-y-3">
-                        <div class="field flex items-center">
-                          <p-toggleSwitch
-                            formControlName="disabled"
-                            inputId="disabled"
-                          ></p-toggleSwitch>
-                          <label for="disabled" class="ml-2 text-sm font-medium text-gray-700">
+                        <div class="field flex items-center justify-between">
+                          <label for="disabled" class="text-sm font-medium text-gray-700">
                             Disabled
                           </label>
+                          <p-toggleswitch
+                            formControlName="disabled"
+                            inputId="disabled"
+                          ></p-toggleswitch>
                         </div>
 
-                        <div class="field flex items-center">
-                          <p-toggleSwitch
-                            formControlName="readOnly"
-                            inputId="readOnly"
-                          ></p-toggleSwitch>
-                          <label for="readOnly" class="ml-2 text-sm font-medium text-gray-700">
+                        <div class="field flex items-center justify-between">
+                          <label for="readOnly" class="text-sm font-medium text-gray-700">
                             Read-only
                           </label>
+                          <p-toggleswitch
+                            formControlName="readOnly"
+                            inputId="readOnly"
+                          ></p-toggleswitch>
                         </div>
                       </div>
                     </div>
@@ -803,6 +803,38 @@ import { ImageGalleryPropertiesPanelComponent } from './panels/image-gallery-pro
         align-items: center;
         justify-content: center;
         min-height: 300px;
+      }
+
+      // PrimeNG ToggleSwitch theme overrides for field properties
+      :host ::ng-deep p-toggleswitch {
+        .p-toggleswitch {
+          .p-toggleswitch-slider {
+            background-color: #cbd5e0;
+            border-radius: 0.75rem;
+            transition: background-color 0.2s ease;
+
+            &::before {
+              background-color: white;
+              box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.15);
+              border: 1px solid rgba(0, 0, 0, 0.08);
+            }
+
+            .p-toggleswitch-handle {
+              background-color: white;
+              box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.15);
+              border: 1px solid rgba(0, 0, 0, 0.08);
+            }
+          }
+
+          &.p-toggleswitch-checked .p-toggleswitch-slider {
+            background-color: #3b82f6;
+          }
+
+          &:focus-visible {
+            outline: 2px solid #3b82f6;
+            outline-offset: 2px;
+          }
+        }
       }
     `,
   ],

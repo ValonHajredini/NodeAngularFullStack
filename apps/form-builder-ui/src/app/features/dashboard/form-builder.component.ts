@@ -22,7 +22,7 @@ import { FormsApiService } from './forms-api.service';
 import { ComponentWithUnsavedChanges } from '@core/guards/unsaved-changes.guard';
 import { FieldPaletteComponent } from './field-palette/field-palette.component';
 import { FormCanvasComponent } from './form-canvas/form-canvas.component';
-import { UnifiedFieldEditorModalComponent } from './unified-field-editor-modal/unified-field-editor-modal.component';
+import { FieldPropertiesModalComponent } from '../../shared/components/field-properties-modal';
 import { FormSettingsModalComponent, FormSettings } from '../../shared/components/form-settings-modal';
 import { PublishDialogComponent } from './publish-dialog/publish-dialog.component';
 import { RowLayoutSidebarComponent } from './row-layout-sidebar/row-layout-sidebar.component';
@@ -55,7 +55,7 @@ import { AuthService } from '@core/auth/auth.service';
     DragDropModule,
     FieldPaletteComponent,
     FormCanvasComponent,
-    UnifiedFieldEditorModalComponent,
+    FieldPropertiesModalComponent,
     FormSettingsModalComponent,
     PublishDialogComponent,
     RowLayoutSidebarComponent,
@@ -318,16 +318,15 @@ import { AuthService } from '@core/auth/auth.service';
         }
       </div>
 
-      <!-- Unified Field Editor Modal (Story 16.8) -->
-      <app-unified-field-editor-modal
-        [visible]="fieldPropertiesModalVisible()"
+      <!-- Field Properties Modal -->
+      <app-field-properties-modal
+        [(visible)]="fieldPropertiesModalVisible"
         [field]="selectedFieldForModal()"
-        [formId]="formBuilderService.currentFormId() || ''"
-        (visibleChange)="onFieldPropertiesModalVisibleChange($event)"
-        (save)="onFieldPropertiesSaved($event)"
-        (cancelModal)="onFieldPropertiesCancelled()"
-        (fieldDeleted)="onFieldDeleted()"
-      ></app-unified-field-editor-modal>
+        [allFields]="formBuilderService.formFields()"
+        (saveChanges)="onFieldPropertiesSaved($event)"
+        (deleteField)="onFieldDeleted()"
+        (cancel)="onFieldPropertiesCancelled()"
+      ></app-field-properties-modal>
 
       <!-- Form Settings Dialog -->
       <app-form-settings-modal
@@ -781,16 +780,6 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
   }
 
   /**
-   * Handles field properties modal visibility changes.
-   */
-  onFieldPropertiesModalVisibleChange(visible: boolean): void {
-    this.fieldPropertiesModalVisible.set(visible);
-    if (!visible) {
-      this.selectedFieldForModal.set(null);
-    }
-  }
-
-  /**
    * Handles field properties save from modal.
    */
   onFieldPropertiesSaved(updatedField: FormField): void {
@@ -807,7 +796,6 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
       life: 2000,
     });
 
-    this.fieldPropertiesModalVisible.set(false);
     this.selectedFieldForModal.set(null);
   }
 
@@ -815,7 +803,6 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
    * Handles field properties modal cancel.
    */
   onFieldPropertiesCancelled(): void {
-    this.fieldPropertiesModalVisible.set(false);
     this.selectedFieldForModal.set(null);
   }
 
@@ -829,6 +816,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
       detail: 'Field has been removed from the form',
       life: 2000,
     });
+    this.selectedFieldForModal.set(null);
   }
 
   /**

@@ -410,6 +410,10 @@ export interface FormField {
     | ImageGalleryMetadata;
   /** Position within row-column layout (optional, for row-based layouts) */
   position?: FieldPosition;
+  /** Whether field is disabled */
+  disabled?: boolean;
+  /** Whether field is read-only */
+  readOnly?: boolean;
 }
 
 /**

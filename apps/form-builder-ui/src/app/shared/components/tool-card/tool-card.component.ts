@@ -49,12 +49,12 @@ export class ToolCardComponent {
   /**
    * Loading state. When true, displays skeleton placeholders.
    */
-  @Input() loading: boolean = false;
+  @Input() loading = false;
 
   /**
    * Interactive mode. When true, card is clickable and has hover effects.
    */
-  @Input() interactive: boolean = true;
+  @Input() interactive = true;
 
   /**
    * Emitted when user clicks the card.

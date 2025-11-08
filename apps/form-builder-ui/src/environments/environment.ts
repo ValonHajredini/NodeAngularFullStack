@@ -8,7 +8,7 @@ export const environment = {
   // Proxy routes /api/v1/tools to dashboard-api (3000), /api/v1/forms to forms-api (3001)
   apiUrl: '/api/v1',
   shortLinkBaseUrl: 'http://localhost:3001',
-  mainAppUrl: 'http://localhost:4200',
+  mainAppUrl: 'http://localhost:4201',
   appName: 'NodeAngularFullStack',
   enableMultiTenancy: false,
   showTestCredentials: true,
