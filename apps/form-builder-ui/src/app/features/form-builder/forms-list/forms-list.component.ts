@@ -19,7 +19,7 @@ import { ConfirmDialog } from 'primeng/confirmdialog';
 import { Toast } from 'primeng/toast';
 import { FormMetadata, FormStatus, PaginatedResponse } from '@nodeangularfullstack/shared';
 import { FormsApiService } from '../forms-api.service';
-import { FormSettingsComponent, FormSettings } from '../form-settings/form-settings.component';
+import { FormSettingsModalComponent, FormSettings } from '../../../shared/components/form-settings-modal';
 import { FormCardComponent, FormCardAction } from '../form-card/form-card.component';
 import { QrCodeDisplayComponent } from '../../tools/components/short-link/components/qr-code-display/qr-code-display.component';
 import { Dialog } from 'primeng/dialog';
@@ -57,7 +57,7 @@ import { Dialog } from 'primeng/dialog';
     InputText,
     ConfirmDialog,
     Toast,
-    FormSettingsComponent,
+    FormSettingsModalComponent,
     FormCardComponent,
     QrCodeDisplayComponent,
     Dialog,
@@ -190,12 +190,12 @@ import { Dialog } from 'primeng/dialog';
       <p-toast position="top-right"></p-toast>
 
       <!-- Form Settings Modal for Creation -->
-      <app-form-settings
+      <app-form-settings-modal
         [(visible)]="showCreateModal"
         [mode]="'create'"
         [settings]="newFormSettings()"
         (settingsSaved)="onFormSettingsSaved($event)"
-      ></app-form-settings>
+      ></app-form-settings-modal>
 
       <!-- QR Code Modal -->
       <p-dialog

@@ -23,7 +23,7 @@ import { ComponentWithUnsavedChanges } from '@core/guards/unsaved-changes.guard'
 import { FieldPaletteComponent } from './field-palette/field-palette.component';
 import { FormCanvasComponent } from './form-canvas/form-canvas.component';
 import { UnifiedFieldEditorModalComponent } from './unified-field-editor-modal/unified-field-editor-modal.component';
-import { FormSettingsComponent, FormSettings } from './form-settings/form-settings.component';
+import { FormSettingsModalComponent, FormSettings } from '../../shared/components/form-settings-modal';
 import { PublishDialogComponent } from './publish-dialog/publish-dialog.component';
 import { RowLayoutSidebarComponent } from './row-layout-sidebar/row-layout-sidebar.component';
 import { StepFormSidebarComponent } from './step-form-sidebar/step-form-sidebar.component';
@@ -56,7 +56,7 @@ import { AuthService } from '@core/auth/auth.service';
     FieldPaletteComponent,
     FormCanvasComponent,
     UnifiedFieldEditorModalComponent,
-    FormSettingsComponent,
+    FormSettingsModalComponent,
     PublishDialogComponent,
     RowLayoutSidebarComponent,
     StepFormSidebarComponent,
@@ -330,12 +330,12 @@ import { AuthService } from '@core/auth/auth.service';
       ></app-unified-field-editor-modal>
 
       <!-- Form Settings Dialog -->
-      <app-form-settings
-        [visible]="settingsDialogVisible()"
-        (visibleChange)="onSettingsDialogVisibleChange($event)"
+      <app-form-settings-modal
+        [(visible)]="settingsDialogVisible"
+        [mode]="'edit'"
         [settings]="formSettings()"
         (settingsSaved)="onSettingsSaved($event)"
-      ></app-form-settings>
+      ></app-form-settings-modal>
 
       <!-- Publish Dialog -->
       <app-publish-dialog
@@ -836,13 +836,6 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
    */
   showSettingsDialog(): void {
     this.settingsDialogVisible.set(true);
-  }
-
-  /**
-   * Handles form settings dialog visibility changes.
-   */
-  onSettingsDialogVisibleChange(visible: boolean): void {
-    this.settingsDialogVisible.set(visible);
   }
 
   /**

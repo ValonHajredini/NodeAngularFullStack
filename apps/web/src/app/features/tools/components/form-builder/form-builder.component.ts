@@ -31,6 +31,12 @@ import { PreviewDialogComponent } from './preview-dialog/preview-dialog.componen
 import { ThemeDropdownComponent } from './theme-dropdown/theme-dropdown.component';
 import { ThemeDesignerModalComponent } from './theme-designer-modal/theme-designer-modal.component';
 import { TokenReuseConfirmationComponent } from './token-reuse-confirmation/token-reuse-confirmation.component';
+import {
+  AUTO_SAVE_INTERVAL_MS,
+  SIDEBAR_BREAKPOINT_PX,
+  FORMS_PAGE_SIZE,
+  PAGINATION_START_PAGE,
+} from './core/constants';
 import { Dialog } from 'primeng/dialog';
 import { FormSchema, FormTheme, TokenStatusResponse } from '@nodeangularfullstack/shared';
 import { trigger, transition, style, animate } from '@angular/animations';
@@ -642,18 +648,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
       if (this.formBuilderService.isDirty() && !this.isSaving()) {
         this.saveDraft(true); // true = auto-save mode
       }
-    }, 30000); // 30 seconds
-  }
-
-  /**
-   * Adds a default text input field to the first row, first column.
-   * Called when creating a new form.
-   */
-  private addDefaultTextField(): void {
-    this.fieldCounter++;
-    const newField = this.formBuilderService.addFieldFromType(FormFieldType.TEXT);
-    // Mark as dirty to show unsaved changes indicator
-    this.formBuilderService.markDirty();
+    }, AUTO_SAVE_INTERVAL_MS);
   }
 
   /**
@@ -855,9 +850,6 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
 
     // Update local settings
     this.formSettings.set({ ...settings });
-
-    // Sync background settings to fields
-    this.syncBackgroundSettingsToFields(settings);
 
     if (!currentFormId) {
       // If no form is loaded, just mark as dirty
@@ -1070,7 +1062,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
     this.formsListLoading.set(true);
     this.formsListError.set(null);
 
-    this.formsApiService.getForms(1, 50).subscribe({
+    this.formsApiService.getForms(PAGINATION_START_PAGE, FORMS_PAGE_SIZE).subscribe({
       next: (response) => {
         this.availableForms.set(response.data ?? []);
         this.formsListLoading.set(false);
@@ -1860,36 +1852,6 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
   }
 
   /**
-   * Extracts background settings from schema settings (not from fields).
-   * Background settings are now stored in schema.settings.background, not as fields.
-   */
-  private extractBackgroundSettings(fields: FormField[]): Partial<FormSettings> {
-    // Background settings are now managed in schema.settings.background
-    // This method is kept for compatibility but returns default values
-    return {
-      backgroundType: 'none',
-      backgroundImageUrl: '',
-      backgroundImagePosition: 'cover',
-      backgroundImageOpacity: 100,
-      backgroundImageAlignment: 'center',
-      backgroundImageBlur: 0,
-      backgroundCustomHtml: '',
-      backgroundCustomCss: '',
-    };
-  }
-
-  /**
-   * Syncs background settings - NO-OP.
-   * Background settings are now stored directly in schema.settings.background
-   * and are not represented as fields in the form.
-   */
-  private syncBackgroundSettingsToFields(settings: FormSettings): void {
-    // Background settings are now managed in form-settings.component
-    // They are stored in schema.settings.background, not as fields
-    // This method is kept for compatibility but does nothing
-  }
-
-  /**
    * Toggles the sidebar collapse state and persists it to localStorage.
    */
   toggleSidebar(): void {
@@ -1899,7 +1861,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
 
   /**
    * Restores the sidebar collapse state from localStorage.
-   * Defaults to collapsed on small screens (<1024px).
+   * Defaults to collapsed on small screens.
    */
   private restoreSidebarCollapseState(): void {
     const savedState = localStorage.getItem(this.SIDEBAR_STORAGE_KEY);
@@ -1907,7 +1869,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
       this.sidebarCollapsed.set(savedState === 'true');
     } else {
       // Default to collapsed on small screens
-      this.sidebarCollapsed.set(window.innerWidth < 1024);
+      this.sidebarCollapsed.set(window.innerWidth < SIDEBAR_BREAKPOINT_PX);
     }
   }
 }

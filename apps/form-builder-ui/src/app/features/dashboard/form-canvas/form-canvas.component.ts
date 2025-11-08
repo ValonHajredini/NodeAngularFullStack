@@ -14,7 +14,7 @@ import { DragDropModule, CdkDragDrop, CdkDrag, CdkDropList } from '@angular/cdk/
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { FormField, FormFieldType, FieldPosition, FormTheme } from '@nodeangularfullstack/shared';
 import { FormBuilderService } from '../form-builder.service';
-import { FormSettings } from '../form-settings/form-settings.component';
+import { FormSettings } from '../../../shared/components/form-settings-modal';
 import { ThemePreviewService } from '../theme-preview.service';
 import { FormsApiService } from '../forms-api.service';
 import { FieldPreviewRendererComponent } from './field-preview-renderer/field-preview-renderer.component';

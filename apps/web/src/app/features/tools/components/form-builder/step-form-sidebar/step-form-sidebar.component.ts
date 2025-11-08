@@ -24,12 +24,7 @@ import { MessageModule } from 'primeng/message';
 import { AccordionModule } from 'primeng/accordion';
 import { FormBuilderService } from '../form-builder.service';
 import { FormStep, RowLayoutConfig, MAX_STEPS } from '@nodeangularfullstack/shared';
-
-/** Width ratio option for dropdown UI */
-interface WidthRatioOption {
-  label: string;
-  value: string | string[];
-}
+import { WidthRatioOption } from '../models/layout-options.model';
 
 /**
  * Step Form Sidebar Component

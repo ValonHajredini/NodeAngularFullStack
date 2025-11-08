@@ -1,24 +1,24 @@
 {
   "/api/v1/forms": {
-    "target": "http://localhost:3001",
+    "target": "http://localhost:3000",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"
   },
   "/api/v1/themes": {
-    "target": "http://localhost:3001",
+    "target": "http://localhost:3000",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"
   },
   "/api/v1/public": {
-    "target": "http://localhost:3001",
+    "target": "http://localhost:3000",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"
   },
   "/api/v1/tools/short-links": {
-    "target": "http://localhost:3001",
+    "target": "http://localhost:3000",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"

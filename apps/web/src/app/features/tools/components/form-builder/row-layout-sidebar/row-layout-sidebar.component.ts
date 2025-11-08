@@ -12,12 +12,7 @@ import { AccordionModule } from 'primeng/accordion';
 import { ToggleButtonModule } from 'primeng/togglebutton';
 import { CheckboxModule } from 'primeng/checkbox';
 import { FormBuilderService } from '../form-builder.service';
-
-/** Width ratio option for dropdown UI */
-interface WidthRatioOption {
-  label: string;
-  value: string | string[];
-}
+import { WidthRatioOption } from '../models/layout-options.model';
 
 /**
  * Right sidebar component for row-based layout configuration.
