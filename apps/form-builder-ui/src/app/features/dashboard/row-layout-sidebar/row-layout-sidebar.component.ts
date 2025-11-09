@@ -55,9 +55,9 @@ interface WidthRatioOption {
     <p-confirmDialog></p-confirmDialog>
 
     <!-- Sidebar Content -->
-    <div class="row-layout-sidebar-content h-full overflow-auto space-y-6 p-4">
+    <div class="row-layout-sidebar-content h-full overflow-auto space-y-3 p-3">
       <!-- Row Layout Section -->
-      <section class="section-block border-b border-gray-200 pb-4">
+      <section class="section-block border-b border-gray-200 pb-2">
         <div class="flex items-start justify-between gap-3">
           <div>
             <p class="section-eyebrow">Layout</p>
@@ -79,8 +79,8 @@ interface WidthRatioOption {
 
       <!-- Active Rows Section (shown when row layout enabled) -->
       @if (formBuilderService.rowLayoutEnabled()) {
-        <section class="section-block pb-6">
-          <div class="flex items-center justify-between mb-3">
+        <section class="section-block pb-3">
+          <div class="flex items-center justify-between mb-2">
             <h4 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Active Rows</h4>
             <span class="text-xs text-gray-500">
               {{ formBuilderService.rowConfigs().length }}
@@ -91,13 +91,13 @@ interface WidthRatioOption {
           <!-- Batch Actions Toolbar (appears when 2+ rows selected) -->
           @if (formBuilderService.selectedRowCount() >= 2) {
             <div
-              class="batch-toolbar sticky top-0 z-10 bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 shadow-sm"
+              class="batch-toolbar sticky top-0 z-10 bg-blue-50 border border-blue-200 rounded-lg p-2 mb-3 shadow-sm"
             >
               <div class="flex items-center justify-between">
                 <span class="text-sm font-semibold text-blue-700">
                   {{ formBuilderService.selectedRowCount() }} rows selected
                 </span>
-                <div class="flex gap-2">
+                <div class="flex gap-1.5">
                   <button
                     pButton
                     label="Duplicate Selected"
@@ -121,17 +121,17 @@ interface WidthRatioOption {
             </div>
           }
 
-          <div class="row-list space-y-3">
+          <div class="row-list space-y-2">
             @for (row of formBuilderService.rowConfigs(); track row.rowId) {
               <div
-                class="row-item rounded-lg border p-3 shadow-xs transition-colors"
+                class="row-item rounded-lg border p-2 shadow-xs transition-colors"
                 [class.border-blue-500]="formBuilderService.isRowSelected(row.rowId)"
                 [class.bg-blue-50]="formBuilderService.isRowSelected(row.rowId)"
                 [class.border-gray-200]="!formBuilderService.isRowSelected(row.rowId)"
                 [class.bg-white]="!formBuilderService.isRowSelected(row.rowId)"
               >
-                <div class="flex items-center justify-between gap-2 mb-3">
-                  <div class="flex items-center gap-3">
+                <div class="flex items-center justify-between gap-1.5 mb-1.5">
+                  <div class="flex items-center gap-2">
                     <!-- Selection Checkbox -->
                     <p-checkbox
                       [binary]="true"
@@ -140,15 +140,15 @@ interface WidthRatioOption {
                       [disabled]="formBuilderService.isPublished()"
                       [attr.aria-label]="'Select row ' + (row.order + 1)"
                     />
-                    <div>
-                      <p class="text-sm font-semibold text-gray-800">Row {{ row.order + 1 }}</p>
+                    <div class="leading-tight">
+                      <p class="text-sm font-semibold text-gray-800 mb-0.5">Row {{ row.order + 1 }}</p>
                       <p class="text-xs text-gray-500">
                         {{ row.columnCount }}
                         {{ row.columnCount === 1 ? 'column' : 'columns' }}
                       </p>
                     </div>
                   </div>
-                  <div class="flex gap-2">
+                  <div class="flex gap-1.5">
                     <!-- Duplicate Button -->
                     <button
                       pButton
@@ -173,7 +173,7 @@ interface WidthRatioOption {
                   </div>
                 </div>
 
-                <div class="flex gap-2">
+                <div class="flex gap-1.5">
                   @for (count of [1, 2, 3, 4]; track count) {
                     <button
                       pButton
@@ -191,10 +191,10 @@ interface WidthRatioOption {
 
                 <!-- Column Widths Section (appears when columnCount >= 2) -->
                 @if (row.columnCount >= 2) {
-                  <div class="column-widths-section mt-4 pt-4 border-t border-gray-100">
+                  <div class="column-widths-section mt-3 pt-3 border-t border-gray-100">
                     <label
                       for="width-ratio-{{ row.rowId }}"
-                      class="text-xs font-semibold text-gray-700 mb-2 block"
+                      class="text-xs font-semibold text-gray-700 mb-1 block"
                     >
                       Width Ratio
                     </label>
@@ -211,10 +211,10 @@ interface WidthRatioOption {
                     />
 
                     @if (selectedWidthRatios()[row.rowId] === 'custom') {
-                      <div class="mt-3">
+                      <div class="mt-2">
                         <label
                           for="custom-widths-{{ row.rowId }}"
-                          class="text-xs font-semibold text-gray-700 mb-2 block"
+                          class="text-xs font-semibold text-gray-700 mb-1 block"
                         >
                           Custom Widths
                         </label>
@@ -242,8 +242,8 @@ interface WidthRatioOption {
 
                 <!-- Sub-Columns Section (appears when columnCount > 0) -->
                 @if (row.columnCount > 0) {
-                  <div class="sub-columns-section mt-4 pt-4 border-t border-gray-100">
-                    <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">
+                  <div class="sub-columns-section mt-3 pt-3 border-t border-gray-100">
+                    <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1">
                       Sub-Columns
                     </h4>
 
@@ -266,7 +266,7 @@ interface WidthRatioOption {
 
                           <p-accordion-content>
                             <!-- Enable Sub-Columns Toggle -->
-                            <div class="toggle-container flex items-center justify-between mb-4">
+                            <div class="toggle-container flex items-center justify-between mb-3">
                               <label
                                 for="sub-columns-toggle-{{ row.rowId }}-{{ columnIndex }}"
                                 class="text-xs font-medium text-gray-700"
@@ -296,12 +296,12 @@ interface WidthRatioOption {
 
                             <!-- Sub-column Configuration (appears when enabled) -->
                             @if (hasSubColumns(row.rowId, columnIndex)) {
-                              <div class="sub-column-config space-y-3">
+                              <div class="sub-column-config space-y-2">
                                 <!-- Sub-Column Count Dropdown -->
                                 <div>
                                   <label
                                     for="sub-column-count-{{ row.rowId }}-{{ columnIndex }}"
-                                    class="text-xs font-semibold text-gray-700 mb-2 block"
+                                    class="text-xs font-semibold text-gray-700 mb-1 block"
                                   >
                                     Number of Sub-Columns
                                   </label>
@@ -324,7 +324,7 @@ interface WidthRatioOption {
                                 <div>
                                   <label
                                     for="sub-column-width-{{ row.rowId }}-{{ columnIndex }}"
-                                    class="text-xs font-semibold text-gray-700 mb-2 block"
+                                    class="text-xs font-semibold text-gray-700 mb-1 block"
                                   >
                                     Sub-Column Width Ratio
                                   </label>
@@ -360,7 +360,7 @@ interface WidthRatioOption {
                                   <div>
                                     <label
                                       for="custom-sub-widths-{{ row.rowId }}-{{ columnIndex }}"
-                                      class="text-xs font-semibold text-gray-700 mb-2 block"
+                                      class="text-xs font-semibold text-gray-700 mb-1 block"
                                     >
                                       Custom Widths
                                     </label>
@@ -417,14 +417,14 @@ interface WidthRatioOption {
             icon="pi pi-plus"
             size="small"
             (click)="onAddRow()"
-            class="w-full mt-4"
+            class="w-full mt-3"
             severity="secondary"
             [outlined]="true"
           ></button>
         </section>
       } @else {
         <!-- Migration Prompt (shown when row layout disabled) -->
-        <section class="section-block pb-6">
+        <section class="section-block pb-3">
           <div class="text-center py-6 px-4 border border-dashed border-gray-300 rounded-lg">
             <i class="pi pi-th-large text-4xl text-gray-400 mb-3 block"></i>
             <p class="text-sm text-gray-600 mb-4">
@@ -478,7 +478,7 @@ interface WidthRatioOption {
       .sub-columns-section {
         background: rgba(249, 250, 251, 0.5);
         border-radius: 6px;
-        padding: 0.75rem;
+        padding: 0.5rem;
       }
 
       .column-header {
@@ -505,7 +505,7 @@ interface WidthRatioOption {
       }
 
       .toggle-container {
-        padding-bottom: 0.75rem;
+        padding-bottom: 0.5rem;
         border-bottom: 1px solid rgba(0, 0, 0, 0.05);
       }
 
@@ -517,12 +517,12 @@ interface WidthRatioOption {
         }
 
         .sub-columns-section .p-accordion .p-accordion-header-link {
-          padding: 0.75rem 1rem;
+          padding: 0.4rem 0.6rem;
           font-size: 0.875rem;
         }
 
         .sub-columns-section .p-accordion .p-accordion-content {
-          padding: 1rem;
+          padding: 0.75rem;
         }
       }
     `,

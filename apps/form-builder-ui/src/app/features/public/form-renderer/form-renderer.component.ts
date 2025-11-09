@@ -244,6 +244,9 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   private collapsedTextBlocks = new Set<string>();
   private checkboxSelections = new Map<string, string[]>();
 
+  // Dynamic height management for step forms
+  private heightUpdateTimer?: any;
+
   constructor(
     private route: ActivatedRoute,
     private formRendererService: FormRendererService,
@@ -276,6 +279,9 @@ export class FormRendererComponent implements OnInit, OnDestroy {
       if (this.isStepFormEnabled()) {
         this.recordStepEvent('view');
       }
+
+      // Initial height calculation after form loads (for all forms)
+      setTimeout(() => this.updateHeight(), 100);
 
       return;
     }
@@ -356,6 +362,9 @@ export class FormRendererComponent implements OnInit, OnDestroy {
       if (this.isStepFormEnabled()) {
         this.recordStepEvent('view');
       }
+
+      // Initial height calculation after form loads (for all forms)
+      setTimeout(() => this.updateHeight(), 100);
     } catch (error) {
       this.handleError('Failed to load preview data', FormRenderErrorType.PARSE_ERROR);
     }
@@ -415,6 +424,9 @@ export class FormRendererComponent implements OnInit, OnDestroy {
           if (this.isStepFormEnabled()) {
             this.recordStepEvent('view');
           }
+
+          // Initial height calculation after form loads (for all forms)
+          setTimeout(() => this.updateHeight(), 100);
         },
         error: (error: FormRenderError) => {
           this.handleError(error.message, error.type);
@@ -471,9 +483,114 @@ export class FormRendererComponent implements OnInit, OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
 
+    // Clear height update timer
+    if (this.heightUpdateTimer) {
+      clearTimeout(this.heightUpdateTimer);
+    }
+
     // Clear theme CSS on component destruction (Story 20.7)
     this.themePreviewService.clearThemeCss();
     this._themeLoaded.set(false);
+  }
+
+  /**
+   * Detects if the form is running inside an iframe.
+   * @returns true if form is embedded in an iframe
+   */
+  private isInIframe(): boolean {
+    try {
+      return window !== window.parent;
+    } catch (e) {
+      // Cross-origin iframe access blocked - assume we're in iframe
+      return true;
+    }
+  }
+
+  /**
+   * Calculates the actual content height of the form.
+   * Measures the form content directly, not the container with fixed min-height.
+   * @returns Calculated height in pixels
+   */
+  private calculateContentHeight(): number {
+    // Try to measure the actual form element first
+    const formElement = document.querySelector('form') as HTMLElement;
+    if (formElement) {
+      // Measure the form's natural content height
+      const formHeight = formElement.scrollHeight;
+
+      // Add padding from card body (15px top + 15px bottom = 30px)
+      // Plus some buffer for better UX (prevents cutoff)
+      const totalHeight = formHeight + 30 + 40;
+
+      return totalHeight;
+    }
+
+    // Fallback: measure the form-content-wrapper itself
+    const contentWrapper = document.querySelector('.form-content-wrapper') as HTMLElement;
+    if (contentWrapper) {
+      // Get all children and calculate their total height
+      let totalHeight = 0;
+      const children = Array.from(contentWrapper.children) as HTMLElement[];
+      children.forEach(child => {
+        totalHeight += child.offsetHeight;
+      });
+
+      return totalHeight + 60; // Add padding buffer
+    }
+
+    // Last resort fallback
+    return 400;
+  }
+
+  /**
+   * Updates the form height based on current content and context.
+   * - If in iframe: sends postMessage to parent window
+   * - If direct URL: adjusts container height directly
+   * Debounced to prevent excessive updates (100ms delay).
+   */
+  private updateHeight(): void {
+    // Clear any pending height updates
+    if (this.heightUpdateTimer) {
+      clearTimeout(this.heightUpdateTimer);
+    }
+
+    // Debounce the height update to avoid excessive calculations
+    this.heightUpdateTimer = setTimeout(() => {
+      const height = this.calculateContentHeight();
+
+      if (this.isInIframe()) {
+        // In iframe context: send postMessage to parent window
+        try {
+          window.parent.postMessage(
+            {
+              type: 'formHeightChange',
+              height: height
+            },
+            '*' // Allow any origin (form can be embedded anywhere)
+          );
+          console.log('[Dynamic Height] Posted height to parent:', height);
+        } catch (e) {
+          console.error('[Dynamic Height] Failed to post message to parent:', e);
+        }
+      } else {
+        // Direct URL context: apply height to container
+        const container = document.querySelector('.form-content-wrapper') as HTMLElement;
+        if (container) {
+          container.style.minHeight = `${height}px`;
+          console.log('[Dynamic Height] Applied min-height to container:', height);
+        }
+      }
+    }, 100); // 100ms debounce delay
+  }
+
+  /**
+   * Window resize listener to recalculate height on viewport changes.
+   * Useful for responsive layouts and orientation changes on mobile.
+   */
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    // Recalculate height for all forms on window resize
+    this.updateHeight();
   }
 
   /**
@@ -493,6 +610,9 @@ export class FormRendererComponent implements OnInit, OnDestroy {
     this.recordStepEvent('view');
 
     this.scrollToTop();
+
+    // Update height after step change
+    setTimeout(() => this.updateHeight(), 50);
   }
 
   /**
@@ -510,6 +630,9 @@ export class FormRendererComponent implements OnInit, OnDestroy {
     this.recordStepEvent('view');
 
     this.scrollToTop();
+
+    // Update height after step change
+    setTimeout(() => this.updateHeight(), 50);
   }
 
   /**
@@ -527,6 +650,9 @@ export class FormRendererComponent implements OnInit, OnDestroy {
     this.recordStepEvent('view');
 
     this.scrollToTop();
+
+    // Update height after step change
+    setTimeout(() => this.updateHeight(), 50);
   }
 
   /**
@@ -668,6 +794,9 @@ export class FormRendererComponent implements OnInit, OnDestroy {
           if (this.isStepFormEnabled()) {
             this.recordStepEvent('view');
           }
+
+          // Initial height calculation after form loads (for all forms)
+          setTimeout(() => this.updateHeight(), 100);
         },
         error: (error: FormRenderError) => {
           this.state = {

@@ -198,8 +198,12 @@ export class IframeEmbedGeneratorComponent implements OnInit {
     const baseUrl = environment.production ? window.location.origin : 'http://localhost:4201';
     const iframeSrc = `${baseUrl}/forms/render/${this.shortCode}`;
 
+    // Generate unique ID for this iframe instance
+    const iframeId = `form-iframe-${this.shortCode}`;
+
     // Generate secure iframe HTML with proper attributes
     const htmlCode = `<iframe
+  id="${iframeId}"
   src="${iframeSrc}"
   width="${options.width}"
   height="${options.height}"
@@ -208,12 +212,45 @@ export class IframeEmbedGeneratorComponent implements OnInit {
   sandbox="allow-forms allow-scripts allow-same-origin"
   title="${this.escapeHtml(options.title)}"
   loading="lazy"
+  style="transition: height 0.3s ease;"
 >
   <p>
     Your browser does not support iframes.
     <a href="${iframeSrc}" target="_blank">Open form in new window</a>
   </p>
-</iframe>`;
+</iframe>
+
+<script>
+  // Dynamic height adjustment for step forms
+  (function() {
+    var iframe = document.getElementById('${iframeId}');
+
+    if (!iframe) {
+      console.error('Iframe not found: ${iframeId}');
+      return;
+    }
+
+    // Listen for height change messages from iframe
+    window.addEventListener('message', function(event) {
+      // Security: Verify the message origin matches the iframe source
+      var iframeSrcOrigin = '${baseUrl}';
+
+      // Accept messages from the iframe origin
+      if (event.origin !== iframeSrcOrigin) {
+        return;
+      }
+
+      // Check if this is a height change message
+      if (event.data && event.data.type === 'formHeightChange' && typeof event.data.height === 'number') {
+        var newHeight = event.data.height + 'px';
+        iframe.style.height = newHeight;
+        console.log('[Form Embed] Height updated to:', newHeight);
+      }
+    });
+
+    console.log('[Form Embed] Dynamic height listener initialized for iframe: ${iframeId}');
+  })();
+</script>`;
 
     return {
       htmlCode,

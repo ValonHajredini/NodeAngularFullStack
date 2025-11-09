@@ -21,15 +21,47 @@ packages (see Epics 30-33 for details).
 - **Tool Registry & Export System**: Export registered tools (forms, workflows, themes) as
   standalone microservice packages with Docker configs, migrations, and boilerplate code
 
+## Application Routing Guide
+
+**CRITICAL**: This monorepo contains multiple frontend and backend applications. Choose the correct
+app based on the task:
+
+| Task                                                     | Frontend App           | Backend API          |
+| -------------------------------------------------------- | ---------------------- | -------------------- |
+| Form builder features (drag-drop, canvas, field palette) | `apps/form-builder-ui` | `apps/forms-api`     |
+| Theme designer (create/edit themes)                      | `apps/form-builder-ui` | `apps/forms-api`     |
+| Form analytics & visualizations                          | `apps/form-builder-ui` | `apps/forms-api`     |
+| Public form rendering                                    | `apps/form-builder-ui` | `apps/forms-api`     |
+| User authentication & login                              | `apps/web`             | `apps/dashboard-api` |
+| Admin dashboard & settings                               | `apps/web`             | `apps/dashboard-api` |
+| Tool registry UI                                         | `apps/web`             | `apps/forms-api`     |
+| Export history & job monitoring                          | `apps/web`             | `apps/forms-api`     |
+
+**Common Mistakes to Avoid:**
+
+- ❌ Don't edit `apps/web` when asked to work on form builder features
+- ❌ Don't edit `apps/api` (legacy) - use domain-specific APIs instead
+- ❌ Don't assume all frontend code is in `apps/web`
+- ✅ Always verify which app the user is referring to before making changes
+
 ## Development Commands
 
 ### Essential Development Commands
 
-- `npm start` or `./start-dev.sh` - Start entire development environment (API + Frontend + pgWeb
-  against local PostgreSQL)
+- `npm start` or `./start-dev.sh` - Start entire development environment (All APIs + All Frontends +
+  pgWeb)
 - `npm stop` or `./stop-dev.sh` - Stop all local services
-- `npm --workspace=apps/api run dev` - Start backend API only (port 3000)
-- `npm --workspace=apps/web run dev` - Start frontend only (port 4200)
+
+**Backend Services:**
+
+- `npm --workspace=apps/api run dev` - Legacy monolithic API (port 3002)
+- `npm --workspace=apps/dashboard-api run dev` - Dashboard/Auth API (port 3000)
+- `npm --workspace=apps/forms-api run dev` - Forms/Themes/Export API (port 3001)
+
+**Frontend Applications:**
+
+- `npm --workspace=apps/web run dev` - Main Angular frontend (port 4200)
+- `npm --workspace=apps/form-builder-ui run dev` - Form Builder UI (port 4201)
 
 ### Testing Commands
 
@@ -50,8 +82,15 @@ packages (see Epics 30-33 for details).
 
 **Running Single Tests:**
 
-- Backend: `npm --workspace=apps/api run test -- --testPathPattern="filename.test.ts"`
-- Frontend: `npm --workspace=apps/web run test -- --include="**/component-name.spec.ts"`
+- **Backend APIs**:
+  - Dashboard API:
+    `npm --workspace=apps/dashboard-api run test -- --testPathPattern="filename.test.ts"`
+  - Forms API: `npm --workspace=apps/forms-api run test -- --testPathPattern="filename.test.ts"`
+  - Legacy API: `npm --workspace=apps/api run test -- --testPathPattern="filename.test.ts"`
+- **Frontend Apps**:
+  - Main UI: `npm --workspace=apps/web run test -- --include="**/component-name.spec.ts"`
+  - Form Builder UI:
+    `npm --workspace=apps/form-builder-ui run test -- --include="**/component-name.spec.ts"`
 - Add `--watch=false`, `--passWithNoTests`, or `--silent` flags as needed
 - Use `--maxWorkers=1` flag for tests that require sequential execution or have resource constraints
 
@@ -66,16 +105,35 @@ packages (see Epics 30-33 for details).
 
 **Workspace-Specific:**
 
-- `npm --workspace=apps/api run lint` - Lint backend only
-- `npm --workspace=apps/web run lint` - Lint frontend only
-- `npm --workspace=apps/api run typecheck` - TypeScript check backend
-- `npm --workspace=apps/web run typecheck` - TypeScript check frontend
+- **Backend APIs**:
+  - `npm --workspace=apps/dashboard-api run lint` - Lint dashboard API
+  - `npm --workspace=apps/forms-api run lint` - Lint forms API
+  - `npm --workspace=apps/dashboard-api run typecheck` - TypeScript check dashboard API
+  - `npm --workspace=apps/forms-api run typecheck` - TypeScript check forms API
+- **Frontend Apps**:
+  - `npm --workspace=apps/web run lint` - Lint main UI
+  - `npm --workspace=apps/form-builder-ui run lint` - Lint form builder UI
+  - `npm --workspace=apps/web run typecheck` - TypeScript check main UI
+  - `npm --workspace=apps/form-builder-ui run typecheck` - TypeScript check form builder UI
 
-### Database Commands (run from root or in apps/api/)
+### Database Commands
 
-- `npm --workspace=apps/api run db:migrate` - Run database migrations
-- `npm --workspace=apps/api run db:seed` - Seed database with test data
-- `npm --workspace=apps/api run db:reset` - Clear and re-seed database
+**Note**: All services share the same PostgreSQL database.
+
+**Migration and Seeding:**
+
+- `npm --workspace=apps/dashboard-api run db:migrate` - Run auth/user migrations
+- `npm --workspace=apps/forms-api run db:migrate` - Run forms/themes/export migrations
+- `npm --workspace=apps/dashboard-api run db:seed` - Seed user and auth data
+- `npm --workspace=apps/forms-api run db:seed` - Seed forms, themes, and tools data
+- `npm --workspace=apps/forms-api run db:reset` - Clear and re-seed all data
+
+**Database Scripts:**
+
+- `./scripts/db/create-separated-databases.sh` - Create databases for separated services
+- `./scripts/db/run-separated-migrations.sh` - Run migrations for all services
+- `./scripts/db/migrate-to-separated-databases.sh` - Migrate data from monolith to separated
+  services
 
 ### Environment Configuration Commands
 
@@ -95,12 +153,25 @@ packages (see Epics 30-33 for details).
 
 ```
 apps/
-├── api/          # Express.js backend (TypeScript)
-├── web/          # Angular 20+ frontend (standalone components)
+├── api/                    # Legacy monolithic Express.js backend (TypeScript)
+├── web/                    # Main Angular 20+ frontend (port 4200)
+├── dashboard-api/          # Dashboard/Auth API service (port 3000)
+├── forms-api/              # Forms/Themes/Export API service (port 3001)
+├── form-builder-ui/        # Form Builder Angular UI (port 4201)
 packages/
-├── shared/       # Shared types and utilities (@nodeangularfullstack/shared)
-├── config/       # Shared configuration
+├── shared/                 # Shared types and utilities (@nodeangularfullstack/shared)
+├── config/                 # Shared configuration
+├── create-tool/            # CLI scaffolding tool
 ```
+
+**Architecture Evolution:**
+
+- Original: Monolithic `apps/api` + `apps/web`
+- Current: Transitioning to domain-specific services
+  - `dashboard-api`: Authentication, users, dashboard
+  - `forms-api`: Forms, themes, tool registry, exports
+  - `form-builder-ui`: Dedicated form builder interface (separate from main UI)
+- Strategy: Gradual service extraction while maintaining monolith compatibility
 
 ### Key Architectural Patterns
 
@@ -143,11 +214,56 @@ packages/
 
 ### Service Architecture
 
-- **Local development ports**: Frontend (4200), Backend (3000), PostgreSQL (5432), pgWeb (8080)
-- Health checks at `/health` endpoint
-- Rate limiting and security middleware
-- CORS configured for cross-origin requests
-- All services run locally with process management via start/stop scripts
+**Port Allocation:**
+
+- **Frontend Apps**:
+  - Main UI (`apps/web`): 4200
+  - Form Builder UI (`apps/form-builder-ui`): 4201
+- **Backend APIs**:
+  - Dashboard API (`apps/dashboard-api`): 3000
+  - Forms API (`apps/forms-api`): 3001
+  - Legacy API (`apps/api`): 3002 (if running)
+- **Infrastructure**:
+  - PostgreSQL: 5432
+  - pgWeb Database UI: 8080
+
+**Service Responsibilities:**
+
+1. **dashboard-api (port 3000)**:
+   - User authentication and authorization
+   - JWT token management
+   - User profile and settings
+   - Main dashboard functionality
+   - Role-based access control
+
+2. **forms-api (port 3001)**:
+   - Form schemas and submissions
+   - Theme management (creation, editing, application)
+   - Tool registry (tracking registered tools)
+   - Export orchestration (generating standalone packages)
+   - Public form rendering and submission
+   - Short link management and QR codes
+
+3. **form-builder-ui (port 4201)**:
+   - Visual drag-and-drop form builder
+   - Row-based layout configuration
+   - Field palette and canvas
+   - Theme designer modal (5-step wizard)
+   - Form analytics and data visualization
+   - Preview mode for forms
+
+4. **web (port 4200)**:
+   - Main application dashboard
+   - Admin tools and settings
+   - Export history management
+   - User profile pages
+
+**Inter-Service Communication:**
+
+- Frontend apps use proxy configurations to route API calls
+- APIs share PostgreSQL database (single database architecture)
+- Shared types via `@nodeangularfullstack/shared` package
+- All services managed by `start-dev.sh` script for local development
 
 ## Testing Strategy
 
@@ -239,22 +355,58 @@ packages/
 
 ### Frontend Development
 
-- Use standalone Angular components (no NgModules)
-- PrimeNG components with Tailwind for styling
+**Both Frontend Apps (`apps/web` and `apps/form-builder-ui`):**
+
+- Angular 20+ with standalone components (no NgModules)
+- PrimeNG 17+ components with Tailwind CSS
 - Reactive forms with custom validators
-- State management with NgRx Signals
-- Proxy configuration automatically routes API calls to backend
+- Proxy configuration routes API calls to appropriate backend services
+
+**Specific to `apps/form-builder-ui`:**
+
+- Signal-based reactive state management
+- Angular CDK Drag-Drop for form builder
+- Chart.js for data visualization
+- Monaco Editor for code editing
+- DOMPurify for HTML sanitization
+- QRCode.js for QR code generation
+
+**Specific to `apps/web`:**
+
+- NgRx Signals for global state management
+- Main authentication flow
+- Admin panels and tools registry UI
+- Export history and job monitoring
 
 ### Form Builder Development
 
+**Database Schema:**
+
 - Form schemas stored in `forms`, `form_schemas`, `form_submissions` tables
 - Short links with QR codes stored in `short_links` table
-- Frontend form builder components in `apps/web/src/app/features/tools/components/form-builder/`
-- Backend form APIs in `apps/api/src/controllers/forms.controller.ts` and
-  `apps/api/src/services/forms.service.ts`
-- Public form rendering at `/public/form/:shortCode` route
+- Themes stored in `form_themes` table with JSONB configuration
+
+**Frontend (`apps/form-builder-ui`):**
+
+- Form builder components in `apps/form-builder-ui/src/app/features/dashboard/`
+- Main components:
+  - `field-palette/` - Drag-and-drop field palette
+  - `form-canvas/` - Form design canvas with row/column layout
+  - `theme-designer-modal/` - 5-step theme creation wizard
+  - `publish-dialog/` - Form publishing and short link generation
+  - `form-analytics/` - Analytics dashboard with Chart.js visualizations
+  - `iframe-embed-generator/` - Iframe embed code generation
+  - `row-layout-sidebar/` - Row and column configuration UI
+  - `step-form-sidebar/` - Multi-step form configuration
+
+**Backend (`apps/forms-api`):**
+
+- Form APIs in `apps/forms-api/src/controllers/forms.controller.ts`
+- Form services in `apps/forms-api/src/services/forms.service.ts`
+- Theme APIs in `apps/forms-api/src/controllers/themes.controller.ts`
+- Public form rendering at `/api/public/forms/:shortCode` endpoint
 - HTML sanitization middleware applied to all form submissions (uses DOMPurify)
-- Custom CSS validation for background styles
+- Custom CSS validation for background styles and theme properties
 
 ### Theme System Development
 
@@ -280,9 +432,9 @@ packages/
 - **Backend Validation**: Theme configs validated for CSS safety and size limits before storage
 - **Theme Application**: Forms reference themes via `formSchema.themeId` foreign key
 - **Location**: Frontend components in
-  `apps/web/src/app/features/tools/components/form-builder/theme-designer-modal/`
-- **Location**: Backend APIs in `apps/api/src/controllers/themes.controller.ts` and
-  `apps/api/src/services/themes.service.ts`
+  `apps/form-builder-ui/src/app/features/dashboard/theme-designer-modal/`
+- **Location**: Backend APIs in `apps/forms-api/src/controllers/themes.controller.ts` and
+  `apps/forms-api/src/services/themes.service.ts`
 - **Row-based layout system**: Enable/disable row layout mode, configure 1-4 columns per row,
   flexible multi-column forms
   - Row layout configuration stored in `FormSettings.rowLayout` (optional property)
@@ -391,8 +543,8 @@ deployed separately, but the core system remains monolithic.
 - **Database schema**: `tool_registry` table tracks all registered tools (forms, workflows, themes)
 - **Status tracking**: Tools can be registered, draft, archived, or exported
 - **Repository pattern**: `ToolRegistryRepository` in
-  `apps/api/src/repositories/tool-registry.repository.ts`
-- **REST API**: CRUD endpoints in `apps/api/src/controllers/tool-registry.controller.ts`
+  `apps/forms-api/src/repositories/tool-registry.repository.ts`
+- **REST API**: CRUD endpoints in `apps/forms-api/src/controllers/tool-registry.controller.ts`
 - **Validation**: Input validation with express-validator middleware
 - **Frontend UI**: `ToolCard` component in `apps/web/src/app/features/admin/components/tool-card/`
 - **Shared types**: `ToolRegistryRecord` in `packages/shared/src/types/tool-registry.types.ts`
@@ -404,8 +556,8 @@ deployed separately, but the core system remains monolithic.
   - `FormsExportStrategy` (8 steps) - exports form builder tools
   - `WorkflowsExportStrategy` (7 steps) - exports workflow tools
   - `ThemesExportStrategy` (6 steps) - exports theme tools
-- **Location**: `apps/api/src/services/export-orchestrator.service.ts` and
-  `apps/api/src/services/export-strategies/`
+- **Location**: `apps/forms-api/src/services/export-orchestrator.service.ts` and
+  `apps/forms-api/src/services/export-strategies/`
 - **Export Jobs schema**: `export_jobs` table tracks export lifecycle (pending → in_progress →
   completed/failed)
 - **Progress tracking**: Real-time progress updates with step completion percentage
@@ -419,7 +571,8 @@ deployed separately, but the core system remains monolithic.
 - **Download API**: `GET /api/tool-registry/export-jobs/:jobId/download` endpoint
 - **Security**: SHA-256 checksums for package integrity, download tracking, 30-day retention
 - **Rollback support**: Automatic cleanup on export failure with step-by-step rollback
-- **Repository**: `ExportJobRepository` in `apps/api/src/repositories/export-job.repository.ts`
+- **Repository**: `ExportJobRepository` in
+  `apps/forms-api/src/repositories/export-job.repository.ts`
 - **Shared types**: `ExportJob`, `ExportJobStatus` in `packages/shared/src/types/export.types.ts`
 
 **CLI Scaffolding Tool (Epic 31)**:
@@ -472,11 +625,16 @@ deployed separately, but the core system remains monolithic.
 
 **Local Development:**
 
-- Frontend: http://localhost:4200
-- Backend API: http://localhost:3000
-- API Documentation: http://localhost:3000/api-docs
-- pgWeb Database UI: http://localhost:8080
-- Health Check: http://localhost:3000/health
+- **Main Frontend (web)**: http://localhost:4200
+- **Form Builder UI**: http://localhost:4201
+- **Dashboard API**: http://localhost:3000
+- **Forms API**: http://localhost:3001
+- **Legacy API**: http://localhost:3002 (if running)
+- **API Documentation**: http://localhost:3000/api-docs
+- **pgWeb Database UI**: http://localhost:8080
+- **Health Checks**:
+  - Dashboard API: http://localhost:3000/health
+  - Forms API: http://localhost:3001/health
 
 **Test User Credentials:**
 
@@ -532,11 +690,20 @@ The `scripts/` directory contains utility scripts accessible via npm commands:
 - `npm run onboarding:setup` - Initialize metrics, feedback, and validation
 - `npm run onboarding:help` - Display onboarding instructions
 
-# important-instruction-reminders
+# Important Instruction Reminders
 
 Do what has been asked; nothing more, nothing less. NEVER create files unless they're absolutely
 necessary for achieving your goal. ALWAYS prefer editing an existing file to creating a new one.
 NEVER proactively create documentation files (\*.md) or README files. Only create documentation
 files if explicitly requested by the User.
 
-- on this claude we are working on frontend on form-builder-ui do not work anything on ../web
+## Multi-App Context Awareness
+
+**CRITICAL**: This repository contains multiple frontend and backend applications:
+
+- When working on **form builder features**, use `apps/form-builder-ui` (NOT `apps/web`)
+- When working on **main dashboard/auth**, use `apps/web` and `apps/dashboard-api`
+- When working on **forms/themes/export**, use `apps/forms-api`
+- Always verify which app the user is referring to before making changes
+- The `apps/web` and `apps/form-builder-ui` are separate Angular applications with different
+  purposes

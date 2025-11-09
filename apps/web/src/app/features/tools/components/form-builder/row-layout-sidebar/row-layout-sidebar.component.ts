@@ -238,7 +238,7 @@ import { WidthRatioOption } from '../models/layout-options.model';
                 <!-- Sub-Columns Section (appears when columnCount > 0) -->
                 @if (row.columnCount > 0) {
                   <div class="sub-columns-section mt-4 pt-4 border-t border-gray-100">
-                    <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">
+                    <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1">
                       Sub-Columns
                     </h4>
 

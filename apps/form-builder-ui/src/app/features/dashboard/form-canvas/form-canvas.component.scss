@@ -273,6 +273,9 @@
     background: var(--theme-step-active-color, var(--theme-primary-color, #3b82f6));
     color: #ffffff;
     border-radius: var(--theme-border-radius, 999px);
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
   }
 }
 

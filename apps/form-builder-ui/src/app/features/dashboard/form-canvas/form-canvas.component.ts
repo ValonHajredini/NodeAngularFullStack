@@ -40,11 +40,29 @@ interface FieldTypeDefinition {
   styleUrls: ['./form-canvas.component.scss'],
   template: `
     <div class="form-canvas h-full theme-form-canvas-background p-6">
+      <!-- Form Title and Description (shown when form has fields or row layout enabled) -->
+      @if (formBuilderService.hasFields() || formBuilderService.rowLayoutEnabled()) {
+        <div class="mb-4">
+          <h3 class="theme-heading">
+            {{ settings.title || 'Untitled Form' }}
+          </h3>
+          <p class="text-sm theme-text-secondary">
+            This is a live preview of your form. Click on a field to edit its properties
+            @if (settings.columnLayout > 1) {
+              <span class="ml-2 theme-text-primary">{{ settings.columnLayout }} columns</span>
+            }
+          </p>
+          @if (settings.description) {
+            <p class="text-sm theme-help-text mt-1">{{ settings.description }}</p>
+          }
+        </div>
+      }
+
       <!-- Step Navigation Tabs (shown when step mode enabled) -->
       @if (stepFormEnabled()) {
         <div class="step-navigation-container mb-6">
           <div
-            class="step-tabs-bar flex items-center gap-2 border-b border-gray-200 pb-0 overflow-x-auto"
+            class="step-tabs-bar flex items-center gap-2 border-b border-gray-200 pb-0"
           >
             @for (step of steps(); track step.id) {
               <button
@@ -66,19 +84,19 @@ interface FieldTypeDefinition {
           </div>
 
           <!-- Step Indicator Badge -->
-          <div
-            class="step-indicator-bar flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-200"
+          <!-- <div
+            class="step-indicator-bar flex items-center gap-4 px-4 py-4 bg-white border-b border-gray-200"
           >
             <span
-              class="badge-primary theme-step-indicator inline-flex items-center px-3 py-1 rounded-full text-sm"
+              class="badge-primary theme-step-indicator inline-flex items-center rounded-full"
             >
               Step {{ activeStepOrder() + 1 }} of {{ steps().length }}
             </span>
-            <span class="theme-label">{{ activeStep()?.title }}</span>
+            <span class="theme-label text-lg font-semibold">{{ activeStep()?.title }}</span>
             @if (activeStep()?.description) {
               <span class="text-sm theme-help-text">{{ activeStep()?.description }}</span>
             }
-          </div>
+          </div> -->
         </div>
       }
 
@@ -129,21 +147,6 @@ interface FieldTypeDefinition {
               style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: white; pointer-events: none; z-index: 1;"
             ></div>
           }
-
-          <div class="mb-4" style="position: relative; z-index: 2;">
-            <h3 class="theme-heading">
-              {{ settings.title || 'Untitled Form' }}
-            </h3>
-            <p class="text-sm theme-text-secondary">
-              This is a live preview of your form. Click on a field to edit its properties
-              @if (settings.columnLayout > 1) {
-                <span class="ml-2 theme-text-primary">{{ settings.columnLayout }} columns</span>
-              }
-            </p>
-            @if (settings.description) {
-              <p class="text-sm theme-help-text mt-1">{{ settings.description }}</p>
-            }
-          </div>
 
           @if (formBuilderService.rowLayoutEnabled()) {
             <!-- Row-based layout mode -->
@@ -1306,11 +1309,11 @@ export class FormCanvasComponent {
   /**
    * Can drop predicate for row-column drop zones.
    * With multi-field column support, all drops are now allowed (no more "occupied" restriction).
-   * @param drag - The CDK dragged item
-   * @param drop - The CDK drop list target
+   * @param _drag - The CDK dragged item
+   * @param _drop - The CDK drop list target
    * @returns Always returns true (all drops allowed)
    */
-  canDropIntoColumn = (drag: CdkDrag, drop: CdkDropList): boolean => {
+  canDropIntoColumn = (_drag: CdkDrag, _drop: CdkDropList): boolean => {
     // Multi-field column support: allow drops into any column
     return true;
   };
@@ -1477,10 +1480,10 @@ export class FormCanvasComponent {
    * Check if field can be dropped into target (step validation)
    * Prevents dragging fields between steps
    * @param drag - The CDK dragged item
-   * @param drop - The CDK drop list target
+   * @param _drop - The CDK drop list target
    * @returns True if drop is allowed
    */
-  canDropField = (drag: CdkDrag, drop: CdkDropList): boolean => {
+  canDropField = (drag: CdkDrag, _drop: CdkDropList): boolean => {
     const draggedField = drag.data as FormField;
 
     // Allow drop from palette (new fields have no stepId yet)

@@ -33,8 +33,8 @@
 <!-- Mobile: Progress Bar (hidden on desktop) -->
 <div class="block md:hidden step-progress-mobile">
   <div class="progress-text">
-    <span class="text-gray-600">Step {{ currentStepIndex + 1 }} of {{ totalSteps }}:</span>
-    <strong class="text-primary-700">{{ steps[currentStepIndex]?.title }}</strong>
+    <span>Step {{ currentStepIndex + 1 }} of {{ totalSteps }}</span>
+    <strong>{{ steps[currentStepIndex]?.title }}</strong>
   </div>
   <p-progressBar [value]="progressPercentage" [showValue]="false" styleClass="mt-2"></p-progressBar>
 </div>

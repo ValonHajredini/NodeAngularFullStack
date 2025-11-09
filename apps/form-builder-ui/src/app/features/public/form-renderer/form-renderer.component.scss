@@ -246,15 +246,19 @@
 .form-content-wrapper {
   padding: 0; // Padding handled by p-card-body (15px)
   border-radius: 0.375rem;
-  min-height: max(400px, calc(100vh - 200px)); // Keep step navigation near viewport bottom
+  min-height: 200px; // Small minimum for very short forms, will be adjusted dynamically
   display: flex;
   flex-direction: column;
+  // Smooth height transitions for dynamic step forms
+  transition: min-height 0.3s ease;
 
   form {
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
-    min-height: 100%;
+    min-height: auto; // Let content determine height
+    // Smooth transitions for content height changes
+    transition: min-height 0.3s ease;
 
     > .row-layout-container,
     > .form-fields-grid {
@@ -1081,31 +1085,46 @@ hr {
 }
 
 .pagination-dot {
-  width: 12px;
-  height: 12px;
+  width: 36px; // Increased from 12px
+  height: 36px; // Increased from 12px
   border-radius: 50%;
   background-color: #d1d5db; // Gray for inactive steps
   border: none;
   padding: 0;
   cursor: default;
   transition: all 0.3s ease;
-  flex-shrink: 0; // Prevent dots from shrinking when many steps
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280; // Dark gray for numbers
+
+  .step-number {
+    display: block;
+    line-height: 1;
+  }
 
   // Active step (current step)
   &.active {
-    width: 32px; // Elongated oval shape for active
-    border-radius: 6px;
+    width: 36px; // Keep circular for consistency
+    height: 36px;
+    border-radius: 50%;
     background-color: var(--theme-primary-color, #3b82f6);
     box-shadow: 0 0 0 3px rgba(var(--theme-primary-color-rgb, 59, 130, 246), 0.2);
+    color: white; // White text for active step
+    font-weight: 700;
   }
 
-  // Completed steps (green checkmark)
+  // Completed steps (green)
   &.completed:not(.active) {
     background-color: #10b981; // Green for completed
+    color: white; // White text for completed steps
     cursor: pointer;
 
     &:hover {
-      transform: scale(1.2);
+      transform: scale(1.1);
       box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
     }
   }
@@ -1117,18 +1136,19 @@ hr {
 
   // Disabled appearance for future steps
   &:not(.active):not(.completed):not(.clickable) {
-    opacity: 0.5;
+    opacity: 0.6;
     cursor: not-allowed;
   }
 
   // Mobile responsive sizing
   @media (max-width: 767px) {
-    width: 10px;
-    height: 10px;
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
 
     &.active {
-      width: 28px;
-      border-radius: 5px;
+      width: 32px;
+      height: 32px;
     }
   }
 }

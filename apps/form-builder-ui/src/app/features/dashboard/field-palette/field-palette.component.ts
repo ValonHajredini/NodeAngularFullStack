@@ -139,7 +139,7 @@ interface FieldTypeDefinition {
                       <div
                         cdkDrag
                         [cdkDragData]="fieldType"
-                        class="field-type-card p-3 border border-gray-300 rounded-lg cursor-move hover:bg-green-50 hover:border-green-400 transition-all"
+                        class="field-type-card border border-gray-300 rounded-lg cursor-move hover:bg-green-50 hover:border-green-400 transition-all"
                         (click)="onFieldTypeSelected(fieldType.type)"
                       >
                         <div class="flex items-center gap-3">
@@ -151,7 +151,7 @@ interface FieldTypeDefinition {
 
                         <div
                           *cdkDragPreview
-                          class="drag-preview p-3 bg-white border-2 border-green-400 rounded-lg shadow-lg opacity-90"
+                          class="drag-preview bg-white border-2 border-green-400 rounded-lg shadow-lg opacity-90"
                         >
                           <div class="flex items-center gap-3">
                             <i [class]="'pi ' + fieldType.icon + ' text-green-600 text-xl'"></i>
@@ -182,7 +182,7 @@ interface FieldTypeDefinition {
                       <div
                         cdkDrag
                         [cdkDragData]="fieldType"
-                        class="field-type-card p-3 border border-gray-300 rounded-lg cursor-move hover:bg-purple-50 hover:border-purple-400 transition-all"
+                        class="field-type-card border border-gray-300 rounded-lg cursor-move hover:bg-purple-50 hover:border-purple-400 transition-all"
                         (click)="onFieldTypeSelected(fieldType.type)"
                       >
                         <div class="flex items-center gap-3">
@@ -194,7 +194,7 @@ interface FieldTypeDefinition {
 
                         <div
                           *cdkDragPreview
-                          class="drag-preview p-3 bg-white border-2 border-purple-400 rounded-lg shadow-lg opacity-90"
+                          class="drag-preview bg-white border-2 border-purple-400 rounded-lg shadow-lg opacity-90"
                         >
                           <div class="flex items-center gap-3">
                             <i [class]="'pi ' + fieldType.icon + ' text-purple-600 text-xl'"></i>
@@ -255,6 +255,7 @@ interface FieldTypeDefinition {
 
       .field-type-card {
         user-select: none;
+        padding: 3px 0.75rem !important;
       }
 
       .field-type-card:active {
@@ -263,6 +264,7 @@ interface FieldTypeDefinition {
 
       .drag-preview {
         min-width: 200px;
+        padding: 3px 0.75rem !important;
       }
 
       .field-type-placeholder {

@@ -680,3 +680,76 @@ body {
   overflow-wrap: break-word;
   word-break: break-word;
 }
+
+/* ==========================================================================
+   Z-Index Fix for PrimeNG Overlays in Modals
+   ========================================================================== */
+
+/* Fix z-index layering for PrimeNG components to appear above modal dialogs
+   Modal backdrop: 1000
+   Modal dialog: 1050
+   PrimeNG overlays: 1100+
+*/
+
+/* PrimeNG Select dropdown overlay */
+::ng-deep .p-select-overlay,
+::ng-deep .p-dropdown-panel,
+::ng-deep .p-select-panel {
+  z-index: 1100 !important;
+}
+
+/* PrimeNG DatePicker overlay */
+::ng-deep .p-datepicker,
+::ng-deep .p-calendar-overlay,
+::ng-deep .p-datepicker-panel {
+  z-index: 1100 !important;
+}
+
+/* PrimeNG MultiSelect overlay */
+::ng-deep .p-multiselect-panel {
+  z-index: 1100 !important;
+}
+
+/* PrimeNG AutoComplete overlay */
+::ng-deep .p-autocomplete-panel {
+  z-index: 1100 !important;
+}
+
+/* PrimeNG Menu/ContextMenu overlay */
+::ng-deep .p-menu-overlay,
+::ng-deep .p-contextmenu {
+  z-index: 1100 !important;
+}
+
+/* PrimeNG OverlayPanel */
+::ng-deep .p-overlaypanel {
+  z-index: 1100 !important;
+}
+
+/* PrimeNG Tooltip */
+::ng-deep .p-tooltip {
+  z-index: 1150 !important;
+}
+
+/* Ensure modal dialogs have appropriate z-index */
+::ng-deep .p-dialog-mask {
+  z-index: 1000 !important;
+}
+
+::ng-deep .p-dialog {
+  z-index: 1050 !important;
+}
+
+/* Ensure modal content doesn't clip overlays */
+::ng-deep .p-dialog-content {
+  overflow: visible !important;
+}
+
+/* Sidebar z-index (should be below modals) */
+::ng-deep .p-sidebar {
+  z-index: 900 !important;
+}
+
+::ng-deep .p-sidebar-mask {
+  z-index: 850 !important;
+}

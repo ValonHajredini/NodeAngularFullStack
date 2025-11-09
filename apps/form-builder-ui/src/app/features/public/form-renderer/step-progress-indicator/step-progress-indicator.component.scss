@@ -57,7 +57,16 @@
 }
 
 .progress-text {
-  @apply mb-2 text-sm;
+  @apply mb-3 flex flex-col gap-1;
+
+  span {
+    @apply text-base font-semibold;
+    color: var(--theme-primary-color, #3b82f6);
+  }
+
+  strong {
+    @apply text-lg font-bold text-gray-800 mt-1;
+  }
 }
 
 // Screen reader only class

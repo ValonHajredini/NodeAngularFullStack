@@ -134,7 +134,7 @@ export class PublishDialogComponent {
       useCustomExpiration: new FormControl(false), // Default to no expiration
       expirationDate: new FormControl(defaultExpiration),
       // Iframe embed controls
-      useIframeEmbed: new FormControl(true), // Checked by default
+      useIframeEmbed: new FormControl(false), // Unchecked by default
       preset: new FormControl('medium'),
       width: new FormControl('600px'),
       height: new FormControl('800px'),
@@ -256,7 +256,7 @@ export class PublishDialogComponent {
     this.publishForm.reset({
       useCustomExpiration: false,
       expirationDate: defaultExpiration,
-      useIframeEmbed: true,
+      useIframeEmbed: false,
       preset: 'medium',
       width: '600px',
       height: '800px',
