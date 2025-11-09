@@ -82,3 +82,10 @@ create sophisticated multi-column layouts with variable column widths (fractiona
 sub-columns (2-4 sub-columns per column, one level deep), while maintaining full backward
 compatibility with existing equal-width row layouts. Includes drag-and-drop support, preset width
 ratios, and responsive mobile rendering.
+
+**Epic 29: Form Template System with Business Logic** Enable users to quickly create domain-specific
+forms by selecting from pre-configured templates (E-commerce, Services, Data Collection, Events,
+Quiz, Polls) with specialized business logic including inventory tracking for product sales,
+appointment booking with conflict prevention, automated quiz scoring, poll vote aggregation, and
+restaurant order calculations. Templates maintain full backward compatibility with existing blank
+form creation workflows while providing faster onboarding and domain-optimized field configurations.

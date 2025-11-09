@@ -146,6 +146,86 @@ export class AuthService {
   }
 
   /**
+   * Logs out from current service only and redirects to dashboard.
+   * This clears local authentication data but user remains logged in to other services.
+   * @returns Observable that completes when logout is successful
+   */
+  logoutFromService(): Observable<void> {
+    const refreshToken = this.refreshTokenSignal();
+
+    if (refreshToken) {
+      return this.apiClient.post<void>('/auth/logout', { refreshToken }).pipe(
+        tap((_: void) => this.clearAuthDataAndRedirectToDashboard()),
+        catchError(() => {
+          // Even if the server logout fails, clear local data
+          this.clearAuthDataAndRedirectToDashboard();
+          return of(undefined);
+        }),
+      );
+    } else {
+      this.clearAuthDataAndRedirectToDashboard();
+      return of(undefined);
+    }
+  }
+
+  /**
+   * Complete logout from all services.
+   * This clears authentication data from all services and redirects to login page.
+   * Also triggers logout in form builder service via iframe.
+   * @returns Observable that completes when logout is successful
+   */
+  logoutFromAllServices(): Observable<void> {
+    const refreshToken = this.refreshTokenSignal();
+
+    if (refreshToken) {
+      return this.apiClient.post<void>('/auth/logout', { refreshToken }).pipe(
+        tap((_: void) => {
+          // Trigger logout on form builder service
+          this.triggerFormBuilderLogout();
+          // Clear local auth data and redirect
+          this.clearAuthDataAndRedirectToLogin();
+        }),
+        catchError(() => {
+          // Even if the server logout fails, clear local data
+          this.triggerFormBuilderLogout();
+          this.clearAuthDataAndRedirectToLogin();
+          return of(undefined);
+        }),
+      );
+    } else {
+      this.triggerFormBuilderLogout();
+      this.clearAuthDataAndRedirectToLogin();
+      return of(undefined);
+    }
+  }
+
+  /**
+   * Triggers logout on form builder service using an invisible iframe.
+   * This ensures tokens are cleared across all services.
+   */
+  private triggerFormBuilderLogout(): void {
+    try {
+      // Create invisible iframe to trigger form builder logout
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = `${environment.formBuilderUrl}/welcome?logout=complete`;
+
+      // Remove iframe after 2 seconds
+      iframe.onload = () => {
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 2000);
+      };
+
+      document.body.appendChild(iframe);
+      console.log('Triggered form builder logout via iframe');
+    } catch (error) {
+      console.error('Failed to trigger form builder logout:', error);
+      // Continue with main app logout even if form builder logout fails
+    }
+  }
+
+  /**
    * Refreshes the access token using the stored refresh token.
    * @returns Observable containing new auth tokens
    * @throws {HttpErrorResponse} When token refresh fails
@@ -301,6 +381,34 @@ export class AuthService {
    * Clears all authentication data and redirects to login.
    */
   private clearAuthData(): void {
+    this.userSignal.set(null);
+    this.accessTokenSignal.set(null);
+    this.refreshTokenSignal.set(null);
+    this.errorSignal.set(null);
+
+    this.clearStorage();
+    this.router.navigate(['/welcome']);
+  }
+
+  /**
+   * Clears local auth data and redirects to dashboard (port 4200).
+   * Used for service-specific logout.
+   */
+  private clearAuthDataAndRedirectToDashboard(): void {
+    this.userSignal.set(null);
+    this.accessTokenSignal.set(null);
+    this.refreshTokenSignal.set(null);
+    this.errorSignal.set(null);
+
+    this.clearStorage();
+    this.router.navigate(['/app/dashboard']);
+  }
+
+  /**
+   * Clears all auth data from all services and redirects to login.
+   * Used for complete logout from all services.
+   */
+  private clearAuthDataAndRedirectToLogin(): void {
     this.userSignal.set(null);
     this.accessTokenSignal.set(null);
     this.refreshTokenSignal.set(null);

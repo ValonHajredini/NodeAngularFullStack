@@ -1,5 +1,5 @@
-import { Component, inject, computed } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, inject, computed, OnInit } from '@angular/core';
+import { Router, ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { ThemeService } from '../../core/services/theme.service';
 import { AuthService } from '../../core/auth/auth.service';
@@ -24,10 +24,40 @@ import {
   `,
   styles: [],
 })
-export class LandingComponent {
+export class LandingComponent implements OnInit {
   readonly themeService = inject(ThemeService);
   readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+
+  /**
+   * Lifecycle hook - handles logout requests from main app or complete logout
+   */
+  ngOnInit(): void {
+    // Check for logout parameter triggered from main app or other sources
+    this.route.queryParams.subscribe((params) => {
+      const logoutParam = params['logout'];
+
+      // Handle 'complete' logout parameter to clear form builder tokens
+      if (logoutParam === 'complete') {
+        console.log('Complete logout triggered in form builder service');
+
+        // Log out the user from form builder service
+        if (this.authService.isAuthenticated()) {
+          this.authService.logout().subscribe({
+            next: () => {
+              console.log('Form builder logout completed - tokens cleared');
+            },
+            error: (error) => {
+              console.error('Form builder logout failed:', error);
+            },
+          });
+        } else {
+          console.log('Form builder: User already logged out');
+        }
+      }
+    });
+  }
 
   /**
    * Welcome page configuration - computed to adapt to authentication state

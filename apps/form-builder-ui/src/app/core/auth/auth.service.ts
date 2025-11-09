@@ -140,6 +140,52 @@ export class AuthService {
   }
 
   /**
+   * Logs out from current service only and redirects to main dashboard.
+   * This clears local authentication data but user remains logged in to other services.
+   * @returns Observable that completes when logout is successful
+   */
+  logoutFromService(): Observable<void> {
+    const refreshToken = this.refreshTokenSignal();
+
+    if (refreshToken) {
+      return this.apiClient.post<void>('/auth/logout', { refreshToken }).pipe(
+        tap((_: void) => this.clearAuthDataAndRedirectToDashboard()),
+        catchError(() => {
+          // Even if the server logout fails, clear local data
+          this.clearAuthDataAndRedirectToDashboard();
+          return of(undefined);
+        }),
+      );
+    } else {
+      this.clearAuthDataAndRedirectToDashboard();
+      return of(undefined);
+    }
+  }
+
+  /**
+   * Complete logout from all services.
+   * This clears authentication data from all services and redirects to login page.
+   * @returns Observable that completes when logout is successful
+   */
+  logoutFromAllServices(): Observable<void> {
+    const refreshToken = this.refreshTokenSignal();
+
+    if (refreshToken) {
+      return this.apiClient.post<void>('/auth/logout', { refreshToken }).pipe(
+        tap((_: void) => this.clearAuthDataAndRedirectToLogin()),
+        catchError(() => {
+          // Even if the server logout fails, clear local data
+          this.clearAuthDataAndRedirectToLogin();
+          return of(undefined);
+        }),
+      );
+    } else {
+      this.clearAuthDataAndRedirectToLogin();
+      return of(undefined);
+    }
+  }
+
+  /**
    * Refreshes the access token using the stored refresh token.
    * @returns Observable containing new auth tokens
    * @throws {HttpErrorResponse} When token refresh fails
@@ -320,6 +366,38 @@ export class AuthService {
 
     // Redirect to main app welcome page with logout parameter to trigger SSO logout
     window.location.href = `${environment.mainAppUrl}/welcome?logout=sso`;
+  }
+
+  /**
+   * Clears local auth data and redirects to main dashboard.
+   * Used for service-specific logout.
+   */
+  private clearAuthDataAndRedirectToDashboard(): void {
+    this.userSignal.set(null);
+    this.accessTokenSignal.set(null);
+    this.refreshTokenSignal.set(null);
+    this.errorSignal.set(null);
+
+    this.clearStorage();
+
+    // Redirect to main app dashboard (port 4200)
+    window.location.href = `${environment.mainAppUrl}/app/dashboard`;
+  }
+
+  /**
+   * Clears all auth data from all services and redirects to login.
+   * Used for complete logout from all services.
+   */
+  private clearAuthDataAndRedirectToLogin(): void {
+    this.userSignal.set(null);
+    this.accessTokenSignal.set(null);
+    this.refreshTokenSignal.set(null);
+    this.errorSignal.set(null);
+
+    this.clearStorage();
+
+    // Redirect to main app welcome/login page with logout parameter
+    window.location.href = `${environment.mainAppUrl}/welcome?logout=complete`;
   }
 
   /**

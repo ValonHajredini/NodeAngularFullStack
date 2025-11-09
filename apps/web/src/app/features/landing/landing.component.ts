@@ -31,19 +31,22 @@ export class LandingComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
 
   /**
-   * Lifecycle hook - handles SSO logout from external apps
+   * Lifecycle hook - handles logout from external apps and complete logout from all services
    */
   ngOnInit(): void {
-    // Check for SSO logout parameter from Form Builder or other satellite apps
+    // Check for logout parameter from Form Builder or other satellite apps
     this.route.queryParams.subscribe((params) => {
-      if (params['logout'] === 'sso') {
-        console.log('SSO logout triggered from external app');
+      const logoutParam = params['logout'];
+
+      // Handle both 'sso' (legacy) and 'complete' logout parameters
+      if (logoutParam === 'sso' || logoutParam === 'complete') {
+        console.log(`Logout triggered from external app: ${logoutParam}`);
 
         // Log out the user from the main app
         if (this.authService.isAuthenticated()) {
           this.authService.logout().subscribe({
             next: () => {
-              console.log('Main app logout completed');
+              console.log('Main app logout completed - tokens cleared');
               // Clean up URL by removing the logout parameter
               this.router.navigate(['/welcome'], { replaceUrl: true });
             },
@@ -55,6 +58,7 @@ export class LandingComponent implements OnInit {
           });
         } else {
           // User already logged out, just clean up URL
+          console.log('User already logged out, cleaning URL');
           this.router.navigate(['/welcome'], { replaceUrl: true });
         }
       }

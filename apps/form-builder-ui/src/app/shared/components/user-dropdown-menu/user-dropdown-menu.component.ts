@@ -3,6 +3,10 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
 import { ThemeService } from '../../../core/services/theme.service';
+import {
+  LogoutConfirmationModalComponent,
+  LogoutType,
+} from '../logout-confirmation-modal/logout-confirmation-modal.component';
 
 /**
  * Interface for user menu items.
@@ -40,7 +44,7 @@ export interface UserMenuItem {
 @Component({
   selector: 'app-user-dropdown-menu',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, LogoutConfirmationModalComponent],
   template: `
     <!-- User Menu Dropdown -->
     <div class="ml-3 relative">
@@ -123,6 +127,14 @@ export interface UserMenuItem {
         </div>
       }
     </div>
+
+    <!-- Logout Confirmation Modal -->
+    @if (showLogoutModal()) {
+      <app-logout-confirmation-modal
+        (logoutConfirmed)="handleLogoutConfirmed($event)"
+        (cancelled)="handleLogoutCancelled()"
+      />
+    }
   `,
   styles: [
     `
@@ -259,6 +271,7 @@ export class UserDropdownMenuComponent implements OnInit, OnDestroy {
   protected readonly userMenuOpen = signal(false);
   protected readonly imageLoadError = signal(false);
   protected readonly currentTheme = this.themeService.currentTheme;
+  protected readonly showLogoutModal = signal(false);
 
   private clickOutsideHandler: ((event: Event) => void) | null = null;
 
@@ -384,19 +397,48 @@ export class UserDropdownMenuComponent implements OnInit, OnDestroy {
     this.userMenuOpen.set(false);
 
     if (item.action === 'logout') {
-      this.authService.logout().subscribe({
+      // Show logout confirmation modal instead of logging out immediately
+      this.showLogoutModal.set(true);
+    } else if (item.action === 'theme' && item.themeValue) {
+      this.themeService.setTheme(item.themeValue);
+    }
+  }
+
+  /**
+   * Handles logout confirmation from modal.
+   */
+  protected handleLogoutConfirmed(logoutType: LogoutType): void {
+    this.showLogoutModal.set(false);
+
+    if (logoutType === LogoutType.SERVICE_ONLY) {
+      // Logout from this service only, redirect to main dashboard
+      this.authService.logoutFromService().subscribe({
         next: () => {
-          // Navigation handled by AuthService
+          // Navigation handled by AuthService (redirects to main app dashboard)
         },
         error: (error) => {
           // eslint-disable-next-line no-console
           console.error('Logout failed:', error);
-          // Force navigation to login even if server logout fails
-          void this.router.navigate(['/auth/login']);
         },
       });
-    } else if (item.action === 'theme' && item.themeValue) {
-      this.themeService.setTheme(item.themeValue);
+    } else if (logoutType === LogoutType.COMPLETE) {
+      // Complete logout from all services
+      this.authService.logoutFromAllServices().subscribe({
+        next: () => {
+          // Navigation handled by AuthService (redirects to main app login)
+        },
+        error: (error) => {
+          // eslint-disable-next-line no-console
+          console.error('Logout failed:', error);
+        },
+      });
     }
+  }
+
+  /**
+   * Handles logout cancellation from modal.
+   */
+  protected handleLogoutCancelled(): void {
+    this.showLogoutModal.set(false);
   }
 }

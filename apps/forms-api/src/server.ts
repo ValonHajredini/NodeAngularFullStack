@@ -28,9 +28,11 @@ import healthRoutes from './routes/health.routes';
 // import { toolRegistryRoutes } from './routes/tool-registry.routes';
 // import { exportRoutes } from './routes/export.routes';
 import shortLinksRoutes from './routes/short-links.routes';
+import authRoutes from './routes/auth.routes';
 import { formsRoutes } from './routes/forms.routes';
 import { publicFormsRoutes } from './routes/public-forms.routes';
 import { themesRoutes } from './routes/themes.routes';
+import templatesRoutes from './routes/templates.routes';
 import { shortLinksController } from './controllers/short-links.controller';
 import { resolveShortLinkValidator } from './validators/url.validators';
 
@@ -168,11 +170,13 @@ class Server {
       shortLinksController.redirectToOriginalUrl
     );
 
-    // API v1 routes - Forms API (Forms, Themes, Short Links for Forms)
+    // API v1 routes - Forms API (Auth, Forms, Themes, Templates, Short Links for Forms)
     // Multi-database architecture: Forms-API only serves forms database tables
     // Tools, drawing projects, registry, and exports are served by dashboard-api
+    this.app.use('/api/v1/auth', authRoutes);
     this.app.use('/api/v1/forms', formsRoutes);
     this.app.use('/api/v1/themes', themesRoutes);
+    this.app.use('/api/v1', templatesRoutes);
     this.app.use('/api/v1/public', publicFormsRoutes);
     this.app.use('/api/v1/tools/short-links', shortLinksRoutes); // Form short links only
     this.app.use('/api/v1', healthRoutes);
