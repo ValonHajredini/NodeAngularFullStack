@@ -5,7 +5,7 @@ import { FormBuilderService } from './form-builder.service';
 import { MessageService } from 'primeng/api';
 import { FormsApiService } from './forms-api.service';
 import { of, throwError } from 'rxjs';
-import { FormStatus, FormFieldType } from '@nodeangularfullstack/shared';
+import { FormStatus, FormFieldType, FormSchema, TemplateCategory } from '@nodeangularfullstack/shared';
 
 describe('FormBuilderComponent', () => {
   let component: FormBuilderComponent;
@@ -641,6 +641,436 @@ describe('FormBuilderComponent', () => {
 
         // Verify component reflects available themes
         expect(component.availableThemes()).toEqual(mockThemes);
+      });
+    });
+  });
+
+  // Story 29.8: Template Application to Form Builder
+  describe('Template Application via Query Parameter', () => {
+    let templatesApiService: jasmine.SpyObj<any>;
+    let router: jasmine.SpyObj<Router>;
+    let activatedRoute: any;
+
+    beforeEach(async () => {
+      templatesApiService = jasmine.createSpyObj('TemplatesApiService', ['applyTemplate']);
+      router = jasmine.createSpyObj('Router', ['navigate']);
+
+      await TestBed.configureTestingModule({
+        imports: [FormBuilderComponent],
+        providers: [
+          FormBuilderService,
+          MessageService,
+          { provide: FormsApiService, useValue: formsApiService },
+          { provide: Router, useValue: router },
+          {
+            provide: ActivatedRoute,
+            useValue: {
+              snapshot: {
+                paramMap: convertToParamMap({}),
+                queryParamMap: convertToParamMap({}),
+              },
+            },
+          },
+        ],
+      })
+        .overrideComponent(FormBuilderComponent, {
+          set: {
+            providers: [
+              { provide: 'TemplatesApiService', useValue: templatesApiService },
+            ],
+          },
+        })
+        .compileComponents();
+
+      fixture = TestBed.createComponent(FormBuilderComponent);
+      component = fixture.componentInstance;
+      formBuilderService = TestBed.inject(FormBuilderService);
+      messageService = TestBed.inject(MessageService);
+      activatedRoute = TestBed.inject(ActivatedRoute);
+
+      // Inject mocked TemplatesApiService
+      (component as any).templatesApiService = templatesApiService;
+      (component as any).router = router;
+    });
+
+    describe('Query parameter detection', () => {
+      it('should detect templateId query parameter and call applyTemplateFromQuery', () => {
+        const mockSchema: FormSchema = {
+          id: 'schema-test-001',
+          formId: 'form-test-001',
+          version: 1,
+          isPublished: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          fields: [],
+          settings: {
+            layout: { columns: 1, spacing: 'medium' },
+            submission: {
+              showSuccessMessage: true,
+              successMessage: 'Thank you!',
+              allowMultipleSubmissions: false,
+            },
+          },
+        };
+
+        templatesApiService.applyTemplate.and.returnValue(of({ data: mockSchema }));
+        activatedRoute.snapshot.queryParamMap = convertToParamMap({ templateId: 'template-123' });
+
+        spyOn<any>(component, 'applyTemplateFromQuery');
+
+        component.ngOnInit();
+
+        expect((component as any).applyTemplateFromQuery).toHaveBeenCalledWith('template-123');
+      });
+
+      it('should not call applyTemplateFromQuery when templateId is absent', () => {
+        activatedRoute.snapshot.queryParamMap = convertToParamMap({});
+
+        spyOn<any>(component, 'applyTemplateFromQuery');
+
+        component.ngOnInit();
+
+        expect((component as any).applyTemplateFromQuery).not.toHaveBeenCalled();
+      });
+
+      it('should return early after template application (skip normal init)', () => {
+        const mockSchema: FormSchema = {
+          id: 'schema-test-002',
+          formId: 'form-test-002',
+          version: 1,
+          isPublished: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          fields: [],
+          settings: {
+            layout: { columns: 1, spacing: 'medium' },
+            submission: {
+              showSuccessMessage: true,
+              successMessage: 'Thank you!',
+              allowMultipleSubmissions: false,
+            },
+          },
+        };
+
+        templatesApiService.applyTemplate.and.returnValue(of({ data: mockSchema }));
+        activatedRoute.snapshot.queryParamMap = convertToParamMap({ templateId: 'template-123' });
+        activatedRoute.snapshot.paramMap = convertToParamMap({});
+
+        spyOn(formBuilderService, 'resetForm');
+
+        component.ngOnInit();
+
+        // resetForm should NOT be called (early return)
+        expect(formBuilderService.resetForm).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('applyTemplateFromQuery success path', () => {
+      it('should load template schema into form builder on success', () => {
+        const mockSchema: FormSchema = {
+          id: 'schema-test-003',
+          formId: 'form-test-003',
+          version: 1,
+          isPublished: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          fields: [
+            {
+              id: 'field-1',
+              type: FormFieldType.TEXT,
+              fieldName: 'name',
+              label: 'Name',
+              placeholder: '',
+              helpText: '',
+              required: true,
+              order: 0,
+              validation: {},
+            },
+          ],
+          settings: {
+            layout: { columns: 1, spacing: 'medium' },
+            submission: {
+              showSuccessMessage: true,
+              successMessage: 'Thank you!',
+              allowMultipleSubmissions: false,
+            },
+          },
+        };
+
+        templatesApiService.applyTemplate.and.returnValue(of({ data: mockSchema }));
+        spyOn(formBuilderService, 'loadFormSchema');
+
+        (component as any).applyTemplateFromQuery('template-123');
+
+        expect(templatesApiService.applyTemplate).toHaveBeenCalledWith('template-123');
+        expect(formBuilderService.loadFormSchema).toHaveBeenCalledWith(mockSchema);
+      });
+
+      it('should display success toast after template application', () => {
+        const mockSchema: FormSchema = {
+          id: 'schema-test-004',
+          formId: 'form-test-004',
+          version: 1,
+          isPublished: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          fields: [],
+          settings: {
+            layout: { columns: 1, spacing: 'medium' },
+            submission: {
+              showSuccessMessage: true,
+              successMessage: 'Thank you!',
+              allowMultipleSubmissions: false,
+            },
+          },
+        };
+
+        templatesApiService.applyTemplate.and.returnValue(of({ data: mockSchema }));
+        spyOn(messageService, 'add');
+
+        (component as any).applyTemplateFromQuery('template-123');
+
+        expect(messageService.add).toHaveBeenCalledWith({
+          severity: 'success',
+          summary: 'Template Applied',
+          detail: 'Template applied successfully!',
+          life: 3000,
+        });
+      });
+
+      it('should remove templateId query parameter after successful load', () => {
+        const mockSchema: FormSchema = {
+          id: 'schema-test-005',
+          formId: 'form-test-005',
+          version: 1,
+          isPublished: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          fields: [],
+          settings: {
+            layout: { columns: 1, spacing: 'medium' },
+            submission: {
+              showSuccessMessage: true,
+              successMessage: 'Thank you!',
+              allowMultipleSubmissions: false,
+            },
+          },
+        };
+
+        templatesApiService.applyTemplate.and.returnValue(of({ data: mockSchema }));
+
+        (component as any).applyTemplateFromQuery('template-123');
+
+        expect(router.navigate).toHaveBeenCalledWith(
+          [],
+          jasmine.objectContaining({
+            queryParams: { templateId: null },
+            queryParamsHandling: 'merge',
+            replaceUrl: true,
+          }),
+        );
+      });
+
+      it('should set isLoadingTemplate to false after successful load', () => {
+        const mockSchema: FormSchema = {
+          id: 'schema-test-006',
+          formId: 'form-test-006',
+          version: 1,
+          isPublished: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          fields: [],
+          settings: {
+            layout: { columns: 1, spacing: 'medium' },
+            submission: {
+              showSuccessMessage: true,
+              successMessage: 'Thank you!',
+              allowMultipleSubmissions: false,
+            },
+          },
+        };
+
+        templatesApiService.applyTemplate.and.returnValue(of({ data: mockSchema }));
+
+        expect(component.isLoadingTemplate()).toBe(false);
+
+        (component as any).applyTemplateFromQuery('template-123');
+
+        expect(component.isLoadingTemplate()).toBe(false);
+      });
+    });
+
+    describe('applyTemplateFromQuery error handling', () => {
+      it('should handle 404 error with specific message', () => {
+        const errorResponse = { status: 404, error: { message: 'Template not found' } };
+        templatesApiService.applyTemplate.and.returnValue(throwError(() => errorResponse));
+        spyOn(messageService, 'add');
+        spyOn(console, 'error');
+
+        (component as any).applyTemplateFromQuery('invalid-template-id');
+
+        expect(console.error).toHaveBeenCalledWith('Failed to apply template:', errorResponse);
+        expect(messageService.add).toHaveBeenCalledWith({
+          severity: 'error',
+          summary: 'Template Load Failed',
+          detail: 'Template not found. It may have been removed. Starting with blank form.',
+          life: 5000,
+        });
+      });
+
+      it('should handle 500 error with specific message', () => {
+        const errorResponse = { status: 500, error: { message: 'Internal server error' } };
+        templatesApiService.applyTemplate.and.returnValue(throwError(() => errorResponse));
+        spyOn(messageService, 'add');
+
+        (component as any).applyTemplateFromQuery('template-123');
+
+        expect(messageService.add).toHaveBeenCalledWith({
+          severity: 'error',
+          summary: 'Template Load Failed',
+          detail: 'Server error while loading template. Please try again or start with a blank form.',
+          life: 5000,
+        });
+      });
+
+      it('should handle network error (status 0) with specific message', () => {
+        const errorResponse = { status: 0, error: null };
+        templatesApiService.applyTemplate.and.returnValue(throwError(() => errorResponse));
+        spyOn(messageService, 'add');
+
+        (component as any).applyTemplateFromQuery('template-123');
+
+        expect(messageService.add).toHaveBeenCalledWith({
+          severity: 'error',
+          summary: 'Template Load Failed',
+          detail: 'Network error. Please check your connection and try again.',
+          life: 5000,
+        });
+      });
+
+      it('should fall back to blank form on error', () => {
+        const errorResponse = { status: 404 };
+        templatesApiService.applyTemplate.and.returnValue(throwError(() => errorResponse));
+        spyOn(formBuilderService, 'resetForm');
+        spyOn(formBuilderService, 'enableRowLayout');
+
+        (component as any).applyTemplateFromQuery('template-123');
+
+        expect(formBuilderService.resetForm).toHaveBeenCalled();
+        expect(formBuilderService.enableRowLayout).toHaveBeenCalledWith(1);
+      });
+
+      it('should remove query parameter on error', () => {
+        const errorResponse = { status: 404 };
+        templatesApiService.applyTemplate.and.returnValue(throwError(() => errorResponse));
+
+        (component as any).applyTemplateFromQuery('template-123');
+
+        expect(router.navigate).toHaveBeenCalledWith(
+          [],
+          jasmine.objectContaining({
+            queryParams: { templateId: null },
+            queryParamsHandling: 'merge',
+            replaceUrl: true,
+          }),
+        );
+      });
+
+      it('should set isLoadingTemplate to false after error', () => {
+        const errorResponse = { status: 404 };
+        templatesApiService.applyTemplate.and.returnValue(throwError(() => errorResponse));
+
+        (component as any).applyTemplateFromQuery('template-123');
+
+        expect(component.isLoadingTemplate()).toBe(false);
+      });
+    });
+
+    describe('Template metadata badge', () => {
+      it('should display template metadata badge when isTemplateMode is true', () => {
+        // Set up template mode
+        formBuilderService.applyTemplate({
+          id: 'template-123',
+          name: 'Contact Form',
+          description: 'Simple contact form',
+          category: TemplateCategory.DATA_COLLECTION,
+          previewImageUrl: 'https://example.com/preview.jpg',
+          templateSchema: {
+            id: 'schema-template-123',
+            formId: 'template-123',
+            version: 1,
+            isPublished: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+            fields: [],
+            settings: {
+              layout: { columns: 1, spacing: 'medium' },
+              submission: {
+                showSuccessMessage: true,
+                successMessage: 'Thank you!',
+                allowMultipleSubmissions: false,
+              },
+            },
+          },
+          usageCount: 0,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+
+        fixture.detectChanges();
+
+        const compiled = fixture.nativeElement as HTMLElement;
+        const badge = compiled.querySelector('.template-badge');
+
+        expect(formBuilderService.isTemplateMode()).toBe(true);
+        expect(badge).toBeTruthy();
+      });
+
+      it('should not display template badge when isTemplateMode is false', () => {
+        expect(formBuilderService.isTemplateMode()).toBe(false);
+
+        fixture.detectChanges();
+
+        const compiled = fixture.nativeElement as HTMLElement;
+        const badge = compiled.querySelector('.template-badge');
+
+        expect(badge).toBeFalsy();
+      });
+
+      it('should show template name in badge', () => {
+        formBuilderService.applyTemplate({
+          id: 'template-123',
+          name: 'Product Order Form',
+          description: 'Template for product orders',
+          category: TemplateCategory.ECOMMERCE,
+          previewImageUrl: 'https://example.com/preview.jpg',
+          templateSchema: {
+            id: 'schema-product-order',
+            formId: 'template-123',
+            version: 1,
+            isPublished: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+            fields: [],
+            settings: {
+              layout: { columns: 1, spacing: 'medium' },
+              submission: {
+                showSuccessMessage: true,
+                successMessage: 'Thank you!',
+                allowMultipleSubmissions: false,
+              },
+            },
+          },
+          usageCount: 0,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+
+        fixture.detectChanges();
+
+        expect(formBuilderService.templateMetadata()?.name).toBe('Product Order Form');
       });
     });
   });

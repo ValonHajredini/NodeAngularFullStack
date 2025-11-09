@@ -69,12 +69,12 @@ interface FieldTypeDefinition {
           <div
             class="step-indicator-bar flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-200"
           >
-            <!-- <span
+            <span
               class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-500 text-white shadow-sm"
             >
               <i class="pi pi-list text-xs"></i>
               Step {{ activeStepOrder() + 1 }} of {{ steps().length }}
-            </span> -->
+            </span>
             <span class="theme-label font-medium">{{ activeStep()?.title }}</span>
             @if (activeStep()?.description) {
               <span class="text-sm theme-help-text">{{ activeStep()?.description }}</span>

@@ -14,6 +14,7 @@ import {
   FormTheme,
   SubColumnConfig,
   MAX_STEPS,
+  FormTemplate,
 } from '@nodeangularfullstack/shared';
 import { ThemesApiService } from './themes-api.service';
 import { ThemePreviewService } from './theme-preview.service';
@@ -61,6 +62,10 @@ export class FormBuilderService {
   private readonly _availableThemes = signal<FormTheme[]>([]);
   private readonly _isThemeLoading = signal<boolean>(false);
 
+  // Template state signals (Story 29.8: Template Application to Form Builder)
+  private readonly _selectedTemplate = signal<FormTemplate | null>(null);
+  private readonly _templateMetadata = signal<{ id: string; name: string } | null>(null);
+
   // Property change subjects for real-time preview updates (Story 16.5)
   private readonly propertyChangeSubject = new Subject<{
     fieldId: string;
@@ -95,6 +100,11 @@ export class FormBuilderService {
   readonly currentTheme = this._currentTheme.asReadonly();
   readonly availableThemes = this._availableThemes.asReadonly();
   readonly isThemeLoading = this._isThemeLoading.asReadonly();
+
+  // Template public signals (Story 29.8)
+  readonly selectedTemplate = this._selectedTemplate.asReadonly();
+  readonly templateMetadata = this._templateMetadata.asReadonly();
+  readonly isTemplateMode = computed(() => this._selectedTemplate() !== null);
 
   // Computed signals
   readonly hasFields = computed(() => this._formFields().length > 0);
@@ -1988,5 +1998,101 @@ export class FormBuilderService {
       currentForm.schema.settings.themeId = undefined;
       this.markDirty();
     }
+  }
+
+  /**
+   * Loads a form schema directly into the form builder.
+   * Used when applying templates or loading form data without full form metadata.
+   * Deep-clones the schema to prevent mutations to the source data.
+   * Story 29.8: Template Application to Form Builder
+   * @param schema - The form schema to load
+   */
+  loadFormSchema(schema: FormSchema): void {
+    // Deep clone to avoid mutations to the original schema
+    const clonedSchema = structuredClone(schema);
+
+    // Load fields from cloned schema
+    if (clonedSchema.fields) {
+      this._formFields.set(clonedSchema.fields);
+    } else {
+      this._formFields.set([]);
+    }
+
+    // Restore row layout configuration if present
+    if (clonedSchema.settings?.rowLayout?.enabled) {
+      this._rowLayoutEnabled.set(true);
+      this._rowConfigs.set(clonedSchema.settings.rowLayout.rows || []);
+
+      // Load sub-column configurations from rows (Story 27.3)
+      const subColumnConfigs: SubColumnConfigInternal[] = [];
+      clonedSchema.settings.rowLayout.rows?.forEach((row) => {
+        if (row.subColumns && row.subColumns.length > 0) {
+          // Add rowId context to each sub-column config for internal state
+          row.subColumns.forEach((subCol) => {
+            subColumnConfigs.push({
+              ...subCol,
+              rowId: row.rowId,
+            });
+          });
+        }
+      });
+      this._subColumnConfigs.set(subColumnConfigs);
+    } else {
+      // Reset row layout and sub-column state for schemas without row layout
+      this._rowLayoutEnabled.set(false);
+      this._rowConfigs.set([]);
+      this._subColumnConfigs.set([]);
+    }
+
+    // Restore step form configuration if present
+    if (clonedSchema.settings?.stepForm?.enabled) {
+      this._stepFormEnabled.set(true);
+      this._steps.set(clonedSchema.settings.stepForm.steps || []);
+      // Set active step to first step by default
+      if (clonedSchema.settings.stepForm.steps?.length > 0) {
+        this._activeStepId.set(clonedSchema.settings.stepForm.steps[0].id);
+      }
+    } else {
+      // Reset step form state for schemas without step configuration
+      this._stepFormEnabled.set(false);
+      this._steps.set([]);
+      this._activeStepId.set(null);
+    }
+
+    // Load theme if schema has themeId
+    if (clonedSchema.settings?.themeId) {
+      this.loadTheme(clonedSchema.settings.themeId);
+    }
+
+    // Clear selection
+    this._selectedField.set(null);
+
+    // Mark as dirty since this is a new form created from template
+    this.markDirty();
+  }
+
+  /**
+   * Applies a template to create a new form.
+   * Loads the template's schema into the form builder and tracks template metadata.
+   * The template is used as a starting point; the resulting form is independent.
+   * Story 29.8: Template Application to Form Builder (AC: 3, 5, 7)
+   * @param template - The template to apply (full FormTemplate object)
+   */
+  applyTemplate(template: FormTemplate): void {
+    if (!template) {
+      console.warn('Cannot apply undefined template');
+      return;
+    }
+
+    // Store template metadata for display in UI
+    this._selectedTemplate.set(template);
+    this._templateMetadata.set({
+      id: template.id,
+      name: template.name,
+    });
+
+    // Load the template's schema into the form builder
+    // This will handle fields, row layouts, step forms, and theme application
+    this.loadFormSchema(template.templateSchema);
   }
 }

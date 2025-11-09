@@ -1,0 +1,388 @@
+<p-dialog
+  [(visible)]="visibleSignal"
+  (onHide)="handleDialogClose()"
+  [modal]="true"
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '900px', maxHeight: '90vh' }"
+  [breakpoints]="{ '1024px': '900px', '768px': '100vw' }"
+  [contentStyle]="{ maxHeight: 'calc(90vh - 180px)', overflow: 'auto' }"
+  [header]="dialogHeader()"
+  styleClass="template-editor-dialog"
+>
+  <p-toast />
+  <p-confirmDialog />
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="flex items-center justify-center py-12">
+      <p-progressSpinner />
+      <p class="ml-4">Loading template...</p>
+    </div>
+  } @else if (error()) {
+    <!-- Error State -->
+    <div class="bg-red-50 border border-red-200 rounded p-4 mb-4">
+      <div class="flex items-start gap-3">
+        <i class="pi pi-exclamation-circle text-red-500 text-xl mt-1"></i>
+        <div class="flex-1">
+          <h4 class="text-red-800 font-semibold mb-1">Error Loading Template</h4>
+          <p class="text-red-700 text-sm">{{ error() }}</p>
+        </div>
+      </div>
+      <button
+        pButton
+        label="Retry"
+        icon="pi pi-refresh"
+        class="p-button-sm mt-3"
+        type="button"
+        aria-label="Retry loading template"
+        (click)="loadTemplateData()"
+      >
+        Retry
+      </button>
+    </div>
+  } @else {
+    <!-- Form Content -->
+    <form [formGroup]="templateForm" class="space-y-6">
+      <!-- Metadata Fields Section -->
+      <div class="space-y-4">
+        <h3 class="text-lg font-semibold text-gray-800 border-b pb-2">Template Metadata</h3>
+
+        <!-- Name Field -->
+        <div class="field">
+          <label for="name" class="block font-medium text-gray-700 mb-2">
+            Template Name <span class="text-red-500">*</span>
+          </label>
+          <input
+            pInputText
+            id="name"
+            formControlName="name"
+            class="w-full"
+            placeholder="Enter template name"
+            [class.ng-invalid]="
+              nameControl?.invalid && (nameControl?.dirty || nameControl?.touched)
+            "
+          />
+          @if (nameControl?.invalid && (nameControl?.dirty || nameControl?.touched)) {
+            <small class="text-red-500 block mt-1">
+              @if (nameControl?.errors?.['required']) {
+                Name is required
+              }
+              @if (nameControl?.errors?.['maxlength']) {
+                Name must not exceed 255 characters
+              }
+            </small>
+          }
+        </div>
+
+        <!-- Description Field -->
+        <div class="field">
+          <label for="description" class="block font-medium text-gray-700 mb-2">
+            Description <span class="text-red-500">*</span>
+          </label>
+          <textarea
+            pTextarea
+            id="description"
+            formControlName="description"
+            class="w-full"
+            rows="3"
+            placeholder="Enter template description"
+            [class.ng-invalid]="
+              descriptionControl?.invalid &&
+              (descriptionControl?.dirty || descriptionControl?.touched)
+            "
+          ></textarea>
+          @if (
+            descriptionControl?.invalid &&
+            (descriptionControl?.dirty || descriptionControl?.touched)
+          ) {
+            <small class="text-red-500 block mt-1">
+              @if (descriptionControl?.errors?.['required']) {
+                Description is required
+              }
+              @if (descriptionControl?.errors?.['maxlength']) {
+                Description must not exceed 500 characters
+              }
+            </small>
+          }
+        </div>
+
+        <!-- Category Field -->
+        <div class="field">
+          <label for="category" class="block font-medium text-gray-700 mb-2">
+            Category <span class="text-red-500">*</span>
+          </label>
+          <p-select
+            id="category"
+            formControlName="category"
+            [options]="categoryOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Select a category"
+            class="w-full"
+            [styleClass]="'w-full'"
+          />
+          @if (categoryControl?.invalid && (categoryControl?.dirty || categoryControl?.touched)) {
+            <small class="text-red-500 block mt-1"> Category is required </small>
+          }
+        </div>
+
+        <!-- Preview Image Upload -->
+        <div class="field">
+          <label class="block font-medium text-gray-700 mb-2">
+            Preview Image <span class="text-gray-500 text-sm">(Optional, max 5MB)</span>
+          </label>
+          @if (!selectedImage()) {
+            <p-fileUpload
+              mode="basic"
+              chooseLabel="Choose Image"
+              accept="image/jpeg,image/png,image/webp"
+              [maxFileSize]="5242880"
+              (onSelect)="onFileSelect($event)"
+              [auto]="false"
+            />
+          } @else {
+            <div class="flex items-center gap-3 bg-gray-50 border rounded p-3">
+              <i class="pi pi-image text-3xl text-gray-400"></i>
+              <div class="flex-1">
+                <p class="font-medium text-sm text-gray-800">{{ selectedImage()?.name }}</p>
+                <p class="text-xs text-gray-500">
+                  {{ (selectedImage()!.size / 1024).toFixed(1) }} KB
+                </p>
+              </div>
+              <button
+                pButton
+                icon="pi pi-times"
+                class="p-button-rounded p-button-text p-button-danger"
+                (click)="removeImage()"
+                aria-label="Remove image"
+              ></button>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Schema Editor Section -->
+      <div class="space-y-4">
+        <h3 class="text-lg font-semibold text-gray-800 border-b pb-2">Template Schema (JSON)</h3>
+
+        <!-- Schema Errors Panel -->
+        @if (schemaErrors().length > 0) {
+          <div class="bg-red-50 border border-red-200 rounded p-4">
+            <div class="flex items-start gap-2">
+              <i class="pi pi-exclamation-circle text-red-500 mt-1"></i>
+              <div class="flex-1">
+                <h4 class="text-red-800 font-semibold mb-2">Schema Validation Errors</h4>
+                <ul class="list-disc list-inside space-y-1">
+                  @for (error of schemaErrors(); track error) {
+                    <li class="text-red-700 text-sm">{{ error }}</li>
+                  }
+                </ul>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Monaco Editor -->
+        <div class="border rounded overflow-hidden" style="height: 400px">
+          <ngx-monaco-editor
+            [options]="editorOptions"
+            [(ngModel)]="schemaJson"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="onSchemaChange($event)"
+          ></ngx-monaco-editor>
+        </div>
+
+        <p class="text-sm text-gray-500 italic">
+          <i class="pi pi-info-circle mr-1"></i>
+          Schema must have a "fields" array with each field containing: id, type, name, label. Max
+          size: 100KB.
+        </p>
+      </div>
+
+      <!-- Business Logic Configuration Section -->
+      <div class="space-y-4">
+        <h3 class="text-lg font-semibold text-gray-800 border-b pb-2">
+          Business Logic Configuration
+        </h3>
+
+        @if (categoryControl?.value === 'ecommerce') {
+          <!-- Inventory Config -->
+          <div class="space-y-4 bg-blue-50 border border-blue-200 rounded p-4">
+            <h4 class="font-semibold text-blue-900 mb-3">
+              <i class="pi pi-box mr-2"></i>Inventory Tracking
+            </h4>
+            <div class="grid grid-cols-2 gap-4">
+              <div class="field">
+                <label for="stockField" class="block text-sm font-medium text-gray-700 mb-2"
+                  >Stock Field Name</label
+                >
+                <input
+                  pInputText
+                  id="stockField"
+                  [(ngModel)]="inventoryConfig().stockField"
+                  [ngModelOptions]="{ standalone: true }"
+                  placeholder="e.g., product_id"
+                  class="w-full"
+                />
+              </div>
+              <div class="field flex items-center pt-6">
+                <p-checkbox
+                  [(ngModel)]="inventoryConfig().decrementOnSubmit"
+                  [ngModelOptions]="{ standalone: true }"
+                  [binary]="true"
+                  label="Decrement stock on submission"
+                  inputId="decrementOnSubmit"
+                />
+              </div>
+            </div>
+          </div>
+        }
+
+        @if (categoryControl?.value === 'services') {
+          <!-- Appointment Config -->
+          <div class="space-y-4 bg-purple-50 border border-purple-200 rounded p-4">
+            <h4 class="font-semibold text-purple-900 mb-3">
+              <i class="pi pi-calendar mr-2"></i>Appointment Booking
+            </h4>
+            <div class="grid grid-cols-2 gap-4">
+              <div class="field">
+                <label for="timeSlotField" class="block text-sm font-medium text-gray-700 mb-2"
+                  >Time Slot Field Name</label
+                >
+                <input
+                  pInputText
+                  id="timeSlotField"
+                  [(ngModel)]="appointmentConfig().timeSlotField"
+                  [ngModelOptions]="{ standalone: true }"
+                  placeholder="e.g., time_slot"
+                  class="w-full"
+                />
+              </div>
+              <div class="field">
+                <label for="maxBookingsPerSlot" class="block text-sm font-medium text-gray-700 mb-2"
+                  >Max Bookings Per Slot</label
+                >
+                <input
+                  pInputText
+                  id="maxBookingsPerSlot"
+                  type="number"
+                  [(ngModel)]="appointmentConfig().maxBookingsPerSlot"
+                  [ngModelOptions]="{ standalone: true }"
+                  min="1"
+                  class="w-full"
+                />
+              </div>
+            </div>
+          </div>
+        }
+
+        @if (categoryControl?.value === 'quiz') {
+          <!-- Quiz Config -->
+          <div class="space-y-4 bg-green-50 border border-green-200 rounded p-4">
+            <h4 class="font-semibold text-green-900 mb-3">
+              <i class="pi pi-check-square mr-2"></i>Quiz Settings
+            </h4>
+            <div class="grid grid-cols-2 gap-4">
+              <div class="field">
+                <label for="passingScore" class="block text-sm font-medium text-gray-700 mb-2"
+                  >Passing Score (%)</label
+                >
+                <input
+                  pInputText
+                  id="passingScore"
+                  type="number"
+                  [(ngModel)]="quizConfig().passingScore"
+                  [ngModelOptions]="{ standalone: true }"
+                  min="0"
+                  max="100"
+                  class="w-full"
+                />
+              </div>
+              <div class="field flex items-center pt-6">
+                <p-checkbox
+                  [(ngModel)]="quizConfig().showResults"
+                  [ngModelOptions]="{ standalone: true }"
+                  [binary]="true"
+                  label="Show results after submission"
+                  inputId="showResults"
+                />
+              </div>
+            </div>
+          </div>
+        }
+
+        @if (categoryControl?.value === 'polls') {
+          <!-- Poll Config -->
+          <div class="space-y-4 bg-orange-50 border border-orange-200 rounded p-4">
+            <h4 class="font-semibold text-orange-900 mb-3">
+              <i class="pi pi-chart-bar mr-2"></i>Poll Settings
+            </h4>
+            <div class="flex flex-col gap-3">
+              <div class="field flex items-center">
+                <p-checkbox
+                  [(ngModel)]="pollConfig().preventDuplicates"
+                  [ngModelOptions]="{ standalone: true }"
+                  [binary]="true"
+                  label="Prevent duplicate votes"
+                  inputId="preventDuplicates"
+                />
+              </div>
+              <div class="field flex items-center">
+                <p-checkbox
+                  [(ngModel)]="pollConfig().showResultsAfterVote"
+                  [ngModelOptions]="{ standalone: true }"
+                  [binary]="true"
+                  label="Show results after vote"
+                  inputId="showResultsAfterVote"
+                />
+              </div>
+            </div>
+          </div>
+        }
+
+        @if (categoryControl?.value === 'data_collection' || categoryControl?.value === 'events') {
+          <p class="text-gray-500 italic py-4 text-center">
+            <i class="pi pi-info-circle mr-2"></i>
+            No business logic configuration for this category
+          </p>
+        }
+      </div>
+    </form>
+  }
+
+  <!-- Footer -->
+  <ng-template #footer>
+    <div class="flex items-center justify-between w-full">
+      <!-- Left side: Preview button -->
+      <button
+        pButton
+        label="Preview Template"
+        icon="pi pi-eye"
+        class="p-button-secondary"
+        [disabled]="schemaErrors().length > 0 || loading()"
+        (click)="handlePreview()"
+      ></button>
+
+      <!-- Right side: Cancel and Save buttons -->
+      <div class="flex gap-2">
+        <button
+          pButton
+          label="Cancel"
+          class="p-button-text"
+          [disabled]="saving()"
+          (click)="handleCancel()"
+        ></button>
+        <button
+          pButton
+          [label]="saveButtonLabel()"
+          class="p-button-primary"
+          [disabled]="!canSave() || loading()"
+          [loading]="saving()"
+          (click)="handleSave()"
+        ></button>
+      </div>
+    </div>
+  </ng-template>
+</p-dialog>

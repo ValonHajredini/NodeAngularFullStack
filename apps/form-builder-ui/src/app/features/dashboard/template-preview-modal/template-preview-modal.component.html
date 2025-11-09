@@ -1,0 +1,104 @@
+<p-dialog
+  [(visible)]="visibleSignal"
+  (visibleChange)="handleVisibilityChange($event)"
+  (onHide)="handleDialogHide()"
+  [modal]="true"
+  [closable]="true"
+  [dismissableMask]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '80vw', maxWidth: '1400px', maxHeight: '90vh' }"
+  [breakpoints]="{ '1024px': '80vw', '768px': '100vw', '0px': '100vw' }"
+  [contentStyle]="{ maxHeight: 'calc(90vh - 140px)', overflow: 'auto' }"
+  styleClass="template-preview-dialog"
+>
+  <!-- Header -->
+  <ng-template #header>
+    @if (template()) {
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center gap-3">
+          <i [class]="getCategoryIcon(template()?.category)" class="text-2xl text-primary"></i>
+          <div class="flex-1">
+            <h2 class="text-xl font-bold m-0">{{ template()?.name }}</h2>
+            <div class="flex items-center gap-2 mt-1">
+              <p-badge
+                [value]="template()?.category || ''"
+                [severity]="'info'"
+                styleClass="text-xs"
+              />
+              @if (template()?.usageCount) {
+                <span class="text-xs text-gray-600"> {{ template()?.usageCount }} uses </span>
+              }
+            </div>
+          </div>
+        </div>
+        @if (template()?.description) {
+          <p class="text-sm text-gray-600 m-0">{{ template()?.description }}</p>
+        }
+      </div>
+    }
+  </ng-template>
+
+  <!-- Content -->
+  <div class="template-preview-content">
+    @if (loading()) {
+      <!-- Loading State -->
+      <div class="flex flex-col items-center justify-center py-12 gap-4">
+        <p-progressSpinner
+          [style]="{ width: '50px', height: '50px' }"
+          strokeWidth="4"
+          animationDuration="1s"
+          ariaLabel="Loading template"
+        />
+        <p class="text-gray-600 m-0">Loading template preview...</p>
+      </div>
+    } @else if (error()) {
+      <!-- Error State -->
+      <div class="flex flex-col items-center justify-center py-12 gap-4">
+        <p-message severity="error" [text]="error()!" [styleClass]="'w-full'" />
+        <button
+          pButton
+          type="button"
+          label="Retry"
+          icon="pi pi-refresh"
+          (click)="handleRetry()"
+          class="p-button-secondary"
+        ></button>
+      </div>
+    } @else if (formSchemaWithSampleData()) {
+      <!-- Template Preview -->
+      <div class="preview-container">
+        <div class="preview-badge mb-4">
+          <p-badge value="Preview Mode" severity="secondary" styleClass="text-xs" />
+          <span class="text-xs text-gray-600 ml-2">
+            This is how the template will look when published
+          </span>
+        </div>
+        <app-form-renderer [formSchema]="formSchemaWithSampleData()!" [previewMode]="true" />
+      </div>
+    }
+  </div>
+
+  <!-- Footer -->
+  <ng-template #footer>
+    <div class="flex justify-end gap-3">
+      <button
+        pButton
+        type="button"
+        label="Back to Templates"
+        icon="pi pi-arrow-left"
+        class="p-button-secondary"
+        (click)="handleBackClick()"
+      ></button>
+      <button
+        pButton
+        type="button"
+        label="Use This Template"
+        icon="pi pi-check"
+        class="p-button-primary"
+        [disabled]="loading() || !!error()"
+        (click)="handleUseTemplateClick()"
+      ></button>
+    </div>
+  </ng-template>
+</p-dialog>

@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { FormBuilderService } from './form-builder.service';
-import { FormField, FormFieldType, FormMetadata, FormStatus } from '@nodeangularfullstack/shared';
+import { FormField, FormFieldType, FormMetadata, FormStatus, FormSchema, FormTemplate, TemplateCategory } from '@nodeangularfullstack/shared';
 
 describe('FormBuilderService', () => {
   let service: FormBuilderService;
@@ -4080,6 +4080,415 @@ describe('FormBuilderService', () => {
 
         service.clearSelection();
         expect(service.hasSelectedRows()).toBe(false);
+      });
+    });
+  });
+
+  // Story 29.8: Template Application to Form Builder
+  describe('Template Application', () => {
+    describe('applyTemplate', () => {
+      it('should store template metadata when applying template', () => {
+        const mockTemplate: FormTemplate = {
+          id: 'template-123',
+          name: 'Product Order Form',
+          description: 'Template for product orders',
+          category: TemplateCategory.ECOMMERCE,
+          previewImageUrl: 'https://example.com/preview.jpg',
+          templateSchema: {
+            id: 'schema-123',
+            formId: 'template-123',
+            version: 1,
+            isPublished: true,
+            fields: [],
+            settings: {
+              layout: { columns: 1, spacing: 'medium' },
+              submission: {
+                showSuccessMessage: true,
+                successMessage: 'Thank you!',
+                allowMultipleSubmissions: false,
+              },
+            },
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+          usageCount: 10,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        service.applyTemplate(mockTemplate);
+
+        expect(service.selectedTemplate()).toEqual(mockTemplate);
+        expect(service.templateMetadata()).toEqual({
+          id: 'template-123',
+          name: 'Product Order Form',
+        });
+      });
+
+      it('should set isTemplateMode to true after applying template', () => {
+        const mockTemplate: FormTemplate = {
+          id: 'template-123',
+          name: 'Test Template',
+          description: 'Test',
+          category: TemplateCategory.DATA_COLLECTION,
+          previewImageUrl: 'https://example.com/preview.jpg',
+          templateSchema: {
+            fields: [],
+            settings: {
+              layout: { columns: 1, spacing: 'medium' },
+              submission: {
+                showSuccessMessage: true,
+                successMessage: 'Thank you!',
+                allowMultipleSubmissions: false,
+              },
+            },
+          },
+          usageCount: 0,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        expect(service.isTemplateMode()).toBe(false);
+
+        service.applyTemplate(mockTemplate);
+
+        expect(service.isTemplateMode()).toBe(true);
+      });
+
+      it('should handle undefined template gracefully', () => {
+        spyOn(console, 'warn');
+
+        service.applyTemplate(undefined as any);
+
+        expect(console.warn).toHaveBeenCalledWith('Cannot apply undefined template');
+        expect(service.selectedTemplate()).toBeNull();
+        expect(service.templateMetadata()).toBeNull();
+        expect(service.isTemplateMode()).toBe(false);
+      });
+
+      it('should load template fields via loadFormSchema', () => {
+        const mockTemplate: FormTemplate = {
+          id: 'template-123',
+          name: 'Contact Form',
+          description: 'Simple contact form',
+          category: TemplateCategory.DATA_COLLECTION,
+          previewImageUrl: 'https://example.com/preview.jpg',
+          templateSchema: {
+            fields: [
+              {
+                id: 'field-1',
+                type: FormFieldType.TEXT,
+                fieldName: 'name',
+                label: 'Name',
+                placeholder: 'Enter your name',
+                helpText: '',
+                required: true,
+                order: 0,
+                validation: {},
+              },
+              {
+                id: 'field-2',
+                type: FormFieldType.EMAIL,
+                fieldName: 'email',
+                label: 'Email',
+                placeholder: 'your@email.com',
+                helpText: '',
+                required: true,
+                order: 1,
+                validation: {},
+              },
+            ],
+            settings: {
+              layout: { columns: 1, spacing: 'medium' },
+              submission: {
+                showSuccessMessage: true,
+                successMessage: 'Thank you!',
+                allowMultipleSubmissions: false,
+              },
+            },
+          },
+          usageCount: 5,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        service.applyTemplate(mockTemplate);
+
+        expect(service.formFields().length).toBe(2);
+        expect(service.formFields()[0].fieldName).toBe('name');
+        expect(service.formFields()[1].fieldName).toBe('email');
+      });
+    });
+
+    describe('loadFormSchema with templates', () => {
+      it('should load row layout configuration from template schema', () => {
+        const schemaWithRowLayout: FormSchema = {
+          fields: [
+            {
+              id: 'field-1',
+              type: FormFieldType.TEXT,
+              fieldName: 'firstName',
+              label: 'First Name',
+              placeholder: '',
+              helpText: '',
+              required: true,
+              order: 0,
+              validation: {},
+              position: { rowId: 'row-1', columnIndex: 0, orderInColumn: 0 },
+            },
+            {
+              id: 'field-2',
+              type: FormFieldType.TEXT,
+              fieldName: 'lastName',
+              label: 'Last Name',
+              placeholder: '',
+              helpText: '',
+              required: true,
+              order: 1,
+              validation: {},
+              position: { rowId: 'row-1', columnIndex: 1, orderInColumn: 0 },
+            },
+          ],
+          settings: {
+            layout: { columns: 1, spacing: 'medium' },
+            submission: {
+              showSuccessMessage: true,
+              successMessage: 'Thank you!',
+              allowMultipleSubmissions: false,
+            },
+            rowLayout: {
+              enabled: true,
+              rows: [
+                {
+                  id: 'row-1',
+                  columnCount: 2,
+                  order: 0,
+                  label: 'Personal Information',
+                  widthRatio: '1fr 1fr',
+                },
+              ],
+            },
+          },
+        };
+
+        service.loadFormSchema(schemaWithRowLayout);
+
+        expect(service.isRowLayoutEnabled()).toBe(true);
+        expect(service.rowConfigs().length).toBe(1);
+        expect(service.rowConfigs()[0].columnCount).toBe(2);
+        expect(service.formFields().length).toBe(2);
+        expect(service.formFields()[0].position?.rowId).toBe('row-1');
+        expect(service.formFields()[0].position?.columnIndex).toBe(0);
+      });
+
+      it('should load step form configuration from template schema', () => {
+        const schemaWithStepForm: FormSchema = {
+          fields: [
+            {
+              id: 'field-1',
+              type: FormFieldType.TEXT,
+              fieldName: 'name',
+              label: 'Name',
+              placeholder: '',
+              helpText: '',
+              required: true,
+              order: 0,
+              validation: {},
+              stepId: 'step-1',
+            },
+            {
+              id: 'field-2',
+              type: FormFieldType.EMAIL,
+              fieldName: 'email',
+              label: 'Email',
+              placeholder: '',
+              helpText: '',
+              required: true,
+              order: 1,
+              validation: {},
+              stepId: 'step-2',
+            },
+          ],
+          settings: {
+            layout: { columns: 1, spacing: 'medium' },
+            submission: {
+              showSuccessMessage: true,
+              successMessage: 'Thank you!',
+              allowMultipleSubmissions: false,
+            },
+            stepForm: {
+              enabled: true,
+              steps: [
+                {
+                  id: 'step-1',
+                  order: 0,
+                  title: 'Personal Info',
+                  description: 'Enter your details',
+                },
+                {
+                  id: 'step-2',
+                  order: 1,
+                  title: 'Contact',
+                  description: 'How to reach you',
+                },
+              ],
+            },
+          },
+        };
+
+        service.loadFormSchema(schemaWithStepForm);
+
+        expect(service.isStepFormEnabled()).toBe(true);
+        expect(service.stepConfigs().length).toBe(2);
+        expect(service.formFields()[0].stepId).toBe('step-1');
+        expect(service.formFields()[1].stepId).toBe('step-2');
+      });
+
+      it('should deep clone template schema to prevent mutation', () => {
+        const originalSchema: FormSchema = {
+          fields: [
+            {
+              id: 'field-1',
+              type: FormFieldType.TEXT,
+              fieldName: 'name',
+              label: 'Name',
+              placeholder: '',
+              helpText: '',
+              required: true,
+              order: 0,
+              validation: {},
+            },
+          ],
+          settings: {
+            layout: { columns: 1, spacing: 'medium' },
+            submission: {
+              showSuccessMessage: true,
+              successMessage: 'Thank you!',
+              allowMultipleSubmissions: false,
+            },
+          },
+        };
+
+        service.loadFormSchema(originalSchema);
+
+        // Modify loaded field
+        const loadedFields = service.formFields();
+        loadedFields[0].label = 'Modified Name';
+
+        // Original schema should not be affected
+        expect(originalSchema.fields[0].label).toBe('Name');
+      });
+
+      it('should handle empty fields array in template schema', () => {
+        const emptySchema: FormSchema = {
+          fields: [],
+          settings: {
+            layout: { columns: 1, spacing: 'medium' },
+            submission: {
+              showSuccessMessage: true,
+              successMessage: 'Thank you!',
+              allowMultipleSubmissions: false,
+            },
+          },
+        };
+
+        service.loadFormSchema(emptySchema);
+
+        expect(service.formFields()).toEqual([]);
+      });
+
+      it('should handle missing fields in template schema', () => {
+        const schemaWithoutFields: FormSchema = {
+          fields: undefined as any,
+          settings: {
+            layout: { columns: 1, spacing: 'medium' },
+            submission: {
+              showSuccessMessage: true,
+              successMessage: 'Thank you!',
+              allowMultipleSubmissions: false,
+            },
+          },
+        };
+
+        service.loadFormSchema(schemaWithoutFields);
+
+        expect(service.formFields()).toEqual([]);
+      });
+    });
+
+    describe('Template signals', () => {
+      it('should initialize template signals as null', () => {
+        expect(service.selectedTemplate()).toBeNull();
+        expect(service.templateMetadata()).toBeNull();
+        expect(service.isTemplateMode()).toBe(false);
+      });
+
+      it('should expose selectedTemplate as readonly signal', () => {
+        const mockTemplate: FormTemplate = {
+          id: 'template-123',
+          name: 'Test Template',
+          description: 'Test',
+          category: TemplateCategory.DATA_COLLECTION,
+          previewImageUrl: 'https://example.com/preview.jpg',
+          templateSchema: {
+            fields: [],
+            settings: {
+              layout: { columns: 1, spacing: 'medium' },
+              submission: {
+                showSuccessMessage: true,
+                successMessage: 'Thank you!',
+                allowMultipleSubmissions: false,
+              },
+            },
+          },
+          usageCount: 0,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        service.applyTemplate(mockTemplate);
+
+        // Verify signal is readonly (cannot be reassigned)
+        expect(service.selectedTemplate()).toEqual(mockTemplate);
+        expect(typeof service.selectedTemplate).toBe('function');
+      });
+
+      it('should compute isTemplateMode based on selectedTemplate', () => {
+        expect(service.isTemplateMode()).toBe(false);
+
+        const mockTemplate: FormTemplate = {
+          id: 'template-123',
+          name: 'Test Template',
+          description: 'Test',
+          category: TemplateCategory.DATA_COLLECTION,
+          previewImageUrl: 'https://example.com/preview.jpg',
+          templateSchema: {
+            fields: [],
+            settings: {
+              layout: { columns: 1, spacing: 'medium' },
+              submission: {
+                showSuccessMessage: true,
+                successMessage: 'Thank you!',
+                allowMultipleSubmissions: false,
+              },
+            },
+          },
+          usageCount: 0,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        service.applyTemplate(mockTemplate);
+        expect(service.isTemplateMode()).toBe(true);
+
+        // Clear template
+        (service as any)._selectedTemplate.set(null);
+        expect(service.isTemplateMode()).toBe(false);
       });
     });
   });

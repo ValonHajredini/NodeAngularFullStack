@@ -7,6 +7,7 @@ export const environment = {
   apiUrl: 'http://localhost:3000/api/v1',
   shortLinkBaseUrl: 'http://localhost:3000',
   formBuilderUrl: 'http://localhost:4201',
+  formsApiUrl: 'http://localhost:3001',
   appName: 'NodeAngularFullStack',
   enableMultiTenancy: false,
   showTestCredentials: true,

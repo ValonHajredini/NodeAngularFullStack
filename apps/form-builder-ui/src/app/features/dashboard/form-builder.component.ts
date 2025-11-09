@@ -19,6 +19,7 @@ import { DragDropModule } from '@angular/cdk/drag-drop';
 import { FormField, FormFieldType, FormMetadata } from '@nodeangularfullstack/shared';
 import { FormBuilderService } from './form-builder.service';
 import { FormsApiService } from './forms-api.service';
+import { TemplatesApiService } from './templates-api.service';
 import { ComponentWithUnsavedChanges } from '@core/guards/unsaved-changes.guard';
 import { FieldPaletteComponent } from './field-palette/field-palette.component';
 import { FormCanvasComponent } from './form-canvas/form-canvas.component';
@@ -103,6 +104,15 @@ import { AuthService } from '@core/auth/auth.service';
               >
                 <i class="pi pi-palette mr-1 text-xs"></i>
                 {{ currentTheme()?.name }}
+              </span>
+            }
+            @if (formBuilderService.isTemplateMode()) {
+              <span
+                class="ml-2 inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200"
+                title="This form was created from a template"
+              >
+                <i class="pi pi-clone mr-1 text-xs"></i>
+                From: {{ formBuilderService.templateMetadata()?.name }}
               </span>
             }
           </span>
@@ -527,6 +537,7 @@ import { AuthService } from '@core/auth/auth.service';
 export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUnsavedChanges {
   readonly formBuilderService = inject(FormBuilderService);
   private readonly formsApiService = inject(FormsApiService);
+  private readonly templatesApiService = inject(TemplatesApiService);
   private readonly messageService = inject(MessageService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -584,6 +595,9 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
   // Theme Designer Modal state (Story 23.5)
   readonly themeDesignerVisible = signal<boolean>(false);
 
+  // Template loading state (Story 29.8)
+  readonly isLoadingTemplate = signal<boolean>(false);
+
   // Sidebar tab state (Story 19.2)
   readonly activeSidebarTab = signal<number>(0); // 0 = Row Layout, 1 = Step Form
 
@@ -608,6 +622,13 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
   ngOnInit(): void {
     // Restore sidebar collapse state from localStorage
     this.restoreSidebarCollapseState();
+
+    // Check for templateId query parameter (Story 29.8: Template Application)
+    const templateId = this.route.snapshot.queryParamMap.get('templateId');
+    if (templateId) {
+      this.applyTemplateFromQuery(templateId);
+      return; // Early return - template application handles form initialization
+    }
 
     // Check if loading existing form from route param
     const formId = this.route.snapshot.paramMap.get('id');
@@ -735,6 +756,80 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
           life: 3000,
         });
         this.router.navigate(['/app/dashboard/list']);
+      },
+    });
+  }
+
+  /**
+   * Applies a template from query parameter.
+   * Fetches the template via API and loads its schema into the form builder.
+   * Story 29.8: Template Application to Form Builder (AC: 4)
+   * @param templateId - Template UUID from query parameter
+   */
+  private applyTemplateFromQuery(templateId: string): void {
+    this.isLoadingTemplate.set(true);
+
+    this.templatesApiService.applyTemplate(templateId).subscribe({
+      next: (response) => {
+        // Load the template schema into the form builder
+        this.formBuilderService.loadFormSchema(response.data!);
+
+        // Show success toast
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Template Applied',
+          detail: 'Template applied successfully!',
+          life: 3000,
+        });
+
+        // Remove query param from URL (clean URL) and replace history entry
+        this.router.navigate([], {
+          queryParams: { templateId: null },
+          queryParamsHandling: 'merge',
+          replaceUrl: true,
+        });
+
+        this.isLoadingTemplate.set(false);
+
+        // Setup auto-save interval after template is loaded
+        this.setupAutoSave();
+      },
+      error: (error) => {
+        console.error('Failed to apply template:', error);
+
+        // Determine error message based on status code
+        let errorMessage = 'Unable to load template. Starting with blank form.';
+        if (error.status === 404) {
+          errorMessage = 'Template not found. It may have been removed. Starting with blank form.';
+        } else if (error.status === 500) {
+          errorMessage = 'Server error while loading template. Please try again or start with a blank form.';
+        } else if (error.status === 0) {
+          errorMessage = 'Network error. Please check your connection and try again.';
+        }
+
+        // Show error toast
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Template Load Failed',
+          detail: errorMessage,
+          life: 5000,
+        });
+
+        // Fall back to blank form initialization
+        this.formBuilderService.resetForm();
+        this.formBuilderService.enableRowLayout(1);
+
+        // Remove failed templateId from URL
+        this.router.navigate([], {
+          queryParams: { templateId: null },
+          queryParamsHandling: 'merge',
+          replaceUrl: true,
+        });
+
+        this.isLoadingTemplate.set(false);
+
+        // Setup auto-save interval even after error
+        this.setupAutoSave();
       },
     });
   }

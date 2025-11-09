@@ -25,6 +25,8 @@ import { FormCardComponent, FormCardAction } from '../form-card/form-card.compon
 // import { QrCodeDisplayComponent } from '../../tools/components/short-link/components/qr-code-display/qr-code-display.component';
 import { Dialog } from 'primeng/dialog';
 import {QrCodeDisplayComponent} from '../../tools/components/short-link/components/qr-code-display/qr-code-display.component';
+import { TemplateSelectionModalComponent } from '../template-selection-modal/template-selection-modal.component';
+import { FormTemplate } from '@nodeangularfullstack/shared';
 
 /**
  * Forms list component displaying all user's forms with enhanced QR code functionality.
@@ -35,6 +37,7 @@ import {QrCodeDisplayComponent} from '../../tools/components/short-link/componen
  * - Form actions: edit, analytics, delete, copy URL
  * - QR code thumbnails for published forms
  * - QR code modal with full-size display and download
+ * - Template selection modal for creating forms from templates
  * - Responsive layout that adapts to different screen sizes
  * - Full-width display mode support
  *
@@ -43,6 +46,11 @@ import {QrCodeDisplayComponent} from '../../tools/components/short-link/componen
  * - Click thumbnail to open modal with full-size QR code
  * - Download QR code images with descriptive filenames
  * - Lazy loading for optimal performance
+ *
+ * Template Integration:
+ * - "Create New Form" button opens template selection modal
+ * - Users can browse templates by category or start blank
+ * - Selected templates are applied when creating new forms
  */
 @Component({
   selector: 'app-forms-list',
@@ -63,6 +71,7 @@ import {QrCodeDisplayComponent} from '../../tools/components/short-link/componen
     FormCardComponent,
     QrCodeDisplayComponent,
     Dialog,
+    TemplateSelectionModalComponent,
   ],
   providers: [MessageService, ConfirmationService],
   template: `
@@ -125,7 +134,7 @@ import {QrCodeDisplayComponent} from '../../tools/components/short-link/componen
               pButton
               label="Create New Form"
               icon="pi pi-plus"
-              (click)="openCreateFormModal()"
+              (click)="openTemplateSelectionModal()"
               class="p-button-primary"
             ></button>
           </div>
@@ -148,7 +157,7 @@ import {QrCodeDisplayComponent} from '../../tools/components/short-link/componen
               pButton
               label="Create Form"
               icon="pi pi-plus"
-              (click)="openCreateFormModal()"
+              (click)="openTemplateSelectionModal()"
             ></button>
           </div>
         }
@@ -237,6 +246,13 @@ import {QrCodeDisplayComponent} from '../../tools/components/short-link/componen
           </div>
         }
       </p-dialog>
+
+      <!-- Template Selection Modal -->
+      <app-template-selection-modal
+        [(visible)]="showTemplateModal"
+        (templateSelected)="onTemplateSelected($event)"
+        (startBlank)="onStartBlank()"
+      />
     </div>
   `,
 })
@@ -280,6 +296,9 @@ export class FormsListComponent implements OnInit {
   // Modal for creating new form
   showCreateModal = signal<boolean>(false);
   readonly newFormSettings = signal<FormSettings | null>(null);
+
+  // Template selection modal
+  showTemplateModal = signal<boolean>(false);
 
   // QR Code modal state
   showQrCodeModal = signal<boolean>(false);
@@ -326,6 +345,34 @@ export class FormsListComponent implements OnInit {
   onPageChange(event: any): void {
     this.currentPage.set(event.page + 1); // PrimeNG is 0-indexed
     this.loadForms();
+  }
+
+  /**
+   * Opens the template selection modal.
+   */
+  openTemplateSelectionModal(): void {
+    this.showTemplateModal.set(true);
+  }
+
+  /**
+   * Handles template selection from the modal.
+   * Creates a new form using the selected template.
+   * @param template - The selected template
+   */
+  onTemplateSelected(template: FormTemplate): void {
+    // TODO: In Story 29.8, implement form creation from template
+    // For now, navigate to form builder with template ID
+    this.router.navigate(['/app/form-builder'], {
+      queryParams: { templateId: template.id },
+    });
+  }
+
+  /**
+   * Handles start blank action from the modal.
+   * Opens the form settings modal to create a blank form.
+   */
+  onStartBlank(): void {
+    this.openCreateFormModal();
   }
 
   /**

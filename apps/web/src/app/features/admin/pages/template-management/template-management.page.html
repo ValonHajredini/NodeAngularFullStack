@@ -1,0 +1,214 @@
+<p-toast />
+<p-confirmDialog />
+
+<div class="template-management-container p-6">
+  <!-- Page Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900">Template Management</h1>
+      <p class="text-gray-600 mt-1">Manage form templates for all users</p>
+    </div>
+    <button
+      pButton
+      label="Create Template"
+      icon="pi pi-plus"
+      class="p-button-primary"
+      (click)="handleCreateTemplate()"
+      pTooltip="Create a new template"
+    ></button>
+  </div>
+
+  <!-- Filters -->
+  <div class="flex gap-4 mb-4 flex-wrap">
+    <p-select
+      [(ngModel)]="selectedCategory"
+      [options]="categoryOptions"
+      placeholder="All Categories"
+      styleClass="w-48"
+      [showClear]="true"
+    />
+    <p-select
+      [(ngModel)]="selectedStatus"
+      [options]="statusOptions"
+      placeholder="All Statuses"
+      styleClass="w-48"
+      [showClear]="true"
+    />
+    <p-iconField iconPosition="left" styleClass="flex-1">
+      <p-inputIcon styleClass="pi pi-search" />
+      <input
+        pInputText
+        [(ngModel)]="searchQuery"
+        placeholder="Search templates by name or description..."
+        class="w-full"
+      />
+    </p-iconField>
+  </div>
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="flex justify-center items-center py-12">
+      <p-progressSpinner />
+    </div>
+  }
+
+  <!-- Error State -->
+  @else if (error()) {
+    <div class="py-8">
+      <p-message severity="error" [text]="error() || ''" styleClass="w-full mb-4" />
+      <button pButton label="Retry" icon="pi pi-refresh" (click)="handleRetry()"></button>
+    </div>
+  }
+
+  <!-- Table -->
+  @else {
+    <p-table
+      [value]="filteredTemplates()"
+      [paginator]="true"
+      [rows]="20"
+      [rowsPerPageOptions]="[10, 20, 50, 100]"
+      [sortField]="'name'"
+      [sortOrder]="1"
+      styleClass="p-datatable-sm"
+    >
+      <ng-template pTemplate="header">
+        <tr>
+          <th pSortableColumn="name">
+            <div class="flex align-items-center">
+              Name
+              <p-sortIcon field="name" />
+            </div>
+          </th>
+          <th pSortableColumn="category">
+            <div class="flex align-items-center">
+              Category
+              <p-sortIcon field="category" />
+            </div>
+          </th>
+          <th>Description</th>
+          <th pSortableColumn="usageCount">
+            <div class="flex align-items-center">
+              Usage Count
+              <p-sortIcon field="usageCount" />
+            </div>
+          </th>
+          <th pSortableColumn="createdAt">
+            <div class="flex align-items-center">
+              Created
+              <p-sortIcon field="createdAt" />
+            </div>
+          </th>
+          <th>Active</th>
+          <th>Actions</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-template>
+        <tr>
+          <td>
+            <strong>{{ template.name }}</strong>
+          </td>
+          <td>
+            <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm">
+              {{ getCategoryLabel(template.category) }}
+            </span>
+          </td>
+          <td>
+            <span class="text-gray-600 text-sm">
+              {{ truncateDescription(template.description) }}
+            </span>
+          </td>
+          <td>
+            <span class="font-semibold">{{ formatUsageCount(template.usageCount) }}</span>
+          </td>
+          <td>
+            <span class="text-gray-600 text-sm">
+              {{ template.createdAt | date: 'MMM d, yyyy' }}
+            </span>
+          </td>
+          <td>
+            <p-toggleSwitch
+              [(ngModel)]="template.isActive"
+              (ngModelChange)="handleToggleActive(template)"
+              [pTooltip]="template.isActive ? 'Deactivate template' : 'Activate template'"
+            />
+          </td>
+          <td>
+            <div class="flex gap-2">
+              <button
+                pButton
+                icon="pi pi-eye"
+                class="p-button-rounded p-button-text p-button-sm"
+                (click)="handlePreview(template)"
+                pTooltip="Preview template"
+                tooltipPosition="top"
+              ></button>
+              <button
+                pButton
+                icon="pi pi-pencil"
+                class="p-button-rounded p-button-text p-button-sm"
+                (click)="handleEdit(template)"
+                pTooltip="Edit template"
+                tooltipPosition="top"
+              ></button>
+              <button
+                pButton
+                icon="pi pi-trash"
+                class="p-button-rounded p-button-text p-button-danger p-button-sm"
+                (click)="handleDelete(template)"
+                pTooltip="Delete template"
+                tooltipPosition="top"
+              ></button>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="7" class="text-center py-8">
+            <div class="flex flex-col items-center gap-4">
+              <i class="pi pi-inbox text-6xl text-gray-400"></i>
+              <div>
+                <p class="text-xl font-semibold text-gray-700">No templates found</p>
+                <p class="text-gray-500 mt-1">Create your first template to get started</p>
+              </div>
+              <button
+                pButton
+                label="Create Template"
+                icon="pi pi-plus"
+                class="p-button-primary"
+                (click)="handleCreateTemplate()"
+              ></button>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+
+    <!-- Templates count footer -->
+    <div class="mt-4 text-sm text-gray-600">
+      Showing {{ filteredTemplates().length }} of {{ templates().length }} templates
+    </div>
+  }
+</div>
+
+<!-- Template Editor Dialog (Story 29.10) -->
+<app-template-editor-dialog
+  [visible]="showEditor()"
+  (visibleChange)="showEditor.set($event)"
+  [mode]="editorMode()"
+  [templateId]="selectedTemplateId()"
+  (saved)="handleEditorSave()"
+/>
+
+<!-- Template Preview Modal (Story 29.7) -->
+<!-- TODO: Integrate TemplatePreviewModal component from Story 29.7 -->
+<!--
+@if (showPreview()) {
+  <app-template-preview-modal
+    [(visible)]="showPreview"
+    [templateId]="previewTemplateId()"
+  />
+}
+-->

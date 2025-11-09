@@ -1,0 +1,61 @@
+/**
+ * Template Editor Dialog Component Styles
+ */
+
+:host {
+  ::ng-deep {
+    .template-editor-dialog {
+      .p-dialog-content {
+        padding: 1.5rem;
+      }
+
+      .p-dialog-footer {
+        padding: 1rem 1.5rem;
+        border-top: 1px solid #e5e7eb;
+      }
+
+      // Monaco Editor container styling
+      .monaco-editor {
+        .margin,
+        .monaco-editor-background {
+          background-color: #1e1e1e;
+        }
+      }
+
+      // File upload styling
+      .p-fileupload-choose {
+        width: 100%;
+      }
+
+      // Checkbox label spacing
+      .p-checkbox-label {
+        margin-left: 0.5rem;
+      }
+
+      // Select dropdown full width
+      .p-select {
+        width: 100%;
+      }
+    }
+  }
+
+  // Field spacing
+  .field {
+    margin-bottom: 0;
+  }
+
+  // Responsive adjustments
+  @media (max-width: 768px) {
+    ::ng-deep {
+      .template-editor-dialog {
+        .p-dialog-content {
+          padding: 1rem;
+        }
+
+        .grid-cols-2 {
+          grid-template-columns: 1fr;
+        }
+      }
+    }
+  }
+}
