@@ -2,7 +2,13 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
-import { FormSchema, FormSettings, FormTheme } from '@nodeangularfullstack/shared';
+import {
+  FormSchema,
+  FormSettings,
+  FormTheme,
+  AvailableSlot,
+  QuizResultMetadata,
+} from '@nodeangularfullstack/shared';
 import { environment } from '@env/environment';
 
 /**
@@ -21,6 +27,7 @@ interface FormSchemaResponse {
 
 /**
  * API response structure for form submission
+ * Story 29.13: Includes optional metadata for quiz results
  */
 interface FormSubmissionResponse {
   success: boolean;
@@ -28,6 +35,24 @@ interface FormSubmissionResponse {
   data: {
     submissionId: string;
     message?: string;
+    metadata?: QuizResultMetadata;
+  };
+  timestamp: string;
+}
+
+/**
+ * API response structure for available slots retrieval
+ */
+interface AvailableSlotsResponse {
+  success: boolean;
+  message: string;
+  data: {
+    slots: AvailableSlot[];
+    dateRange: {
+      startDate: string;
+      endDate: string;
+    };
+    maxBookingsPerSlot: number;
   };
   timestamp: string;
 }
@@ -161,7 +186,7 @@ export class FormRendererService {
     token: string,
     values: Record<string, unknown>,
     metadata?: Record<string, unknown>,
-  ): Observable<{ submissionId: string; message?: string }> {
+  ): Observable<{ submissionId: string; message?: string; metadata?: QuizResultMetadata }> {
     const payload: any = { values };
     if (metadata) {
       payload.metadata = metadata;
@@ -171,6 +196,43 @@ export class FormRendererService {
       map((response) => response.data),
       catchError((error: HttpErrorResponse) => {
         return throwError(() => this.handleSubmitError(error));
+      }),
+    );
+  }
+
+  /**
+   * Retrieves available appointment slots for a form using short code.
+   * @param shortCode - Short code for form access (e.g., 'abc123')
+   * @param startDate - Start date for availability query (YYYY-MM-DD)
+   * @param endDate - End date for availability query (YYYY-MM-DD)
+   * @returns Observable with array of available slots
+   * @throws {FormRenderError} Various error types based on failure reason
+   * @example
+   * formRendererService.getAvailableSlots('abc123', '2025-12-15', '2025-12-22').subscribe({
+   *   next: (slots) => console.log('Available slots:', slots),
+   *   error: (err) => console.error('Error:', err.type, err.message)
+   * });
+   */
+  getAvailableSlots(
+    shortCode: string,
+    startDate: string,
+    endDate: string,
+  ): Observable<AvailableSlot[]> {
+    const url = `${environment.apiUrl}/public/forms/${shortCode}/available-slots`;
+    const params = {
+      startDate,
+      endDate,
+    };
+
+    console.log('FormRendererService: Fetching available slots from:', url, 'Params:', params);
+    return this.http.get<AvailableSlotsResponse>(url, { params }).pipe(
+      map((response) => {
+        console.log('FormRendererService: Successfully received available slots:', response);
+        return response.data.slots;
+      }),
+      catchError((error: HttpErrorResponse) => {
+        console.error('FormRendererService: Error fetching available slots:', error);
+        return throwError(() => this.handleError(error));
       }),
     );
   }

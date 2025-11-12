@@ -277,4 +277,99 @@ router.get(
   publicFormsController.getPublicFormByShortCode
 );
 
+/**
+ * @swagger
+ * /api/public/forms/{shortCode}/available-slots:
+ *   get:
+ *     summary: Get available appointment slots for a form
+ *     description: Retrieves available time slots for appointment booking forms (no authentication required)
+ *     tags: [Public Forms]
+ *     parameters:
+ *       - in: path
+ *         name: shortCode
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Short code for the published appointment form
+ *         example: "abc123"
+ *       - in: query
+ *         name: startDate
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Start date for availability query (YYYY-MM-DD)
+ *         example: "2025-12-15"
+ *       - in: query
+ *         name: endDate
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: End date for availability query (YYYY-MM-DD)
+ *         example: "2025-12-22"
+ *     responses:
+ *       200:
+ *         description: Available slots retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Available slots retrieved successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     slots:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/AvailableSlot'
+ *                     dateRange:
+ *                       type: object
+ *                       properties:
+ *                         startDate:
+ *                           type: string
+ *                           format: date
+ *                           example: "2025-12-15"
+ *                         endDate:
+ *                           type: string
+ *                           format: date
+ *                           example: "2025-12-22"
+ *                     maxBookingsPerSlot:
+ *                       type: number
+ *                       example: 5
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *       400:
+ *         description: Missing or invalid query parameters
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid date format. Expected YYYY-MM-DD (ISO 8601)"
+ *       404:
+ *         description: Form not found or not configured for appointment booking
+ *       410:
+ *         description: Form has expired
+ *       429:
+ *         description: Rate limit exceeded
+ */
+router.get(
+  '/forms/:shortCode/available-slots',
+  RateLimitMiddleware.publicFormRenderLimit(),
+  publicFormsController.getAvailableSlots
+);
+
 export { router as publicFormsRoutes };

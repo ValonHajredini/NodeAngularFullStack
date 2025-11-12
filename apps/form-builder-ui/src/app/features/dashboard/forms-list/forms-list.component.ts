@@ -360,11 +360,58 @@ export class FormsListComponent implements OnInit {
    * @param template - The selected template
    */
   onTemplateSelected(template: FormTemplate): void {
-    // TODO: In Story 29.8, implement form creation from template
-    // For now, navigate to form builder with template ID
-    this.router.navigate(['/app/form-builder'], {
-      queryParams: { templateId: template.id },
-    });
+    // Create a new form with template reference
+    const initialSchema: any = {
+      version: 1,
+      fields: [],
+      settings: {
+        layout: {
+          columns: 1,
+          spacing: 'normal',
+        },
+        submission: {
+          showSuccessMessage: true,
+          successMessage: 'Thank you for your submission!',
+          redirectUrl: '',
+          allowMultipleSubmissions: true,
+        },
+        background: {
+          type: 'none',
+        },
+      },
+      isPublished: false,
+    };
+
+    this.formsApiService
+      .createForm({
+        title: template.name,
+        description: template.description,
+        status: FormStatus.DRAFT,
+        schema: initialSchema as any,
+      })
+      .subscribe({
+        next: (form) => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Form Created',
+            detail: `Form "${template.name}" created from template`,
+            life: 2000,
+          });
+
+          // Navigate to form builder with template ID as query param
+          this.router.navigate(['/app/dashboard', form.id], {
+            queryParams: { templateId: template.id },
+          });
+        },
+        error: (error) => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Creation Failed',
+            detail: error.error?.message || 'Failed to create form from template',
+            life: 3000,
+          });
+        },
+      });
   }
 
   /**

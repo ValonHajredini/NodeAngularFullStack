@@ -259,6 +259,32 @@ export interface ImageGalleryMetadata extends BaseFieldMetadata {
 }
 
 /**
+ * Product variant metadata for IMAGE_GALLERY fields
+ * Used by product templates for inventory tracking and e-commerce functionality
+ * Each array element corresponds to an image in the gallery
+ *
+ * @example
+ * // T-Shirt with 3 variants (Red-M, Blue-M, Red-L)
+ * [
+ *   { sku: 'TSHIRT-RED-M', size: 'M', color: 'Red', priceModifier: 0, displayName: 'Red - Medium' },
+ *   { sku: 'TSHIRT-BLUE-M', size: 'M', color: 'Blue', priceModifier: 100, displayName: 'Blue - Medium' },
+ *   { sku: 'TSHIRT-RED-L', size: 'L', color: 'Red', priceModifier: 200, displayName: 'Red - Large' }
+ * ]
+ */
+export interface ImageVariantMetadata {
+  /** Variant SKU for inventory tracking (unique identifier) */
+  sku: string;
+  /** Variant size (e.g., 'S', 'M', 'L', 'XL') */
+  size?: string;
+  /** Variant color (e.g., 'Red', 'Blue', 'Black') */
+  color?: string;
+  /** Price modifier in cents (positive or negative, e.g., 100 = +$1.00, -50 = -$0.50) */
+  priceModifier?: number;
+  /** Variant display name shown to users (e.g., 'Red - Large') */
+  displayName?: string;
+}
+
+/**
  * Configuration for nested sub-columns within a parent column.
  * Enables subdividing a column into 2-4 horizontal sub-columns for granular field positioning.
  *
@@ -408,6 +434,13 @@ export interface FormField {
     | ImageMetadata
     | TextBlockMetadata
     | ImageGalleryMetadata;
+  /**
+   * Variant metadata for IMAGE_GALLERY fields (e.g., product variants).
+   * Each array element corresponds to an image in the gallery.
+   * Used by product templates for inventory tracking.
+   * @see ImageVariantMetadata
+   */
+  variantMetadata?: ImageVariantMetadata[];
   /** Position within row-column layout (optional, for row-based layouts) */
   position?: FieldPosition;
   /** Whether field is disabled */
@@ -494,6 +527,8 @@ export interface FormSettings {
   stepForm?: StepFormConfig;
   /** Optional theme ID reference for applying pre-designed styling */
   themeId?: string;
+  /** Optional template ID reference for forms created from templates with business logic */
+  templateId?: string;
 }
 
 /**
@@ -526,6 +561,8 @@ export interface FormSchema {
   updatedAt: Date;
   /** Embedded theme object when fetched from API (not stored in DB) */
   theme?: FormTheme;
+  /** Embedded template object when fetched from API (not stored in DB) - Story 29.13 */
+  template?: any; // Import from templates.types.ts would create circular dependency
 }
 
 /**
@@ -862,5 +899,34 @@ export interface PublishFormRequest {
   expiresInDays?: number;
   /** Optional iframe embed configuration */
   iframeEmbedOptions?: IframeEmbedOptions;
+}
+
+/**
+ * Chart.js compatible data structure for analytics charts
+ * Used by StatisticsEngine for quiz score distributions and other chart data
+ * Story 29.13: Quiz Template with Scoring Logic
+ */
+export interface ChartData {
+  /** Chart labels (x-axis values) */
+  labels: string[];
+  /** Chart datasets with data points and styling */
+  datasets: ChartDataset[];
+}
+
+/**
+ * Chart.js dataset configuration
+ * Includes data points and visual styling options
+ */
+export interface ChartDataset {
+  /** Dataset label (shown in legend/tooltips) */
+  label: string;
+  /** Data values (y-axis values) */
+  data: number[];
+  /** Background color(s) for bars/lines/points */
+  backgroundColor?: string | string[];
+  /** Border color for chart elements */
+  borderColor?: string;
+  /** Border width in pixels */
+  borderWidth?: number;
 }
 

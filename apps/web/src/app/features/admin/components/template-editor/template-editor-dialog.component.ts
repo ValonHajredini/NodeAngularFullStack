@@ -11,22 +11,23 @@ import {
 import { CommonModule } from '@angular/common';
 import {
   FormBuilder,
+  FormControl,
+  FormControlStatus,
   FormGroup,
   Validators,
   ReactiveFormsModule,
   FormsModule,
 } from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Dialog } from 'primeng/dialog';
 import { ButtonDirective } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
 import { Textarea } from 'primeng/textarea';
-import { Select } from 'primeng/select';
 import { FileUpload } from 'primeng/fileupload';
 import { ProgressSpinner } from 'primeng/progressspinner';
 import { Toast } from 'primeng/toast';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { Checkbox } from 'primeng/checkbox';
-import { MonacoEditorModule } from 'ngx-monaco-editor-v2';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import {
   FormTemplate,
@@ -34,6 +35,7 @@ import {
   TemplateBusinessLogicConfig,
   CreateFormTemplateRequest,
   FormSchema,
+  QuizScoringRule,
 } from '@nodeangularfullstack/shared';
 import { TemplatesApiService } from '@core/services/templates-api.service';
 
@@ -45,6 +47,12 @@ interface DropdownOption {
   value: string;
 }
 
+interface QuizConfigFormState {
+  passingScore: number;
+  showResults: boolean;
+  scoringRules: QuizScoringRule[];
+}
+
 /**
  * Admin Template Editor Dialog Component
  *
@@ -54,7 +62,7 @@ interface DropdownOption {
  * **Features:**
  * - Metadata form (name, description, category)
  * - Preview image upload to Digital Ocean Spaces
- * - Monaco Editor for JSON schema editing with validation
+ * - JSON schema editing with validation
  * - Dynamic business logic configuration based on category
  * - Real-time preview integration
  * - Unsaved changes confirmation
@@ -93,13 +101,11 @@ interface DropdownOption {
     ButtonDirective,
     InputText,
     Textarea,
-    Select,
     FileUpload,
     ProgressSpinner,
     Toast,
     ConfirmDialog,
     Checkbox,
-    MonacoEditorModule,
   ],
   providers: [ConfirmationService, MessageService],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -129,23 +135,10 @@ export class TemplateEditorDialogComponent {
   protected readonly loading = signal(false);
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
-  protected readonly schemaJson = signal<string>('{\n  "fields": [],\n  "settings": {}\n}');
+  private readonly defaultSchema = '{\n  "fields": [],\n  "settings": {}\n}';
   protected readonly schemaErrors = signal<string[]>([]);
   protected readonly selectedImage = signal<File | null>(null);
-  private initialSchemaJson = '';
-
-  // Monaco Editor configuration
-  protected readonly editorOptions = {
-    language: 'json',
-    theme: 'vs-dark',
-    automaticLayout: true,
-    minimap: { enabled: false },
-    lineNumbers: 'on' as const,
-    scrollBeyondLastLine: false,
-    wordWrap: 'on' as const,
-    formatOnPaste: true,
-    formatOnType: true,
-  };
+  private initialSchemaJson = this.defaultSchema;
 
   // Category options for dropdown
   protected readonly categoryOptions: DropdownOption[] = [
@@ -163,7 +156,12 @@ export class TemplateEditorDialogComponent {
     description: ['', [Validators.required, Validators.maxLength(500)]],
     category: ['', Validators.required],
     preview_image_url: [''],
+    schema: [this.defaultSchema, Validators.required],
   });
+
+  private readonly formStatus = signal<FormControlStatus>(
+    this.templateForm.status as FormControlStatus,
+  );
 
   // Business logic configuration signals (category-specific)
   protected readonly inventoryConfig = signal({
@@ -173,12 +171,14 @@ export class TemplateEditorDialogComponent {
 
   protected readonly appointmentConfig = signal({
     timeSlotField: '',
+    dateField: '',
     maxBookingsPerSlot: 1,
   });
 
-  protected readonly quizConfig = signal({
+  protected readonly quizConfig = signal<QuizConfigFormState>({
     passingScore: 70,
     showResults: true,
+    scoringRules: [],
   });
 
   protected readonly pollConfig = signal({
@@ -196,15 +196,23 @@ export class TemplateEditorDialogComponent {
   get categoryControl(): ReturnType<typeof this.templateForm.get> {
     return this.templateForm.get('category');
   }
+  get schemaControl(): FormControl<string | null> {
+    return this.templateForm.get('schema') as FormControl<string | null>;
+  }
 
   // Computed signals
   protected readonly formDirty = computed(
-    () => this.templateForm.dirty || this.schemaJson() !== this.initialSchemaJson,
+    () => this.templateForm.dirty || (this.schemaControl.value ?? '') !== this.initialSchemaJson,
   );
 
   protected readonly canSave = computed(
-    () => this.templateForm.valid && this.schemaErrors().length === 0 && !this.saving(),
+    () => this.formStatus() === 'VALID' && this.schemaErrors().length === 0 && !this.saving(),
   );
+
+  // Debug signals to show validation state
+  protected readonly debugFormValid = computed(() => this.formStatus() === 'VALID');
+  protected readonly debugSchemaErrors = computed(() => this.schemaErrors().length);
+  protected readonly debugSaving = computed(() => this.saving());
 
   protected readonly dialogHeader = computed(() =>
     this.mode() === 'create' ? 'Create Template' : 'Edit Template',
@@ -214,17 +222,64 @@ export class TemplateEditorDialogComponent {
     this.mode() === 'create' ? 'Create Template' : 'Save Changes',
   );
 
+  /**
+   * List form control names that are currently invalid.
+   * Helpful for debugging validation state in the UI.
+   */
+  protected getInvalidControls(): string[] {
+    const invalidControls = Object.entries(this.templateForm.controls)
+      .filter(([, control]) => control.invalid)
+      .map(([name]) => name);
+
+    if (this.templateForm.errors) {
+      invalidControls.push('(form)');
+    }
+
+    return invalidControls;
+  }
+
+  /**
+   * Current reactive form status (VALID, INVALID, PENDING, DISABLED)
+   */
+  protected getFormStatus(): FormControlStatus {
+    return this.formStatus();
+  }
+
+  /**
+   * Extract current form-level validation errors (if any).
+   */
+  protected getFormErrors(): string[] {
+    const errors = this.templateForm.errors;
+    if (!errors) {
+      return [];
+    }
+
+    return Object.keys(errors);
+  }
+
   // Effects to sync visible input with internal signal
   constructor() {
     effect(() => {
       this.visibleSignal.set(this.visible());
     });
 
+    this.templateForm.statusChanges.pipe(takeUntilDestroyed()).subscribe((status) => {
+      this.formStatus.set(status as FormControlStatus);
+    });
+
+    this.schemaControl.valueChanges.pipe(takeUntilDestroyed()).subscribe((value) => {
+      this.validateSchema(value ?? '');
+    });
+
+    this.validateSchema(this.schemaControl.value ?? this.defaultSchema);
+
     effect(() => {
       if (this.visible() && this.mode() === 'edit' && this.templateId()) {
         this.loadTemplateData();
       } else if (this.visible() && this.mode() === 'create') {
         this.resetForm();
+        // Validate initial schema
+        this.validateSchema();
       }
     });
   }
@@ -252,7 +307,7 @@ export class TemplateEditorDialogComponent {
 
         // Load schema into Monaco Editor
         const schemaJson = JSON.stringify(template.templateSchema, null, 2);
-        this.schemaJson.set(schemaJson);
+        this.templateForm.patchValue({ schema: schemaJson });
         this.initialSchemaJson = schemaJson;
 
         // Load business logic config
@@ -290,13 +345,15 @@ export class TemplateEditorDialogComponent {
       case 'appointment':
         this.appointmentConfig.set({
           timeSlotField: config.timeSlotField,
+          dateField: config.dateField || '',
           maxBookingsPerSlot: config.maxBookingsPerSlot,
         });
         break;
       case 'quiz':
         this.quizConfig.set({
-          passingScore: config.passingScore || 70,
-          showResults: config.showResults || true,
+          passingScore: config.passingScore ?? 70,
+          showResults: config.showResults ?? true,
+          scoringRules: config.scoringRules?.map((rule) => ({ ...rule })) ?? [],
         });
         break;
       case 'poll':
@@ -312,8 +369,8 @@ export class TemplateEditorDialogComponent {
    * Validate JSON schema
    * Checks for valid JSON syntax, required fields, and size limit
    */
-  protected validateSchema(): void {
-    const json = this.schemaJson();
+  protected validateSchema(schemaValue?: string): void {
+    const json = schemaValue ?? this.schemaControl.value ?? '';
     const errors: string[] = [];
 
     // 1. Valid JSON syntax
@@ -336,7 +393,7 @@ export class TemplateEditorDialogComponent {
       schema.fields.forEach((field: any, index: number) => {
         if (!field.id) errors.push(`Field ${index + 1} missing "id"`);
         if (!field.type) errors.push(`Field ${index + 1} missing "type"`);
-        if (!field.name) errors.push(`Field ${index + 1} missing "name"`);
+        if (!field.fieldName) errors.push(`Field ${index + 1} missing "fieldName"`);
         if (!field.label) errors.push(`Field ${index + 1} missing "label"`);
       });
     }
@@ -348,14 +405,6 @@ export class TemplateEditorDialogComponent {
     }
 
     this.schemaErrors.set(errors);
-  }
-
-  /**
-   * Handle Monaco Editor value changes
-   */
-  protected onSchemaChange(value: string): void {
-    this.schemaJson.set(value);
-    this.validateSchema();
   }
 
   /**
@@ -441,8 +490,9 @@ export class TemplateEditorDialogComponent {
 
     // Parse schema
     let templateSchema: FormSchema;
+    const schemaValue = this.schemaControl.value ?? '';
     try {
-      templateSchema = JSON.parse(this.schemaJson());
+      templateSchema = JSON.parse(schemaValue);
     } catch (e) {
       this.messageService.add({
         severity: 'error',
@@ -459,7 +509,10 @@ export class TemplateEditorDialogComponent {
       name: formValue.name,
       description: formValue.description,
       category: formValue.category,
-      previewImageUrl: formValue.preview_image_url,
+      // Only include previewImageUrl if it has a value
+      ...(formValue.preview_image_url && formValue.preview_image_url.trim()
+        ? { previewImageUrl: formValue.preview_image_url }
+        : {}),
       templateSchema,
       businessLogicConfig: this.getBusinessLogicConfig(),
     };
@@ -517,14 +570,14 @@ export class TemplateEditorDialogComponent {
         return {
           type: 'appointment',
           timeSlotField: this.appointmentConfig().timeSlotField,
-          dateField: '',
+          dateField: this.appointmentConfig().dateField,
           maxBookingsPerSlot: this.appointmentConfig().maxBookingsPerSlot,
-          bookingsTable: 'appointments',
+          bookingsTable: 'appointment_bookings',
         };
       case TemplateCategory.QUIZ:
         return {
           type: 'quiz',
-          scoringRules: {},
+          scoringRules: this.quizConfig().scoringRules.map((rule) => ({ ...rule })),
           passingScore: this.quizConfig().passingScore,
           showResults: this.quizConfig().showResults,
         };
@@ -598,15 +651,22 @@ export class TemplateEditorDialogComponent {
    * @private
    */
   private resetForm(): void {
-    this.templateForm.reset();
-    this.schemaJson.set('{\n  "fields": [],\n  "settings": {}\n}');
-    this.initialSchemaJson = '';
+    this.templateForm.reset({
+      name: '',
+      description: '',
+      category: '',
+      preview_image_url: '',
+      schema: this.defaultSchema,
+    });
+    this.initialSchemaJson = this.defaultSchema;
     this.schemaErrors.set([]);
     this.selectedImage.set(null);
     this.error.set(null);
     this.inventoryConfig.set({ stockField: '', decrementOnSubmit: false });
-    this.appointmentConfig.set({ timeSlotField: '', maxBookingsPerSlot: 1 });
-    this.quizConfig.set({ passingScore: 70, showResults: true });
+    this.appointmentConfig.set({ timeSlotField: '', dateField: '', maxBookingsPerSlot: 1 });
+    this.quizConfig.set({ passingScore: 70, showResults: true, scoringRules: [] });
     this.pollConfig.set({ preventDuplicates: true, showResultsAfterVote: true });
+    this.validateSchema(this.defaultSchema);
+    this.templateForm.markAsPristine();
   }
 }

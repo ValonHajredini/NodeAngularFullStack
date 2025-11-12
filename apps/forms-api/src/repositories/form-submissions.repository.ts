@@ -328,6 +328,100 @@ export class FormSubmissionsRepository {
       client.release();
     }
   }
+
+  /**
+   * Updates submission metadata.
+   * Used to store executor results (quiz scores, booking details, etc.).
+   *
+   * Epic 29: Form Template System with Business Logic
+   * Story 29.13: Quiz Template with Scoring Logic
+   *
+   * @param client - Database client (transaction context)
+   * @param submissionId - Submission UUID
+   * @param metadata - Metadata object to store in JSONB column
+   * @returns Promise containing the updated submission record
+   * @throws {Error} When database query fails or submission not found
+   * @example
+   * const client = await pool.connect();
+   * await client.query('BEGIN');
+   * try {
+   *   const updated = await formSubmissionsRepository.updateMetadata(
+   *     client,
+   *     'submission-uuid',
+   *     { score: 85, correctAnswers: 17, totalQuestions: 20 }
+   *   );
+   *   await client.query('COMMIT');
+   * } catch (error) {
+   *   await client.query('ROLLBACK');
+   *   throw error;
+   * } finally {
+   *   client.release();
+   * }
+   */
+  async updateMetadata(
+    client: any,
+    submissionId: string,
+    metadata: Record<string, any>
+  ): Promise<FormSubmission> {
+    try {
+      const query = `
+        UPDATE form_submissions
+        SET metadata = $1
+        WHERE id = $2
+        RETURNING
+          id,
+          form_schema_id as "formSchemaId",
+          values_json as "values",
+          submitted_at as "submittedAt",
+          submitter_ip as "submitterIp",
+          user_id as "userId",
+          metadata
+      `;
+
+      const result = await client.query(query, [JSON.stringify(metadata), submissionId]);
+
+      if (result.rows.length === 0) {
+        throw new Error(`Submission not found: ${submissionId}`);
+      }
+
+      const row = result.rows[0];
+      return {
+        ...row,
+        values: row.values,
+        metadata: row.metadata || undefined,
+      } as FormSubmission;
+    } catch (error: any) {
+      throw new Error(`Failed to update submission metadata: ${error.message}`);
+    }
+  }
+
+  /**
+   * Deletes a form submission by ID.
+   * Used for compensating transactions when business logic execution fails.
+   * @param submissionId - Submission ID to delete
+   * @returns Promise containing true if deleted, false if not found
+   * @throws {Error} When database query fails
+   * @example
+   * await formSubmissionsRepository.delete('submission-uuid');
+   */
+  async delete(submissionId: string): Promise<boolean> {
+    const client = await this.pool.connect();
+
+    try {
+      const query = `
+        DELETE FROM form_submissions
+        WHERE id = $1
+        RETURNING id
+      `;
+
+      const result = await client.query(query, [submissionId]);
+      return result.rowCount !== null && result.rowCount > 0;
+    } catch (error: any) {
+      throw new Error(`Failed to delete submission: ${error.message}`);
+    } finally {
+      client.release();
+    }
+  }
 }
 
 // Export singleton instance

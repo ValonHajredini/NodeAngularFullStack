@@ -34,6 +34,7 @@ export const appConfig: ApplicationConfig = {
     {
       provide: NGX_MONACO_EDITOR_CONFIG,
       useValue: {
+        baseUrl: '/assets/monaco-editor/min',
         defaultOptions: {
           theme: 'vs-light',
           language: 'html',

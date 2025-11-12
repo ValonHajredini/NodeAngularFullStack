@@ -38,10 +38,7 @@ export class SsoNavigationService {
    * // Navigate to specific form in same window
    * ssoNavigationService.openFormBuilder('/forms/123', false);
    */
-  async openFormBuilder(
-    route: string = '/app/dashboard',
-    openInNewTab: boolean = true,
-  ): Promise<void> {
+  async openFormBuilder(route = '/app/dashboard', openInNewTab = true): Promise<void> {
     return this.navigateWithSso(this.appUrls.formBuilder, route, openInNewTab);
   }
 
@@ -61,11 +58,7 @@ export class SsoNavigationService {
    *   true
    * );
    */
-  async navigateWithSso(
-    baseUrl: string,
-    route: string = '/',
-    openInNewTab: boolean = true,
-  ): Promise<void> {
+  async navigateWithSso(baseUrl: string, route = '/', openInNewTab = true): Promise<void> {
     // Get current user's access token
     const token = this.authService.getAccessToken();
 
@@ -151,7 +144,7 @@ export class SsoNavigationService {
    * // In template
    * <a [href]="formBuilderUrl" target="_blank">Open Form Builder</a>
    */
-  createSsoLink(baseUrl: string, route: string = '/'): string | null {
+  createSsoLink(baseUrl: string, route = '/'): string | null {
     const token = this.authService.getAccessToken();
 
     if (!token || this.authService.isTokenExpired()) {

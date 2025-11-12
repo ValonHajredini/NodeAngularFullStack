@@ -31,8 +31,10 @@ import {
   FormStep,
   StepNavigationEvent,
   RowLayoutConfig,
+  QuizResultMetadata,
   isInputField,
   isDisplayElement,
+  isQuizResultMetadata,
 } from '@nodeangularfullstack/shared';
 
 // Shared Services
@@ -45,6 +47,8 @@ import { ThemePreviewService } from '../../dashboard/theme-preview.service';
 
 // Field Renderers
 import { ImageGalleryRendererComponent } from './image-gallery-renderer.component';
+import { AvailableSlotsComponent } from './available-slots.component';
+import { QuizResultsComponent } from './quiz-results/quiz-results.component';
 
 /**
  * Component state for UI management
@@ -88,6 +92,8 @@ interface StepDotItem {
     Card,
     ButtonDirective,
     ImageGalleryRendererComponent,
+    AvailableSlotsComponent,
+    QuizResultsComponent,
   ],
   providers: [MessageService],
   templateUrl: './form-renderer.component.html',
@@ -234,12 +240,57 @@ export class FormRendererComponent implements OnInit, OnDestroy {
     submissionMessage: null,
   };
 
+  /**
+   * Stock availability signal for product templates (Story 29.11 AC10).
+   * Tracks whether selected product variant is in stock.
+   * - true: In stock (can submit)
+   * - false: Out of stock (disable submit)
+   * - null: No variant selected or not a product form
+   */
+  private readonly _stockAvailable = signal<boolean | null>(null);
+  readonly stockAvailable = this._stockAvailable.asReadonly();
+
+  /**
+   * Quiz results signal for quiz templates (Story 29.13).
+   * Stores quiz scoring results after submission.
+   * Contains score, pass/fail status, and detailed answer breakdown.
+   */
+  private readonly _quizResults = signal<QuizResultMetadata | null>(null);
+  readonly quizResults = this._quizResults.asReadonly();
+
+  /**
+   * Show quiz results flag.
+   * When true, displays QuizResultsComponent instead of form.
+   */
+  private readonly _showQuizResults = signal(false);
+  readonly showQuizResults = this._showQuizResults.asReadonly();
+
+  /**
+   * Check if current form uses quiz template.
+   * Returns true if template business logic config type is 'quiz'.
+   */
+  get isQuizTemplate(): boolean {
+    const template = this.schema?.template;
+    return template?.businessLogicConfig?.type === 'quiz';
+  }
+
   // Expose enums to template
   fieldTypes = FormFieldType;
   errorTypes = FormRenderErrorType;
 
   private destroy$ = new Subject<void>();
   private token = '';
+  private _shortCode = ''; // Form short code for appointment slot fetching
+
+  // Public shortCode signal for template access (Story 29.12)
+  private readonly _shortCodeSignal = signal<string>('');
+  readonly shortCode = this._shortCodeSignal.asReadonly();
+
+  // Computed signal to detect appointment template type (Story 29.12 AC9)
+  protected readonly isAppointmentTemplate = computed(() => {
+    const schema = this._formSchemaSignal();
+    return (schema as any)?.template?.businessLogicConfig?.type === 'appointment';
+  });
 
   private collapsedTextBlocks = new Set<string>();
   private checkboxSelections = new Map<string, string[]>();
@@ -399,6 +450,10 @@ export class FormRendererComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Store short code for appointment slot fetching (Story 29.12)
+    this._shortCode = shortCode;
+    this._shortCodeSignal.set(shortCode);
+
     // Load form schema by short code
     this.formRendererService
       .getFormByShortCode(shortCode)
@@ -477,6 +532,61 @@ export class FormRendererComponent implements OnInit, OnDestroy {
         );
       }
     }
+  }
+
+  /**
+   * Handles appointment slot selection from AvailableSlotsComponent.
+   * Automatically populates date and time slot fields in the form.
+   *
+   * @param slot - Selected slot with date and timeSlot
+   */
+  onSlotSelected(slot: { date: string; timeSlot: string }): void {
+    if (!this.formGroup) {
+      console.warn('Form group not initialized, cannot populate slot fields');
+      return;
+    }
+
+    console.log('Slot selected:', slot);
+
+    // Find date and time slot fields in the form schema
+    const dateField = this.schema?.fields.find((f) => f.type === FormFieldType.DATE);
+    const timeSlotField = this.schema?.fields.find(
+      (f) => f.type === FormFieldType.SELECT && f.fieldName.toLowerCase().includes('time')
+    );
+
+    // Auto-populate date field
+    if (dateField) {
+      const dateControl = this.formGroup.get(dateField.fieldName);
+      if (dateControl) {
+        // Convert ISO date string (YYYY-MM-DD) to Date object for calendar field
+        const dateValue = new Date(slot.date + 'T00:00:00');
+        dateControl.setValue(dateValue);
+        dateControl.markAsTouched();
+        console.log(`Auto-populated date field "${dateField.fieldName}" with:`, dateValue);
+      }
+    } else {
+      console.warn('No date field found in form schema');
+    }
+
+    // Auto-populate time slot field
+    if (timeSlotField) {
+      const timeSlotControl = this.formGroup.get(timeSlotField.fieldName);
+      if (timeSlotControl) {
+        timeSlotControl.setValue(slot.timeSlot);
+        timeSlotControl.markAsTouched();
+        console.log(`Auto-populated time slot field "${timeSlotField.fieldName}" with:`, slot.timeSlot);
+      }
+    } else {
+      console.warn('No time slot field found in form schema');
+    }
+
+    // Scroll to form fields after slot selection
+    setTimeout(() => {
+      const formElement = document.querySelector('.form-fields-container');
+      if (formElement) {
+        formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
   }
 
   ngOnDestroy(): void {
@@ -1015,6 +1125,16 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Handles stock availability changes from IMAGE_GALLERY fields with variant metadata (Story 29.11 AC10).
+   * Updates stock availability signal to control submit button state.
+   *
+   * @param available - Stock availability (true: in stock, false: out of stock, null: no variant selected)
+   */
+  onStockAvailabilityChange(available: boolean | null): void {
+    this._stockAvailable.set(available);
+  }
+
+  /**
    * Returns fields sorted by order
    */
   getSortedFields(): FormField[] {
@@ -1400,24 +1520,35 @@ export class FormRendererComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (result) => {
-          // Success - show success message
-          const successMessage =
-            this.settings?.submission?.successMessage ||
-            result.message ||
-            'Thank you! Your response has been submitted.';
+          // Check if response contains quiz results (Story 29.13)
+          if (this.isQuizTemplate && isQuizResultMetadata(result.metadata)) {
+            const metadata = result.metadata;
+            this._quizResults.set(metadata);
+            this._showQuizResults.set(true);
+            this.state = {
+              ...this.state,
+              submitting: false,
+            };
+          } else {
+            // Success - show success message
+            const successMessage =
+              this.settings?.submission?.successMessage ||
+              result.message ||
+              'Thank you! Your response has been submitted.';
 
-          this.state = {
-            ...this.state,
-            submitting: false,
-            submitted: true,
-            submissionMessage: successMessage,
-          };
+            this.state = {
+              ...this.state,
+              submitting: false,
+              submitted: true,
+              submissionMessage: successMessage,
+            };
 
-          // Handle redirect if configured
-          if (this.settings?.submission?.redirectUrl) {
-            setTimeout(() => {
-              window.location.href = this.settings!.submission!.redirectUrl!;
-            }, 3000);
+            // Handle redirect if configured
+            if (this.settings?.submission?.redirectUrl) {
+              setTimeout(() => {
+                window.location.href = this.settings!.submission!.redirectUrl!;
+              }, 3000);
+            }
           }
         },
         error: (error: FormRenderError) => {

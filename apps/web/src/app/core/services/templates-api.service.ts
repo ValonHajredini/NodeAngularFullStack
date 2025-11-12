@@ -61,7 +61,7 @@ interface ApiResponse<T> {
   providedIn: 'root',
 })
 export class TemplatesApiService {
-  private readonly baseUrl = `${environment.formsApiUrl}/api/templates`;
+  private readonly baseUrl = `${environment.formsApiUrl}/api/v1/templates`;
   private cache$: Observable<FormTemplate[]> | null = null;
 
   constructor(private readonly http: HttpClient) {}

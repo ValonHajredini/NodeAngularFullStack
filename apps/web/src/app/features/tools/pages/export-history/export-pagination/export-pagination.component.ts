@@ -59,25 +59,25 @@ export class ExportPaginationComponent {
    * Current page number (1-indexed).
    * Passed from parent container component.
    */
-  @Input({ required: true }) currentPage: number = 1;
+  @Input({ required: true }) currentPage = 1;
 
   /**
    * Total number of pages.
    * Calculated by parent based on total count and page size.
    */
-  @Input({ required: true }) totalPages: number = 1;
+  @Input({ required: true }) totalPages = 1;
 
   /**
    * Number of items per page.
    * Default: 20 items.
    */
-  @Input({ required: true }) pageSize: number = 20;
+  @Input({ required: true }) pageSize = 20;
 
   /**
    * Total count of items across all pages.
    * Used for display purposes.
    */
-  @Input({ required: true }) totalCount: number = 0;
+  @Input({ required: true }) totalCount = 0;
 
   /**
    * Emitted when user navigates to a different page.

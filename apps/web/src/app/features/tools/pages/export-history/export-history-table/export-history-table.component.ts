@@ -66,7 +66,7 @@ export class ExportHistoryTableComponent {
    * Whether current user is an admin.
    * Controls visibility of delete button.
    */
-  @Input({ required: true }) isAdmin: boolean = false;
+  @Input({ required: true }) isAdmin = false;
 
   /**
    * Current sort field name.

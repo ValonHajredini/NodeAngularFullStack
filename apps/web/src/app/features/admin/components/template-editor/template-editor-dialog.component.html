@@ -113,16 +113,19 @@
           <label for="category" class="block font-medium text-gray-700 mb-2">
             Category <span class="text-red-500">*</span>
           </label>
-          <p-select
+          <select
             id="category"
             formControlName="category"
-            [options]="categoryOptions"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Select a category"
-            class="w-full"
-            [styleClass]="'w-full'"
-          />
+            class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
+            [class.border-red-500]="
+              categoryControl?.invalid && (categoryControl?.dirty || categoryControl?.touched)
+            "
+          >
+            <option value="" disabled>Select a category</option>
+            <option *ngFor="let option of categoryOptions" [value]="option.value">
+              {{ option.label }}
+            </option>
+          </select>
           @if (categoryControl?.invalid && (categoryControl?.dirty || categoryControl?.touched)) {
             <small class="text-red-500 block mt-1"> Category is required </small>
           }
@@ -167,6 +170,36 @@
       <div class="space-y-4">
         <h3 class="text-lg font-semibold text-gray-800 border-b pb-2">Template Schema (JSON)</h3>
 
+        <!-- Debug Panel (Temporary) -->
+        <div class="bg-blue-50 border border-blue-200 rounded p-3 text-xs">
+          <p class="font-semibold mb-1">Debug Info:</p>
+          <ul class="space-y-1">
+            <li>Form Valid: {{ debugFormValid() ? '✅' : '❌' }}</li>
+            <li>Form Status: {{ getFormStatus() }}</li>
+            <li>
+              Schema Errors: {{ debugSchemaErrors() }} {{ debugSchemaErrors() === 0 ? '✅' : '❌' }}
+            </li>
+            <li>Saving: {{ debugSaving() ? '⏳' : '✅' }}</li>
+            <li>Can Save: {{ canSave() ? '✅' : '❌' }}</li>
+            <li>
+              Invalid Fields:
+              @if (getInvalidControls().length === 0) {
+                None
+              } @else {
+                {{ getInvalidControls().join(', ') }}
+              }
+            </li>
+            <li>
+              Form Errors:
+              @if (getFormErrors().length === 0) {
+                None
+              } @else {
+                {{ getFormErrors().join(', ') }}
+              }
+            </li>
+          </ul>
+        </div>
+
         <!-- Schema Errors Panel -->
         @if (schemaErrors().length > 0) {
           <div class="bg-red-50 border border-red-200 rounded p-4">
@@ -184,21 +217,34 @@
           </div>
         }
 
-        <!-- Monaco Editor -->
-        <div class="border rounded overflow-hidden" style="height: 400px">
-          <ngx-monaco-editor
-            [options]="editorOptions"
-            [(ngModel)]="schemaJson"
-            [ngModelOptions]="{ standalone: true }"
-            (ngModelChange)="onSchemaChange($event)"
-          ></ngx-monaco-editor>
+        <!-- Schema JSON Textarea -->
+        <div class="field">
+          <textarea
+            pTextarea
+            formControlName="schema"
+            (blur)="validateSchema()"
+            class="w-full font-mono text-sm"
+            rows="20"
+            placeholder='Enter JSON schema (e.g., {"fields": [], "settings": {}})'
+            style="resize: vertical; min-height: 400px"
+          ></textarea>
         </div>
 
-        <p class="text-sm text-gray-500 italic">
-          <i class="pi pi-info-circle mr-1"></i>
-          Schema must have a "fields" array with each field containing: id, type, name, label. Max
-          size: 100KB.
-        </p>
+        <div class="flex items-center justify-between">
+          <p class="text-sm text-gray-500 italic">
+            <i class="pi pi-info-circle mr-1"></i>
+            Schema must have a "fields" array with each field containing: id, type, fieldName,
+            label. Max size: 100KB.
+          </p>
+          <button
+            pButton
+            label="Validate Schema"
+            icon="pi pi-check-circle"
+            class="p-button-sm p-button-secondary"
+            (click)="validateSchema()"
+            type="button"
+          ></button>
+        </div>
       </div>
 
       <!-- Business Logic Configuration Section -->
@@ -261,19 +307,32 @@
                 />
               </div>
               <div class="field">
-                <label for="maxBookingsPerSlot" class="block text-sm font-medium text-gray-700 mb-2"
-                  >Max Bookings Per Slot</label
+                <label for="dateField" class="block text-sm font-medium text-gray-700 mb-2"
+                  >Date Field Name</label
                 >
                 <input
                   pInputText
-                  id="maxBookingsPerSlot"
-                  type="number"
-                  [(ngModel)]="appointmentConfig().maxBookingsPerSlot"
+                  id="dateField"
+                  [(ngModel)]="appointmentConfig().dateField"
                   [ngModelOptions]="{ standalone: true }"
-                  min="1"
+                  placeholder="e.g., appointment_date"
                   class="w-full"
                 />
               </div>
+            </div>
+            <div class="field">
+              <label for="maxBookingsPerSlot" class="block text-sm font-medium text-gray-700 mb-2"
+                >Max Bookings Per Slot</label
+              >
+              <input
+                pInputText
+                id="maxBookingsPerSlot"
+                type="number"
+                [(ngModel)]="appointmentConfig().maxBookingsPerSlot"
+                [ngModelOptions]="{ standalone: true }"
+                min="1"
+                class="w-full"
+              />
             </div>
           </div>
         }

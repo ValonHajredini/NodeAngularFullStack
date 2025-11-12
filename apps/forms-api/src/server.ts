@@ -33,6 +33,7 @@ import { formsRoutes } from './routes/forms.routes';
 import { publicFormsRoutes } from './routes/public-forms.routes';
 import { themesRoutes } from './routes/themes.routes';
 import templatesRoutes from './routes/templates.routes';
+import inventoryRoutes from './routes/inventory.routes';
 import { shortLinksController } from './controllers/short-links.controller';
 import { resolveShortLinkValidator } from './validators/url.validators';
 
@@ -178,6 +179,7 @@ class Server {
     this.app.use('/api/v1/themes', themesRoutes);
     this.app.use('/api/v1', templatesRoutes);
     this.app.use('/api/v1/public', publicFormsRoutes);
+    this.app.use('/api/v1/inventory', inventoryRoutes); // Real-time stock checking
     this.app.use('/api/v1/tools/short-links', shortLinksRoutes); // Form short links only
     this.app.use('/api/v1', healthRoutes);
 

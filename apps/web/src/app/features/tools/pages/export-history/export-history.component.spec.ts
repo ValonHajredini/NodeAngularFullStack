@@ -316,8 +316,12 @@ describe('ExportHistoryComponent', () => {
     });
 
     it('should support all sort fields', () => {
-      const fields: Array<'created_at' | 'completed_at' | 'download_count' | 'package_size_bytes'> =
-        ['created_at', 'completed_at', 'download_count', 'package_size_bytes'];
+      const fields: ('created_at' | 'completed_at' | 'download_count' | 'package_size_bytes')[] = [
+        'created_at',
+        'completed_at',
+        'download_count',
+        'package_size_bytes',
+      ];
 
       fields.forEach((field) => {
         component.onSortChange({ sortBy: field, sortOrder: 'desc' });

@@ -22,6 +22,7 @@ import { Message } from 'primeng/message';
 import { FormTemplate, TemplateCategory, FormSchema } from '@nodeangularfullstack/shared';
 import { TemplateCardComponent } from './template-card.component';
 import { TemplatePreviewModalComponent } from '../template-preview-modal/template-preview-modal.component';
+import { TemplatesApiService } from '../templates-api.service';
 
 /**
  * Interface representing a template category with metadata for display
@@ -312,6 +313,7 @@ interface CategoryData {
 })
 export class TemplateSelectionModalComponent implements OnInit {
   private readonly router = inject(Router);
+  private readonly templatesApiService = inject(TemplatesApiService);
 
   /** Input/Output for dialog visibility */
   @Input() set visible(value: boolean) {
@@ -343,7 +345,7 @@ export class TemplateSelectionModalComponent implements OnInit {
   /** Signal for currently selected/expanded category */
   protected readonly selectedCategory = signal<TemplateCategory | null>(null);
 
-  /** Signal containing all templates (mock data for now) */
+  /** Signal containing all templates loaded from API */
   protected readonly templates = signal<FormTemplate[]>([]);
 
   /** Signal for preview modal visibility */
@@ -415,118 +417,39 @@ export class TemplateSelectionModalComponent implements OnInit {
   private searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
 
   ngOnInit(): void {
-    // TODO: Load templates from API service (Story 29.8)
-    // For now, using mock data
-    this.loadTemplatesMock();
+    // Load templates from API
+    this.loadTemplates();
   }
 
   /**
-   * Creates mock template data for development
-   * @returns Array of mock form templates
-   * @private
+   * Loads templates from API service
+   * Story 29.8: Template Application to Form Builder
    */
-  private createMockTemplates(): FormTemplate[] {
-    const mockApiDelayMs = 500;
-    const emptySchema = {} as FormSchema;
-
-    return [
-      {
-        id: '1',
-        name: 'Product Order Form',
-        description: 'Standard product order form with inventory tracking',
-        category: TemplateCategory.ECOMMERCE,
-        previewImageUrl: 'https://via.placeholder.com/300x200?text=Product+Order',
-        templateSchema: emptySchema,
-        isActive: true,
-        usageCount: 42,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        id: '2',
-        name: 'Appointment Booking',
-        description: 'Schedule appointments with time slot management',
-        category: TemplateCategory.SERVICES,
-        previewImageUrl: 'https://via.placeholder.com/300x200?text=Appointments',
-        templateSchema: emptySchema,
-        isActive: true,
-        usageCount: 35,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        id: '3',
-        name: 'Customer Feedback Survey',
-        description: 'Collect customer feedback and ratings',
-        category: TemplateCategory.DATA_COLLECTION,
-        previewImageUrl: 'https://via.placeholder.com/300x200?text=Survey',
-        templateSchema: emptySchema,
-        isActive: true,
-        usageCount: 28,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        id: '4',
-        name: 'Event RSVP',
-        description: 'Manage event registrations and RSVPs',
-        category: TemplateCategory.EVENTS,
-        previewImageUrl: 'https://via.placeholder.com/300x200?text=RSVP',
-        templateSchema: emptySchema,
-        isActive: true,
-        usageCount: 22,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        id: '5',
-        name: 'Knowledge Quiz',
-        description: 'Create quizzes with automatic scoring',
-        category: TemplateCategory.QUIZ,
-        previewImageUrl: 'https://via.placeholder.com/300x200?text=Quiz',
-        templateSchema: emptySchema,
-        isActive: true,
-        usageCount: 18,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        id: '6',
-        name: 'Opinion Poll',
-        description: 'Gather opinions with vote aggregation',
-        category: TemplateCategory.POLLS,
-        previewImageUrl: 'https://via.placeholder.com/300x200?text=Poll',
-        templateSchema: emptySchema,
-        isActive: true,
-        usageCount: 15,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    ];
-  }
-
-  /**
-   * Loads mock template data for development
-   * TODO: Replace with actual API call in Story 29.8
-   */
-  private loadTemplatesMock(): void {
-    const mockApiDelayMs = 500;
+  private loadTemplates(): void {
     this.loading.set(true);
     this.error.set(null);
 
-    // Simulate API delay
-    setTimeout(() => {
-      const mockTemplates = this.createMockTemplates();
-      this.templates.set(mockTemplates);
-      this.loading.set(false);
-    }, mockApiDelayMs);
+    this.templatesApiService.getTemplates().subscribe({
+      next: (response) => {
+        // API returns { success, data: FormTemplate[], pagination, timestamp }
+        this.templates.set(response.data || []);
+        this.loading.set(false);
+      },
+      error: (error) => {
+        console.error('Failed to load templates:', error);
+        this.error.set(
+          error.error?.message || 'Failed to load templates. Please try again.'
+        );
+        this.loading.set(false);
+      },
+    });
   }
 
   /**
    * Retries loading templates after an error
    */
   protected retryLoadTemplates(): void {
-    this.loadTemplatesMock();
+    this.loadTemplates();
   }
 
   /**
@@ -594,10 +517,8 @@ export class TemplateSelectionModalComponent implements OnInit {
     this.templateSelected.emit(template);
     this.closeDialog();
 
-    // Navigate to form builder with template ID
-    this.router.navigate(['/app/form-builder'], {
-      queryParams: { templateId: template.id },
-    });
+    // Navigation handled by parent component (FormsListComponent)
+    // Parent will create form from template and navigate to builder
   }
 
   /**
@@ -607,8 +528,8 @@ export class TemplateSelectionModalComponent implements OnInit {
     this.startBlank.emit();
     this.closeDialog();
 
-    // Navigate to form builder without template
-    this.router.navigate(['/app/form-builder']);
+    // Navigation handled by parent component (FormsListComponent)
+    // Parent will open create form modal
   }
 
   /**

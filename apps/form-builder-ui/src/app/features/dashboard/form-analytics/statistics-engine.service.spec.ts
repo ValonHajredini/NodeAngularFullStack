@@ -267,4 +267,181 @@ describe('StatisticsEngineService', () => {
       expect(distribution[1].percentage).toBe(100);
     });
   });
+
+  describe('analyzeQuizScores (Epic 29, Story 29.13, TEST-003)', () => {
+    it('should categorize submissions into correct score ranges', () => {
+      const submissions = [
+        createQuizSubmission(10), // 0-20%
+        createQuizSubmission(35), // 21-40%
+        createQuizSubmission(50), // 41-60%
+        createQuizSubmission(75), // 61-80%
+        createQuizSubmission(95), // 81-100%
+      ];
+
+      const result = service.analyzeQuizScores(submissions);
+
+      expect(result.labels).toEqual(['0-20%', '21-40%', '41-60%', '61-80%', '81-100%']);
+      expect(result.datasets[0].data).toEqual([1, 1, 1, 1, 1]);
+    });
+
+    it('should handle boundary values correctly', () => {
+      const submissions = [
+        createQuizSubmission(0), // 0-20%
+        createQuizSubmission(20), // 0-20%
+        createQuizSubmission(40), // 21-40%
+        createQuizSubmission(60), // 41-60%
+        createQuizSubmission(80), // 61-80%
+        createQuizSubmission(100), // 81-100%
+      ];
+
+      const result = service.analyzeQuizScores(submissions);
+
+      expect(result.datasets[0].data).toEqual([2, 1, 1, 1, 1]);
+    });
+
+    it('should handle empty submissions array', () => {
+      const result = service.analyzeQuizScores([]);
+
+      expect(result.labels).toEqual(['0-20%', '21-40%', '41-60%', '61-80%', '81-100%']);
+      expect(result.datasets[0].data).toEqual([0, 0, 0, 0, 0]);
+    });
+
+    it('should skip submissions without quiz metadata', () => {
+      const submissions = [
+        createQuizSubmission(50),
+        createRegularSubmission(), // No quiz metadata
+        createQuizSubmission(80),
+      ];
+
+      const result = service.analyzeQuizScores(submissions);
+
+      // Should only count the 2 quiz submissions
+      expect(result.datasets[0].data).toEqual([0, 0, 1, 1, 0]);
+    });
+
+    it('should handle perfect score (100%)', () => {
+      const submissions = [createQuizSubmission(100)];
+
+      const result = service.analyzeQuizScores(submissions);
+
+      expect(result.datasets[0].data[4]).toBe(1); // 81-100% range
+    });
+
+    it('should handle zero score (0%)', () => {
+      const submissions = [createQuizSubmission(0)];
+
+      const result = service.analyzeQuizScores(submissions);
+
+      expect(result.datasets[0].data[0]).toBe(1); // 0-20% range
+    });
+
+    it('should count multiple submissions in the same range', () => {
+      const submissions = [
+        createQuizSubmission(85),
+        createQuizSubmission(90),
+        createQuizSubmission(95),
+        createQuizSubmission(100),
+      ];
+
+      const result = service.analyzeQuizScores(submissions);
+
+      expect(result.datasets[0].data[4]).toBe(4); // All in 81-100% range
+    });
+
+    it('should return correct ChartData structure', () => {
+      const submissions = [createQuizSubmission(50)];
+
+      const result = service.analyzeQuizScores(submissions);
+
+      expect(result).toHaveProperty('labels');
+      expect(result).toHaveProperty('datasets');
+      expect(Array.isArray(result.labels)).toBe(true);
+      expect(Array.isArray(result.datasets)).toBe(true);
+      expect(result.datasets[0]).toHaveProperty('label');
+      expect(result.datasets[0].label).toBe('Number of Submissions');
+    });
+
+    it('should have 5 color-coded background colors', () => {
+      const result = service.analyzeQuizScores([]);
+
+      const colors = result.datasets[0].backgroundColor as string[];
+      expect(colors.length).toBe(5);
+      expect(colors[0]).toContain('244, 67, 54'); // Red
+      expect(colors[4]).toContain('76, 175, 80'); // Green
+    });
+
+    it('should analyze a typical class quiz distribution', () => {
+      const submissions = [
+        // Failed (0-20%): 2 students
+        createQuizSubmission(10),
+        createQuizSubmission(15),
+        // Poor (21-40%): 3 students
+        createQuizSubmission(25),
+        createQuizSubmission(30),
+        createQuizSubmission(38),
+        // Average (41-60%): 5 students
+        createQuizSubmission(45),
+        createQuizSubmission(50),
+        createQuizSubmission(52),
+        createQuizSubmission(55),
+        createQuizSubmission(60),
+        // Good (61-80%): 8 students
+        createQuizSubmission(65),
+        createQuizSubmission(70),
+        createQuizSubmission(72),
+        createQuizSubmission(75),
+        createQuizSubmission(76),
+        createQuizSubmission(78),
+        createQuizSubmission(79),
+        createQuizSubmission(80),
+        // Excellent (81-100%): 12 students
+        createQuizSubmission(82),
+        createQuizSubmission(85),
+        createQuizSubmission(88),
+        createQuizSubmission(90),
+        createQuizSubmission(92),
+        createQuizSubmission(94),
+        createQuizSubmission(95),
+        createQuizSubmission(96),
+        createQuizSubmission(97),
+        createQuizSubmission(98),
+        createQuizSubmission(99),
+        createQuizSubmission(100),
+      ];
+
+      const result = service.analyzeQuizScores(submissions);
+
+      // Bell curve distribution
+      expect(result.datasets[0].data).toEqual([2, 3, 5, 8, 12]);
+    });
+  });
 });
+
+// Helper Functions for Quiz Tests
+
+function createQuizSubmission(score: number): any {
+  return {
+    id: `quiz-sub-${Math.random()}`,
+    formSchemaId: 'test-form-id',
+    data: {},
+    metadata: {
+      score,
+      passed: score >= 60,
+      correctAnswers: Math.floor((score / 100) * 10),
+      totalQuestions: 10,
+    },
+    submittedAt: new Date(),
+    submitterIp: '127.0.0.1',
+  };
+}
+
+function createRegularSubmission(): any {
+  return {
+    id: `regular-sub-${Math.random()}`,
+    formSchemaId: 'test-form-id',
+    data: { name: 'Test User', email: 'test@example.com' },
+    metadata: null,
+    submittedAt: new Date(),
+    submitterIp: '127.0.0.1',
+  };
+}

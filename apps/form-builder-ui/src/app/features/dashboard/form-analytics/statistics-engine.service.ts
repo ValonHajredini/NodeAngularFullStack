@@ -9,6 +9,8 @@ import {
   FormSubmission,
   FormSchema,
   StepNavigationEvent,
+  ChartData,
+  isQuizResultMetadata,
 } from '@nodeangularfullstack/shared';
 
 /**
@@ -380,6 +382,65 @@ export class StatisticsEngineService {
       totalSubmissions: submissions.length,
       stepStats: stepStatsArray,
       funnelData,
+    };
+  }
+
+  /**
+   * Analyzes quiz score distribution from form submissions.
+   * Groups scores into percentage ranges for visualization.
+   *
+   * @param submissions - Array of form submissions with quiz result metadata
+   * @returns Chart data with score ranges and color-coded distribution
+   *
+   * @example
+   * ```typescript
+   * const chartData = statisticsService.analyzeQuizScores(submissions);
+   * // Returns: {
+   * //   labels: ['0-20%', '21-40%', '41-60%', '61-80%', '81-100%'],
+   * //   datasets: [{ label: 'Number of Submissions', data: [2, 3, 5, 8, 12], ... }]
+   * // }
+   * ```
+   *
+   * Epic 29: Form Template System with Business Logic
+   * Story 29.13: Quiz Template with Scoring Logic
+   */
+  analyzeQuizScores(submissions: FormSubmission[]): ChartData {
+    const scoreRanges: { [key: string]: number } = {
+      '0-20%': 0,
+      '21-40%': 0,
+      '41-60%': 0,
+      '61-80%': 0,
+      '81-100%': 0,
+    };
+
+    submissions.forEach((sub) => {
+      if (!isQuizResultMetadata(sub.metadata)) {
+        return;
+      }
+
+      const score = sub.metadata.score;
+      if (score <= 20) scoreRanges['0-20%']++;
+      else if (score <= 40) scoreRanges['21-40%']++;
+      else if (score <= 60) scoreRanges['41-60%']++;
+      else if (score <= 80) scoreRanges['61-80%']++;
+      else scoreRanges['81-100%']++;
+    });
+
+    return {
+      labels: Object.keys(scoreRanges),
+      datasets: [
+        {
+          label: 'Number of Submissions',
+          data: Object.values(scoreRanges),
+          backgroundColor: [
+            'rgba(244, 67, 54, 0.7)', // Red (0-20%)
+            'rgba(255, 152, 0, 0.7)', // Orange (21-40%)
+            'rgba(255, 235, 59, 0.7)', // Yellow (41-60%)
+            'rgba(139, 195, 74, 0.7)', // Light Green (61-80%)
+            'rgba(76, 175, 80, 0.7)', // Green (81-100%)
+          ],
+        },
+      ],
     };
   }
 }

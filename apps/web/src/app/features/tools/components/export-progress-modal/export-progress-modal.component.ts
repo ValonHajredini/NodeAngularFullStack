@@ -130,7 +130,7 @@ export class ExportProgressModalComponent implements OnDestroy {
 
   readonly packageExpired = computed(() => {
     const job = this.exportJob();
-    if (!job || !job.packageExpiresAt) return false;
+    if (!job?.packageExpiresAt) return false;
     return new Date(job.packageExpiresAt) < new Date();
   });
 
@@ -307,7 +307,7 @@ export class ExportProgressModalComponent implements OnDestroy {
    */
   downloadPackage(): void {
     const job = this.exportJob();
-    if (!job || !job.jobId) {
+    if (!job?.jobId) {
       console.error('[ExportProgressModal] No export job available');
       return;
     }

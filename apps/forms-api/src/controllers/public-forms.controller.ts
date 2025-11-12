@@ -4,10 +4,13 @@ import validator from 'validator';
 import { formSchemasRepository } from '../repositories/form-schemas.repository';
 import { formSubmissionsRepository } from '../repositories/form-submissions.repository';
 import { shortLinksRepository } from '../repositories/short-links.repository';
+import { templatesRepository } from '../repositories/templates.repository';
+import { appointmentBookingRepository } from '../repositories/appointment-booking.repository';
 import { ApiError } from '../services/forms.service';
 import { AsyncHandler } from '../utils/async-handler.utils';
 import { AppConfig } from '../config/app.config';
 import { FormField, FormFieldType } from '@nodeangularfullstack/shared';
+import { TemplateExecutorRegistry } from '../services/template-executor-registry.service';
 
 /**
  * JWT payload structure for form render tokens
@@ -401,6 +404,42 @@ export class PublicFormsController {
         throw error;
       }
 
+      // Template business logic integration (Epic 29.11: Inventory Tracking)
+      // Check if form has a template with business logic configuration
+      let template = null;
+      const templateId = formSchema.settings?.templateId;
+
+      if (templateId) {
+        try {
+          template = await templatesRepository.findById(templateId);
+
+          if (template && template.businessLogicConfig) {
+            // Validate business logic before creating submission
+            const validation = await TemplateExecutorRegistry.validateBeforeSubmission(
+              { values: sanitizedValues },
+              template
+            );
+
+            if (!validation.valid) {
+              const error = new ApiError(
+                validation.errors[0] || 'Business logic validation failed',
+                400,
+                'BUSINESS_LOGIC_VALIDATION_ERROR'
+              );
+              (error as any).errors = validation.errors;
+              throw error;
+            }
+          }
+        } catch (error: any) {
+          // Re-throw validation errors
+          if (error instanceof ApiError) {
+            throw error;
+          }
+          // Log other errors but don't block submission
+          console.error('Template validation error:', error);
+        }
+      }
+
       // Create submission
       const submission = await formSubmissionsRepository.create({
         formSchemaId,
@@ -413,6 +452,30 @@ export class PublicFormsController {
         },
       });
 
+      // Execute template business logic after submission (if applicable)
+      let executorResult = null;
+      if (template && template.businessLogicConfig) {
+        try {
+          executorResult = await TemplateExecutorRegistry.executeAfterSubmission(
+            submission,
+            template
+          );
+        } catch (error: any) {
+          // Business logic execution failed - delete submission (compensating transaction)
+          try {
+            await formSubmissionsRepository.delete(submission.id);
+          } catch (deleteError) {
+            console.error('Failed to delete submission after executor error:', deleteError);
+          }
+
+          throw new ApiError(
+            `Submission failed: ${error.message}`,
+            500,
+            'BUSINESS_LOGIC_EXECUTION_ERROR'
+          );
+        }
+      }
+
       // Return success response
       res.status(201).json({
         success: true,
@@ -423,6 +486,8 @@ export class PublicFormsController {
           successMessage:
             formSchema.settings?.submission?.successMessage ||
             'Thank you for your submission!',
+          // Include executor result if available (e.g., remaining stock)
+          executorResult: executorResult?.data,
         },
         timestamp: new Date().toISOString(),
       });
@@ -482,6 +547,136 @@ export class PublicFormsController {
           theme: formData.theme || null, // null if no theme or theme deleted
           shortCode: formData.shortCode,
           renderToken: formData.renderToken, // Include render token for form submission
+        },
+        timestamp: new Date().toISOString(),
+      });
+    }
+  );
+
+  /**
+   * Retrieves available appointment slots for a form using short code.
+   * @route GET /api/public/forms/:shortCode/available-slots
+   * @param req - Express request object with shortCode parameter and query params
+   * @param res - Express response object
+   * @returns HTTP response with available slots array
+   * @throws {ApiError} 400 - Missing or invalid query parameters
+   * @throws {ApiError} 404 - Short code not found, form not published, or no appointment config
+   * @throws {ApiError} 410 - Form has expired
+   * @example
+   * GET /api/public/forms/abc123/available-slots?startDate=2025-12-15&endDate=2025-12-22
+   */
+  getAvailableSlots = AsyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const { shortCode } = req.params;
+      const { startDate, endDate } = req.query;
+
+      // Validate short code
+      if (!shortCode) {
+        throw new ApiError('Invalid short code', 404, 'INVALID_SHORT_CODE');
+      }
+
+      // Validate query parameters
+      if (!startDate || !endDate) {
+        throw new ApiError(
+          'Missing required query parameters: startDate and endDate',
+          400,
+          'MISSING_PARAMETERS'
+        );
+      }
+
+      // Validate date format (YYYY-MM-DD)
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (
+        typeof startDate !== 'string' ||
+        !dateRegex.test(startDate) ||
+        typeof endDate !== 'string' ||
+        !dateRegex.test(endDate)
+      ) {
+        throw new ApiError(
+          'Invalid date format. Expected YYYY-MM-DD (ISO 8601)',
+          400,
+          'INVALID_DATE_FORMAT'
+        );
+      }
+
+      // Validate date range (endDate must be after or equal to startDate)
+      if (new Date(endDate) < new Date(startDate)) {
+        throw new ApiError(
+          'Invalid date range: endDate must be after or equal to startDate',
+          400,
+          'INVALID_DATE_RANGE'
+        );
+      }
+
+      // Query form data by short code
+      const formData =
+        await shortLinksRepository.findFormSchemaByCode(shortCode);
+
+      if (!formData) {
+        throw new ApiError('Form not found', 404, 'FORM_NOT_FOUND');
+      }
+
+      // Check if form has expired
+      if (
+        formData.schema.expiresAt &&
+        new Date(formData.schema.expiresAt) < new Date()
+      ) {
+        throw new ApiError('This form has expired', 410, 'FORM_EXPIRED');
+      }
+
+      // Get template ID from form settings
+      const templateId = formData.settings?.templateId;
+
+      if (!templateId) {
+        throw new ApiError(
+          'Form is not configured with an appointment template',
+          404,
+          'NO_APPOINTMENT_CONFIG'
+        );
+      }
+
+      // Retrieve template with business logic configuration
+      const template = await templatesRepository.findById(templateId);
+
+      if (!template || !template.businessLogicConfig) {
+        throw new ApiError(
+          'Form template not found or has no business logic configuration',
+          404,
+          'TEMPLATE_NOT_FOUND'
+        );
+      }
+
+      // Verify template has appointment business logic
+      if (template.businessLogicConfig.type !== 'appointment') {
+        throw new ApiError(
+          'Form is not configured for appointment booking',
+          404,
+          'NOT_APPOINTMENT_FORM'
+        );
+      }
+
+      // Extract AppointmentConfig
+      const appointmentConfig = template.businessLogicConfig as any; // Type will be narrowed
+
+      // Query available slots from repository
+      const slots = await appointmentBookingRepository.getAvailableSlots(
+        formData.schema.id,
+        startDate,
+        endDate,
+        appointmentConfig.maxBookingsPerSlot
+      );
+
+      // Return available slots
+      res.status(200).json({
+        success: true,
+        message: 'Available slots retrieved successfully',
+        data: {
+          slots,
+          dateRange: {
+            startDate,
+            endDate,
+          },
+          maxBookingsPerSlot: appointmentConfig.maxBookingsPerSlot,
         },
         timestamp: new Date().toISOString(),
       });

@@ -158,9 +158,7 @@ export class TemplateManagementPage implements OnInit {
     const query = this.searchQuery().toLowerCase();
     if (query) {
       filtered = filtered.filter(
-        (t) =>
-          t.name.toLowerCase().includes(query) ||
-          (t.description && t.description.toLowerCase().includes(query)),
+        (t) => t.name.toLowerCase().includes(query) || t.description?.toLowerCase().includes(query),
       );
     }
 

@@ -1,0 +1,267 @@
+/**
+ * Available Slots Component Styles
+ * Epic 29, Story 29.12: Appointment Booking Template with Time Slot Management
+ */
+
+.available-slots-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+  }
+}
+
+/* Header Section */
+.slots-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.slots-title {
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0 0 0.5rem 0;
+
+  @media (max-width: 768px) {
+    font-size: 1.5rem;
+  }
+}
+
+.slots-description {
+  font-size: 1rem;
+  color: var(--text-color-secondary);
+  margin: 0;
+}
+
+/* Date Range Selector */
+.date-range-selector {
+  margin-bottom: 2rem;
+}
+
+.date-range-label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-color);
+}
+
+.date-range-hint {
+  display: block;
+  margin-top: 0.5rem;
+  color: var(--text-color-secondary);
+  font-size: 0.875rem;
+}
+
+/* Loading State */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+}
+
+.loading-text {
+  margin-top: 1rem;
+  color: var(--text-color-secondary);
+  font-size: 1rem;
+}
+
+/* Error State */
+.error-container {
+  text-align: center;
+  padding: 2rem;
+}
+
+/* Slots Grid */
+.slots-grid {
+  margin-top: 2rem;
+}
+
+.date-group {
+  margin-bottom: 3rem;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.date-heading {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0 0 1rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--surface-border);
+}
+
+.slots-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.75rem;
+  }
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+}
+
+/* Slot Card */
+.slot-card {
+  position: relative;
+  padding: 1rem;
+  border: 2px solid var(--surface-border);
+  border-radius: 8px;
+  background-color: var(--surface-card);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+
+  &:hover:not(.slot-full) {
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  &.slot-full {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: var(--surface-ground);
+  }
+
+  &.slot-selected {
+    border-color: var(--primary-color);
+    background-color: var(--primary-50);
+    box-shadow: 0 4px 12px rgba(var(--primary-500-rgb), 0.2);
+
+    .slot-time {
+      color: var(--primary-color);
+      font-weight: 600;
+    }
+  }
+}
+
+.slot-time {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-color);
+  text-align: center;
+
+  @media (max-width: 480px) {
+    font-size: 0.875rem;
+  }
+}
+
+.slot-tag {
+  font-size: 0.75rem;
+}
+
+.selected-indicator {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  color: var(--primary-color);
+  font-size: 1.25rem;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--text-color-secondary);
+}
+
+.empty-icon {
+  font-size: 4rem;
+  color: var(--text-color-secondary);
+  opacity: 0.5;
+  margin-bottom: 1rem;
+}
+
+.empty-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0 0 0.5rem 0;
+}
+
+.empty-message {
+  font-size: 1rem;
+  margin: 0 0 1rem 0;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Legend */
+.slots-legend {
+  margin-top: 3rem;
+  padding: 1.5rem;
+  background-color: var(--surface-ground);
+  border-radius: 8px;
+  border: 1px solid var(--surface-border);
+}
+
+.legend-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0 0 1rem 0;
+}
+
+.legend-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.legend-tag {
+  flex-shrink: 0;
+}
+
+.legend-text {
+  font-size: 0.875rem;
+  color: var(--text-color-secondary);
+}
+
+/* Accessibility: Focus states */
+.slot-card:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+/* Print styles */
+@media print {
+  .slots-header,
+  .date-range-selector,
+  .slots-legend {
+    page-break-inside: avoid;
+  }
+
+  .slot-card:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}

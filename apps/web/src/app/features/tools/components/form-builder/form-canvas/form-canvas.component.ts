@@ -1247,7 +1247,7 @@ export class FormCanvasComponent {
    * @param columnIndex - Parent column index
    * @returns Array of sub-column indices [{index: 0}, {index: 1}, ...]
    */
-  protected subColumnsForColumn(rowId: string, columnIndex: number): Array<{ index: number }> {
+  protected subColumnsForColumn(rowId: string, columnIndex: number): { index: number }[] {
     const key = `${rowId}-${columnIndex}`;
     const config = this.formBuilderService.subColumnsByRowColumn().get(key);
     if (!config) return [];

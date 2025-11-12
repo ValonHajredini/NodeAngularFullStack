@@ -47,6 +47,7 @@
     "feedback:collect": "node scripts/feedback-collector.js collect",
     "feedback:quick": "node scripts/feedback-collector.js quick",
     "feedback:dashboard": "node scripts/feedback-collector.js dashboard",
+    "sync:monaco": "node scripts/sync-monaco-assets.mjs",
     "onboarding:setup": "npm run metrics:init && npm run feedback:init && node examples/tutorials/first-feature/validation.js",
     "onboarding:help": "echo 'Visit examples/tutorials/first-feature/README.md to get started!'",
     "dev:unlock-accounts": "./scripts/unlock-account.sh",

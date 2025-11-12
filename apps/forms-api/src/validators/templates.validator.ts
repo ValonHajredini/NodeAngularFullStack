@@ -86,12 +86,20 @@ const templateSchemaValidation = body('templateSchema')
 
     // Validate each field has required properties
     schema.fields.forEach((field: any, index: number) => {
-      if (!field.label || typeof field.label !== 'string') {
-        throw new Error(`Field at index ${index} must have a label`);
+      if (!field.id || typeof field.id !== 'string') {
+        throw new Error(`Field at index ${index} must have an id`);
+      }
+
+      if (!field.type || typeof field.type !== 'string') {
+        throw new Error(`Field at index ${index} must have a type`);
       }
 
       if (!field.fieldName || typeof field.fieldName !== 'string') {
         throw new Error(`Field at index ${index} must have a fieldName`);
+      }
+
+      if (!field.label || typeof field.label !== 'string') {
+        throw new Error(`Field at index ${index} must have a label`);
       }
     });
 
@@ -321,12 +329,20 @@ export const updateTemplateValidator = [
         }
 
         schema.fields.forEach((field: any, index: number) => {
-          if (!field.label || typeof field.label !== 'string') {
-            throw new Error(`Field at index ${index} must have a label`);
+          if (!field.id || typeof field.id !== 'string') {
+            throw new Error(`Field at index ${index} must have an id`);
+          }
+
+          if (!field.type || typeof field.type !== 'string') {
+            throw new Error(`Field at index ${index} must have a type`);
           }
 
           if (!field.fieldName || typeof field.fieldName !== 'string') {
             throw new Error(`Field at index ${index} must have a fieldName`);
+          }
+
+          if (!field.label || typeof field.label !== 'string') {
+            throw new Error(`Field at index ${index} must have a label`);
           }
         });
       }

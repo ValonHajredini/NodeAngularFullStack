@@ -147,7 +147,7 @@ describe('TemplateEditorDialogComponent', () => {
 
   describe('Schema Validation', () => {
     it('should detect invalid JSON syntax', () => {
-      component.schemaJson.set('invalid json');
+      component.templateForm.patchValue({ schema: 'invalid json' });
       component.validateSchema();
 
       expect(component.schemaErrors().length).toBeGreaterThan(0);
@@ -155,14 +155,14 @@ describe('TemplateEditorDialogComponent', () => {
     });
 
     it('should validate schema has fields array', () => {
-      component.schemaJson.set('{"settings": {}}');
+      component.templateForm.patchValue({ schema: '{"settings": {}}' });
       component.validateSchema();
 
       expect(component.schemaErrors()).toContain('Schema must have a "fields" array');
     });
 
     it('should validate field required properties', () => {
-      component.schemaJson.set('{"fields": [{"id": "1"}]}');
+      component.templateForm.patchValue({ schema: '{"fields": [{"id": "1"}]}' });
       component.validateSchema();
 
       expect(component.schemaErrors().some((e) => e.includes('missing "type"'))).toBe(true);
@@ -181,7 +181,7 @@ describe('TemplateEditorDialogComponent', () => {
         settings: {},
       });
 
-      component.schemaJson.set(largeSchema);
+      component.templateForm.patchValue({ schema: largeSchema });
       component.validateSchema();
 
       const sizeError = component.schemaErrors().find((e) => e.includes('exceeds 100KB limit'));
@@ -201,7 +201,7 @@ describe('TemplateEditorDialogComponent', () => {
         settings: {},
       });
 
-      component.schemaJson.set(validSchema);
+      component.templateForm.patchValue({ schema: validSchema });
       component.validateSchema();
 
       expect(component.schemaErrors().length).toBe(0);
@@ -227,7 +227,7 @@ describe('TemplateEditorDialogComponent', () => {
         ],
         settings: {},
       });
-      component.schemaJson.set(validSchema);
+      component.templateForm.patchValue({ schema: validSchema });
     });
 
     it('should create template in create mode', () => {
@@ -278,7 +278,7 @@ describe('TemplateEditorDialogComponent', () => {
     });
 
     it('should show error if schema is invalid', () => {
-      component.schemaJson.set('invalid json');
+      component.templateForm.patchValue({ schema: 'invalid json' });
       component.handleSave();
 
       expect(templatesApiService.createTemplate).not.toHaveBeenCalled();
@@ -307,6 +307,38 @@ describe('TemplateEditorDialogComponent', () => {
     });
   });
 
+  describe('UI State', () => {
+    it('should enable create button when form and schema are valid', () => {
+      fixture.componentRef.setInput('visible', true);
+      fixture.detectChanges();
+
+      component.templateForm.patchValue({
+        name: 'Valid Template',
+        description: 'Valid description',
+        category: TemplateCategory.SERVICES,
+      });
+      component.templateForm.patchValue({
+        schema: JSON.stringify({
+          fields: [
+            {
+              id: 'field1',
+              type: 'text',
+              name: 'full_name',
+              label: 'Full Name',
+            },
+          ],
+          settings: {},
+        }),
+      });
+      component.validateSchema();
+      fixture.detectChanges();
+
+      const saveButton: HTMLButtonElement =
+        fixture.nativeElement.querySelector('button.p-button-primary');
+      expect(saveButton?.disabled).toBeFalse();
+    });
+  });
+
   describe('Cancel/Close Actions', () => {
     it('should close dialog without confirmation if form is pristine', () => {
       component.handleCancel();
@@ -323,7 +355,7 @@ describe('TemplateEditorDialogComponent', () => {
     });
 
     it('should show confirmation if schema changed', () => {
-      component.schemaJson.set('{"fields": [], "settings": {}}');
+      component.templateForm.patchValue({ schema: '{"fields": [], "settings": {}}' });
       component.handleCancel();
 
       expect(confirmationService.confirm).toHaveBeenCalled();

@@ -1,0 +1,118 @@
+<div class="available-slots-container">
+  <!-- Header Section -->
+  <div class="slots-header">
+    <h2 class="slots-title">Select Appointment Time</h2>
+    <p class="slots-description">Choose a date range to view available time slots</p>
+  </div>
+
+  <!-- Date Range Picker -->
+  <div class="date-range-selector">
+    <label for="dateRange" class="date-range-label">Date Range</label>
+    <p-datepicker
+      [(ngModel)]="dateRange"
+      (ngModelChange)="onDateRangeChange()"
+      selectionMode="range"
+      [minDate]="minDate"
+      [maxDate]="maxDate"
+      [showIcon]="true"
+      [iconDisplay]="'input'"
+      dateFormat="M dd, yy"
+      [readonlyInput]="false"
+      placeholder="Select date range"
+      inputId="dateRange"
+      styleClass="w-full"
+    ></p-datepicker>
+    <small class="date-range-hint">Select start and end dates (up to 90 days from today)</small>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading()" class="loading-container">
+    <p-progressSpinner
+      styleClass="w-4rem h-4rem"
+      strokeWidth="4"
+      fill="transparent"
+      animationDuration="1s"
+    ></p-progressSpinner>
+    <p class="loading-text">Loading available slots...</p>
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="errorMessage() && !loading()" class="error-container">
+    <p-message severity="error" [text]="errorMessage()!" styleClass="w-full"></p-message>
+    <button
+      pButton
+      type="button"
+      label="Retry"
+      icon="pi pi-refresh"
+      class="p-button-outlined mt-3"
+      (click)="fetchAvailableSlots()"
+    ></button>
+  </div>
+
+  <!-- Slots Grid -->
+  <div *ngIf="!loading() && !errorMessage() && availableSlots().length > 0" class="slots-grid">
+    <!-- Group slots by date -->
+    <div *ngFor="let entry of getSlotsByDate() | keyvalue" class="date-group">
+      <h3 class="date-heading">{{ formatDateDisplay(entry.key) }}</h3>
+
+      <div class="slots-row">
+        <div
+          *ngFor="let slot of entry.value"
+          class="slot-card"
+          [class.slot-full]="!slot.is_available"
+          [class.slot-selected]="isSlotSelected(slot)"
+          (click)="selectSlot(slot)"
+        >
+          <div class="slot-time">{{ slot.time_slot }}</div>
+          <p-tag
+            [value]="getAvailabilityLabel(slot)"
+            [severity]="getAvailabilitySeverity(slot)"
+            styleClass="slot-tag"
+          ></p-tag>
+
+          <!-- Selected indicator -->
+          <div *ngIf="isSlotSelected(slot)" class="selected-indicator">
+            <i class="pi pi-check-circle"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!loading() && !errorMessage() && availableSlots().length === 0" class="empty-state">
+    <i class="pi pi-calendar-times empty-icon"></i>
+    <h3 class="empty-title">No Available Slots</h3>
+    <p class="empty-message">
+      There are no available time slots for the selected date range. Please try a different date
+      range.
+    </p>
+    <button
+      pButton
+      type="button"
+      label="Select Different Dates"
+      icon="pi pi-calendar"
+      class="p-button-outlined mt-3"
+      (click)="resetAndFetchSlots()"
+    ></button>
+  </div>
+
+  <!-- Legend -->
+  <div *ngIf="!loading() && !errorMessage() && availableSlots().length > 0" class="slots-legend">
+    <h4 class="legend-title">Availability Legend</h4>
+    <div class="legend-items">
+      <div class="legend-item">
+        <p-tag value="Available" severity="success" styleClass="legend-tag"></p-tag>
+        <span class="legend-text">50%+ capacity remaining</span>
+      </div>
+      <div class="legend-item">
+        <p-tag value="Limited" severity="warning" styleClass="legend-tag"></p-tag>
+        <span class="legend-text">25-50% capacity remaining</span>
+      </div>
+      <div class="legend-item">
+        <p-tag value="Full" severity="danger" styleClass="legend-tag"></p-tag>
+        <span class="legend-text">No capacity remaining</span>
+      </div>
+    </div>
+  </div>
+</div>

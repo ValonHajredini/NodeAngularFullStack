@@ -90,35 +90,50 @@ export interface AppointmentConfig {
 }
 
 /**
+ * Scoring rule for a single quiz question
+ * @since Epic 29, Story 29.13
+ */
+export interface QuizScoringRule {
+  /** Field ID of the question */
+  fieldId: string;
+  /** Correct answer value */
+  correctAnswer: string;
+  /** Optional: custom points (default 1) */
+  points?: number;
+}
+
+/**
  * Business logic configuration for quiz scoring
  * Calculates scores based on correct answer mappings
+ *
+ * @since Epic 29, Story 29.13
  *
  * @example
  * ```typescript
  * const quizConfig: QuizConfig = {
  *   type: 'quiz',
- *   scoringRules: {
- *     'question_1': 'option_b',
- *     'question_2': 'option_a',
- *     'question_3': 'option_c'
- *   },
+ *   scoringRules: [
+ *     { fieldId: 'q1', correctAnswer: 'B', points: 2 },
+ *     { fieldId: 'q2', correctAnswer: 'C', points: 2 },
+ *     { fieldId: 'q3', correctAnswer: 'A', points: 1 }
+ *   ],
  *   passingScore: 70,
  *   showResults: true,
- *   weightedScoring: false
+ *   allowRetakes: true
  * };
  * ```
  */
 export interface QuizConfig {
   /** Discriminator for type narrowing */
   type: 'quiz';
-  /** Map of question field names to correct answer values */
-  scoringRules: Record<string, string>;
-  /** Optional passing score percentage (0-100) */
-  passingScore?: number;
-  /** Whether to display results to user after submission */
-  showResults?: boolean;
-  /** Whether to apply weighted scoring (different point values per question) */
-  weightedScoring?: boolean;
+  /** Array of question scoring rules */
+  scoringRules: QuizScoringRule[];
+  /** Passing percentage (0-100) */
+  passingScore: number;
+  /** Show results to user after submission */
+  showResults: boolean;
+  /** Optional: allow multiple submissions */
+  allowRetakes?: boolean;
 }
 
 /**
@@ -323,4 +338,109 @@ export interface TemplateFilterParams {
   limit?: number;
   /** Pagination: page offset (default: 0) */
   offset?: number;
+}
+
+/**
+ * Appointment booking record
+ * Represents a confirmed, cancelled, or completed appointment slot
+ *
+ * @since Epic 29, Story 29.12
+ *
+ * @example
+ * ```typescript
+ * const booking: AppointmentBooking = {
+ *   id: '123e4567-e89b-12d3-a456-426614174000',
+ *   form_id: '456e7890-e89b-12d3-a456-426614174111',
+ *   date: '2025-12-15',
+ *   time_slot: '09:00-10:00',
+ *   booked_at: new Date('2025-12-01T10:30:00Z'),
+ *   status: 'confirmed',
+ *   created_at: new Date('2025-12-01T10:30:00Z'),
+ *   updated_at: new Date('2025-12-01T10:30:00Z')
+ * };
+ * ```
+ */
+export interface AppointmentBooking {
+  /** Unique booking identifier (UUID v4) */
+  id: string;
+  /** Form UUID this booking belongs to */
+  form_id: string;
+  /** Appointment date in ISO format (YYYY-MM-DD) */
+  date: string;
+  /** Time slot identifier (e.g., "09:00-10:00", "morning", custom labels) */
+  time_slot: string;
+  /** Timestamp when booking was created */
+  booked_at: Date;
+  /** Booking status: confirmed (active), cancelled (user cancelled), completed (past appointment) */
+  status: 'confirmed' | 'cancelled' | 'completed';
+  /** Record creation timestamp */
+  created_at: Date;
+  /** Record last update timestamp */
+  updated_at: Date;
+}
+
+/**
+ * Available slot information for appointment booking
+ * Used by frontend to display available time slots with capacity
+ *
+ * @since Epic 29, Story 29.12
+ *
+ * @example
+ * ```typescript
+ * const slot: AvailableSlot = {
+ *   date: '2025-12-15',
+ *   time_slot: '09:00-10:00',
+ *   available_capacity: 2,
+ *   max_capacity: 5,
+ *   is_available: true
+ * };
+ * ```
+ */
+export interface AvailableSlot {
+  /** Appointment date in ISO format (YYYY-MM-DD) */
+  date: string;
+  /** Time slot identifier */
+  time_slot: string;
+  /** Number of bookings still available */
+  available_capacity: number;
+  /** Maximum bookings allowed per slot */
+  max_capacity: number;
+  /** Whether slot has availability (available_capacity > 0) */
+  is_available: boolean;
+}
+
+/**
+ * Quiz submission metadata stored in form_submissions.metadata JSONB
+ * Contains scoring results and detailed answer breakdown
+ *
+ * @since Epic 29, Story 29.13
+ *
+ * @example
+ * ```typescript
+ * const metadata: QuizResultMetadata = {
+ *   score: 80,
+ *   correctAnswers: 4,
+ *   totalQuestions: 5,
+ *   passed: true,
+ *   pointsEarned: 8,
+ *   maxPoints: 10,
+ *   answeredAt: '2025-01-09T12:00:00Z'
+ * };
+ * ```
+ */
+export interface QuizResultMetadata {
+  /** Percentage score (0-100) */
+  score: number;
+  /** Number of correct answers */
+  correctAnswers: number;
+  /** Total number of questions */
+  totalQuestions: number;
+  /** Whether user passed (score >= passingScore) */
+  passed: boolean;
+  /** Optional: total points earned */
+  pointsEarned?: number;
+  /** Optional: maximum possible points */
+  maxPoints?: number;
+  /** ISO timestamp of submission */
+  answeredAt: string;
 }

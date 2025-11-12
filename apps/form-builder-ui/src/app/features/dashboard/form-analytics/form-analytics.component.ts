@@ -23,6 +23,7 @@ import {
   FieldStatistics,
   ChartType,
   ChartTypeOption,
+  ChoiceDistribution,
 } from '@nodeangularfullstack/shared';
 import { FormsApiService } from '../forms-api.service';
 // REMOVED: ToolConfigService not needed in form-builder-ui (tool config is for dashboard-api)
@@ -301,6 +302,19 @@ const ALL_CHART_TYPE_OPTIONS: ChartTypeOption[] = [
           </p-table>
         </div>
 
+        <!-- Quiz Score Distribution Section (Story 29.13) -->
+        @if (isQuizForm() && quizScoreDistribution().length > 0) {
+          <div class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Quiz Performance</h2>
+            <div class="bg-white rounded-lg shadow p-6">
+              <app-bar-chart
+                title="Score Distribution"
+                [data]="quizScoreDistribution()"
+              ></app-bar-chart>
+            </div>
+          </div>
+        }
+
         <!-- Charts Dashboard Section -->
         <div class="charts-dashboard">
           <div class="flex items-center justify-between mb-6">
@@ -484,6 +498,7 @@ export class FormAnalyticsComponent implements OnInit {
   readonly formId = signal<string>('');
   readonly formTitle = signal<string>('');
   readonly formFields = signal<FormField[]>([]);
+  readonly formMetadata = signal<FormMetadata | null>(null); // Store full metadata for template access
   readonly submissions = signal<FormSubmission[]>([]);
   readonly isLoading = signal<boolean>(false);
   readonly isLoadingSubmissions = signal<boolean>(false);
@@ -618,6 +633,40 @@ export class FormAnalyticsComponent implements OnInit {
   });
 
   /**
+   * Detects if the current form uses a quiz template.
+   * Checks template business logic configuration for type='quiz'.
+   * Epic 29: Form Template System with Business Logic
+   * Story 29.13: Quiz Template with Scoring Logic
+   */
+  readonly isQuizForm = computed(() => {
+    const metadata = this.formMetadata();
+    return metadata?.schema?.template?.businessLogicConfig?.type === 'quiz';
+  });
+
+  /**
+   * Quiz score distribution data for chart visualization.
+   * Converts score ranges into ChoiceDistribution format for BarChartComponent.
+   * Only calculated when form is a quiz template and has submissions.
+   * Epic 29: Form Template System with Business Logic
+   * Story 29.13: Quiz Template with Scoring Logic
+   */
+  readonly quizScoreDistribution = computed<ChoiceDistribution[]>(() => {
+    if (!this.isQuizForm() || this.submissions().length === 0) {
+      return [];
+    }
+
+    const chartData = this.statisticsEngine.analyzeQuizScores(this.submissions());
+
+    // Convert ChartData to ChoiceDistribution format for BarChartComponent
+    return chartData.labels.map((label, index) => ({
+      label,
+      value: label,
+      count: chartData.datasets[0].data[index],
+      percentage: 0, // Percentage not needed for quiz scores
+    }));
+  });
+
+  /**
    * Check if a chart type is compatible with a data type.
    * @param dataType - Field data type (numeric, choice, timeseries, toggle, none)
    * @param chartType - Chart type to validate
@@ -688,6 +737,7 @@ export class FormAnalyticsComponent implements OnInit {
       next: (form: FormMetadata) => {
         this.formTitle.set(form.title);
         this.formFields.set(form.schema?.fields || []);
+        this.formMetadata.set(form); // Store full metadata for quiz template detection
         this.isLoading.set(false);
 
         // Load submissions after form details
