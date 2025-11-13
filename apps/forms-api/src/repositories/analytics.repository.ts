@@ -541,6 +541,166 @@ export class AnalyticsRepository {
       client.release();
     }
   }
+
+  /**
+   * Gets product sales aggregation (revenue, quantities, top products).
+   * Aggregates JSONB fields: quantity, price, product_id, product_name.
+   *
+   * @param formSchemaId - UUID of the form schema
+   * @param tenantId - Optional tenant ID for filtering
+   * @returns Promise with product sales data
+   */
+  async getProductSalesData(
+    formSchemaId: string,
+    tenantId: string | null
+  ): Promise<{
+    totalRevenue: number;
+    totalItemsSold: number;
+    productBreakdown: Array<{ productId: string; name: string; quantity: number; revenue: number }>;
+  }> {
+    const client = await this.pool.connect();
+    try {
+      let query = `
+        SELECT
+          COALESCE(SUM((fs.values_json->>'quantity')::numeric * (fs.values_json->>'price')::numeric), 0) as total_revenue,
+          COALESCE(SUM((fs.values_json->>'quantity')::numeric), 0) as total_items_sold,
+          json_agg(
+            json_build_object(
+              'productId', fs.values_json->>'product_id',
+              'name', fs.values_json->>'product_name',
+              'quantity', COALESCE((fs.values_json->>'quantity')::numeric, 0),
+              'revenue', COALESCE((fs.values_json->>'quantity')::numeric * (fs.values_json->>'price')::numeric, 0)
+            )
+          ) FILTER (WHERE fs.values_json->>'product_id' IS NOT NULL) as product_breakdown
+        FROM form_submissions fs
+        INNER JOIN form_schemas fsch ON fs.form_schema_id = fsch.id
+        WHERE fs.form_schema_id = $1
+      `;
+
+      const values: any[] = [formSchemaId];
+
+      // Add tenant filter if multi-tenancy is enabled
+      if (tenantId !== null) {
+        query += ` AND fsch.tenant_id = $2`;
+        values.push(tenantId);
+      }
+
+      const result = await client.query(query, values);
+      const row = result.rows[0];
+
+      return {
+        totalRevenue: parseFloat(row.total_revenue) || 0,
+        totalItemsSold: parseFloat(row.total_items_sold) || 0,
+        productBreakdown: row.product_breakdown || [],
+      };
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Gets appointment booking time slot aggregation for heatmap.
+   * Groups bookings by time slot and day of week.
+   *
+   * @param formSchemaId - UUID of the form schema
+   * @param tenantId - Optional tenant ID for filtering
+   * @returns Promise with time slot booking counts
+   */
+  async getAppointmentTimeSlots(
+    formSchemaId: string,
+    tenantId: string | null
+  ): Promise<Array<{ timeSlot: string; dayOfWeek: string; bookings: number }>> {
+    const client = await this.pool.connect();
+    try {
+      let query = `
+        SELECT
+          fs.values_json->>'time_slot' as time_slot,
+          TO_CHAR((fs.values_json->>'booking_date')::date, 'Day') as day_of_week,
+          COUNT(*) as bookings
+        FROM form_submissions fs
+        INNER JOIN form_schemas fsch ON fs.form_schema_id = fsch.id
+        WHERE fs.form_schema_id = $1
+          AND fs.values_json->>'time_slot' IS NOT NULL
+      `;
+
+      const values: any[] = [formSchemaId];
+
+      // Add tenant filter if multi-tenancy is enabled
+      if (tenantId !== null) {
+        query += ` AND fsch.tenant_id = $2`;
+        values.push(tenantId);
+      }
+
+      query += `
+        GROUP BY fs.values_json->>'time_slot', TO_CHAR((fs.values_json->>'booking_date')::date, 'Day')
+        ORDER BY bookings DESC
+      `;
+
+      const result = await client.query(query, values);
+      return result.rows.map((row) => ({
+        timeSlot: row.time_slot,
+        dayOfWeek: row.day_of_week.trim(),
+        bookings: parseInt(row.bookings, 10),
+      }));
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Gets restaurant menu item popularity aggregation.
+   * Aggregates quantities and revenue per menu item.
+   *
+   * @param formSchemaId - UUID of the form schema
+   * @param tenantId - Optional tenant ID for filtering
+   * @returns Promise with menu item popularity data
+   */
+  async getRestaurantItemPopularity(
+    formSchemaId: string,
+    tenantId: string | null
+  ): Promise<{
+    totalRevenue: number;
+    totalItemsOrdered: number;
+    itemBreakdown: Array<{ itemName: string; quantity: number; revenue: number }>;
+  }> {
+    const client = await this.pool.connect();
+    try {
+      let query = `
+        SELECT
+          COALESCE(SUM((fs.values_json->>'quantity')::numeric * (fs.values_json->>'price')::numeric), 0) as total_revenue,
+          COALESCE(SUM((fs.values_json->>'quantity')::numeric), 0) as total_items_ordered,
+          json_agg(
+            json_build_object(
+              'itemName', fs.values_json->>'item_name',
+              'quantity', COALESCE((fs.values_json->>'quantity')::numeric, 0),
+              'revenue', COALESCE((fs.values_json->>'quantity')::numeric * (fs.values_json->>'price')::numeric, 0)
+            )
+          ) FILTER (WHERE fs.values_json->>'item_name' IS NOT NULL) as item_breakdown
+        FROM form_submissions fs
+        INNER JOIN form_schemas fsch ON fs.form_schema_id = fsch.id
+        WHERE fs.form_schema_id = $1
+      `;
+
+      const values: any[] = [formSchemaId];
+
+      // Add tenant filter if multi-tenancy is enabled
+      if (tenantId !== null) {
+        query += ` AND fsch.tenant_id = $2`;
+        values.push(tenantId);
+      }
+
+      const result = await client.query(query, values);
+      const row = result.rows[0];
+
+      return {
+        totalRevenue: parseFloat(row.total_revenue) || 0,
+        totalItemsOrdered: parseFloat(row.total_items_ordered) || 0,
+        itemBreakdown: row.item_breakdown || [],
+      };
+    } finally {
+      client.release();
+    }
+  }
 }
 
 /**

@@ -19,7 +19,7 @@
  * Defaults to 0 for new jobs, incremented atomically on each download.
  */
 ALTER TABLE export_jobs
-ADD COLUMN download_count INTEGER NOT NULL DEFAULT 0;
+ADD COLUMN IF NOT EXISTS download_count INTEGER NOT NULL DEFAULT 0;
 
 /**
  * Add last_downloaded_at column
@@ -27,7 +27,7 @@ ADD COLUMN download_count INTEGER NOT NULL DEFAULT 0;
  * NULL if package has never been downloaded.
  */
 ALTER TABLE export_jobs
-ADD COLUMN last_downloaded_at TIMESTAMP WITH TIME ZONE;
+ADD COLUMN IF NOT EXISTS last_downloaded_at TIMESTAMP WITH TIME ZONE;
 
 /**
  * Add package_expires_at column
@@ -36,7 +36,7 @@ ADD COLUMN last_downloaded_at TIMESTAMP WITH TIME ZONE;
  * NULL if job not completed or expiration not set.
  */
 ALTER TABLE export_jobs
-ADD COLUMN package_expires_at TIMESTAMP WITH TIME ZONE;
+ADD COLUMN IF NOT EXISTS package_expires_at TIMESTAMP WITH TIME ZONE;
 
 /**
  * Add package_retention_days column
@@ -45,7 +45,7 @@ ADD COLUMN package_expires_at TIMESTAMP WITH TIME ZONE;
  * Used to calculate package_expires_at timestamp.
  */
 ALTER TABLE export_jobs
-ADD COLUMN package_retention_days INTEGER NOT NULL DEFAULT 30;
+ADD COLUMN IF NOT EXISTS package_retention_days INTEGER NOT NULL DEFAULT 30;
 
 -- ============================================================================
 -- CONSTRAINTS: Data Validation
@@ -55,18 +55,32 @@ ADD COLUMN package_retention_days INTEGER NOT NULL DEFAULT 30;
  * Check: download_count must be non-negative
  * Prevents invalid negative download counts from database errors.
  */
-ALTER TABLE export_jobs
-ADD CONSTRAINT check_download_count_valid
-CHECK (download_count >= 0);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'check_download_count_valid'
+  ) THEN
+    ALTER TABLE export_jobs
+    ADD CONSTRAINT check_download_count_valid
+    CHECK (download_count >= 0);
+  END IF;
+END $$;
 
 /**
  * Check: package_retention_days must be positive
  * Ensures retention period is at least 1 day.
  * Typical values: 7, 30, 90, 365 days
  */
-ALTER TABLE export_jobs
-ADD CONSTRAINT check_package_retention_valid
-CHECK (package_retention_days > 0);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'check_package_retention_valid'
+  ) THEN
+    ALTER TABLE export_jobs
+    ADD CONSTRAINT check_package_retention_valid
+    CHECK (package_retention_days > 0);
+  END IF;
+END $$;
 
 -- ============================================================================
 -- INDEXES: Query Performance Optimization
@@ -129,28 +143,26 @@ END $$;
 -- VERIFICATION QUERIES (FOR MANUAL TESTING)
 -- ============================================================================
 
-/**
- * After running this migration, verify the columns were added:
- *
- * -- Check if new columns exist
- * SELECT column_name, data_type, column_default, is_nullable
- * FROM information_schema.columns
- * WHERE table_name = 'export_jobs'
- *   AND column_name IN (
- *     'download_count', 'last_downloaded_at',
- *     'package_expires_at', 'package_retention_days'
- *   );
- *
- * -- Check if indexes were created
- * SELECT indexname, indexdef
- * FROM pg_indexes
- * WHERE tablename = 'export_jobs'
- *   AND indexname LIKE '%download%'
- *    OR indexname LIKE '%expires%'
- *    OR indexname LIKE '%packages%';
- *
- * -- Test constraint validation (should fail)
- * INSERT INTO export_jobs (job_id, tool_id, user_id, download_count)
- * VALUES (gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), -1);
- * -- Expected: ERROR - violates check constraint "check_download_count_valid"
- */
+-- After running this migration, verify the columns were added:
+--
+-- Check if new columns exist
+-- SELECT column_name, data_type, column_default, is_nullable
+-- FROM information_schema.columns
+-- WHERE table_name = 'export_jobs'
+--   AND column_name IN (
+--     'download_count', 'last_downloaded_at',
+--     'package_expires_at', 'package_retention_days'
+--   );
+--
+-- Check if indexes were created
+-- SELECT indexname, indexdef
+-- FROM pg_indexes
+-- WHERE tablename = 'export_jobs'
+--   AND indexname LIKE '%download%'
+--    OR indexname LIKE '%expires%'
+--    OR indexname LIKE '%packages%';
+--
+-- Test constraint validation (should fail)
+-- INSERT INTO export_jobs (job_id, tool_id, user_id, download_count)
+-- VALUES (gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), -1);
+-- Expected: ERROR - violates check constraint "check_download_count_valid"

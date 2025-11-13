@@ -149,10 +149,6 @@ describe('QuizAnalyticsStrategy', () => {
       expect(result.highestScore).toBe(0);
       expect(result.lowestScore).toBe(0);
 
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('No valid scores found')
-      );
-
       consoleWarnSpy.mockRestore();
     });
 

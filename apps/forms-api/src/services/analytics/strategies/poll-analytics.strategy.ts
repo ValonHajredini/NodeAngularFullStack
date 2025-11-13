@@ -191,8 +191,8 @@ export class PollAnalyticsStrategy implements IAnalyticsStrategy {
         votePercentages,
         uniqueVoters: counts.totalSubmissions, // Each submission = 1 unique voter (duplicate prevention handled at submission level)
         mostPopularOption,
-        firstSubmissionAt: counts.firstSubmissionAt || undefined,
-        lastSubmissionAt: counts.lastSubmissionAt || undefined,
+        firstSubmissionAt: counts.firstSubmissionAt ?? undefined,
+        lastSubmissionAt: counts.lastSubmissionAt ?? undefined,
       };
 
       return metrics;

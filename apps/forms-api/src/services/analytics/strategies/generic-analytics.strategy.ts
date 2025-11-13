@@ -63,24 +63,24 @@ export class GenericAnalyticsStrategy implements IAnalyticsStrategy {
    * Determines if this strategy supports the given category.
    *
    * Generic strategy supports:
-   * - DATA_COLLECTION category (general-purpose forms)
    * - Null values (forms without category metadata)
    *
    * This is the fallback strategy for forms without specialized analytics requirements.
+   * Note: DATA_COLLECTION category is now handled by RestaurantAnalyticsStrategy (Story 30.4).
    *
    * @param category - Template category from TemplateCategory enum
-   * @returns True for DATA_COLLECTION or null categories
+   * @returns True for null categories only
    *
    * @example
    * ```typescript
-   * strategy.supports(TemplateCategory.DATA_COLLECTION); // true
    * strategy.supports(null); // true (fallback for uncategorized forms)
+   * strategy.supports(TemplateCategory.DATA_COLLECTION); // false (RestaurantAnalyticsStrategy handles this)
    * strategy.supports(TemplateCategory.POLLS); // false (specialized strategy handles this)
    * ```
    */
   supports(category: TemplateCategory | null): boolean {
-    // Support DATA_COLLECTION category and null (uncategorized forms)
-    return category === TemplateCategory.DATA_COLLECTION || category === null;
+    // Only support null (uncategorized forms) - RestaurantAnalyticsStrategy handles DATA_COLLECTION
+    return category === null;
   }
 
   /**

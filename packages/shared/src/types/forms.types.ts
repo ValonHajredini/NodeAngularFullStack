@@ -557,6 +557,12 @@ export interface FormSchema {
   themeId?: string;
   /** Optional iframe embed configuration for published forms */
   iframeEmbedOptions?: IframeEmbedOptions;
+  /**
+   * Optional template category for this form (stored in schema_json.category)
+   * Used for analytics, template detection, and category-specific processing
+   * @since Story 30.1 (Templates Infrastructure)
+   */
+  category?: string; // Template category (polls, quiz, ecommerce, services, data_collection, events)
   /** Schema creation timestamp */
   createdAt: Date;
   /** Schema last update timestamp */

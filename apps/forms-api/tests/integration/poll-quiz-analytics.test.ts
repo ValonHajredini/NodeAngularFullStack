@@ -8,63 +8,100 @@
  * Story 30.3: Poll and Quiz Analytics Strategies (Backend)
  */
 
-import { AnalyticsRepository, analyticsRepository } from '../../src/repositories/analytics.repository';
+import { analyticsRepository } from '../../src/repositories/analytics.repository';
 import { PollAnalyticsStrategy } from '../../src/services/analytics/strategies/poll-analytics.strategy';
 import { QuizAnalyticsStrategy } from '../../src/services/analytics/strategies/quiz-analytics.strategy';
-import { formsPool } from '../../src/config/multi-database.config';
-import { Pool, PoolClient } from 'pg';
+import { formsPool, authPool } from '../../src/config/multi-database.config';
+import { PoolClient } from 'pg';
 
 describe('Poll and Quiz Analytics Integration Tests', () => {
-  let client: PoolClient;
+  let formsClient: PoolClient;
+  let authClient: PoolClient;
   let pollFormSchemaId: string;
   let quizFormSchemaId: string;
+  let testFormId: string;
+  let testUserId: string;
 
   beforeAll(async () => {
-    client = await formsPool.connect();
+    formsClient = await formsPool.connect();
+    authClient = await authPool.connect();
 
-    // Create test form_schemas for poll and quiz
-    const pollFormResult = await client.query(`
+    // Create test user first (in auth database)
+    const userResult = await authClient.query(`
+      INSERT INTO users (id, email, password_hash, first_name, last_name, role, created_at, updated_at)
+      VALUES (
+        gen_random_uuid(),
+        'test-analytics@example.com',
+        '$2b$10$dummy.hash.for.testing',
+        'Test',
+        'User',
+        'user',
+        NOW(),
+        NOW()
+      )
+      RETURNING id
+    `);
+    testUserId = userResult.rows[0].id;
+
+    // Create test form (in forms database)
+    const formResult = await formsClient.query(`
+      INSERT INTO forms (id, title, description, status, user_id, created_at, updated_at)
+      VALUES (
+        gen_random_uuid(),
+        'Test Form',
+        'Test form for analytics',
+        'published',
+        $1,
+        NOW(),
+        NOW()
+      )
+      RETURNING id
+    `, [testUserId]);
+    testFormId = formResult.rows[0].id;
+
+    // Create test form_schemas for poll and quiz (in forms database)
+    const pollFormResult = await formsClient.query(`
       INSERT INTO form_schemas (id, form_id, schema_json, schema_version, is_published)
       VALUES (
         gen_random_uuid(),
-        (SELECT id FROM forms LIMIT 1),
+        $1,
         '{"title": "Test Poll", "fields": [{"type": "radio", "label": "Poll Question"}]}'::jsonb,
         1,
         true
       )
       RETURNING id
-    `);
+    `, [testFormId]);
     pollFormSchemaId = pollFormResult.rows[0].id;
 
-    const quizFormResult = await client.query(`
+    const quizFormResult = await formsClient.query(`
       INSERT INTO form_schemas (id, form_id, schema_json, schema_version, is_published)
       VALUES (
         gen_random_uuid(),
-        (SELECT id FROM forms LIMIT 1),
+        $1,
         '{"title": "Test Quiz", "fields": [{"type": "number", "label": "Quiz Score"}]}'::jsonb,
         1,
         true
       )
       RETURNING id
-    `);
+    `, [testFormId]);
     quizFormSchemaId = quizFormResult.rows[0].id;
 
-    // Seed poll submissions
+    // Seed poll submissions (in forms database)
     for (let i = 0; i < 150; i++) {
       const option = i < 75 ? 'Option A' : i < 120 ? 'Option B' : 'Option C';
-      await client.query(`
+      await formsClient.query(`
         INSERT INTO form_submissions (form_schema_id, values_json, submitter_ip, submitted_at)
         VALUES ($1, $2, '127.0.0.1', NOW() - INTERVAL '${i} hours')
       `, [pollFormSchemaId, JSON.stringify({ poll_option: option })]);
     }
 
-    // Seed quiz submissions with scores and question responses
+    // Seed quiz submissions with scores and question responses (in forms database)
     const scores = [85, 90, 75, 55, 40, 95, 80, 70, 65, 50, 88, 92, 78, 60, 45];
     for (const score of scores) {
       const q1 = score >= 60;
       const q2 = score >= 70;
       const q3 = score >= 80;
-      await client.query(`
+      await formsClient.query(`
         INSERT INTO form_submissions (form_schema_id, values_json, submitter_ip, submitted_at)
         VALUES ($1, $2, '127.0.0.1', NOW())
       `, [quizFormSchemaId, JSON.stringify({ score, q1, q2, q3 })]);
@@ -72,18 +109,14 @@ describe('Poll and Quiz Analytics Integration Tests', () => {
   });
 
   afterAll(async () => {
-    // Clean up test data
-    await client.query('DELETE FROM form_submissions WHERE form_schema_id IN ($1, $2)', [
-      pollFormSchemaId,
-      quizFormSchemaId,
-    ]);
-    await client.query('DELETE FROM form_schemas WHERE id IN ($1, $2)', [
-      pollFormSchemaId,
-      quizFormSchemaId,
-    ]);
+    // Clean up test data (cascade will handle form_submissions and form_schemas)
+    await formsClient.query('DELETE FROM forms WHERE id = $1', [testFormId]);
+    await authClient.query('DELETE FROM users WHERE id = $1', [testUserId]);
 
-    client.release();
+    formsClient.release();
+    authClient.release();
     await formsPool.end();
+    await authPool.end();
   });
 
   describe('AnalyticsRepository', () => {
@@ -121,28 +154,29 @@ describe('Poll and Quiz Analytics Integration Tests', () => {
         );
 
         // Expected distribution from scores: [85, 90, 75, 55, 40, 95, 80, 70, 65, 50, 88, 92, 78, 60, 45]
-        // 41-60: 3 (55, 50, 60)
-        // 61-80: 6 (75, 70, 65, 78, 80, 78)
-        // 81-100: 6 (85, 90, 95, 88, 92, 88)
+        // 21-40: 1 (40)
+        // 41-60: 4 (55, 50, 45, 60)
+        // 61-80: 5 (75, 70, 65, 78, 80)
+        // 81-100: 5 (85, 90, 95, 88, 92)
         expect(result.find((r) => r.bucket === '21-40')).toEqual({ bucket: '21-40', count: 1 }); // 40
         expect(result.find((r) => r.bucket === '41-60')).toEqual({ bucket: '41-60', count: 4 }); // 55, 50, 45, 60
-        expect(result.find((r) => r.bucket === '61-80')).toEqual({ bucket: '61-80', count: 4 }); // 75, 70, 65, 78
-        expect(result.find((r) => r.bucket === '81-100')).toEqual({ bucket: '81-100', count: 6 }); // 85, 90, 95, 80, 88, 92
+        expect(result.find((r) => r.bucket === '61-80')).toEqual({ bucket: '61-80', count: 5 }); // 75, 70, 65, 78, 80
+        expect(result.find((r) => r.bucket === '81-100')).toEqual({ bucket: '81-100', count: 5 }); // 85, 90, 95, 88, 92
       });
 
       it('should handle forms with no valid scores', async () => {
-        // Create form with no scores
-        const emptyFormResult = await client.query(`
+        // Create form with no scores (in forms database)
+        const emptyFormResult = await formsClient.query(`
           INSERT INTO form_schemas (id, form_id, schema_json, schema_version, is_published)
           VALUES (
             gen_random_uuid(),
-            (SELECT id FROM forms LIMIT 1),
+            $1,
             '{"title": "Empty Quiz"}'::jsonb,
             1,
             true
           )
           RETURNING id
-        `);
+        `, [testFormId]);
         const emptyFormId = emptyFormResult.rows[0].id;
 
         const result = await analyticsRepository.getQuizScoreBuckets(emptyFormId, 'score', null);
@@ -150,7 +184,7 @@ describe('Poll and Quiz Analytics Integration Tests', () => {
         expect(result).toEqual([]);
 
         // Cleanup
-        await client.query('DELETE FROM form_schemas WHERE id = $1', [emptyFormId]);
+        await formsClient.query('DELETE FROM form_schemas WHERE id = $1', [emptyFormId]);
       });
     });
   });
@@ -184,18 +218,18 @@ describe('Poll and Quiz Analytics Integration Tests', () => {
     });
 
     it('should handle zero submissions gracefully', async () => {
-      // Create empty form
-      const emptyFormResult = await client.query(`
+      // Create empty form (in forms database)
+      const emptyFormResult = await formsClient.query(`
         INSERT INTO form_schemas (id, form_id, schema_json, schema_version, is_published)
         VALUES (
           gen_random_uuid(),
-          (SELECT id FROM forms LIMIT 1),
+          $1,
           '{"title": "Empty Poll"}'::jsonb,
           1,
           true
         )
         RETURNING id
-      `);
+      `, [testFormId]);
       const emptyFormId = emptyFormResult.rows[0].id;
 
       const metrics = await strategy.buildMetrics(emptyFormId, null);
@@ -208,7 +242,7 @@ describe('Poll and Quiz Analytics Integration Tests', () => {
       expect(metrics.mostPopularOption).toBe('');
 
       // Cleanup
-      await client.query('DELETE FROM form_schemas WHERE id = $1', [emptyFormId]);
+      await formsClient.query('DELETE FROM form_schemas WHERE id = $1', [emptyFormId]);
     });
   });
 
@@ -256,18 +290,18 @@ describe('Poll and Quiz Analytics Integration Tests', () => {
     });
 
     it('should handle zero submissions gracefully', async () => {
-      // Create empty quiz
-      const emptyQuizResult = await client.query(`
+      // Create empty quiz (in forms database)
+      const emptyQuizResult = await formsClient.query(`
         INSERT INTO form_schemas (id, form_id, schema_json, schema_version, is_published)
         VALUES (
           gen_random_uuid(),
-          (SELECT id FROM forms LIMIT 1),
+          $1,
           '{"title": "Empty Quiz"}'::jsonb,
           1,
           true
         )
         RETURNING id
-      `);
+      `, [testFormId]);
       const emptyQuizId = emptyQuizResult.rows[0].id;
 
       const metrics = await strategy.buildMetrics(emptyQuizId, null);
@@ -283,7 +317,7 @@ describe('Poll and Quiz Analytics Integration Tests', () => {
       expect(metrics.lowestScore).toBe(0);
 
       // Cleanup
-      await client.query('DELETE FROM form_schemas WHERE id = $1', [emptyQuizId]);
+      await formsClient.query('DELETE FROM form_schemas WHERE id = $1', [emptyQuizId]);
     });
   });
 

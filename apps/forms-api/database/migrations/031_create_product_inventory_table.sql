@@ -33,11 +33,11 @@ CREATE TABLE IF NOT EXISTS product_inventory (
 
 -- Create B-tree index for SKU lookups (critical for performance)
 -- This index is essential for SELECT FOR UPDATE queries in transaction locking
-CREATE INDEX idx_product_inventory_sku
+CREATE INDEX IF NOT EXISTS idx_product_inventory_sku
     ON product_inventory (sku);
 
 -- Create B-tree index for form_id foreign key lookups
-CREATE INDEX idx_product_inventory_form_id
+CREATE INDEX IF NOT EXISTS idx_product_inventory_form_id
     ON product_inventory (form_id);
 
 -- Create trigger for automatic updated_at updates on product_inventory

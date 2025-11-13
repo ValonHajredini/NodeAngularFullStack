@@ -151,6 +151,112 @@ export class FormsRepository extends BaseRepository<FormMetadata> {
   }
 
   /**
+   * Finds a form by ID with its latest schema (includes category from schema_json).
+   * This method JOINs with form_schemas to retrieve the form's category metadata.
+   * Use this method when you need category detection for analytics or template selection.
+   *
+   * @param id - Form ID to find
+   * @param tenantId - Optional tenant ID for tenant isolation (as string)
+   * @returns Promise containing the form with schema or null if not found
+   * @throws {Error} When database query fails
+   * @example
+   * const form = await formsRepository.findFormWithSchema('form-uuid', 'tenant-uuid');
+   * const category = form?.schema?.schemaJson?.category; // Access category from schema
+   *
+   * @since Story 30.5 (QA Fix)
+   */
+  async findFormWithSchema(
+    id: string,
+    tenantId?: string
+  ): Promise<FormMetadata | null> {
+    const client = await this.pool.connect();
+
+    try {
+      let query = `
+        SELECT
+          f.id,
+          f.user_id as "userId",
+          f.tenant_id as "tenantId",
+          f.title,
+          f.description,
+          f.status,
+          f.qr_code_url as "qrCodeUrl",
+          f.created_at as "createdAt",
+          f.updated_at as "updatedAt",
+          fs.id as "schema.id",
+          fs.schema_version as "schema.version",
+          fs.schema_json as "schema.schemaJson",
+          fs.is_published as "schema.isPublished",
+          fs.render_token as "schema.renderToken",
+          fs.expires_at as "schema.expiresAt",
+          fs.created_at as "schema.createdAt",
+          fs.updated_at as "schema.updatedAt"
+        FROM forms f
+        LEFT JOIN LATERAL (
+          SELECT *
+          FROM form_schemas
+          WHERE form_id = f.id
+          ORDER BY schema_version DESC
+          LIMIT 1
+        ) fs ON true
+        WHERE f.id = $1
+      `;
+      const params: any[] = [id];
+
+      // Apply tenant filtering if provided
+      if (tenantId) {
+        query += ' AND f.tenant_id = $2';
+        params.push(tenantId);
+      }
+
+      const result = await client.query(query, params);
+
+      if (result.rows.length === 0) {
+        return null;
+      }
+
+      const row = result.rows[0];
+
+      // Build form metadata object
+      const form: FormMetadata = {
+        id: row.id,
+        userId: row.userId,
+        tenantId: row.tenantId,
+        title: row.title,
+        description: row.description,
+        status: row.status,
+        qrCodeUrl: row.qrCodeUrl,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      };
+
+      // Add schema if it exists
+      if (row['schema.id'] && row['schema.schemaJson']) {
+        const schemaJson = row['schema.schemaJson'];
+        form.schema = {
+          id: row['schema.id'],
+          formId: row.id,
+          version: row['schema.version'],
+          fields: schemaJson.fields || [],
+          settings: schemaJson.settings || {},
+          category: schemaJson.category, // ✅ Extract category from schema_json
+          isPublished: row['schema.isPublished'],
+          renderToken: row['schema.renderToken'],
+          expiresAt: row['schema.expiresAt'],
+          createdAt: row['schema.createdAt'],
+          updatedAt: row['schema.updatedAt'],
+        };
+      }
+
+      return form;
+    } catch (error: any) {
+      throw new Error(`Failed to find form with schema: ${error.message}`);
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
    * Finds all forms created by a specific user.
    * @param userId - User ID to filter by
    * @param tenantId - Optional tenant ID for tenant isolation

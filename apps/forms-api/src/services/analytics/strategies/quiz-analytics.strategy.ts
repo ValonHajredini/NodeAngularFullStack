@@ -205,9 +205,6 @@ export class QuizAnalyticsStrategy implements IAnalyticsStrategy {
 
       // Handle case where no valid scores exist
       if (scores.length === 0) {
-        console.warn(
-          `[QuizAnalyticsStrategy] No valid scores found for form ${formId} (${submissions.length} submissions)`
-        );
         return {
           category: 'quiz',
           totalSubmissions: counts.totalSubmissions,
@@ -218,8 +215,8 @@ export class QuizAnalyticsStrategy implements IAnalyticsStrategy {
           questionAccuracy: {},
           highestScore: 0,
           lowestScore: 0,
-          firstSubmissionAt: counts.firstSubmissionAt || undefined,
-          lastSubmissionAt: counts.lastSubmissionAt || undefined,
+          firstSubmissionAt: counts.firstSubmissionAt ?? undefined,
+          lastSubmissionAt: counts.lastSubmissionAt ?? undefined,
         };
       }
 

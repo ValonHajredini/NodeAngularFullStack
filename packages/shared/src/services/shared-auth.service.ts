@@ -74,6 +74,7 @@ export class SharedAuthService {
   private userCache: Map<string, CacheEntry<AuthUser>>;
   private tenantCache: Map<string, CacheEntry<AuthTenant>>;
   private authPool: Pool;
+  private cleanupIntervalId?: NodeJS.Timeout; // Store interval ID for cleanup
 
   // Cache TTL in milliseconds
   private readonly USER_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -344,9 +345,38 @@ export class SharedAuthService {
 
   private startCacheCleanup(): void {
     // Run cache cleanup every 10 minutes
-    setInterval(() => {
+    this.cleanupIntervalId = setInterval(() => {
       this.cleanupExpiredCache();
     }, 10 * 60 * 1000);
+
+    // Unref the interval so it doesn't prevent Node.js process from exiting
+    if (this.cleanupIntervalId.unref) {
+      this.cleanupIntervalId.unref();
+    }
+  }
+
+  /**
+   * Stops the cache cleanup interval and clears all caches.
+   * Should be called when shutting down the service or during test cleanup.
+   *
+   * @example
+   * // In test teardown
+   * afterAll(() => {
+   *   sharedAuthService.destroy();
+   * });
+   *
+   * @since Story 30.5 (QA Fix - Memory Leak)
+   */
+  public destroy(): void {
+    // Stop the cache cleanup interval
+    if (this.cleanupIntervalId) {
+      clearInterval(this.cleanupIntervalId);
+      this.cleanupIntervalId = undefined;
+    }
+
+    // Clear all caches
+    this.userCache.clear();
+    this.tenantCache.clear();
   }
 
   private cleanupExpiredCache(): void {

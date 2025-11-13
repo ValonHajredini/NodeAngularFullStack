@@ -39,27 +39,23 @@ CREATE TABLE IF NOT EXISTS form_templates (
     )
 );
 
--- IMPORTANT: The following indexes use CONCURRENTLY to avoid blocking table writes during deployment.
--- CONCURRENTLY cannot be used inside transaction blocks, so these must be run separately if wrapped in BEGIN/COMMIT.
--- If migration framework doesn't support CONCURRENTLY, run these index creation statements manually after table creation.
-
 -- Create B-tree index for active status filtering
 -- Optimizes queries filtering for active templates only
-CREATE INDEX CONCURRENTLY idx_templates_is_active
+CREATE INDEX IF NOT EXISTS idx_templates_is_active
     ON form_templates (is_active) WHERE is_active = true;
 
 -- Create B-tree index for category column
 -- Optimizes queries filtering by category enum value
-CREATE INDEX CONCURRENTLY idx_templates_category
+CREATE INDEX IF NOT EXISTS idx_templates_category
     ON form_templates (category);
 
 -- Create B-tree index for usage count sorting
 -- Optimizes queries ordering by popularity
-CREATE INDEX CONCURRENTLY idx_templates_usage_count
+CREATE INDEX IF NOT EXISTS idx_templates_usage_count
     ON form_templates (usage_count DESC);
 
 -- Create B-tree index for created_by foreign key
-CREATE INDEX CONCURRENTLY idx_templates_created_by
+CREATE INDEX IF NOT EXISTS idx_templates_created_by
     ON form_templates (created_by) WHERE created_by IS NOT NULL;
 
 -- Create trigger for automatic updated_at updates on form_templates

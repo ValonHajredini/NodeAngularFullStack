@@ -21,7 +21,7 @@
  * NULL if package not yet created or checksum generation failed.
  */
 ALTER TABLE export_jobs
-ADD COLUMN package_checksum VARCHAR(64);
+ADD COLUMN IF NOT EXISTS package_checksum VARCHAR(64);
 
 /**
  * Add package_algorithm column
@@ -30,7 +30,7 @@ ADD COLUMN package_checksum VARCHAR(64);
  * Allows future migration to stronger algorithms (sha512, sha3-256, etc.).
  */
 ALTER TABLE export_jobs
-ADD COLUMN package_algorithm VARCHAR(20) NOT NULL DEFAULT 'sha256';
+ADD COLUMN IF NOT EXISTS package_algorithm VARCHAR(20) NOT NULL DEFAULT 'sha256';
 
 /**
  * Add checksum_verified_at column
@@ -40,7 +40,7 @@ ADD COLUMN package_algorithm VARCHAR(20) NOT NULL DEFAULT 'sha256';
  * Used to track security audit trail.
  */
 ALTER TABLE export_jobs
-ADD COLUMN checksum_verified_at TIMESTAMP WITH TIME ZONE;
+ADD COLUMN IF NOT EXISTS checksum_verified_at TIMESTAMP WITH TIME ZONE;
 
 -- ============================================================================
 -- CONSTRAINTS: Data Validation
@@ -52,15 +52,22 @@ ADD COLUMN checksum_verified_at TIMESTAMP WITH TIME ZONE;
  * Prevents invalid checksums from being stored in database.
  * Format: ^[0-9a-f]{64}$ (regex pattern)
  */
-ALTER TABLE export_jobs
-ADD CONSTRAINT check_package_checksum_format
-CHECK (
-  package_checksum IS NULL
-  OR (
-    package_checksum ~ '^[0-9a-f]{64}$'
-    AND LENGTH(package_checksum) = 64
-  )
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'check_package_checksum_format'
+  ) THEN
+    ALTER TABLE export_jobs
+    ADD CONSTRAINT check_package_checksum_format
+    CHECK (
+      package_checksum IS NULL
+      OR (
+        package_checksum ~ '^[0-9a-f]{64}$'
+        AND LENGTH(package_checksum) = 64
+      )
+    );
+  END IF;
+END $$;
 
 /**
  * Check: package_algorithm must be a known algorithm
@@ -68,22 +75,36 @@ CHECK (
  * Current supported: sha256
  * Future support: sha512, sha3-256, sha3-512
  */
-ALTER TABLE export_jobs
-ADD CONSTRAINT check_package_algorithm_valid
-CHECK (package_algorithm IN ('sha256', 'sha512', 'sha3-256', 'sha3-512'));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'check_package_algorithm_valid'
+  ) THEN
+    ALTER TABLE export_jobs
+    ADD CONSTRAINT check_package_algorithm_valid
+    CHECK (package_algorithm IN ('sha256', 'sha512', 'sha3-256', 'sha3-512'));
+  END IF;
+END $$;
 
 /**
  * Check: checksum_verified_at must be after package creation
  * Ensures verification timestamp is logically consistent.
  * Verification cannot occur before package completion.
  */
-ALTER TABLE export_jobs
-ADD CONSTRAINT check_checksum_verified_after_completion
-CHECK (
-  checksum_verified_at IS NULL
-  OR completed_at IS NULL
-  OR checksum_verified_at >= completed_at
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'check_checksum_verified_after_completion'
+  ) THEN
+    ALTER TABLE export_jobs
+    ADD CONSTRAINT check_checksum_verified_after_completion
+    CHECK (
+      checksum_verified_at IS NULL
+      OR completed_at IS NULL
+      OR checksum_verified_at >= completed_at
+    );
+  END IF;
+END $$;
 
 -- ============================================================================
 -- INDEXES: Query Performance Optimization
@@ -144,36 +165,34 @@ END $$;
 -- VERIFICATION QUERIES (FOR MANUAL TESTING)
 -- ============================================================================
 
-/**
- * After running this migration, verify the columns were added:
- *
- * -- Check if new columns exist
- * SELECT column_name, data_type, column_default, is_nullable
- * FROM information_schema.columns
- * WHERE table_name = 'export_jobs'
- *   AND column_name IN (
- *     'package_checksum', 'package_algorithm', 'checksum_verified_at'
- *   );
- *
- * -- Check if indexes were created
- * SELECT indexname, indexdef
- * FROM pg_indexes
- * WHERE tablename = 'export_jobs'
- *   AND (indexname LIKE '%checksum%' OR indexname LIKE '%verification%');
- *
- * -- Check constraints
- * SELECT conname, pg_get_constraintdef(oid)
- * FROM pg_constraint
- * WHERE conname LIKE '%checksum%' OR conname LIKE '%algorithm%';
- *
- * -- Test checksum format validation (should fail)
- * UPDATE export_jobs
- * SET package_checksum = 'INVALID_CHECKSUM'
- * WHERE job_id = (SELECT job_id FROM export_jobs LIMIT 1);
- * -- Expected: ERROR - violates check constraint "check_package_checksum_format"
- *
- * -- Test valid checksum (should succeed)
- * UPDATE export_jobs
- * SET package_checksum = 'a3f5b1c2d4e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2'
- * WHERE job_id = (SELECT job_id FROM export_jobs LIMIT 1);
- */
+-- After running this migration, verify the columns were added:
+--
+-- Check if new columns exist
+-- SELECT column_name, data_type, column_default, is_nullable
+-- FROM information_schema.columns
+-- WHERE table_name = 'export_jobs'
+--   AND column_name IN (
+--     'package_checksum', 'package_algorithm', 'checksum_verified_at'
+--   );
+--
+-- Check if indexes were created
+-- SELECT indexname, indexdef
+-- FROM pg_indexes
+-- WHERE tablename = 'export_jobs'
+--   AND (indexname LIKE '%checksum%' OR indexname LIKE '%verification%');
+--
+-- Check constraints
+-- SELECT conname, pg_get_constraintdef(oid)
+-- FROM pg_constraint
+-- WHERE conname LIKE '%checksum%' OR conname LIKE '%algorithm%';
+--
+-- Test checksum format validation (should fail)
+-- UPDATE export_jobs
+-- SET package_checksum = 'INVALID_CHECKSUM'
+-- WHERE job_id = (SELECT job_id FROM export_jobs LIMIT 1);
+-- Expected: ERROR - violates check constraint "check_package_checksum_format"
+--
+-- Test valid checksum (should succeed)
+-- UPDATE export_jobs
+-- SET package_checksum = 'a3f5b1c2d4e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2'
+-- WHERE job_id = (SELECT job_id FROM export_jobs LIMIT 1);

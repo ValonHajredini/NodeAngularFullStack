@@ -4,7 +4,7 @@
 -- Date: 2025-11-09
 
 -- Create appointment_bookings table for time slot management
-CREATE TABLE appointment_bookings (
+CREATE TABLE IF NOT EXISTS appointment_bookings (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     form_id UUID NOT NULL REFERENCES forms(id) ON DELETE CASCADE,
     date DATE NOT NULL,
@@ -17,12 +17,13 @@ CREATE TABLE appointment_bookings (
 
 -- Index for fast conflict detection
 -- Partial index only on confirmed bookings for better performance
-CREATE INDEX idx_appointment_bookings_form_date_slot ON appointment_bookings(form_id, date, time_slot) WHERE status = 'confirmed';
+CREATE INDEX IF NOT EXISTS idx_appointment_bookings_form_date_slot ON appointment_bookings(form_id, date, time_slot) WHERE status = 'confirmed';
 
 -- Index for calendar queries
-CREATE INDEX idx_appointment_bookings_date ON appointment_bookings(date, status);
+CREATE INDEX IF NOT EXISTS idx_appointment_bookings_date ON appointment_bookings(date, status);
 
 -- Trigger for updated_at
+DROP TRIGGER IF EXISTS update_appointment_bookings_updated_at ON appointment_bookings;
 CREATE TRIGGER update_appointment_bookings_updated_at
 BEFORE UPDATE ON appointment_bookings
 FOR EACH ROW

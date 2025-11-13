@@ -12,6 +12,11 @@
 
 import { AnalyticsStrategyRegistry } from './strategy-registry.service';
 import { GenericAnalyticsStrategy } from './strategies/generic-analytics.strategy';
+import { PollAnalyticsStrategy } from './strategies/poll-analytics.strategy';
+import { QuizAnalyticsStrategy } from './strategies/quiz-analytics.strategy';
+import { ProductAnalyticsStrategy } from './strategies/product-analytics.strategy';
+import { AppointmentAnalyticsStrategy } from './strategies/appointment-analytics.strategy';
+import { RestaurantAnalyticsStrategy } from './strategies/restaurant-analytics.strategy';
 import { analyticsRepository } from '../../repositories/analytics.repository';
 import { CategoryMetrics, TemplateCategory } from '@nodeangularfullstack/shared';
 
@@ -40,7 +45,7 @@ import { CategoryMetrics, TemplateCategory } from '@nodeangularfullstack/shared'
 export class AnalyticsService {
   /**
    * Strategy registry for selecting appropriate analytics strategies.
-   * Initialized with generic fallback strategy.
+   * Initialized with category-specific strategies and generic fallback.
    */
   private registry: AnalyticsStrategyRegistry;
 
@@ -48,8 +53,9 @@ export class AnalyticsService {
    * Creates a new analytics service.
    *
    * Initializes the strategy registry with:
+   * - PollAnalyticsStrategy (Story 30.3)
+   * - QuizAnalyticsStrategy (Story 30.3)
    * - GenericAnalyticsStrategy (fallback)
-   * - Additional strategies will be registered in future stories (30.3-30.5)
    *
    * @example
    * ```typescript
@@ -57,9 +63,13 @@ export class AnalyticsService {
    * ```
    */
   constructor() {
-    // Initialize registry with generic strategy (fallback)
-    // Future stories (30.3-30.5) will add category-specific strategies
+    // Initialize registry with all analytics strategies (Story 30.3 + 30.4 + 30.5)
     this.registry = new AnalyticsStrategyRegistry([
+      new PollAnalyticsStrategy(analyticsRepository),
+      new QuizAnalyticsStrategy(analyticsRepository),
+      new ProductAnalyticsStrategy(analyticsRepository),
+      new AppointmentAnalyticsStrategy(analyticsRepository),
+      new RestaurantAnalyticsStrategy(analyticsRepository),
       new GenericAnalyticsStrategy(analyticsRepository),
     ]);
   }
