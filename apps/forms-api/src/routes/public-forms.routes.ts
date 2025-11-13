@@ -2,13 +2,22 @@ import { Router } from 'express';
 import { Request, Response, NextFunction } from 'express';
 import { PublicFormsController } from '../controllers/public-forms.controller';
 import { RateLimitMiddleware } from '../middleware/rate-limit.middleware';
+import { sessionMiddleware } from '../middleware/session.middleware';
 
 /**
  * Public forms routes configuration.
  * Defines public endpoints for form rendering (no authentication required).
+ * Session middleware applied for poll duplicate vote prevention (Story 29.14).
  */
 const router = Router();
 const publicFormsController = new PublicFormsController();
+
+/**
+ * Apply session middleware to all public form routes
+ * Required for poll voting duplicate prevention
+ * @since Epic 29, Story 29.14
+ */
+router.use(sessionMiddleware);
 
 /**
  * Middleware to allow iframe embedding for public forms.
@@ -370,6 +379,67 @@ router.get(
   '/forms/:shortCode/available-slots',
   RateLimitMiddleware.publicFormRenderLimit(),
   publicFormsController.getAvailableSlots
+);
+
+/**
+ * @swagger
+ * /api/public/forms/{shortCode}/poll-results:
+ *   get:
+ *     summary: Get poll results for a form
+ *     description: Retrieves aggregated poll vote results with counts and percentages (no authentication required)
+ *     tags: [Public Forms]
+ *     parameters:
+ *       - in: path
+ *         name: shortCode
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Short code for the published poll form
+ *         example: "abc123"
+ *     responses:
+ *       200:
+ *         description: Poll results retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Poll results retrieved successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     total_votes:
+ *                       type: number
+ *                       example: 150
+ *                     vote_counts:
+ *                       type: object
+ *                       additionalProperties:
+ *                         type: number
+ *                       example: { "option_a": 75, "option_b": 45, "option_c": 30 }
+ *                     vote_percentages:
+ *                       type: object
+ *                       additionalProperties:
+ *                         type: number
+ *                       example: { "option_a": 50, "option_b": 30, "option_c": 20 }
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *       404:
+ *         description: Form not found or not configured for poll voting
+ *       410:
+ *         description: Form has expired
+ *       429:
+ *         description: Rate limit exceeded
+ */
+router.get(
+  '/forms/:shortCode/poll-results',
+  RateLimitMiddleware.publicFormRenderLimit(),
+  publicFormsController.getPollResults
 );
 
 export { router as publicFormsRoutes };

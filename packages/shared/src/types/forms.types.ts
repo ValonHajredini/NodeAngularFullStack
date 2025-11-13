@@ -523,6 +523,8 @@ export interface FormSettings {
     /** Row configurations */
     rows: RowLayoutConfig[];
   };
+  /** Optional template category for analytics and detection (Epic 30) */
+  templateCategory?: string;
   /** Optional step form configuration for multi-step wizard forms */
   stepForm?: StepFormConfig;
   /** Optional theme ID reference for applying pre-designed styling */
@@ -563,6 +565,15 @@ export interface FormSchema {
   theme?: FormTheme;
   /** Embedded template object when fetched from API (not stored in DB) - Story 29.13 */
   template?: any; // Import from templates.types.ts would create circular dependency
+  /** Optional business logic configuration for template-based forms (Epic 30) */
+  businessLogicConfig?: any; // Import from templates.types.ts would create circular dependency
+  /** Optional metadata for extended form properties (Epic 30) */
+  metadata?: {
+    /** Template category for analytics and detection */
+    templateCategory?: string;
+    /** Additional custom metadata fields */
+    [key: string]: any;
+  };
 }
 
 /**

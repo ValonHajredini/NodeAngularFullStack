@@ -19,3 +19,9 @@ export { FormsExportStrategy } from './export-strategies/forms.strategy.js';
 export { WorkflowsExportStrategy } from './export-strategies/workflows.strategy.js';
 export { ThemesExportStrategy } from './export-strategies/themes.strategy.js';
 export { ExportStrategyFactory } from './export-strategies/factory.js';
+
+// Export analytics services and strategies
+export { AnalyticsService, analyticsService } from './analytics/analytics.service';
+export { AnalyticsStrategyRegistry } from './analytics/strategy-registry.service';
+export { IAnalyticsStrategy } from './analytics/strategies/analytics-strategy.interface';
+export { GenericAnalyticsStrategy } from './analytics/strategies/generic-analytics.strategy';

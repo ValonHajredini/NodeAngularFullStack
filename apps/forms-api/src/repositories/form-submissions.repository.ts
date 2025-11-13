@@ -422,6 +422,92 @@ export class FormSubmissionsRepository {
       client.release();
     }
   }
+
+  /**
+   * Check for duplicate vote by session ID (for poll voting).
+   * Used by PollExecutor to prevent duplicate votes from the same session.
+   * Queries metadata JSONB column for session_id field.
+   *
+   * @since Epic 29, Story 29.14
+   * @param formSchemaId - Form schema UUID
+   * @param sessionId - Session ID from req.session.id
+   * @returns Promise containing count of submissions from this session
+   * @throws {Error} When database query fails
+   * @example
+   * const count = await repository.checkDuplicateBySession('form-uuid', 'sess_abc123');
+   * if (count > 0) {
+   *   // Session has already voted
+   * }
+   */
+  async checkDuplicateBySession(
+    formSchemaId: string,
+    sessionId: string
+  ): Promise<number> {
+    const client = await this.pool.connect();
+
+    try {
+      const query = `
+        SELECT COUNT(*) as count
+        FROM form_submissions
+        WHERE form_schema_id = $1
+          AND metadata->>'session_id' = $2
+      `;
+
+      const result = await client.query(query, [formSchemaId, sessionId]);
+      return parseInt(result.rows[0].count, 10);
+    } catch (error: any) {
+      throw new Error(
+        `Failed to check duplicate vote by session: ${error.message}`
+      );
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Aggregate poll votes by option value.
+   * Extracts vote values from values_json JSONB column and counts occurrences.
+   * Used for poll results display with real-time vote counts.
+   *
+   * @since Epic 29, Story 29.14
+   * @param formSchemaId - Form schema UUID
+   * @param voteField - Field ID of the poll question (e.g., 'poll_question')
+   * @returns Promise containing array of vote counts per option
+   * @throws {Error} When database query fails
+   * @example
+   * const results = await repository.aggregatePollVotes('form-uuid', 'favorite_color');
+   * // Returns: [{ vote_value: 'blue', count: 15 }, { vote_value: 'red', count: 10 }]
+   */
+  async aggregatePollVotes(
+    formSchemaId: string,
+    voteField: string
+  ): Promise<Array<{ vote_value: string; count: number }>> {
+    const client = await this.pool.connect();
+
+    try {
+      const query = `
+        SELECT
+          values_json->>$2 as vote_value,
+          COUNT(*) as count
+        FROM form_submissions
+        WHERE form_schema_id = $1
+          AND values_json->>$2 IS NOT NULL
+        GROUP BY values_json->>$2
+        ORDER BY count DESC
+      `;
+
+      const result = await client.query(query, [formSchemaId, voteField]);
+
+      return result.rows.map((row) => ({
+        vote_value: row.vote_value,
+        count: parseInt(row.count, 10),
+      }));
+    } catch (error: any) {
+      throw new Error(`Failed to aggregate poll votes: ${error.message}`);
+    } finally {
+      client.release();
+    }
+  }
 }
 
 // Export singleton instance

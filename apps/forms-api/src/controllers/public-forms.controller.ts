@@ -415,9 +415,13 @@ export class PublicFormsController {
 
           if (template && template.businessLogicConfig) {
             // Validate business logic before creating submission
+            // Get session ID for poll voting (Story 29.14)
+            const sessionId = (req.session as any)?.id;
+
             const validation = await TemplateExecutorRegistry.validateBeforeSubmission(
               { values: sanitizedValues },
-              template
+              template,
+              sessionId
             );
 
             if (!validation.valid) {
@@ -456,9 +460,14 @@ export class PublicFormsController {
       let executorResult = null;
       if (template && template.businessLogicConfig) {
         try {
+          // Get session ID for poll voting (Story 29.14)
+          const sessionId = (req.session as any)?.id;
+
           executorResult = await TemplateExecutorRegistry.executeAfterSubmission(
             submission,
-            template
+            template,
+            undefined, // client (no transaction context needed for public forms)
+            sessionId
           );
         } catch (error: any) {
           // Business logic execution failed - delete submission (compensating transaction)
@@ -678,6 +687,108 @@ export class PublicFormsController {
           },
           maxBookingsPerSlot: appointmentConfig.maxBookingsPerSlot,
         },
+        timestamp: new Date().toISOString(),
+      });
+    }
+  );
+
+  /**
+   * GET /api/public/forms/:shortCode/poll-results
+   * Retrieves aggregated poll results for a form with poll template.
+   *
+   * @since Epic 29, Story 29.14
+   * @source docs/architecture/backend-architecture.md (Poll Voting)
+   */
+  getPollResults = AsyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const { shortCode } = req.params;
+
+      if (!shortCode || typeof shortCode !== 'string') {
+        throw new ApiError('Invalid short code', 400, 'INVALID_SHORT_CODE');
+      }
+
+      // Query form data by short code
+      const formData =
+        await shortLinksRepository.findFormSchemaByCode(shortCode);
+
+      if (!formData) {
+        throw new ApiError('Form not found', 404, 'FORM_NOT_FOUND');
+      }
+
+      // Check if form has expired
+      if (
+        formData.schema.expiresAt &&
+        new Date(formData.schema.expiresAt) < new Date()
+      ) {
+        throw new ApiError('This form has expired', 410, 'FORM_EXPIRED');
+      }
+
+      // Get template ID from form settings
+      const templateId = formData.settings?.templateId;
+
+      if (!templateId) {
+        throw new ApiError(
+          'Form is not configured with a poll template',
+          404,
+          'NO_POLL_CONFIG'
+        );
+      }
+
+      // Retrieve template with business logic configuration
+      const template = await templatesRepository.findById(templateId);
+
+      if (!template || !template.businessLogicConfig) {
+        throw new ApiError(
+          'Form template not found or has no business logic configuration',
+          404,
+          'TEMPLATE_NOT_FOUND'
+        );
+      }
+
+      // Verify template has poll business logic
+      if (template.businessLogicConfig.type !== 'poll') {
+        throw new ApiError(
+          'Form is not configured for poll voting',
+          404,
+          'NOT_POLL_FORM'
+        );
+      }
+
+      // Extract PollLogicConfig
+      const pollConfig = template.businessLogicConfig as any;
+
+      // Query aggregated poll votes from repository
+      const voteData = await formSubmissionsRepository.aggregatePollVotes(
+        formData.schema.id,
+        pollConfig.voteField
+      );
+
+      const totalVotes = voteData.reduce((sum, v) => sum + v.count, 0);
+
+      const results = {
+        total_votes: totalVotes,
+        vote_counts: voteData.reduce(
+          (acc, v) => {
+            acc[v.vote_value] = v.count;
+            return acc;
+          },
+          {} as Record<string, number>
+        ),
+        vote_percentages: voteData.reduce(
+          (acc, v) => {
+            acc[v.vote_value] =
+              totalVotes > 0 ? Math.round((v.count / totalVotes) * 100) : 0;
+            return acc;
+          },
+          {} as Record<string, number>
+        ),
+      };
+
+      // Return poll results
+      res.status(200).json({
+        success: true,
+        message: 'Poll results retrieved successfully',
+        data: results,
         timestamp: new Date().toISOString(),
       });
     }

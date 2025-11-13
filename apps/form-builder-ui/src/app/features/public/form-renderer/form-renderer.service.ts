@@ -8,6 +8,7 @@ import {
   FormTheme,
   AvailableSlot,
   QuizResultMetadata,
+  PollResults,
 } from '@nodeangularfullstack/shared';
 import { environment } from '@env/environment';
 
@@ -54,6 +55,17 @@ interface AvailableSlotsResponse {
     };
     maxBookingsPerSlot: number;
   };
+  timestamp: string;
+}
+
+/**
+ * API response structure for poll results retrieval
+ * Story 29.14: Poll Template with Vote Aggregation
+ */
+interface PollResultsResponse {
+  success: boolean;
+  message: string;
+  data: PollResults;
   timestamp: string;
 }
 
@@ -232,6 +244,35 @@ export class FormRendererService {
       }),
       catchError((error: HttpErrorResponse) => {
         console.error('FormRendererService: Error fetching available slots:', error);
+        return throwError(() => this.handleError(error));
+      }),
+    );
+  }
+
+  /**
+   * Retrieves aggregated poll results for a form using short code.
+   * Returns vote counts and percentages for all poll options.
+   * Story 29.14: Poll Template with Vote Aggregation
+   * @param shortCode - Short code for form access (e.g., 'abc123')
+   * @returns Observable with poll results (vote counts and percentages)
+   * @throws {FormRenderError} Various error types based on failure reason
+   * @example
+   * formRendererService.getPollResults('abc123').subscribe({
+   *   next: (results) => console.log('Total votes:', results.total_votes, 'Counts:', results.vote_counts),
+   *   error: (err) => console.error('Error:', err.type, err.message)
+   * });
+   */
+  getPollResults(shortCode: string): Observable<PollResults> {
+    const url = `${environment.apiUrl}/public/forms/${shortCode}/poll-results`;
+
+    console.log('FormRendererService: Fetching poll results from:', url);
+    return this.http.get<PollResultsResponse>(url).pipe(
+      map((response) => {
+        console.log('FormRendererService: Successfully received poll results:', response);
+        return response.data;
+      }),
+      catchError((error: HttpErrorResponse) => {
+        console.error('FormRendererService: Error fetching poll results:', error);
         return throwError(() => this.handleError(error));
       }),
     );

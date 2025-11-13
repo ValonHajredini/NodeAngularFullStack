@@ -32,8 +32,9 @@ import { PreviewDialogComponent } from './preview-dialog/preview-dialog.componen
 import { ThemeDropdownComponent } from './theme-dropdown/theme-dropdown.component';
 import { ThemeDesignerModalComponent } from './theme-designer-modal/theme-designer-modal.component';
 import { TokenReuseConfirmationComponent } from './token-reuse-confirmation/token-reuse-confirmation.component';
+import { TemplateSelectionModalComponent } from './template-selection-modal/template-selection-modal.component';
 import { Dialog } from 'primeng/dialog';
-import { FormSchema, FormTheme, TokenStatusResponse } from '@nodeangularfullstack/shared';
+import { FormSchema, FormTheme, TokenStatusResponse, FormTemplate } from '@nodeangularfullstack/shared';
 import { trigger, transition, style, animate } from '@angular/animations';
 import { AuthService } from '@core/auth/auth.service';
 
@@ -65,6 +66,7 @@ import { AuthService } from '@core/auth/auth.service';
     ThemeDropdownComponent,
     ThemeDesignerModalComponent,
     TokenReuseConfirmationComponent,
+    TemplateSelectionModalComponent,
     Dialog,
   ],
   providers: [MessageService, ConfirmationService],
@@ -139,6 +141,17 @@ import { AuthService } from '@core/auth/auth.service';
         </div>
 
         <div class="flex items-center gap-2">
+          <button
+            pButton
+            label="Use Template"
+            icon="pi pi-clone"
+            severity="secondary"
+            size="small"
+            [outlined]="true"
+            (click)="openTemplateSelectionModal()"
+            [disabled]="formBuilderService.formFields().length > 0 || formBuilderService.isPublished()"
+            title="Start from a template"
+          ></button>
           <app-theme-dropdown
             [currentThemeId]="formBuilderService.currentForm()?.schema?.settings?.themeId"
             [currentUserId]="currentUserId()"
@@ -386,6 +399,13 @@ import { AuthService } from '@core/auth/auth.service';
         (themeSaved)="onThemeSaved($event)"
       ></app-theme-designer-modal>
 
+      <!-- Template Selection Modal (Story 29.6) -->
+      <app-template-selection-modal
+        [(visible)]="templateSelectionModalVisible"
+        (templateSelected)="onTemplateSelected($event)"
+        (startBlank)="onStartBlank()"
+      ></app-template-selection-modal>
+
       <!-- Toast for notifications -->
       <p-toast position="bottom-right"></p-toast>
 
@@ -594,6 +614,9 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
 
   // Theme Designer Modal state (Story 23.5)
   readonly themeDesignerVisible = signal<boolean>(false);
+
+  // Template Selection Modal state (Story 29.6)
+  readonly templateSelectionModalVisible = signal<boolean>(false);
 
   // Template loading state (Story 29.8)
   readonly isLoadingTemplate = signal<boolean>(false);
@@ -1239,6 +1262,40 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
         : 'Your custom theme has been created and applied successfully!',
       life: 3000,
     });
+  }
+
+  /**
+   * Opens the Template Selection Modal (Story 29.6).
+   * Allows users to choose from pre-built templates or start blank.
+   * Disabled if form already has fields or is published.
+   */
+  openTemplateSelectionModal(): void {
+    this.templateSelectionModalVisible.set(true);
+  }
+
+  /**
+   * Handles template selection from Template Selection Modal (Story 29.6).
+   * Navigates to form builder with templateId query param,
+   * which triggers the existing applyTemplateFromQuery method.
+   * @param template - Selected form template
+   */
+  onTemplateSelected(template: FormTemplate): void {
+    // Close the modal
+    this.templateSelectionModalVisible.set(false);
+
+    // Navigate with templateId query param to trigger template application
+    this.router.navigate([], {
+      queryParams: { templateId: template.id },
+      queryParamsHandling: 'merge',
+    });
+  }
+
+  /**
+   * Handles "Start Blank" from Template Selection Modal (Story 29.6).
+   * Closes the modal without applying a template.
+   */
+  onStartBlank(): void {
+    this.templateSelectionModalVisible.set(false);
   }
 
   /**

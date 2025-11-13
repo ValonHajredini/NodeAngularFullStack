@@ -6,6 +6,10 @@ import {
   FormTemplate,
   UpdateFormTemplateRequest,
   CreateFormTemplateRequest,
+  CategoryMetrics,
+  TemplateWizardConfig,
+  detectTemplateCategory,
+  FormSchema,
 } from '@nodeangularfullstack/shared';
 import { environment } from '../../../environments/environment';
 
@@ -260,5 +264,47 @@ export class TemplatesApiService {
 
     console.error('TemplatesApiService error:', errorMessage, error);
     return throwError(() => new Error(errorMessage));
+  }
+
+  /**
+   * Helper method to detect template category from form schema
+   * Uses Epic 30 shared utilities for category detection
+   * @param schema - Form schema to analyze
+   * @returns Detected template category or null
+   * @since Epic 30, Story 30.1
+   */
+  detectFormCategory(schema: FormSchema) {
+    return detectTemplateCategory(schema);
+  }
+
+  /**
+   * Type guard to validate category metrics structure
+   * Ensures CategoryMetrics type compilation
+   * @param metrics - Metrics object to validate
+   * @returns True if metrics has valid category discriminator
+   * @since Epic 30, Story 30.1
+   */
+  isValidCategoryMetrics(metrics: any): metrics is CategoryMetrics {
+    return (
+      metrics &&
+      typeof metrics.category === 'string' &&
+      typeof metrics.totalSubmissions === 'number'
+    );
+  }
+
+  /**
+   * Type guard to validate wizard configuration
+   * Ensures TemplateWizardConfig type compilation
+   * @param config - Configuration object to validate
+   * @returns True if config has valid category discriminator
+   * @since Epic 30, Story 30.1
+   */
+  isValidWizardConfig(config: any): config is TemplateWizardConfig {
+    return (
+      config &&
+      typeof config.category === 'string' &&
+      Array.isArray(config.steps) &&
+      Array.isArray(config.allowedFields)
+    );
   }
 }

@@ -17,8 +17,10 @@ export * from './types/validation.types';
 export * from './types/tenant.types';
 export * from './types/templates.types';
 export * from './types/inventory.types';
+export * from './types/analytics.types';
 export * from './utils/validation';
 export * from './utils/templates';
+export * from './utils/category-detection.util';
 // NOTE: SharedAuthService is NOT exported here because it's backend-only (uses pg Pool)
 // Backend services should import it directly:
 // import { SharedAuthService } from '@nodeangularfullstack/shared/services/shared-auth.service';

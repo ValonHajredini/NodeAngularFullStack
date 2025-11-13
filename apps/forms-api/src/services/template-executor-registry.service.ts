@@ -2,8 +2,10 @@ import { ITemplateExecutor } from './template-executors/base-executor.interface'
 import { InventoryExecutor } from './template-executors/inventory-executor';
 import { AppointmentExecutor } from './template-executors/appointment-executor';
 import { QuizExecutor } from './template-executors/quiz-executor';
+import { PollExecutor } from './template-executors/poll-executor';
 import { inventoryRepository } from '../repositories/inventory.repository';
 import { appointmentBookingRepository } from '../repositories/appointment-booking.repository';
+import { formSubmissionsRepository } from '../repositories/form-submissions.repository';
 import {
   FormSubmission,
   FormTemplate,
@@ -58,19 +60,29 @@ export class TemplateExecutorRegistry {
    * Retrieves executor for a given business logic type.
    *
    * @param type - Business logic type (inventory, appointment, quiz, poll, order)
+   * @param sessionId - Optional session ID (required for poll executor)
    * @returns Executor instance
-   * @throws {Error} When executor type is not registered
+   * @throws {Error} When executor type is not registered or required params missing
    *
    * @example
    * const executor = TemplateExecutorRegistry.getExecutor('inventory');
+   * const pollExecutor = TemplateExecutorRegistry.getExecutor('poll', 'session-123');
    */
-  static getExecutor(type: string): ITemplateExecutor {
+  static getExecutor(type: string, sessionId?: string): ITemplateExecutor {
     this.initializeExecutors();
+
+    // Poll executor requires sessionId and is created per request (not singleton)
+    if (type === 'poll') {
+      if (!sessionId) {
+        throw new Error('Session ID required for poll voting');
+      }
+      return new PollExecutor(formSubmissionsRepository, sessionId);
+    }
 
     const executor = this.executors.get(type);
 
     if (!executor) {
-      throw new Error(`Unknown executor type: ${type}. Available types: ${Array.from(this.executors.keys()).join(', ')}`);
+      throw new Error(`Unknown executor type: ${type}. Available types: ${Array.from(this.executors.keys()).join(', ')}, poll`);
     }
 
     return executor;
@@ -106,6 +118,7 @@ export class TemplateExecutorRegistry {
    *
    * @param submissionData - Form submission data (not yet persisted)
    * @param template - Template with business logic configuration
+   * @param sessionId - Optional session ID (required for poll voting)
    * @returns Promise containing validation result
    *
    * @example
@@ -120,14 +133,15 @@ export class TemplateExecutorRegistry {
    */
   static async validateBeforeSubmission(
     submissionData: Partial<FormSubmission>,
-    template: FormTemplate
+    template: FormTemplate,
+    sessionId?: string
   ) {
     if (!template.businessLogicConfig) {
       // No business logic - validation passes
       return { valid: true, errors: [] };
     }
 
-    const executor = this.getExecutor(template.businessLogicConfig.type);
+    const executor = this.getExecutor(template.businessLogicConfig.type, sessionId);
     return await executor.validate(
       submissionData,
       template,
@@ -144,6 +158,7 @@ export class TemplateExecutorRegistry {
    * @param submission - Created form submission record (persisted)
    * @param template - Template with business logic configuration
    * @param client - Optional PostgreSQL client with active transaction context
+   * @param sessionId - Optional session ID (required for poll voting)
    * @returns Promise containing execution result
    * @throws {Error} When execution fails (triggers submission deletion)
    *
@@ -170,14 +185,15 @@ export class TemplateExecutorRegistry {
   static async executeAfterSubmission(
     submission: FormSubmission,
     template: FormTemplate,
-    client?: any
+    client?: any,
+    sessionId?: string
   ) {
     if (!template.businessLogicConfig) {
       // No business logic - return success
       return { success: true };
     }
 
-    const executor = this.getExecutor(template.businessLogicConfig.type);
+    const executor = this.getExecutor(template.businessLogicConfig.type, sessionId);
     return await executor.execute(
       submission,
       template,
