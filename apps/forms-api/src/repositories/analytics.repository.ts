@@ -376,6 +376,171 @@ export class AnalyticsRepository {
       client.release();
     }
   }
+
+  /**
+   * Gets poll option counts for a specific form.
+   *
+   * Aggregates poll submissions to count votes per option.
+   * Designed for Poll template category analytics.
+   *
+   * Uses JSONB operators to efficiently extract and count poll votes.
+   * Query optimized with indexes on form_schema_id and JSONB GIN indexes.
+   *
+   * Returns empty array if no submissions exist (allowing strategies to
+   * populate zero-vote default metrics).
+   *
+   * @param formSchemaId - UUID of the poll form schema to analyze
+   * @param fieldKey - JSONB field key containing the poll option (e.g., 'poll_option')
+   * @param tenantId - Optional tenant ID for filtering (null for non-tenant mode)
+   * @returns Promise containing array of option counts sorted by count descending
+   * @throws {Error} When database query fails
+   *
+   * @example
+   * ```typescript
+   * const pollCounts = await analyticsRepository.getPollOptionCounts(
+   *   '123e4567-e89b-12d3-a456-426614174000',
+   *   'poll_option',
+   *   'tenant-abc'
+   * );
+   * // [
+   * //   { option: 'Option A', count: 75 },
+   * //   { option: 'Option B', count: 45 },
+   * //   { option: 'Option C', count: 30 }
+   * // ]
+   * ```
+   */
+  async getPollOptionCounts(
+    formSchemaId: string,
+    fieldKey: string,
+    tenantId: string | null
+  ): Promise<Array<{ option: string; count: number }>> {
+    const client = await this.pool.connect();
+
+    try {
+      let query = `
+        SELECT
+          fs.values_json ->> $2 as option,
+          COUNT(*) as count
+        FROM form_submissions fs
+        INNER JOIN form_schemas fsch ON fs.form_schema_id = fsch.id
+        WHERE fs.form_schema_id = $1
+          AND fs.values_json ? $2
+      `;
+
+      const values: any[] = [formSchemaId, fieldKey];
+
+      // Add tenant filter if multi-tenancy is enabled
+      if (tenantId !== null) {
+        query += ` AND fsch.tenant_id = $3`;
+        values.push(tenantId);
+      }
+
+      query += `
+        GROUP BY fs.values_json ->> $2
+        ORDER BY count DESC
+      `;
+
+      const result = await client.query(query, values);
+
+      return result.rows.map((row) => ({
+        option: row.option,
+        count: parseInt(row.count, 10),
+      }));
+    } catch (error: any) {
+      console.error('[AnalyticsRepository] Error fetching poll option counts:', error);
+      throw new Error(`Failed to fetch poll option counts: ${error.message}`);
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Gets quiz score distribution grouped into histogram buckets.
+   *
+   * Aggregates quiz submissions to create score distribution histogram.
+   * Designed for Quiz template category analytics.
+   *
+   * Groups scores into predefined buckets (0-20, 21-40, 41-60, 61-80, 81-100)
+   * using SQL CASE expressions for efficient server-side aggregation.
+   *
+   * Filters out null/invalid scores and returns empty array if no valid
+   * scores exist (allowing strategies to populate default metrics).
+   *
+   * @param formSchemaId - UUID of the quiz form schema to analyze
+   * @param scoreFieldKey - JSONB field key containing the quiz score (e.g., 'score', 'quiz_score')
+   * @param tenantId - Optional tenant ID for filtering (null for non-tenant mode)
+   * @returns Promise containing score buckets with counts
+   * @throws {Error} When database query fails
+   *
+   * @example
+   * ```typescript
+   * const scoreBuckets = await analyticsRepository.getQuizScoreBuckets(
+   *   '123e4567-e89b-12d3-a456-426614174000',
+   *   'score',
+   *   'tenant-abc'
+   * );
+   * // [
+   * //   { bucket: '0-20', count: 10 },
+   * //   { bucket: '21-40', count: 15 },
+   * //   { bucket: '41-60', count: 25 },
+   * //   { bucket: '61-80', count: 80 },
+   * //   { bucket: '81-100', count: 70 }
+   * // ]
+   * ```
+   */
+  async getQuizScoreBuckets(
+    formSchemaId: string,
+    scoreFieldKey: string,
+    tenantId: string | null
+  ): Promise<Array<{ bucket: string; count: number }>> {
+    const client = await this.pool.connect();
+
+    try {
+      let query = `
+        SELECT
+          CASE
+            WHEN (fs.values_json ->> $2)::numeric BETWEEN 0 AND 20 THEN '0-20'
+            WHEN (fs.values_json ->> $2)::numeric BETWEEN 21 AND 40 THEN '21-40'
+            WHEN (fs.values_json ->> $2)::numeric BETWEEN 41 AND 60 THEN '41-60'
+            WHEN (fs.values_json ->> $2)::numeric BETWEEN 61 AND 80 THEN '61-80'
+            WHEN (fs.values_json ->> $2)::numeric BETWEEN 81 AND 100 THEN '81-100'
+          END as bucket,
+          COUNT(*) as count
+        FROM form_submissions fs
+        INNER JOIN form_schemas fsch ON fs.form_schema_id = fsch.id
+        WHERE fs.form_schema_id = $1
+          AND fs.values_json ? $2
+          AND fs.values_json ->> $2 ~ '^[0-9]+(\\.[0-9]+)?$'
+      `;
+
+      const values: any[] = [formSchemaId, scoreFieldKey];
+
+      // Add tenant filter if multi-tenancy is enabled
+      if (tenantId !== null) {
+        query += ` AND fsch.tenant_id = $3`;
+        values.push(tenantId);
+      }
+
+      query += `
+        GROUP BY bucket
+        ORDER BY bucket ASC
+      `;
+
+      const result = await client.query(query, values);
+
+      return result.rows
+        .filter((row) => row.bucket !== null) // Filter out scores outside 0-100 range
+        .map((row) => ({
+          bucket: row.bucket,
+          count: parseInt(row.count, 10),
+        }));
+    } catch (error: any) {
+      console.error('[AnalyticsRepository] Error fetching quiz score buckets:', error);
+      throw new Error(`Failed to fetch quiz score buckets: ${error.message}`);
+    } finally {
+      client.release();
+    }
+  }
 }
 
 /**

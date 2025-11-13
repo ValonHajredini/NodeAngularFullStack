@@ -10,7 +10,7 @@
 // Mock client state - initialized before imports
 let mockClient: any;
 let queryHistory: Array<{ query: string; values: any[] }> = [];
-let mockResponses: Map<string, any> = new Map();
+const mockResponses: Map<string, any> = new Map();
 let mockError: Error | null = null;
 
 // Mock the multi-database config module BEFORE importing AnalyticsRepository
@@ -491,6 +491,337 @@ describe('AnalyticsRepository', () => {
       expect(consoleErrorSpy).toHaveBeenCalled();
 
       consoleErrorSpy.mockRestore();
+    });
+  });
+
+  describe('getPollOptionCounts', () => {
+    it('should return poll option counts sorted by count descending', async () => {
+      const mockResult = {
+        rows: [
+          { option: 'Option A', count: '75' },
+          { option: 'Option B', count: '45' },
+          { option: 'Option C', count: '30' },
+        ],
+      };
+
+      mockQueryResponse('fs.values_json ->> $2 as option', mockResult);
+
+      const result = await repository.getPollOptionCounts(
+        '123e4567-e89b-42d3-a456-426614174000',
+        'poll_option',
+        null
+      );
+
+      expect(result).toHaveLength(3);
+      expect(result[0]).toEqual({ option: 'Option A', count: 75 });
+      expect(result[1]).toEqual({ option: 'Option B', count: 45 });
+      expect(result[2]).toEqual({ option: 'Option C', count: 30 });
+    });
+
+    it('should return empty array when no poll submissions exist', async () => {
+      const mockResult = { rows: [] };
+
+      mockQueryResponse('fs.values_json ->> $2 as option', mockResult);
+
+      const result = await repository.getPollOptionCounts(
+        '123e4567-e89b-42d3-a456-426614174000',
+        'poll_option',
+        null
+      );
+
+      expect(result).toEqual([]);
+    });
+
+    it('should filter by JSONB key existence', async () => {
+      const mockResult = {
+        rows: [{ option: 'Yes', count: '50' }],
+      };
+
+      mockQueryResponse('fs.values_json ->> $2 as option', mockResult);
+
+      await repository.getPollOptionCounts(
+        '123e4567-e89b-42d3-a456-426614174000',
+        'poll_option',
+        null
+      );
+
+      const history = getQueryHistory();
+      expect(history[0].query).toContain('fs.values_json ? $2');
+    });
+
+    it('should include tenant filter when tenantId provided', async () => {
+      const mockResult = {
+        rows: [{ option: 'Option A', count: '25' }],
+      };
+
+      mockQueryResponse('fs.values_json ->> $2 as option', mockResult);
+
+      await repository.getPollOptionCounts(
+        '123e4567-e89b-42d3-a456-426614174000',
+        'poll_option',
+        'tenant-abc'
+      );
+
+      const history = getQueryHistory();
+      expect(history[0].query).toContain('fsch.tenant_id = $3');
+      expect(history[0].values).toEqual([
+        '123e4567-e89b-42d3-a456-426614174000',
+        'poll_option',
+        'tenant-abc',
+      ]);
+    });
+
+    it('should group by option value and order by count descending', async () => {
+      const mockResult = {
+        rows: [
+          { option: 'Popular', count: '100' },
+          { option: 'Less Popular', count: '10' },
+        ],
+      };
+
+      mockQueryResponse('fs.values_json ->> $2 as option', mockResult);
+
+      await repository.getPollOptionCounts(
+        '123e4567-e89b-42d3-a456-426614174000',
+        'poll_option',
+        null
+      );
+
+      const history = getQueryHistory();
+      expect(history[0].query).toContain('GROUP BY fs.values_json ->> $2');
+      expect(history[0].query).toContain('ORDER BY count DESC');
+    });
+
+    it('should handle query errors and rethrow with context', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      mockQueryError(new Error('JSONB operator error'));
+
+      await expect(
+        repository.getPollOptionCounts(
+          '123e4567-e89b-42d3-a456-426614174000',
+          'poll_option',
+          null
+        )
+      ).rejects.toThrow('Failed to fetch poll option counts: JSONB operator error');
+
+      expect(consoleErrorSpy).toHaveBeenCalled();
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should handle custom field keys', async () => {
+      const mockResult = {
+        rows: [{ option: 'Vote A', count: '60' }],
+      };
+
+      mockQueryResponse('fs.values_json ->> $2 as option', mockResult);
+
+      const result = await repository.getPollOptionCounts(
+        '123e4567-e89b-42d3-a456-426614174000',
+        'vote_choice',
+        null
+      );
+
+      const history = getQueryHistory();
+      expect(history[0].values[1]).toBe('vote_choice');
+      expect(result[0].option).toBe('Vote A');
+    });
+  });
+
+  describe('getQuizScoreBuckets', () => {
+    it('should return score distribution buckets', async () => {
+      const mockResult = {
+        rows: [
+          { bucket: '0-20', count: '10' },
+          { bucket: '21-40', count: '15' },
+          { bucket: '41-60', count: '25' },
+          { bucket: '61-80', count: '80' },
+          { bucket: '81-100', count: '70' },
+        ],
+      };
+
+      mockQueryResponse('CASE', mockResult);
+
+      const result = await repository.getQuizScoreBuckets(
+        '123e4567-e89b-42d3-a456-426614174000',
+        'score',
+        null
+      );
+
+      expect(result).toHaveLength(5);
+      expect(result[0]).toEqual({ bucket: '0-20', count: 10 });
+      expect(result[4]).toEqual({ bucket: '81-100', count: 70 });
+    });
+
+    it('should return empty array when no valid scores exist', async () => {
+      const mockResult = { rows: [] };
+
+      mockQueryResponse('CASE', mockResult);
+
+      const result = await repository.getQuizScoreBuckets(
+        '123e4567-e89b-42d3-a456-426614174000',
+        'score',
+        null
+      );
+
+      expect(result).toEqual([]);
+    });
+
+    it('should filter out null buckets (scores outside 0-100 range)', async () => {
+      const mockResult = {
+        rows: [
+          { bucket: '41-60', count: '25' },
+          { bucket: null, count: '5' }, // Score outside valid range
+          { bucket: '61-80', count: '30' },
+        ],
+      };
+
+      mockQueryResponse('CASE', mockResult);
+
+      const result = await repository.getQuizScoreBuckets(
+        '123e4567-e89b-42d3-a456-426614174000',
+        'score',
+        null
+      );
+
+      expect(result).toHaveLength(2);
+      expect(result.find((r) => r.bucket === null)).toBeUndefined();
+    });
+
+    it('should validate score field is numeric using regex', async () => {
+      const mockResult = {
+        rows: [{ bucket: '61-80', count: '20' }],
+      };
+
+      mockQueryResponse('CASE', mockResult);
+
+      await repository.getQuizScoreBuckets(
+        '123e4567-e89b-42d3-a456-426614174000',
+        'score',
+        null
+      );
+
+      const history = getQueryHistory();
+      expect(history[0].query).toContain("~ '^[0-9]+(\\.[0-9]+)?$'");
+    });
+
+    it('should use CASE expression for bucketing', async () => {
+      const mockResult = {
+        rows: [{ bucket: '0-20', count: '5' }],
+      };
+
+      mockQueryResponse('CASE', mockResult);
+
+      await repository.getQuizScoreBuckets(
+        '123e4567-e89b-42d3-a456-426614174000',
+        'score',
+        null
+      );
+
+      const history = getQueryHistory();
+      expect(history[0].query).toContain('WHEN (fs.values_json ->> $2)::numeric BETWEEN 0 AND 20');
+      expect(history[0].query).toContain('WHEN (fs.values_json ->> $2)::numeric BETWEEN 81 AND 100');
+    });
+
+    it('should include tenant filter when tenantId provided', async () => {
+      const mockResult = {
+        rows: [{ bucket: '61-80', count: '15' }],
+      };
+
+      mockQueryResponse('CASE', mockResult);
+
+      await repository.getQuizScoreBuckets(
+        '123e4567-e89b-42d3-a456-426614174000',
+        'score',
+        'tenant-xyz'
+      );
+
+      const history = getQueryHistory();
+      expect(history[0].query).toContain('fsch.tenant_id = $3');
+      expect(history[0].values).toEqual([
+        '123e4567-e89b-42d3-a456-426614174000',
+        'score',
+        'tenant-xyz',
+      ]);
+    });
+
+    it('should order buckets ascending', async () => {
+      const mockResult = {
+        rows: [
+          { bucket: '0-20', count: '5' },
+          { bucket: '21-40', count: '10' },
+          { bucket: '81-100', count: '50' },
+        ],
+      };
+
+      mockQueryResponse('CASE', mockResult);
+
+      await repository.getQuizScoreBuckets(
+        '123e4567-e89b-42d3-a456-426614174000',
+        'score',
+        null
+      );
+
+      const history = getQueryHistory();
+      expect(history[0].query).toContain('ORDER BY bucket ASC');
+    });
+
+    it('should handle query errors and rethrow with context', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      mockQueryError(new Error('Numeric cast failed'));
+
+      await expect(
+        repository.getQuizScoreBuckets(
+          '123e4567-e89b-42d3-a456-426614174000',
+          'score',
+          null
+        )
+      ).rejects.toThrow('Failed to fetch quiz score buckets: Numeric cast failed');
+
+      expect(consoleErrorSpy).toHaveBeenCalled();
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should handle custom score field keys', async () => {
+      const mockResult = {
+        rows: [{ bucket: '81-100', count: '45' }],
+      };
+
+      mockQueryResponse('CASE', mockResult);
+
+      await repository.getQuizScoreBuckets(
+        '123e4567-e89b-42d3-a456-426614174000',
+        'quiz_score',
+        null
+      );
+
+      const history = getQueryHistory();
+      expect(history[0].values[1]).toBe('quiz_score');
+    });
+
+    it('should handle decimal scores correctly', async () => {
+      const mockResult = {
+        rows: [
+          { bucket: '41-60', count: '12' },
+          { bucket: '61-80', count: '18' },
+        ],
+      };
+
+      mockQueryResponse('CASE', mockResult);
+
+      const result = await repository.getQuizScoreBuckets(
+        '123e4567-e89b-42d3-a456-426614174000',
+        'score',
+        null
+      );
+
+      expect(result).toHaveLength(2);
+      // Regex validates both integers and decimals: '^[0-9]+(\\.[0-9]+)?$'
+      expect(result[0].count).toBe(12);
+      expect(result[1].count).toBe(18);
     });
   });
 
