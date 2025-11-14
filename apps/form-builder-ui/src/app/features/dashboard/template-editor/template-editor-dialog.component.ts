@@ -37,7 +37,7 @@ import {
   FormSchema,
   QuizScoringRule,
 } from '@nodeangularfullstack/shared';
-import { TemplatesApiService } from '@core/services/templates-api.service';
+import { TemplatesApiService } from '../templates-api.service';
 
 /**
  * Dropdown option interface for PrimeNG dropdowns
@@ -505,6 +505,8 @@ export class TemplateEditorDialogComponent {
 
     // Build template data
     const formValue = this.templateForm.value;
+    const businessLogicConfig = this.getBusinessLogicConfig();
+
     const templateData: CreateFormTemplateRequest = {
       name: formValue.name,
       description: formValue.description,
@@ -514,7 +516,8 @@ export class TemplateEditorDialogComponent {
         ? { previewImageUrl: formValue.preview_image_url }
         : {}),
       templateSchema,
-      businessLogicConfig: this.getBusinessLogicConfig(),
+      // Only include businessLogicConfig if it's defined
+      ...(businessLogicConfig ? { businessLogicConfig } : {}),
     };
 
     this.saving.set(true);
@@ -551,6 +554,8 @@ export class TemplateEditorDialogComponent {
 
   /**
    * Get business logic configuration based on category
+   * Returns undefined if required fields are not configured to allow templates
+   * to be created without complete business logic setup
    * @private
    */
   private getBusinessLogicConfig(): TemplateBusinessLogicConfig | undefined {
@@ -558,6 +563,10 @@ export class TemplateEditorDialogComponent {
 
     switch (category) {
       case TemplateCategory.ECOMMERCE:
+        // Inventory config requires stockField at minimum
+        if (!this.inventoryConfig().stockField) {
+          return undefined;
+        }
         return {
           type: 'inventory',
           stockField: this.inventoryConfig().stockField,
@@ -567,6 +576,10 @@ export class TemplateEditorDialogComponent {
           decrementOnSubmit: this.inventoryConfig().decrementOnSubmit,
         };
       case TemplateCategory.SERVICES:
+        // Appointment config requires timeSlotField and dateField at minimum
+        if (!this.appointmentConfig().timeSlotField || !this.appointmentConfig().dateField) {
+          return undefined;
+        }
         return {
           type: 'appointment',
           timeSlotField: this.appointmentConfig().timeSlotField,
@@ -575,6 +588,10 @@ export class TemplateEditorDialogComponent {
           bookingsTable: 'appointment_bookings',
         };
       case TemplateCategory.QUIZ:
+        // Quiz config requires at least one scoring rule
+        if (!this.quizConfig().scoringRules || this.quizConfig().scoringRules.length === 0) {
+          return undefined;
+        }
         return {
           type: 'quiz',
           scoringRules: this.quizConfig().scoringRules.map((rule) => ({ ...rule })),
@@ -582,13 +599,9 @@ export class TemplateEditorDialogComponent {
           showResults: this.quizConfig().showResults,
         };
       case TemplateCategory.POLLS:
-        return {
-          type: 'poll',
-          voteField: '',
-          preventDuplicates: this.pollConfig().preventDuplicates,
-          showResultsAfterVote: this.pollConfig().showResultsAfterVote,
-          trackingMethod: 'session',
-        };
+        // Poll config requires voteField to be specified
+        // Since we don't have UI for this yet, return undefined
+        return undefined;
       default:
         return undefined;
     }

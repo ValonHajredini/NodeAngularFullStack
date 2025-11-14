@@ -793,9 +793,9 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
     this.isLoadingTemplate.set(true);
 
     this.templatesApiService.applyTemplate(templateId).subscribe({
-      next: (response) => {
+      next: (formSchema) => {
         // Load the template schema into the form builder
-        this.formBuilderService.loadFormSchema(response.data!);
+        this.formBuilderService.loadFormSchema(formSchema);
 
         // Show success toast
         this.messageService.add({

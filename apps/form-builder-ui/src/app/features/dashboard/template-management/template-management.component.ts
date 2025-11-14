@@ -22,8 +22,8 @@ import { Message } from 'primeng/message';
 import { Tooltip } from 'primeng/tooltip';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { FormTemplate, TemplateCategory } from '@nodeangularfullstack/shared';
-import { TemplatesApiService } from '@core/services/templates-api.service';
-import { TemplateEditorDialogComponent } from '../../components/template-editor/template-editor-dialog.component';
+import { TemplatesApiService } from '../templates-api.service';
+import { TemplateEditorDialogComponent } from '../template-editor/template-editor-dialog.component';
 
 /**
  * Dropdown option interface for PrimeNG dropdowns
@@ -63,7 +63,7 @@ interface DropdownOption {
  * // Route configuration
  * {
  *   path: 'templates',
- *   component: TemplateManagementPage,
+ *   component: TemplateManagementComponent,
  *   canActivate: [authGuard, roleGuard(['admin'])]
  * }
  * ```
@@ -90,10 +90,10 @@ interface DropdownOption {
   ],
   providers: [ConfirmationService, MessageService],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  templateUrl: './template-management.page.html',
-  styleUrls: ['./template-management.page.scss'],
+  templateUrl: './template-management.component.html',
+  styleUrls: ['./template-management.component.scss'],
 })
-export class TemplateManagementPage implements OnInit {
+export class TemplateManagementComponent implements OnInit {
   private readonly templatesApiService = inject(TemplatesApiService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);

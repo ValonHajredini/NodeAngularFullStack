@@ -33,18 +33,6 @@ export const adminRoutes: Routes = [
       description: 'Register a new tool using the guided wizard',
     },
   },
-  {
-    path: 'templates',
-    loadComponent: () =>
-      import('./pages/template-management/template-management.page').then(
-        (m) => m.TemplateManagementPage,
-      ),
-    canActivate: [authGuard, roleGuard(['admin'])],
-    data: {
-      title: 'Template Management',
-      description: 'Manage form templates for all users',
-    },
-  },
 ];
 
 export default adminRoutes;

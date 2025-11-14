@@ -430,9 +430,9 @@ export class TemplateSelectionModalComponent implements OnInit {
     this.error.set(null);
 
     this.templatesApiService.getTemplates().subscribe({
-      next: (response) => {
-        // API returns { success, data: FormTemplate[], pagination, timestamp }
-        this.templates.set(response.data || []);
+      next: (templates) => {
+        // Service now returns unwrapped FormTemplate[] directly
+        this.templates.set(templates || []);
         this.loading.set(false);
       },
       error: (error) => {

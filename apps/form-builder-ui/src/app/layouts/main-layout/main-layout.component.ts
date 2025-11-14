@@ -392,6 +392,11 @@ export class MainLayoutComponent implements OnInit {
       icon: 'pi pi-home',
     },
     {
+      label: 'Templates',
+      route: '/app/dashboard/templates',
+      icon: 'pi pi-clone',
+    },
+    {
       label: 'Documentation',
       route: '/app/documentation',
       icon: 'pi pi-book',
@@ -427,10 +432,24 @@ export class MainLayoutComponent implements OnInit {
 
   /**
    * Checks if the given route is currently active.
+   * Uses precise matching to avoid false positives for nested routes.
    */
   public isActiveRoute(route: string): boolean {
     const current = this.currentRoute();
-    return current === route || current.startsWith(route + '/');
+
+    // Exact match
+    if (current === route) {
+      return true;
+    }
+
+    // Special handling for dashboard route to avoid matching sub-routes
+    if (route === '/app/dashboard') {
+      // Only match exact dashboard or list route, not templates or other sub-routes
+      return current === '/app/dashboard' || current === '/app/dashboard/list';
+    }
+
+    // For other routes, match if current starts with route + '/'
+    return current.startsWith(route + '/');
   }
 
   /**

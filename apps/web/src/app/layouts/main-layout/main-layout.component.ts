@@ -450,12 +450,6 @@ export class MainLayoutComponent implements OnInit {
       icon: 'pi pi-folder',
       roles: ['admin'],
     },
-    {
-      label: 'Templates',
-      route: '/app/admin/templates',
-      icon: 'pi pi-file-edit',
-      roles: ['admin'],
-    },
   ];
 
   ngOnInit(): void {

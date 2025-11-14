@@ -500,10 +500,7 @@ export class FormsListComponent implements OnInit {
   private createFormFromTemplate(template: FormTemplate, settings: FormSettings): void {
     // First, apply the template to get the full schema
     this.templatesApiService.applyTemplate(template.id).subscribe({
-      next: (response) => {
-        // Get the template schema from API response
-        const templateSchema = response.data;
-
+      next: (templateSchema) => {
         // Validate template schema
         if (!templateSchema) {
           this.messageService.add({

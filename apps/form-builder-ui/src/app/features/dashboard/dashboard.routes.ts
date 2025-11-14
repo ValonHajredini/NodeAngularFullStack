@@ -18,6 +18,13 @@ export const dashboardRoutes: Routes = [
       import('./forms-list/forms-list.component').then((m) => m.FormsListComponent),
   },
   {
+    path: 'templates',
+    loadComponent: () =>
+      import('./template-management/template-management.component').then(
+        (m) => m.TemplateManagementComponent,
+      ),
+  },
+  {
     path: ':id/analytics',
     loadComponent: () =>
       import('./form-analytics/form-analytics.component').then((m) => m.FormAnalyticsComponent),

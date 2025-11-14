@@ -9,11 +9,11 @@ import { UserDropdownMenuComponent } from '../user-dropdown-menu/user-dropdown-m
  * Navigation Bar Component
  *
  * A reusable navigation bar component for authenticated users.
- * Includes brand name, dashboard navigation, theme toggle, and user dropdown.
+ * Includes brand name, main navigation links, theme toggle, and user dropdown.
  *
  * Features:
  * - Brand name/logo display
- * - Dashboard navigation button
+ * - Navigation links (Dashboard, Templates, Documentation)
  * - Theme toggle integration
  * - User dropdown menu
  * - Responsive design
@@ -55,6 +55,18 @@ import { UserDropdownMenuComponent } from '../user-dropdown-menu/user-dropdown-m
             <div class="nav-link-content">
               <i class="pi pi-home" aria-hidden="true"></i>
               <span class="nav-link-text">Dashboard</span>
+            </div>
+          </p-button>
+          <p-button
+            routerLink="/app/dashboard/templates"
+            [text]="true"
+            severity="secondary"
+            class="nav-link"
+            [attr.aria-label]="'Go to Templates'"
+          >
+            <div class="nav-link-content">
+              <i class="pi pi-clone" aria-hidden="true"></i>
+              <span class="nav-link-text">Templates</span>
             </div>
           </p-button>
           <p-button
