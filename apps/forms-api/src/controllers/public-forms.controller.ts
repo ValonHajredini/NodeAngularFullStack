@@ -8,7 +8,7 @@ import { templatesRepository } from '../repositories/templates.repository';
 import { appointmentBookingRepository } from '../repositories/appointment-booking.repository';
 import { ApiError } from '../services/forms.service';
 import { AsyncHandler } from '../utils/async-handler.utils';
-import { AppConfig } from '../config/app.config';
+import { appConfig, AppConfig } from '../config/app.config';
 import { FormField, FormFieldType } from '@nodeangularfullstack/shared';
 import { TemplateExecutorRegistry } from '../services/template-executor-registry.service';
 
@@ -194,7 +194,7 @@ export class PublicFormsController {
 
       // Rate limiting: Configurable submissions per hour per IP (unauthenticated)
       // Default: 100 (production), can be set to 1000 for development via RATE_LIMIT_MAX_REQUESTS env var
-      const rateLimit = AppConfig.get().rateLimit.maxRequests;
+      const rateLimit = appConfig.rateLimit.maxRequests;
       const submissionCount = await formSubmissionsRepository.countByIpSince(
         submitterIp,
         1
