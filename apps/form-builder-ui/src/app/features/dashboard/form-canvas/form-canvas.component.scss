@@ -410,3 +410,62 @@
   width: 100%;
   height: 100%;
 }
+
+/* JSON Syntax Highlighting Styles */
+.json-key {
+  color: #fbbf24; // Bright amber/gold for object keys
+  font-weight: 600;
+}
+
+.json-string {
+  color: #34d399; // Bright emerald green for string values
+}
+
+.json-number {
+  color: #60a5fa; // Bright sky blue for numbers
+  font-weight: 500;
+}
+
+.json-boolean {
+  color: #a78bfa; // Bright purple for booleans
+  font-weight: 700;
+}
+
+.json-null {
+  color: #9ca3af; // Light gray for null
+  font-style: italic;
+  opacity: 0.8;
+}
+
+/* View Toggle Container */
+.view-toggle-container {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 10;
+}
+
+/* JSON View Overlay */
+.json-view-overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(17, 24, 39, 0.95); // Dark semi-transparent background
+  z-index: 5;
+  padding: 1.5rem;
+  overflow: auto;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+
+  pre {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #e5e7eb; // Light gray text
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+
+  code {
+    display: block;
+    font-family: inherit;
+  }
+}

@@ -12,6 +12,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { DragDropModule, CdkDragDrop, CdkDrag, CdkDropList } from '@angular/cdk/drag-drop';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { MessageService } from 'primeng/api';
 import { FormField, FormFieldType, FieldPosition, FormTheme } from '@nodeangularfullstack/shared';
 import { FormBuilderService } from '../form-builder.service';
 import { FormSettings } from '../../../shared/components/form-settings-modal';
@@ -512,6 +513,58 @@ interface FieldTypeDefinition {
       }
 
       <!-- Field Settings Modal removed - now handled by parent UnifiedFieldEditorModal (Story 16.8) -->
+
+      <!-- View Toggle Tabs (Preview / JSON) -->
+      <div class="view-toggle-container absolute bottom-4 right-4 z-10">
+        <div class="flex gap-1 bg-white rounded shadow-sm border border-gray-200 p-0.5">
+          <button
+            type="button"
+            class="px-2 py-1 rounded text-xs font-medium transition-colors"
+            [class.bg-blue-500]="viewMode() === 'preview'"
+            [class.text-white]="viewMode() === 'preview'"
+            [class.text-gray-700]="viewMode() !== 'preview'"
+            [class.hover:bg-gray-100]="viewMode() !== 'preview'"
+            (click)="setViewMode('preview')"
+          >
+            <i class="pi pi-eye mr-1 text-xs"></i>
+            Preview
+          </button>
+          <button
+            type="button"
+            class="px-2 py-1 rounded text-xs font-medium transition-colors"
+            [class.bg-blue-500]="viewMode() === 'json'"
+            [class.text-white]="viewMode() === 'json'"
+            [class.text-gray-700]="viewMode() !== 'json'"
+            [class.hover:bg-gray-100]="viewMode() !== 'json'"
+            (click)="setViewMode('json')"
+          >
+            <i class="pi pi-code mr-1 text-xs"></i>
+            JSON
+          </button>
+        </div>
+      </div>
+
+      <!-- JSON View Container -->
+      @if (viewMode() === 'json') {
+        <div class="json-view-overlay absolute inset-0 bg-gray-900 bg-opacity-95 z-[5] p-6 overflow-auto">
+          <div class="max-w-4xl mx-auto">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-white text-lg font-semibold">Form Schema (JSON)</h3>
+              <button
+                type="button"
+                class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
+                (click)="copyJsonToClipboard()"
+              >
+                <i class="pi pi-copy mr-2"></i>
+                Copy
+              </button>
+            </div>
+            <pre class="bg-gray-800 rounded-lg p-4 overflow-x-auto">
+              <code [innerHTML]="formattedJson()"></code>
+            </pre>
+          </div>
+        </div>
+      }
     </div>
   `,
 })
@@ -520,7 +573,11 @@ export class FormCanvasComponent {
   private readonly sanitizer = inject(DomSanitizer);
   private readonly themePreviewService = inject(ThemePreviewService);
   private readonly formsApiService = inject(FormsApiService);
+  private readonly messageService = inject(MessageService);
   protected readonly FormFieldType = FormFieldType;
+
+  // View mode signal for toggling between preview and JSON view
+  protected readonly viewMode = signal<'preview' | 'json'>('preview');
 
   private _settings = signal<FormSettings>({
     title: 'Untitled Form',
@@ -591,6 +648,135 @@ export class FormCanvasComponent {
     if (!activeId) return [];
     return rows.filter((row) => row.stepId === activeId);
   });
+
+  /**
+   * Computed signal: Formatted and syntax-highlighted JSON for the form schema.
+   * Generates colorized HTML representation of the current form structure.
+   */
+  protected readonly formattedJson = computed(() => {
+    const currentForm = this.formBuilderService.currentForm();
+    if (!currentForm?.schema) {
+      return this.sanitizer.bypassSecurityTrustHtml(
+        '<span style="color: #999;">No form schema available</span>',
+      );
+    }
+
+    // Build complete schema object for JSON display
+    const schemaForDisplay = {
+      formId: currentForm.id,
+      title: this.settings.title || 'Untitled Form',
+      description: this.settings.description || '',
+      fields: currentForm.schema.fields || [],
+      settings: currentForm.schema.settings || {},
+      rowLayout: this.formBuilderService.rowLayoutEnabled()
+        ? {
+            enabled: true,
+            rows: this.formBuilderService.rowConfigs(),
+          }
+        : undefined,
+      steps: this.stepFormEnabled() ? this.formBuilderService.steps() : undefined,
+    };
+
+    // Format as pretty JSON
+    const jsonString = JSON.stringify(schemaForDisplay, null, 2);
+
+    // Apply syntax highlighting
+    const highlighted = this.syntaxHighlightJson(jsonString);
+
+    return this.sanitizer.bypassSecurityTrustHtml(highlighted);
+  });
+
+  /**
+   * Switch between preview and JSON view modes.
+   * @param mode - The view mode to activate ('preview' or 'json')
+   */
+  protected setViewMode(mode: 'preview' | 'json'): void {
+    this.viewMode.set(mode);
+  }
+
+  /**
+   * Copy the formatted JSON to clipboard and show toast notification.
+   */
+  protected async copyJsonToClipboard(): Promise<void> {
+    try {
+      const currentForm = this.formBuilderService.currentForm();
+      if (!currentForm?.schema) {
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'No Schema',
+          detail: 'No form schema available to copy',
+        });
+        return;
+      }
+
+      // Build complete schema object for clipboard
+      const schemaForClipboard = {
+        formId: currentForm.id,
+        title: this.settings.title || 'Untitled Form',
+        description: this.settings.description || '',
+        fields: currentForm.schema.fields || [],
+        settings: currentForm.schema.settings || {},
+        rowLayout: this.formBuilderService.rowLayoutEnabled()
+          ? {
+              enabled: true,
+              rows: this.formBuilderService.rowConfigs(),
+            }
+          : undefined,
+        steps: this.stepFormEnabled() ? this.formBuilderService.steps() : undefined,
+      };
+
+      // Format as pretty JSON
+      const jsonString = JSON.stringify(schemaForClipboard, null, 2);
+
+      // Use Clipboard API to copy
+      await navigator.clipboard.writeText(jsonString);
+
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Copied',
+        detail: 'Form schema copied to clipboard',
+      });
+    } catch (error) {
+      console.error('Failed to copy JSON to clipboard:', error);
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Copy Failed',
+        detail: 'Failed to copy JSON to clipboard',
+      });
+    }
+  }
+
+  /**
+   * Apply syntax highlighting to JSON string.
+   * Returns HTML string with color-coded spans for different token types.
+   * @param json - The JSON string to highlight
+   * @returns HTML string with syntax highlighting
+   */
+  private syntaxHighlightJson(json: string): string {
+    // Replace tokens with colored spans
+    return json
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(
+        /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+        (match) => {
+          let cls = 'number'; // Default color for numbers
+          if (/^"/.test(match)) {
+            if (/:$/.test(match)) {
+              cls = 'key'; // JSON object keys
+            } else {
+              cls = 'string'; // JSON string values
+            }
+          } else if (/true|false/.test(match)) {
+            cls = 'boolean'; // Booleans
+          } else if (/null/.test(match)) {
+            cls = 'null'; // Null values
+          }
+          return `<span class="json-${cls}">${match}</span>`;
+        },
+      );
+  }
 
   /**
    * Check if background image exists with URL (from settings)
