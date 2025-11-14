@@ -53,6 +53,8 @@ export enum FormFieldType {
   TEXT_BLOCK = 'text_block',
   /** Image gallery selector (input field for selecting one image from gallery) */
   IMAGE_GALLERY = 'image_gallery',
+  /** Time slot selector for appointments/bookings with configurable intervals */
+  TIME_SLOT = 'time_slot',
 }
 
 /**
@@ -73,6 +75,7 @@ export const FIELD_TYPE_CATEGORIES = {
     FormFieldType.DATETIME,
     FormFieldType.TOGGLE,
     FormFieldType.IMAGE_GALLERY,
+    FormFieldType.TIME_SLOT,
   ] as const,
 
   /** Display elements that don't collect data (visual/organizational) */
@@ -259,6 +262,27 @@ export interface ImageGalleryMetadata extends BaseFieldMetadata {
 }
 
 /**
+ * Time slot metadata for TIME_SLOT field type
+ * Configures time interval selection for appointments and bookings
+ */
+export interface TimeSlotMetadata extends BaseFieldMetadata {
+  /** Time interval for slot generation */
+  interval: '10min' | '15min' | '30min' | '1hour' | '1day';
+  /** Start time (HH:MM format, 24-hour) - Default: '09:00' */
+  startTime?: string;
+  /** End time (HH:MM format, 24-hour) - Default: '17:00' */
+  endTime?: string;
+  /** Display format for time slots - Default: '12h' */
+  timeFormat?: '12h' | '24h';
+  /** Maximum number of time slots to display - Default: 20 */
+  maxSlots?: number;
+  /** Whether to allow multiple slot selection - Default: false */
+  allowMultiple?: boolean;
+  /** Timezone for time slot display (e.g., 'America/New_York') */
+  timezone?: string;
+}
+
+/**
  * Product variant metadata for IMAGE_GALLERY fields
  * Used by product templates for inventory tracking and e-commerce functionality
  * Each array element corresponds to an image in the gallery
@@ -427,13 +451,14 @@ export interface FormField {
   order: number;
   /** Parent group ID for nested fields */
   parentGroupId?: string;
-  /** Additional metadata for special field types (e.g., GROUP, HEADING, IMAGE, TEXT_BLOCK, IMAGE_GALLERY) */
+  /** Additional metadata for special field types (e.g., GROUP, HEADING, IMAGE, TEXT_BLOCK, IMAGE_GALLERY, TIME_SLOT) */
   metadata?:
     | GroupMetadata
     | HeadingMetadata
     | ImageMetadata
     | TextBlockMetadata
-    | ImageGalleryMetadata;
+    | ImageGalleryMetadata
+    | TimeSlotMetadata;
   /**
    * Variant metadata for IMAGE_GALLERY fields (e.g., product variants).
    * Each array element corresponds to an image in the gallery.

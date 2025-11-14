@@ -15,7 +15,6 @@ import { Component, ChangeDetectionStrategy, input, computed } from '@angular/co
 import { CommonModule, DecimalPipe, CurrencyPipe } from '@angular/common';
 import { ProductMetrics, ChoiceDistribution } from '@nodeangularfullstack/shared';
 import { HorizontalBarChartComponent } from './charts/horizontal-bar-chart.component';
-import { BarChartComponent } from './charts/bar-chart.component';
 import { Message } from 'primeng/message';
 
 /**
@@ -63,7 +62,6 @@ import { Message } from 'primeng/message';
     DecimalPipe,
     CurrencyPipe,
     HorizontalBarChartComponent,
-    BarChartComponent,
     Message,
   ],
   template: `

@@ -1,0 +1,43 @@
+<div class="category-selection-container" role="region" aria-label="Template category selection">
+  <div class="category-grid">
+    @for (categoryMeta of categories(); track categoryMeta.category) {
+      <div
+        class="category-card"
+        [class.selected]="isSelected(categoryMeta.category)"
+        tabindex="0"
+        role="button"
+        [attr.aria-label]="getAriaLabel(categoryMeta)"
+        [attr.aria-pressed]="isSelected(categoryMeta.category)"
+        (click)="selectCategory(categoryMeta.category)"
+        (keydown)="handleKeyDown($event, categoryMeta.category)"
+      >
+        <!-- Category Icon -->
+        <div class="category-icon" [attr.data-severity]="categoryMeta.severity">
+          <i [class]="categoryMeta.icon" aria-hidden="true"></i>
+        </div>
+
+        <!-- Category Content -->
+        <div class="category-content">
+          <h4 class="category-label">{{ categoryMeta.label }}</h4>
+          <p class="category-description">{{ categoryMeta.description }}</p>
+        </div>
+
+        <!-- Selection Indicator -->
+        @if (isSelected(categoryMeta.category)) {
+          <div class="selection-indicator" aria-hidden="true">
+            <i class="pi pi-check-circle"></i>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Selection Hint (for accessibility) -->
+  <div class="selection-hint" role="status" aria-live="polite" aria-atomic="true">
+    @if (selectedCategory()) {
+      <span> {{ selectedCategory() }} category selected. Press Next to continue. </span>
+    } @else {
+      <span> No category selected. Use keyboard or mouse to select a template category. </span>
+    }
+  </div>
+</div>

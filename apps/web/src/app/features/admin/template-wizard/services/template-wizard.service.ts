@@ -419,16 +419,68 @@ export class TemplateWizardService {
    */
   private getWizardConfigForCategory(category: TemplateCategory): TemplateWizardConfig {
     // Placeholder: Will be populated with actual wizard configurations
-    return {
-      category,
-      steps: [
-        { stepId: 'basic', label: 'Basic Info', required: true, order: 0 },
-        { stepId: 'config', label: 'Configuration', required: true, order: 1 },
-        { stepId: 'preview', label: 'Preview', required: false, order: 2 },
-      ],
-      allowedFields: [],
-      validationRules: {},
-    } as TemplateWizardConfig;
+    const baseSteps = [
+      { stepId: 'basic', label: 'Basic Info', required: true, order: 0 },
+      { stepId: 'config', label: 'Configuration', required: true, order: 1 },
+      { stepId: 'preview', label: 'Preview', required: false, order: 2 },
+    ];
+
+    const baseFields: any[] = [];
+
+    switch (category) {
+      case TemplateCategory.POLLS:
+        return {
+          category: TemplateCategory.POLLS,
+          steps: baseSteps,
+          allowedFields: baseFields,
+          pollOptions: { minOptions: 2, maxOptions: 10 },
+          voteTrackingOptions: ['session', 'ip', 'fingerprint'],
+        };
+      case TemplateCategory.QUIZ:
+        return {
+          category: TemplateCategory.QUIZ,
+          steps: baseSteps,
+          allowedFields: baseFields,
+          questionOptions: { minQuestions: 1, maxQuestions: 50 },
+          scoringOptions: { defaultPoints: 1, allowCustomPoints: true },
+        };
+      case TemplateCategory.ECOMMERCE:
+        return {
+          category: TemplateCategory.ECOMMERCE,
+          steps: baseSteps,
+          allowedFields: baseFields,
+          inventoryOptions: { enableTracking: true, enableVariants: true },
+          pricingOptions: { enableTax: true, enableShipping: true },
+        };
+      case TemplateCategory.SERVICES:
+        return {
+          category: TemplateCategory.SERVICES,
+          steps: baseSteps,
+          allowedFields: baseFields,
+          timeSlotOptions: { interval: 30, minAdvanceBooking: 1, maxAdvanceBooking: 30 },
+          capacityOptions: { defaultCapacity: 1, allowOverbook: false },
+        };
+      case TemplateCategory.DATA_COLLECTION:
+        return {
+          category: TemplateCategory.DATA_COLLECTION,
+          steps: baseSteps,
+          allowedFields: baseFields,
+          menuOptions: { minItems: 1, maxItems: 100, enableCategories: true },
+          orderOptions: { enableTax: true, enableTips: true, calculateTotal: true },
+        };
+      case TemplateCategory.EVENTS:
+        return {
+          category: TemplateCategory.EVENTS,
+          steps: baseSteps,
+          allowedFields: baseFields,
+          rsvpOptions: { allowGuestCount: true, requireContactInfo: true },
+          ticketOptions: { enableSales: true, enableDiscounts: false, maxPerOrder: 10 },
+        };
+      default:
+        // Exhaustiveness check
+        const _exhaustive: never = category;
+        throw new Error(`Unknown template category: ${category}`);
+    }
   }
 
   /**
@@ -482,36 +534,40 @@ export class TemplateWizardService {
 
     switch (category) {
       case TemplateCategory.POLLS:
-        summary.push(`Min options: ${(categoryData.minOptions as number) || 2}`);
-        summary.push(`Max options: ${(categoryData.maxOptions as number) || 10}`);
-        summary.push(`Vote tracking: ${(categoryData.voteTracking as string) || 'session'}`);
+        summary.push(`Min options: ${(categoryData['minOptions'] as number) || 2}`);
+        summary.push(`Max options: ${(categoryData['maxOptions'] as number) || 10}`);
+        summary.push(`Vote tracking: ${(categoryData['voteTracking'] as string) || 'session'}`);
         break;
       case TemplateCategory.QUIZ:
-        summary.push(`Min questions: ${(categoryData.minQuestions as number) || 1}`);
-        summary.push(`Passing score: ${(categoryData.passingScore as number) || 70}%`);
-        summary.push(`Allow retakes: ${(categoryData.allowRetakes as boolean) ? 'Yes' : 'No'}`);
+        summary.push(`Min questions: ${(categoryData['minQuestions'] as number) || 1}`);
+        summary.push(`Passing score: ${(categoryData['passingScore'] as number) || 70}%`);
+        summary.push(`Allow retakes: ${(categoryData['allowRetakes'] as boolean) ? 'Yes' : 'No'}`);
         break;
       case TemplateCategory.ECOMMERCE:
         summary.push(
-          `Inventory tracking: ${(categoryData.enableInventory as boolean) ? 'Yes' : 'No'}`,
+          `Inventory tracking: ${(categoryData['enableInventory'] as boolean) ? 'Yes' : 'No'}`,
         );
-        summary.push(`Tax calculation: ${(categoryData.enableTax as boolean) ? 'Yes' : 'No'}`);
+        summary.push(`Tax calculation: ${(categoryData['enableTax'] as boolean) ? 'Yes' : 'No'}`);
         break;
       case TemplateCategory.SERVICES:
-        summary.push(`Slot interval: ${(categoryData.slotInterval as number) || 30} minutes`);
-        summary.push(`Max bookings: ${(categoryData.maxBookingsPerSlot as number) || 1} per slot`);
+        summary.push(`Slot interval: ${(categoryData['slotInterval'] as number) || 30} minutes`);
+        summary.push(
+          `Max bookings: ${(categoryData['maxBookingsPerSlot'] as number) || 1} per slot`,
+        );
         break;
       case TemplateCategory.DATA_COLLECTION:
-        summary.push(`Min items: ${(categoryData.minItems as number) || 1}`);
+        summary.push(`Min items: ${(categoryData['minItems'] as number) || 1}`);
         summary.push(
-          `Categories: ${(categoryData.enableCategories as boolean) ? 'Enabled' : 'Disabled'}`,
+          `Categories: ${(categoryData['enableCategories'] as boolean) ? 'Enabled' : 'Disabled'}`,
         );
         break;
       case TemplateCategory.EVENTS:
         summary.push(
-          `Guest count: ${(categoryData.allowGuestCount as boolean) ? 'Allowed' : 'Not allowed'}`,
+          `Guest count: ${(categoryData['allowGuestCount'] as boolean) ? 'Allowed' : 'Not allowed'}`,
         );
-        summary.push(`Max tickets: ${(categoryData.maxTicketsPerOrder as number) || 10} per order`);
+        summary.push(
+          `Max tickets: ${(categoryData['maxTicketsPerOrder'] as number) || 10} per order`,
+        );
         break;
     }
 

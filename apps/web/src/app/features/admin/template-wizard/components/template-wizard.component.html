@@ -1,0 +1,163 @@
+<p-dialog
+  [(visible)]="visible"
+  [modal]="true"
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '90vw', maxWidth: '1200px', minHeight: '600px' }"
+  [header]="'Create Template Wizard'"
+  [closeOnEscape]="true"
+  (onHide)="close(true)"
+  styleClass="template-wizard-dialog"
+>
+  <!-- Wizard Steps Navigation -->
+  <div class="wizard-steps-container">
+    <p-steps
+      [model]="stepItems()"
+      [activeIndex]="activeIndex()"
+      [readonly]="false"
+      styleClass="wizard-steps"
+    ></p-steps>
+  </div>
+
+  <!-- Wizard Content Area -->
+  <div class="wizard-content">
+    <!-- Step 0: Category Selection -->
+    @if (currentStep() === 0) {
+      <div class="step-container">
+        <h3 class="step-title">Select Template Category</h3>
+        <p class="step-description">
+          Choose the type of form template you want to create. Each category provides specialized
+          fields and business logic.
+        </p>
+        <!-- Category Selection Component -->
+        <app-category-selection></app-category-selection>
+      </div>
+    }
+
+    <!-- Step 1: Basic Info (placeholder for future stories) -->
+    @if (currentStep() === 1) {
+      <div class="step-container">
+        <h3 class="step-title">Basic Information</h3>
+        <p class="step-description">Enter the basic details for your template.</p>
+        <div class="form-placeholder">
+          <p class="text-muted">Basic info form will be rendered here (Story 30.11+)</p>
+        </div>
+      </div>
+    }
+
+    <!-- Step 2: Configuration (placeholder for future stories) -->
+    @if (currentStep() === 2) {
+      <div class="step-container">
+        <h3 class="step-title">Configure Template</h3>
+        <p class="step-description">Configure category-specific options and business logic.</p>
+        <div class="form-placeholder">
+          <p class="text-muted">Configuration form will be rendered here (Story 30.12+)</p>
+        </div>
+      </div>
+    }
+
+    <!-- Step 3: Preview (placeholder for future stories) -->
+    @if (currentStep() === 3) {
+      <div class="step-container">
+        <h3 class="step-title">Preview & Confirm</h3>
+        <p class="step-description">Review your template configuration before creating.</p>
+        <!-- Live Preview Panel Component -->
+        <app-live-preview-panel></app-live-preview-panel>
+      </div>
+    }
+  </div>
+
+  <!-- Validation Errors Display -->
+  @if (validationErrors().length > 0) {
+    <div class="validation-errors" role="alert" aria-live="polite">
+      <i class="pi pi-exclamation-triangle"></i>
+      <div class="error-list">
+        @for (error of validationErrors(); track error) {
+          <p class="error-message">{{ error }}</p>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Footer: Navigation and Actions -->
+  <ng-template pTemplate="footer">
+    <div class="wizard-footer">
+      <!-- Advanced Mode Toggle -->
+      <div class="advanced-mode-toggle">
+        <p-button
+          [label]="advancedMode() ? 'Advanced Mode: ON' : 'Advanced Mode'"
+          [outlined]="!advancedMode()"
+          [severity]="advancedMode() ? 'secondary' : 'info'"
+          icon="pi pi-cog"
+          size="small"
+          (onClick)="toggleAdvancedMode()"
+          [attr.aria-pressed]="advancedMode()"
+          [attr.aria-label]="'Toggle advanced mode'"
+        ></p-button>
+
+        @if (advancedMode()) {
+          <p-button
+            label="Jump to JSON Editor"
+            severity="secondary"
+            icon="pi pi-code"
+            size="small"
+            (onClick)="jumpToJsonEditor()"
+            [attr.aria-label]="'Open JSON editor'"
+          ></p-button>
+        }
+      </div>
+
+      <!-- Navigation Buttons -->
+      <div class="navigation-buttons">
+        <!-- Cancel Button -->
+        <p-button
+          label="Cancel"
+          severity="secondary"
+          [outlined]="true"
+          icon="pi pi-times"
+          (onClick)="cancel()"
+          [attr.aria-label]="'Cancel wizard and discard changes'"
+        ></p-button>
+
+        <!-- Back Button -->
+        <p-button
+          label="Back"
+          severity="secondary"
+          icon="pi pi-arrow-left"
+          [disabled]="!canGoBack()"
+          (onClick)="previousStep()"
+          [attr.aria-label]="'Go to previous step'"
+          [attr.aria-disabled]="!canGoBack()"
+        ></p-button>
+
+        <!-- Next Button -->
+        @if (!isLastStep()) {
+          <p-button
+            label="Next"
+            severity="primary"
+            icon="pi pi-arrow-right"
+            iconPos="right"
+            [disabled]="!canGoNext()"
+            (onClick)="nextStep()"
+            [attr.aria-label]="'Go to next step'"
+            [attr.aria-disabled]="!canGoNext()"
+          ></p-button>
+        }
+
+        <!-- Create Button (last step only) -->
+        @if (isLastStep()) {
+          <p-button
+            label="Create Template"
+            severity="success"
+            icon="pi pi-check"
+            [disabled]="!isValid()"
+            (onClick)="close(false)"
+            [attr.aria-label]="'Create template from wizard configuration'"
+            [attr.aria-disabled]="!isValid()"
+          ></p-button>
+        }
+      </div>
+    </div>
+  </ng-template>
+</p-dialog>

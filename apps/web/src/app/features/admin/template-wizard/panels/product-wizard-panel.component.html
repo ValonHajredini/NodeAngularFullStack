@@ -1,0 +1,467 @@
+<div class="product-wizard-panel">
+  <!-- Step Indicator -->
+  <div class="wizard-steps mb-4">
+    <div class="flex justify-content-between align-items-center">
+      <div class="flex-1" *ngFor="let step of steps; let i = index">
+        <div
+          class="step-item"
+          [class.active]="currentStep() === i"
+          [class.completed]="currentStep() > i"
+        >
+          <div class="step-icon">
+            <i [class]="step.icon"></i>
+          </div>
+          <div class="step-label text-sm mt-2">{{ step.label }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Help Text Message -->
+  <p-message severity="info" [text]="getStepHelpText()" [styleClass]="'mb-4 w-full'"></p-message>
+
+  <!-- Validation Errors -->
+  <div *ngIf="validationErrors().length > 0" class="mb-4">
+    <p-message
+      *ngFor="let error of validationErrors()"
+      severity="error"
+      [text]="error"
+      [styleClass]="'mb-2 w-full'"
+      [attr.role]="'alert'"
+      [attr.aria-live]="'assertive'"
+    ></p-message>
+  </div>
+
+  <!-- Product Configuration Form -->
+  <form [formGroup]="productForm" class="product-form">
+    <!-- Step 1: Inventory Items -->
+    <div *ngIf="currentStep() === 0" class="wizard-step-content">
+      <!-- Add Product Form -->
+      <div class="add-product-form p-4 surface-50 border-round mb-4">
+        <h4 class="font-semibold mb-3">Add Product</h4>
+        <div class="grid">
+          <div class="col-12 md:col-6">
+            <label for="product-name" class="block font-medium mb-2">Product Name</label>
+            <input
+              #productNameInput
+              id="product-name"
+              type="text"
+              pInputText
+              placeholder="e.g., Wireless Mouse"
+              class="w-full"
+            />
+          </div>
+          <div class="col-12 md:col-6">
+            <label for="product-sku" class="block font-medium mb-2">SKU</label>
+            <input
+              #productSkuInput
+              id="product-sku"
+              type="text"
+              pInputText
+              placeholder="e.g., WM-001"
+              class="w-full"
+            />
+          </div>
+          <div class="col-12 md:col-6">
+            <label for="product-price" class="block font-medium mb-2">Price ($)</label>
+            <p-inputNumber
+              #productPriceInput
+              inputId="product-price"
+              [min]="0"
+              [minFractionDigits]="2"
+              [maxFractionDigits]="2"
+              mode="currency"
+              currency="USD"
+              placeholder="0.00"
+              class="w-full"
+            ></p-inputNumber>
+          </div>
+          <div class="col-12 md:col-6">
+            <label for="product-stock" class="block font-medium mb-2">Initial Stock</label>
+            <p-inputNumber
+              #productStockInput
+              inputId="product-stock"
+              [min]="0"
+              [showButtons]="true"
+              placeholder="0"
+              class="w-full"
+            ></p-inputNumber>
+          </div>
+        </div>
+        <button
+          pButton
+          type="button"
+          label="Add Product"
+          icon="pi pi-plus"
+          class="mt-3"
+          (click)="
+            addProduct(
+              productNameInput.value,
+              productSkuInput.value,
+              productPriceInput.value || 0,
+              productStockInput.value || 0
+            );
+            productNameInput.value = '';
+            productSkuInput.value = '';
+            productPriceInput.value = null;
+            productStockInput.value = null
+          "
+        ></button>
+      </div>
+
+      <!-- Product Inventory Table -->
+      <div *ngIf="productInventory().length > 0">
+        <div class="flex justify-content-between align-items-center mb-3">
+          <h4 class="font-semibold m-0">
+            Product Inventory ({{ productInventory().length }} items)
+          </h4>
+          <div class="text-right">
+            <small class="text-color-secondary">Total Inventory Value:</small>
+            <strong class="ml-2 text-primary">${{ totalInventoryValue().toFixed(2) }}</strong>
+          </div>
+        </div>
+        <p-table
+          [value]="productInventory()"
+          [tableStyle]="{ 'min-width': '50rem' }"
+          styleClass="p-datatable-sm"
+        >
+          <ng-template pTemplate="header">
+            <tr>
+              <th style="width: 35%">Product Name</th>
+              <th style="width: 20%">SKU</th>
+              <th style="width: 15%">Price</th>
+              <th style="width: 15%">Stock</th>
+              <th style="width: 10%">Value</th>
+              <th style="width: 5%">Actions</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-product let-rowIndex="rowIndex">
+            <tr>
+              <td>{{ product.name }}</td>
+              <td>
+                <span class="font-mono text-sm">{{ product.sku }}</span>
+              </td>
+              <td>${{ product.price.toFixed(2) }}</td>
+              <td>{{ product.stock }} units</td>
+              <td>${{ (product.price * product.stock).toFixed(2) }}</td>
+              <td>
+                <button
+                  pButton
+                  type="button"
+                  icon="pi pi-trash"
+                  class="p-button-text p-button-danger p-button-sm"
+                  (click)="removeProduct(rowIndex)"
+                  [attr.aria-label]="'Remove product ' + product.name"
+                ></button>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    </div>
+
+    <!-- Step 2: Pricing Tiers -->
+    <div *ngIf="currentStep() === 1" class="wizard-step-content">
+      <div class="field">
+        <div class="flex align-items-center">
+          <p-checkbox
+            inputId="enable-tax"
+            formControlName="enableTax"
+            [binary]="true"
+            [attr.aria-describedby]="'enable-tax-help'"
+          ></p-checkbox>
+          <label for="enable-tax" class="ml-2 font-semibold">
+            Enable Tax Calculation
+            <i
+              class="pi pi-info-circle ml-2 text-primary cursor-pointer"
+              pTooltip="Automatically calculate and add tax to product prices."
+              tooltipPosition="right"
+            ></i>
+          </label>
+        </div>
+        <small id="enable-tax-help" class="block mt-2 ml-7 text-color-secondary">
+          Add sales tax to all product prices at checkout
+        </small>
+      </div>
+
+      <div *ngIf="productForm.get('enableTax')?.value" class="field mt-4">
+        <label for="tax-rate" class="block font-semibold mb-2"> Tax Rate (%) </label>
+        <p-inputNumber
+          inputId="tax-rate"
+          formControlName="taxRate"
+          [min]="0"
+          [max]="100"
+          [showButtons]="true"
+          [step]="0.5"
+          suffix="%"
+          class="w-full"
+          [attr.aria-describedby]="'tax-rate-help'"
+        ></p-inputNumber>
+        <small id="tax-rate-help" class="block mt-2 text-color-secondary">
+          Sales tax percentage applied to product prices
+        </small>
+      </div>
+
+      <div class="field mt-5">
+        <div class="flex align-items-center">
+          <p-checkbox
+            inputId="enable-discounts"
+            formControlName="enableDiscounts"
+            [binary]="true"
+            [attr.aria-describedby]="'enable-discounts-help'"
+          ></p-checkbox>
+          <label for="enable-discounts" class="ml-2 font-semibold">
+            Enable Discounts
+            <i
+              class="pi pi-info-circle ml-2 text-primary cursor-pointer"
+              pTooltip="Apply percentage-based discounts to products."
+              tooltipPosition="right"
+            ></i>
+          </label>
+        </div>
+        <small id="enable-discounts-help" class="block mt-2 ml-7 text-color-secondary">
+          Offer discounts on product prices
+        </small>
+      </div>
+
+      <div *ngIf="productForm.get('enableDiscounts')?.value" class="field mt-4">
+        <label for="discount-percentage" class="block font-semibold mb-2">
+          Discount Percentage (%)
+        </label>
+        <p-inputNumber
+          inputId="discount-percentage"
+          formControlName="discountPercentage"
+          [min]="0"
+          [max]="100"
+          [showButtons]="true"
+          [step]="5"
+          suffix="%"
+          class="w-full"
+          [attr.aria-describedby]="'discount-percentage-help'"
+        ></p-inputNumber>
+        <small id="discount-percentage-help" class="block mt-2 text-color-secondary">
+          Percentage discount applied to product prices
+        </small>
+      </div>
+
+      <!-- Pricing Example -->
+      <div *ngIf="productInventory().length > 0" class="mt-5 p-4 surface-50 border-round">
+        <h4 class="font-semibold mb-3 text-color-secondary">
+          <i class="pi pi-calculator mr-2"></i>
+          Pricing Example
+        </h4>
+        <div class="example-product">
+          <p class="mb-2"><strong>Product:</strong> {{ productInventory()[0].name }}</p>
+          <p class="mb-2">
+            <strong>Base Price:</strong> ${{ productInventory()[0].price.toFixed(2) }}
+          </p>
+          <p
+            *ngIf="
+              productForm.get('enableDiscounts')?.value &&
+              productForm.get('discountPercentage')?.value > 0
+            "
+            class="mb-2 text-success"
+          >
+            <strong>After Discount ({{ productForm.get('discountPercentage')?.value }}%):</strong>
+            ${{
+              (
+                productInventory()[0].price *
+                (1 - productForm.get('discountPercentage')?.value / 100)
+              ).toFixed(2)
+            }}
+          </p>
+          <p *ngIf="productForm.get('enableTax')?.value" class="mb-0 text-primary">
+            <strong>Final Price (+ {{ productForm.get('taxRate')?.value }}% tax):</strong>
+            ${{
+              (
+                (productForm.get('enableDiscounts')?.value &&
+                productForm.get('discountPercentage')?.value > 0
+                  ? productInventory()[0].price *
+                    (1 - productForm.get('discountPercentage')?.value / 100)
+                  : productInventory()[0].price) *
+                (1 + productForm.get('taxRate')?.value / 100)
+              ).toFixed(2)
+            }}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Availability -->
+    <div *ngIf="currentStep() === 2" class="wizard-step-content">
+      <div class="field">
+        <div class="flex align-items-center">
+          <p-checkbox
+            inputId="enable-inventory-tracking"
+            formControlName="enableInventoryTracking"
+            [binary]="true"
+            [attr.aria-describedby]="'enable-inventory-tracking-help'"
+          ></p-checkbox>
+          <label for="enable-inventory-tracking" class="ml-2 font-semibold">
+            Enable Inventory Tracking
+            <i
+              class="pi pi-info-circle ml-2 text-primary cursor-pointer"
+              pTooltip="Track stock levels and prevent orders when inventory is depleted."
+              tooltipPosition="right"
+            ></i>
+          </label>
+        </div>
+        <small id="enable-inventory-tracking-help" class="block mt-2 ml-7 text-color-secondary">
+          Automatically update stock levels on each order
+        </small>
+      </div>
+
+      <div *ngIf="productForm.get('enableInventoryTracking')?.value" class="field mt-4">
+        <label for="low-stock-threshold" class="block font-semibold mb-2">
+          Low Stock Threshold
+        </label>
+        <p-inputNumber
+          inputId="low-stock-threshold"
+          formControlName="lowStockThreshold"
+          [min]="0"
+          [showButtons]="true"
+          [step]="5"
+          class="w-full"
+          [attr.aria-describedby]="'low-stock-threshold-help'"
+        ></p-inputNumber>
+        <small id="low-stock-threshold-help" class="block mt-2 text-color-secondary">
+          Show low stock warning when inventory falls below this level
+        </small>
+      </div>
+
+      <div class="field mt-4">
+        <label for="max-items-per-order" class="block font-semibold mb-2">
+          Maximum Items Per Order
+          <i
+            class="pi pi-info-circle ml-2 text-primary cursor-pointer"
+            pTooltip="Limit the quantity of each product that can be ordered at once."
+            tooltipPosition="right"
+          ></i>
+        </label>
+        <p-inputNumber
+          inputId="max-items-per-order"
+          formControlName="maxItemsPerOrder"
+          [min]="1"
+          [showButtons]="true"
+          class="w-full"
+          [attr.aria-describedby]="'max-items-per-order-help'"
+        ></p-inputNumber>
+        <small id="max-items-per-order-help" class="block mt-2 text-color-secondary">
+          Maximum quantity of a single product per order
+        </small>
+      </div>
+    </div>
+
+    <!-- Step 4: Fulfillment -->
+    <div *ngIf="currentStep() === 3" class="wizard-step-content">
+      <div class="field">
+        <label for="shipping-method" class="block font-semibold mb-2">
+          Shipping Method
+          <i
+            class="pi pi-info-circle ml-2 text-primary cursor-pointer"
+            pTooltip="Select the default shipping method for product orders."
+            tooltipPosition="right"
+          ></i>
+        </label>
+        <p-select
+          inputId="shipping-method"
+          formControlName="shippingMethod"
+          [options]="shippingMethodOptions"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Select shipping method"
+          class="w-full"
+          [attr.aria-describedby]="'shipping-method-help'"
+        ></p-select>
+        <small id="shipping-method-help" class="block mt-2 text-color-secondary">
+          Default shipping option for customer orders
+        </small>
+      </div>
+
+      <div *ngIf="productForm.get('shippingMethod')?.value !== 'pickup'" class="field mt-4">
+        <label for="shipping-cost" class="block font-semibold mb-2"> Shipping Cost ($) </label>
+        <p-inputNumber
+          inputId="shipping-cost"
+          formControlName="shippingCost"
+          [min]="0"
+          [minFractionDigits]="2"
+          [maxFractionDigits]="2"
+          mode="currency"
+          currency="USD"
+          class="w-full"
+          [attr.aria-describedby]="'shipping-cost-help'"
+        ></p-inputNumber>
+        <small id="shipping-cost-help" class="block mt-2 text-color-secondary">
+          Flat rate shipping fee for {{ productForm.get('shippingMethod')?.value }} shipping
+        </small>
+      </div>
+
+      <div *ngIf="productForm.get('shippingMethod')?.value !== 'pickup'" class="field mt-5">
+        <div class="flex align-items-center">
+          <p-checkbox
+            inputId="enable-free-shipping"
+            formControlName="enableFreeShipping"
+            [binary]="true"
+            [attr.aria-describedby]="'enable-free-shipping-help'"
+          ></p-checkbox>
+          <label for="enable-free-shipping" class="ml-2 font-semibold">
+            Enable Free Shipping
+            <i
+              class="pi pi-info-circle ml-2 text-primary cursor-pointer"
+              pTooltip="Offer free shipping when order total exceeds threshold."
+              tooltipPosition="right"
+            ></i>
+          </label>
+        </div>
+        <small id="enable-free-shipping-help" class="block mt-2 ml-7 text-color-secondary">
+          Waive shipping fees for orders above a certain amount
+        </small>
+      </div>
+
+      <div *ngIf="productForm.get('enableFreeShipping')?.value" class="field mt-4">
+        <label for="free-shipping-threshold" class="block font-semibold mb-2">
+          Free Shipping Threshold ($)
+        </label>
+        <p-inputNumber
+          inputId="free-shipping-threshold"
+          formControlName="freeShippingThreshold"
+          [min]="0"
+          [minFractionDigits]="2"
+          [maxFractionDigits]="2"
+          mode="currency"
+          currency="USD"
+          class="w-full"
+          [attr.aria-describedby]="'free-shipping-threshold-help'"
+        ></p-inputNumber>
+        <small id="free-shipping-threshold-help" class="block mt-2 text-color-secondary">
+          Orders above this amount qualify for free shipping
+        </small>
+      </div>
+    </div>
+  </form>
+
+  <!-- Navigation Buttons -->
+  <div class="wizard-navigation flex justify-content-between mt-5 pt-4 border-top-1 surface-border">
+    <button
+      pButton
+      type="button"
+      label="Previous"
+      icon="pi pi-arrow-left"
+      class="p-button-outlined"
+      [disabled]="currentStep() === 0"
+      (click)="previousStep()"
+      [attr.aria-label]="'Go to previous step'"
+    ></button>
+
+    <button
+      pButton
+      type="button"
+      [label]="currentStep() === 3 ? 'Complete' : 'Next'"
+      [icon]="currentStep() === 3 ? 'pi pi-check' : 'pi pi-arrow-right'"
+      iconPos="right"
+      [disabled]="!isStepValid()"
+      (click)="nextStep()"
+      [attr.aria-label]="currentStep() === 3 ? 'Complete product configuration' : 'Go to next step'"
+    ></button>
+  </div>
+</div>

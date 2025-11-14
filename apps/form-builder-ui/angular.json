@@ -37,7 +37,10 @@
                 "output": "assets/monaco-editor/min-maps"
               }
             ],
-            "styles": ["src/styles.scss"]
+            "styles": [
+              "src/styles.scss",
+              "../../node_modules/angular-calendar/css/angular-calendar.css"
+            ]
           },
           "configurations": {
             "production": {
@@ -105,7 +108,10 @@
                 "output": "assets/monaco-editor/min-maps"
               }
             ],
-            "styles": ["src/styles.scss"]
+            "styles": [
+              "src/styles.scss",
+              "../../node_modules/angular-calendar/css/angular-calendar.css"
+            ]
           }
         },
         "lint": {

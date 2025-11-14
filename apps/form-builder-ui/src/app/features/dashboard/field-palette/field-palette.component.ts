@@ -316,6 +316,12 @@ export class FieldPaletteComponent implements OnInit, OnDestroy {
       category: 'input',
     },
     {
+      type: FormFieldType.TIME_SLOT,
+      icon: 'pi-hourglass',
+      label: 'Time Slot',
+      category: 'input',
+    },
+    {
       type: FormFieldType.DIVIDER,
       icon: 'pi-minus',
       label: 'Section Divider',

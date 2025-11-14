@@ -889,8 +889,9 @@ export class FormsService {
 
     const fields = schemaData.fields ?? currentSchema?.fields ?? [];
     const themeId = schemaData.themeId ?? currentSchema?.themeId;
+    const category = schemaData.category ?? currentSchema?.category;
 
-    return this.formSchemasRepo.createSchema(formId, {
+    const schemaToCreate: any = {
       formId,
       version: nextVersion,
       fields,
@@ -899,7 +900,14 @@ export class FormsService {
       renderToken: undefined,
       expiresAt: undefined,
       themeId,
-    });
+    };
+
+    // Preserve template category for analytics detection (Epic 30)
+    if (category) {
+      schemaToCreate.category = category;
+    }
+
+    return this.formSchemasRepo.createSchema(formId, schemaToCreate);
   }
 
   private normalizeSchemaSettings(
@@ -945,6 +953,11 @@ export class FormsService {
     // Preserve step form configuration if present (Story 19.1)
     if (settings?.stepForm) {
       result.stepForm = settings.stepForm;
+    }
+
+    // Preserve template category for analytics detection (Epic 30)
+    if (settings?.templateCategory) {
+      result.templateCategory = settings.templateCategory;
     }
 
     return result;

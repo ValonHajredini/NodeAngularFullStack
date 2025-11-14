@@ -28,6 +28,7 @@ import {
   HeadingMetadata,
   TextBlockMetadata,
   ImageMetadata,
+  TimeSlotMetadata,
   FormStep,
   StepNavigationEvent,
   RowLayoutConfig,
@@ -877,6 +878,85 @@ export class FormRendererComponent implements OnInit, OnDestroy {
       return field.metadata as HeadingMetadata;
     }
     return null;
+  }
+
+  /**
+   * Generate time slot options based on field metadata configuration
+   */
+  getTimeSlotOptions(field: FormField): { label: string; value: string }[] {
+    if (field.type !== FormFieldType.TIME_SLOT || !field.metadata) {
+      return [];
+    }
+
+    const metadata = field.metadata as TimeSlotMetadata;
+    const interval = metadata.interval || '30min';
+    const startTime = metadata.startTime || '09:00';
+    const endTime = metadata.endTime || '17:00';
+    const timeFormat = metadata.timeFormat || '12h';
+    const maxSlots = metadata.maxSlots || 20;
+
+    // Parse start and end times
+    const [startHour, startMinute] = startTime.split(':').map(Number);
+    const [endHour, endMinute] = endTime.split(':').map(Number);
+
+    // Calculate interval in minutes
+    const intervalMinutes = this.getIntervalMinutes(interval);
+
+    // Generate time slots
+    const slots: { label: string; value: string }[] = [];
+    let currentHour = startHour;
+    let currentMinute = startMinute;
+
+    while (slots.length < maxSlots) {
+      // Check if we've reached the end time
+      if (currentHour > endHour || (currentHour === endHour && currentMinute >= endMinute)) {
+        break;
+      }
+
+      // Format time slot
+      const timeValue = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
+      const timeLabel = timeFormat === '12h' ? this.formatTime12Hour(currentHour, currentMinute) : timeValue;
+
+      slots.push({ label: timeLabel, value: timeValue });
+
+      // Add interval to current time
+      currentMinute += intervalMinutes;
+      if (currentMinute >= 60) {
+        currentHour += Math.floor(currentMinute / 60);
+        currentMinute = currentMinute % 60;
+      }
+    }
+
+    return slots;
+  }
+
+  /**
+   * Convert interval string to minutes
+   */
+  private getIntervalMinutes(interval: string): number {
+    switch (interval) {
+      case '10min':
+        return 10;
+      case '15min':
+        return 15;
+      case '30min':
+        return 30;
+      case '1hour':
+        return 60;
+      case '1day':
+        return 1440;
+      default:
+        return 30;
+    }
+  }
+
+  /**
+   * Format time in 12-hour format (e.g., "9:00 AM", "2:30 PM")
+   */
+  private formatTime12Hour(hour: number, minute: number): string {
+    const period = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+    return `${displayHour}:${String(minute).padStart(2, '0')} ${period}`;
   }
 
   /**

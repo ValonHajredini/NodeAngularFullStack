@@ -85,7 +85,7 @@ export function buildPollSchema(config: WizardConfig): FormSchema {
     preventDuplicates: true,
     showResultsAfterVote: true,
     trackingMethod:
-      (config.categoryData.voteTracking as 'session' | 'ip' | 'fingerprint') || 'session',
+      (config.categoryData['voteTracking'] as 'session' | 'ip' | 'fingerprint') || 'session',
     allowChangeVote: false,
   };
 
@@ -170,9 +170,9 @@ export function buildQuizSchema(config: WizardConfig): FormSchema {
       { fieldId: question1Id, correctAnswer: 'a', points: 1 },
       { fieldId: question2Id, correctAnswer: 'b', points: 1 },
     ],
-    passingScore: config.categoryData.passingScore || 70,
+    passingScore: (config.categoryData['passingScore'] as number) || 70,
     showResults: true,
-    allowRetakes: config.categoryData.allowRetakes ?? true,
+    allowRetakes: (config.categoryData['allowRetakes'] as boolean) ?? true,
   };
 
   return {
@@ -185,7 +185,7 @@ export function buildQuizSchema(config: WizardConfig): FormSchema {
       submission: {
         showSuccessMessage: true,
         successMessage: 'Quiz submitted! Check your score.',
-        allowMultipleSubmissions: config.categoryData.allowRetakes ?? true,
+        allowMultipleSubmissions: (config.categoryData['allowRetakes'] as boolean) ?? true,
       },
       templateCategory: TemplateCategory.QUIZ,
     },
@@ -245,7 +245,7 @@ export function buildProductSchema(config: WizardConfig): FormSchema {
 
   let businessLogicConfig: InventoryConfig | undefined;
 
-  if (config.categoryData.enableInventory) {
+  if (config.categoryData['enableInventory']) {
     businessLogicConfig = {
       type: 'inventory',
       stockField: productFieldId,
@@ -328,7 +328,7 @@ export function buildAppointmentSchema(config: WizardConfig): FormSchema {
     type: 'appointment',
     timeSlotField: timeSlotFieldId,
     dateField: dateFieldId,
-    maxBookingsPerSlot: config.categoryData.maxBookingsPerSlot || 1,
+    maxBookingsPerSlot: (config.categoryData['maxBookingsPerSlot'] as number) || 1,
     bookingsTable: 'appointments',
     allowOverbook: false,
   };
@@ -451,7 +451,7 @@ export function buildEventsSchema(config: WizardConfig): FormSchema {
     },
   ];
 
-  if (config.categoryData.allowGuestCount) {
+  if (config.categoryData['allowGuestCount']) {
     fields.push({
       id: generateFieldId('guests'),
       type: FormFieldType.NUMBER,
@@ -459,7 +459,7 @@ export function buildEventsSchema(config: WizardConfig): FormSchema {
       fieldName: 'guest_count',
       placeholder: 'Enter guest count',
       required: false,
-      validation: { min: 0, max: config.categoryData.maxTicketsPerOrder || 10 },
+      validation: { min: 0, max: (config.categoryData['maxTicketsPerOrder'] as number) || 10 },
       order: 1,
     });
   }

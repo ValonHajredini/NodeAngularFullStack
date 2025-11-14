@@ -1,0 +1,268 @@
+/**
+ * Category Selection Component Styles
+ * Epic 30, Story 30.10
+ */
+
+:host {
+  display: block;
+}
+
+/**
+ * Category Selection Container
+ */
+.category-selection-container {
+  width: 100%;
+}
+
+/**
+ * Category Grid Layout
+ * 3 columns on desktop, 2 on tablet, 1 on mobile
+ */
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+
+  @media (max-width: 992px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 576px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+/**
+ * Category Card
+ * Interactive card for each template category
+ */
+.category-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem 1.5rem;
+  background-color: var(--surface-card);
+  border: 2px solid var(--surface-border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+
+  /* Hover State */
+  &:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+  }
+
+  /* Focus State (keyboard navigation) */
+  &:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb), 0.2);
+  }
+
+  /* Selected State */
+  &.selected {
+    border-color: var(--primary-color);
+    background-color: var(--primary-50);
+    box-shadow: 0 4px 12px rgba(var(--primary-color-rgb), 0.15);
+
+    .category-icon {
+      background-color: var(--primary-color);
+      color: var(--primary-color-text);
+    }
+
+    .category-label {
+      color: var(--primary-color);
+      font-weight: 600;
+    }
+  }
+
+  /* Active State */
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+/**
+ * Category Icon
+ * Large icon at the top of each card
+ */
+.category-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-color: var(--surface-ground);
+  margin-bottom: 1.25rem;
+  transition: all 0.2s ease;
+
+  i {
+    font-size: 2.5rem;
+    color: var(--text-color);
+  }
+
+  /* Severity-based colors */
+  &[data-severity='primary'] {
+    background-color: var(--primary-50);
+    i {
+      color: var(--primary-500);
+    }
+  }
+
+  &[data-severity='success'] {
+    background-color: var(--green-50);
+    i {
+      color: var(--green-500);
+    }
+  }
+
+  &[data-severity='warning'] {
+    background-color: var(--orange-50);
+    i {
+      color: var(--orange-500);
+    }
+  }
+
+  &[data-severity='info'] {
+    background-color: var(--blue-50);
+    i {
+      color: var(--blue-500);
+    }
+  }
+
+  &[data-severity='secondary'] {
+    background-color: var(--surface-100);
+    i {
+      color: var(--text-color-secondary);
+    }
+  }
+
+  &[data-severity='danger'] {
+    background-color: var(--red-50);
+    i {
+      color: var(--red-500);
+    }
+  }
+}
+
+/**
+ * Category Content
+ * Label and description text
+ */
+.category-content {
+  text-align: center;
+  flex: 1;
+
+  .category-label {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 0.75rem 0;
+    color: var(--text-color);
+    transition: color 0.2s ease;
+  }
+
+  .category-description {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--text-color-secondary);
+    margin: 0;
+  }
+}
+
+/**
+ * Selection Indicator
+ * Checkmark shown when category is selected
+ */
+.selection-indicator {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  font-size: 1.5rem;
+  color: var(--primary-color);
+  animation: scaleIn 0.2s ease;
+
+  i {
+    display: block;
+  }
+}
+
+/**
+ * Selection Hint
+ * Accessible status message for screen readers
+ */
+.selection-hint {
+  padding: 1rem;
+  background-color: var(--surface-ground);
+  border-radius: 6px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--text-color-secondary);
+
+  /* Visually hidden but accessible to screen readers */
+  span {
+    display: inline-block;
+  }
+}
+
+/**
+ * Animations
+ */
+@keyframes scaleIn {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/**
+ * Accessibility: High Contrast Mode
+ */
+@media (prefers-contrast: high) {
+  .category-card {
+    border-width: 3px;
+
+    &.selected {
+      border-width: 4px;
+    }
+  }
+}
+
+/**
+ * Accessibility: Reduced Motion
+ */
+@media (prefers-reduced-motion: reduce) {
+  .category-card {
+    transition: none;
+
+    &:hover {
+      transform: none;
+    }
+  }
+
+  .selection-indicator {
+    animation: none;
+  }
+
+  .category-icon {
+    transition: none;
+  }
+}
+
+/**
+ * Dark Mode Support
+ * Adjust colors for dark themes
+ */
+@media (prefers-color-scheme: dark) {
+  .category-card.selected {
+    background-color: rgba(var(--primary-color-rgb), 0.15);
+  }
+}

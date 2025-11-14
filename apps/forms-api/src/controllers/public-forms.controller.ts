@@ -192,13 +192,15 @@ export class PublicFormsController {
         req.headers['x-forwarded-for'] ||
         'unknown') as string;
 
-      // Rate limiting: 10 submissions per hour per IP (unauthenticated)
+      // Rate limiting: Configurable submissions per hour per IP (unauthenticated)
+      // Default: 100 (production), can be set to 1000 for development via RATE_LIMIT_MAX_REQUESTS env var
+      const rateLimit = AppConfig.get().rateLimit.maxRequests;
       const submissionCount = await formSubmissionsRepository.countByIpSince(
         submitterIp,
         1
       );
 
-      if (submissionCount >= 10) {
+      if (submissionCount >= rateLimit) {
         throw new ApiError(
           'Rate limit exceeded. Please try again later.',
           429,

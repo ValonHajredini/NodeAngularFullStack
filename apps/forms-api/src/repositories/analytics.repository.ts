@@ -116,6 +116,7 @@ export class AnalyticsRepository {
           MAX(fs.submitted_at) as last_submission_at
         FROM form_submissions fs
         INNER JOIN form_schemas fsch ON fs.form_schema_id = fsch.id
+        INNER JOIN forms f ON fsch.form_id = f.id
         WHERE fs.form_schema_id = $1
       `;
 
@@ -123,7 +124,7 @@ export class AnalyticsRepository {
 
       // Add tenant filter if multi-tenancy is enabled
       if (tenantId !== null) {
-        query += ` AND fsch.tenant_id = $2`;
+        query += ` AND f.tenant_id = $2`;
         values.push(tenantId);
       }
 
@@ -201,6 +202,7 @@ export class AnalyticsRepository {
           COUNT(*) as count
         FROM form_submissions fs
         INNER JOIN form_schemas fsch ON fs.form_schema_id = fsch.id
+        INNER JOIN forms f ON fsch.form_id = f.id
         WHERE fs.form_schema_id = $1
           AND fs.values_json ? $2
       `;
@@ -209,7 +211,7 @@ export class AnalyticsRepository {
 
       // Add tenant filter if multi-tenancy is enabled
       if (tenantId !== null) {
-        query += ` AND fsch.tenant_id = $3`;
+        query += ` AND f.tenant_id = $3`;
         values.push(tenantId);
       }
 
@@ -293,6 +295,7 @@ export class AnalyticsRepository {
           COUNT(*) as count
         FROM form_submissions fs
         INNER JOIN form_schemas fsch ON fs.form_schema_id = fsch.id
+        INNER JOIN forms f ON fsch.form_id = f.id
         WHERE fs.form_schema_id = $1
       `;
 
@@ -300,7 +303,7 @@ export class AnalyticsRepository {
 
       // Add tenant filter if multi-tenancy is enabled
       if (tenantId !== null) {
-        query += ` AND fsch.tenant_id = $2`;
+        query += ` AND f.tenant_id = $2`;
         values.push(tenantId);
       }
 
@@ -359,6 +362,7 @@ export class AnalyticsRepository {
         SELECT fs.values_json
         FROM form_submissions fs
         INNER JOIN form_schemas fsch ON fs.form_schema_id = fsch.id
+        INNER JOIN forms f ON fsch.form_id = f.id
         WHERE fs.form_schema_id = $1
       `;
 
@@ -366,7 +370,7 @@ export class AnalyticsRepository {
 
       // Add tenant filter if multi-tenancy is enabled
       if (tenantId !== null) {
-        query += ` AND fsch.tenant_id = $2`;
+        query += ` AND f.tenant_id = $2`;
         values.push(tenantId);
       }
 
@@ -429,6 +433,7 @@ export class AnalyticsRepository {
           COUNT(*) as count
         FROM form_submissions fs
         INNER JOIN form_schemas fsch ON fs.form_schema_id = fsch.id
+        INNER JOIN forms f ON fsch.form_id = f.id
         WHERE fs.form_schema_id = $1
           AND fs.values_json ? $2
       `;
@@ -437,7 +442,7 @@ export class AnalyticsRepository {
 
       // Add tenant filter if multi-tenancy is enabled
       if (tenantId !== null) {
-        query += ` AND fsch.tenant_id = $3`;
+        query += ` AND f.tenant_id = $3`;
         values.push(tenantId);
       }
 
@@ -514,6 +519,7 @@ export class AnalyticsRepository {
           COUNT(*) as count
         FROM form_submissions fs
         INNER JOIN form_schemas fsch ON fs.form_schema_id = fsch.id
+        INNER JOIN forms f ON fsch.form_id = f.id
         WHERE fs.form_schema_id = $1
           AND fs.values_json ? $2
           AND fs.values_json ->> $2 ~ '^[0-9]+(\\.[0-9]+)?$'
@@ -523,7 +529,7 @@ export class AnalyticsRepository {
 
       // Add tenant filter if multi-tenancy is enabled
       if (tenantId !== null) {
-        query += ` AND fsch.tenant_id = $3`;
+        query += ` AND f.tenant_id = $3`;
         values.push(tenantId);
       }
 
@@ -580,6 +586,7 @@ export class AnalyticsRepository {
           ) FILTER (WHERE fs.values_json->>'product_id' IS NOT NULL) as product_breakdown
         FROM form_submissions fs
         INNER JOIN form_schemas fsch ON fs.form_schema_id = fsch.id
+        INNER JOIN forms f ON fsch.form_id = f.id
         WHERE fs.form_schema_id = $1
       `;
 
@@ -587,7 +594,7 @@ export class AnalyticsRepository {
 
       // Add tenant filter if multi-tenancy is enabled
       if (tenantId !== null) {
-        query += ` AND fsch.tenant_id = $2`;
+        query += ` AND f.tenant_id = $2`;
         values.push(tenantId);
       }
 
@@ -625,6 +632,7 @@ export class AnalyticsRepository {
           COUNT(*) as bookings
         FROM form_submissions fs
         INNER JOIN form_schemas fsch ON fs.form_schema_id = fsch.id
+        INNER JOIN forms f ON fsch.form_id = f.id
         WHERE fs.form_schema_id = $1
           AND fs.values_json->>'time_slot' IS NOT NULL
       `;
@@ -633,7 +641,7 @@ export class AnalyticsRepository {
 
       // Add tenant filter if multi-tenancy is enabled
       if (tenantId !== null) {
-        query += ` AND fsch.tenant_id = $2`;
+        query += ` AND f.tenant_id = $2`;
         values.push(tenantId);
       }
 
@@ -684,6 +692,7 @@ export class AnalyticsRepository {
           ) FILTER (WHERE fs.values_json->>'item_name' IS NOT NULL) as item_breakdown
         FROM form_submissions fs
         INNER JOIN form_schemas fsch ON fs.form_schema_id = fsch.id
+        INNER JOIN forms f ON fsch.form_id = f.id
         WHERE fs.form_schema_id = $1
       `;
 
@@ -691,7 +700,7 @@ export class AnalyticsRepository {
 
       // Add tenant filter if multi-tenancy is enabled
       if (tenantId !== null) {
-        query += ` AND fsch.tenant_id = $2`;
+        query += ` AND f.tenant_id = $2`;
         values.push(tenantId);
       }
 

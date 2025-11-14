@@ -18,6 +18,137 @@
 @import 'quill/dist/quill.core.css';
 @import 'quill/dist/quill.snow.css';
 
+/* Calendar Custom Styling - Match App Color Scheme */
+::ng-deep {
+  /* Calendar container styling */
+  .calendar-container {
+    .cal-month-view {
+      background: white;
+      border: 1px solid var(--color-border-light);
+      border-radius: var(--border-radius-lg);
+      overflow: hidden;
+    }
+
+    /* Calendar header row (days of week) */
+    .cal-header {
+      background-color: var(--color-gray-50);
+      border-bottom: 1px solid var(--color-border-light);
+
+      .cal-cell {
+        padding: 12px 8px;
+        font-weight: var(--font-weight-medium);
+        color: var(--color-text-secondary);
+        font-size: var(--font-size-sm);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+    }
+
+    /* Calendar cells (individual days) */
+    .cal-day-cell {
+      min-height: 100px;
+      border: 1px solid var(--color-border-light);
+      background: white;
+      transition: var(--transition-colors);
+
+      &:hover {
+        background-color: var(--color-gray-50);
+      }
+
+      &.cal-today {
+        background-color: var(--color-primary-50);
+      }
+
+      &.cal-out-month {
+        background-color: var(--color-gray-50);
+        opacity: 0.5;
+      }
+    }
+
+    /* Day number in cell */
+    .cal-day-number {
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-medium);
+      color: var(--color-text-primary);
+      padding: 4px 8px;
+      opacity: 1;
+    }
+
+    /* Calendar events */
+    .cal-event {
+      border-radius: var(--border-radius-base);
+      padding: 4px 8px;
+      margin: 2px;
+      font-size: var(--font-size-xs);
+      font-weight: var(--font-weight-medium);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: var(--transition-colors);
+
+      &:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+      }
+    }
+
+    /* Week view styling */
+    .cal-week-view {
+      .cal-time-label-column {
+        background-color: var(--color-gray-50);
+        border-right: 1px solid var(--color-border-light);
+      }
+
+      .cal-hour-segment {
+        border-bottom: 1px solid var(--color-border-light);
+
+        &:hover {
+          background-color: var(--color-gray-50);
+        }
+      }
+
+      .cal-event-container {
+        .cal-event {
+          border-left-width: 4px;
+          border-left-style: solid;
+          background-color: rgba(255, 255, 255, 0.95);
+          box-shadow: var(--shadow-md);
+        }
+      }
+    }
+
+    /* Day view styling */
+    .cal-day-view {
+      .cal-hour-segment {
+        border-bottom: 1px solid var(--color-border-light);
+
+        &:hover {
+          background-color: var(--color-gray-50);
+        }
+      }
+
+      .cal-event {
+        border-left-width: 4px;
+        border-left-style: solid;
+      }
+    }
+
+    /* Time labels */
+    .cal-time {
+      font-size: var(--font-size-xs);
+      color: var(--color-text-muted);
+      font-weight: var(--font-weight-medium);
+    }
+
+    /* Current time indicator */
+    .cal-current-time-marker {
+      background-color: var(--color-error-500);
+    }
+  }
+}
+
 /* Enhanced Global Styles with Theme Variables */
 html {
   scroll-behavior: smooth;

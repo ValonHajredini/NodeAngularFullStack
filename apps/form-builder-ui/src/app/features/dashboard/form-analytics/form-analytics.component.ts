@@ -261,7 +261,7 @@ const ALL_CHART_TYPE_OPTIONS: ChartTypeOption[] = [
 
               <!-- Appointment Analytics Component (Story 30.8) -->
               @if (metrics.category === 'services') {
-                <app-appointment-analytics [metrics]="$any(metrics)"></app-appointment-analytics>
+                <app-appointment-analytics [metrics]="$any(metrics)" [formSchemaId]="formId()"></app-appointment-analytics>
               }
 
               <!-- Restaurant Analytics Component (Story 30.8) -->
@@ -800,12 +800,19 @@ export class FormAnalyticsComponent implements OnInit {
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
+    console.log('[FormAnalytics] ngOnInit - Route param ID:', id);
+    console.log('[FormAnalytics] ngOnInit - Full route params:', this.route.snapshot.paramMap);
+    console.log('[FormAnalytics] ngOnInit - Current URL:', this.router.url);
+
     if (!id) {
+      console.error('[FormAnalytics] No form ID found in route params');
       this.error.set('Form ID is required');
       return;
     }
 
     this.formId.set(id);
+    console.log('[FormAnalytics] formId signal set to:', this.formId());
+
     this.loadToolConfig();
     this.loadFormDetails();
     this.loadVisibleFieldsPreference();
@@ -833,8 +840,16 @@ export class FormAnalyticsComponent implements OnInit {
     this.isLoading.set(true);
     this.error.set(null);
 
+    console.log('[FormAnalytics] Loading form details for ID:', this.formId());
+
     this.formsApiService.getFormById(this.formId()).subscribe({
       next: (form: FormMetadata) => {
+        console.log('[FormAnalytics] Received form data:', {
+          id: form.id,
+          title: form.title,
+          schema: form.schema,
+        });
+
         this.formTitle.set(form.title);
         this.formFields.set(form.schema?.fields || []);
         this.isLoading.set(false);
@@ -844,6 +859,7 @@ export class FormAnalyticsComponent implements OnInit {
           const detectedCategory = this.categoryAnalyticsService.detectTemplateCategory(
             form.schema,
           );
+          console.log('[FormAnalytics] Detected category:', detectedCategory);
           this.category.set(detectedCategory);
 
           // Load category-specific analytics if category detected
@@ -856,6 +872,7 @@ export class FormAnalyticsComponent implements OnInit {
         this.loadSubmissions({ first: 0, rows: this.pageSize() });
       },
       error: (error) => {
+        console.error('[FormAnalytics] Error loading form details:', error);
         this.isLoading.set(false);
         const errorMessage = error.error?.message || 'Failed to load form details';
         this.error.set(errorMessage);

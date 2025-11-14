@@ -41,8 +41,8 @@ export function validatePollConfig(config: Record<string, unknown>): ValidationR
   const errors: string[] = [];
 
   // Validate min/max options
-  const minOptions = config.minOptions as number | undefined;
-  const maxOptions = config.maxOptions as number | undefined;
+  const minOptions = config['minOptions'] as number | undefined;
+  const maxOptions = config['maxOptions'] as number | undefined;
   const MIN_OPTIONS = 2;
   const MAX_ALLOWED_OPTIONS = 20;
 
@@ -64,7 +64,7 @@ export function validatePollConfig(config: Record<string, unknown>): ValidationR
 
   // Validate vote tracking method
   const validTrackingMethods = ['session', 'ip', 'fingerprint'];
-  const voteTracking = config.voteTracking as string | undefined;
+  const voteTracking = config['voteTracking'] as string | undefined;
   if (voteTracking !== undefined && !validTrackingMethods.includes(voteTracking)) {
     errors.push(`Vote tracking must be one of: ${validTrackingMethods.join(', ')}`);
   }
@@ -95,17 +95,17 @@ export function validateQuizConfig(config: Record<string, unknown>): ValidationR
   const errors: string[] = [];
 
   // Validate min questions
-  const minQuestions = config.minQuestions;
+  const minQuestions = config['minQuestions'];
   if (typeof minQuestions !== 'number' || minQuestions < 1) {
     errors.push('Minimum questions must be at least 1');
   }
 
-  if (minQuestions && minQuestions > 50) {
+  if (typeof minQuestions === 'number' && minQuestions > 50) {
     errors.push('Minimum questions cannot exceed 50');
   }
 
   // Validate passing score
-  const passingScore = config.passingScore;
+  const passingScore = config['passingScore'];
   if (typeof passingScore !== 'number') {
     errors.push('Passing score is required');
   } else if (passingScore < 0 || passingScore > 100) {
@@ -113,7 +113,7 @@ export function validateQuizConfig(config: Record<string, unknown>): ValidationR
   }
 
   // Validate allow retakes (boolean)
-  if ('allowRetakes' in config && typeof config.allowRetakes !== 'boolean') {
+  if ('allowRetakes' in config && typeof config['allowRetakes'] !== 'boolean') {
     errors.push('Allow retakes must be a boolean value');
   }
 
@@ -142,17 +142,17 @@ export function validateProductConfig(config: Record<string, unknown>): Validati
   const errors: string[] = [];
 
   // Validate boolean flags
-  if ('enableInventory' in config && typeof config.enableInventory !== 'boolean') {
+  if ('enableInventory' in config && typeof config['enableInventory'] !== 'boolean') {
     errors.push('Enable inventory must be a boolean value');
   }
 
-  if ('enableTax' in config && typeof config.enableTax !== 'boolean') {
+  if ('enableTax' in config && typeof config['enableTax'] !== 'boolean') {
     errors.push('Enable tax must be a boolean value');
   }
 
   // Validate tax rate if tax is enabled
-  if (config.enableTax && 'taxRate' in config) {
-    const taxRate = config.taxRate;
+  if (config['enableTax'] && 'taxRate' in config) {
+    const taxRate = config['taxRate'];
     if (typeof taxRate !== 'number' || taxRate < 0 || taxRate > 1) {
       errors.push('Tax rate must be a number between 0 and 1 (e.g., 0.08 for 8%)');
     }
@@ -183,7 +183,7 @@ export function validateAppointmentConfig(config: Record<string, unknown>): Vali
   const errors: string[] = [];
 
   // Validate slot interval
-  const slotInterval = config.slotInterval;
+  const slotInterval = config['slotInterval'];
   const validIntervals = [15, 30, 60, 120]; // Common time intervals in minutes
 
   if (typeof slotInterval !== 'number') {
@@ -193,12 +193,12 @@ export function validateAppointmentConfig(config: Record<string, unknown>): Vali
   }
 
   // Validate max bookings per slot
-  const maxBookingsPerSlot = config.maxBookingsPerSlot;
+  const maxBookingsPerSlot = config['maxBookingsPerSlot'];
   if (typeof maxBookingsPerSlot !== 'number' || maxBookingsPerSlot < 1) {
     errors.push('Max bookings per slot must be at least 1');
   }
 
-  if (maxBookingsPerSlot && maxBookingsPerSlot > 100) {
+  if (typeof maxBookingsPerSlot === 'number' && maxBookingsPerSlot > 100) {
     errors.push('Max bookings per slot cannot exceed 100');
   }
 
@@ -227,13 +227,13 @@ export function validateRestaurantConfig(config: Record<string, unknown>): Valid
   const errors: string[] = [];
 
   // Validate min items
-  const minItems = config.minItems;
+  const minItems = config['minItems'];
   if (typeof minItems !== 'number' || minItems < 1) {
     errors.push('Minimum items must be at least 1');
   }
 
   // Validate enable categories (boolean)
-  if ('enableCategories' in config && typeof config.enableCategories !== 'boolean') {
+  if ('enableCategories' in config && typeof config['enableCategories'] !== 'boolean') {
     errors.push('Enable categories must be a boolean value');
   }
 
@@ -262,17 +262,17 @@ export function validateEventsConfig(config: Record<string, unknown>): Validatio
   const errors: string[] = [];
 
   // Validate allow guest count (boolean)
-  if ('allowGuestCount' in config && typeof config.allowGuestCount !== 'boolean') {
+  if ('allowGuestCount' in config && typeof config['allowGuestCount'] !== 'boolean') {
     errors.push('Allow guest count must be a boolean value');
   }
 
   // Validate max tickets per order
-  const maxTicketsPerOrder = config.maxTicketsPerOrder;
+  const maxTicketsPerOrder = config['maxTicketsPerOrder'];
   if (typeof maxTicketsPerOrder !== 'number' || maxTicketsPerOrder < 1) {
     errors.push('Max tickets per order must be at least 1');
   }
 
-  if (maxTicketsPerOrder && maxTicketsPerOrder > 100) {
+  if (typeof maxTicketsPerOrder === 'number' && maxTicketsPerOrder > 100) {
     errors.push('Max tickets per order cannot exceed 100');
   }
 

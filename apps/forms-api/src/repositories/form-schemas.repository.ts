@@ -59,10 +59,15 @@ export class FormSchemasRepository {
       `;
 
       // Build schema JSON from fields and settings
-      const schemaJson = {
+      const schemaJson: any = {
         fields: schema.fields || [],
         settings: schema.settings || {},
       };
+
+      // Preserve template category for analytics detection (Epic 30)
+      if (schema.category) {
+        schemaJson.category = schema.category;
+      }
 
       const values = [
         formId,
@@ -83,7 +88,7 @@ export class FormSchemasRepository {
       const row = result.rows[0];
       const parsedSchemaJson = row.schema_json;
 
-      return {
+      const returnSchema: any = {
         id: row.id,
         formId: row.formId,
         version: row.version,
@@ -99,7 +104,14 @@ export class FormSchemasRepository {
         themeId: row.themeId,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
-      } as FormSchema;
+      };
+
+      // Preserve template category for analytics detection (Epic 30)
+      if (parsedSchemaJson.category) {
+        returnSchema.category = parsedSchemaJson.category;
+      }
+
+      return returnSchema as FormSchema;
     } catch (error: any) {
       throw new Error(`Failed to create form schema: ${error.message}`);
     } finally {
@@ -466,7 +478,7 @@ export class FormSchemasRepository {
       const row = result.rows[0];
       const parsedSchemaJson = row.schema_json;
 
-      return {
+      const returnSchema: any = {
         id: row.id,
         formId: row.formId,
         version: row.version,
@@ -482,7 +494,14 @@ export class FormSchemasRepository {
         themeId: row.themeId,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
-      } as FormSchema;
+      };
+
+      // Preserve template category for analytics detection (Epic 30)
+      if (parsedSchemaJson.category) {
+        returnSchema.category = parsedSchemaJson.category;
+      }
+
+      return returnSchema as FormSchema;
     } catch (error: any) {
       throw new Error(`Failed to update form schema: ${error.message}`);
     } finally {
@@ -548,7 +567,7 @@ export class FormSchemasRepository {
       const row = result.rows[0];
       const parsedSchemaJson = row.schema_json;
 
-      return {
+      const returnSchema: any = {
         id: row.id,
         formId: row.formId,
         version: row.version,
@@ -564,7 +583,14 @@ export class FormSchemasRepository {
         themeId: row.themeId,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
-      } as FormSchema;
+      };
+
+      // Preserve template category for analytics detection (Epic 30)
+      if (parsedSchemaJson.category) {
+        returnSchema.category = parsedSchemaJson.category;
+      }
+
+      return returnSchema as FormSchema;
     } catch (error: any) {
       throw new Error(`Failed to publish form schema: ${error.message}`);
     } finally {
@@ -612,7 +638,7 @@ export class FormSchemasRepository {
       const row = result.rows[0];
       const parsedSchemaJson = row.schema_json;
 
-      return {
+      const returnSchema: any = {
         id: row.id,
         formId: row.formId,
         version: row.version,
@@ -628,7 +654,14 @@ export class FormSchemasRepository {
         themeId: row.themeId,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
-      } as FormSchema;
+      };
+
+      // Preserve template category for analytics detection (Epic 30)
+      if (parsedSchemaJson.category) {
+        returnSchema.category = parsedSchemaJson.category;
+      }
+
+      return returnSchema as FormSchema;
     } catch (error: any) {
       throw new Error(`Failed to unpublish form schema: ${error.message}`);
     } finally {

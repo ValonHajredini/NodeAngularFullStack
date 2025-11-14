@@ -19,6 +19,7 @@ import { ConfirmDialog } from 'primeng/confirmdialog';
 import { Toast } from 'primeng/toast';
 import { FormMetadata, FormStatus } from '@nodeangularfullstack/shared';
 import { FormsApiService } from '../forms-api.service';
+import { TemplatesApiService } from '../templates-api.service';
 import { FormSettingsModalComponent, FormSettings } from '../../../shared/components/form-settings-modal';
 // REMOVED: ToolConfigService not needed in form-builder-ui (tool config is for dashboard-api)
 import { FormCardComponent, FormCardAction } from '../form-card/form-card.component';
@@ -50,7 +51,11 @@ import { FormTemplate } from '@nodeangularfullstack/shared';
  * Template Integration:
  * - "Create New Form" button opens template selection modal
  * - Users can browse templates by category or start blank
- * - Selected templates are applied when creating new forms
+ * - After selecting a template, form settings modal opens with pre-populated data
+ * - User can customize form name and description before creating
+ * - Template schema is applied via API before form creation
+ * - Form is created with full template schema (fields, settings, business logic)
+ * - Navigates to builder with populated form ready for editing
  */
 @Component({
   selector: 'app-forms-list',
@@ -258,6 +263,7 @@ import { FormTemplate } from '@nodeangularfullstack/shared';
 })
 export class FormsListComponent implements OnInit {
   private readonly formsApiService = inject(FormsApiService);
+  private readonly templatesApiService = inject(TemplatesApiService);
   // REMOVED: toolConfigService not needed in form-builder-ui
   private readonly messageService = inject(MessageService);
   private readonly confirmationService = inject(ConfirmationService);
@@ -299,6 +305,9 @@ export class FormsListComponent implements OnInit {
 
   // Template selection modal
   showTemplateModal = signal<boolean>(false);
+
+  // Selected template (when creating from template)
+  selectedTemplate = signal<FormTemplate | null>(null);
 
   // QR Code modal state
   showQrCodeModal = signal<boolean>(false);
@@ -356,62 +365,26 @@ export class FormsListComponent implements OnInit {
 
   /**
    * Handles template selection from the modal.
-   * Creates a new form using the selected template.
+   * Opens the form settings modal pre-populated with template data.
    * @param template - The selected template
    */
   onTemplateSelected(template: FormTemplate): void {
-    // Create a new form with template reference
-    const initialSchema: any = {
-      version: 1,
-      fields: [],
-      settings: {
-        layout: {
-          columns: 1,
-          spacing: 'normal',
-        },
-        submission: {
-          showSuccessMessage: true,
-          successMessage: 'Thank you for your submission!',
-          redirectUrl: '',
-          allowMultipleSubmissions: true,
-        },
-        background: {
-          type: 'none',
-        },
-      },
-      isPublished: false,
-    };
+    // Store selected template for later use
+    this.selectedTemplate.set(template);
 
-    this.formsApiService
-      .createForm({
-        title: template.name,
-        description: template.description,
-        status: FormStatus.DRAFT,
-        schema: initialSchema as any,
-      })
-      .subscribe({
-        next: (form) => {
-          this.messageService.add({
-            severity: 'success',
-            summary: 'Form Created',
-            detail: `Form "${template.name}" created from template`,
-            life: 2000,
-          });
+    // Pre-populate form settings with template data
+    this.newFormSettings.set({
+      title: template.name,
+      description: template.description || '',
+      columnLayout: 1,
+      fieldSpacing: 'normal',
+      successMessage: 'Thank you for your submission!',
+      redirectUrl: '',
+      allowMultipleSubmissions: true,
+    });
 
-          // Navigate to form builder with template ID as query param
-          this.router.navigate(['/app/dashboard', form.id], {
-            queryParams: { templateId: template.id },
-          });
-        },
-        error: (error) => {
-          this.messageService.add({
-            severity: 'error',
-            summary: 'Creation Failed',
-            detail: error.error?.message || 'Failed to create form from template',
-            life: 3000,
-          });
-        },
-      });
+    // Open the form settings modal
+    this.showCreateModal.set(true);
   }
 
   /**
@@ -419,6 +392,8 @@ export class FormsListComponent implements OnInit {
    * Opens the form settings modal to create a blank form.
    */
   onStartBlank(): void {
+    // Clear any previously selected template
+    this.selectedTemplate.set(null);
     this.openCreateFormModal();
   }
 
@@ -440,10 +415,26 @@ export class FormsListComponent implements OnInit {
 
   /**
    * Handles form settings saved from the modal.
-   * Creates a new form and navigates to the builder.
+   * Creates a new form (blank or from template) and navigates to the builder.
    */
   onFormSettingsSaved(settings: FormSettings): void {
-    // Create initial schema with background settings
+    // Check if creating from template
+    const template = this.selectedTemplate();
+    const isFromTemplate = !!template;
+
+    if (isFromTemplate && template) {
+      // Apply template first, then create form with template schema
+      this.createFormFromTemplate(template, settings);
+    } else {
+      // Create blank form
+      this.createBlankForm(settings);
+    }
+  }
+
+  /**
+   * Creates a blank form with empty schema
+   */
+  private createBlankForm(settings: FormSettings): void {
     const initialSchema: any = {
       version: 1,
       fields: [],
@@ -458,7 +449,6 @@ export class FormsListComponent implements OnInit {
           redirectUrl: settings.redirectUrl || '',
           allowMultipleSubmissions: settings.allowMultipleSubmissions,
         },
-        // Include background settings
         background: {
           type: settings.backgroundType || 'none',
           imageUrl: settings.backgroundImageUrl || '',
@@ -502,6 +492,104 @@ export class FormsListComponent implements OnInit {
           });
         },
       });
+  }
+
+  /**
+   * Creates a form from a template by applying the template schema
+   */
+  private createFormFromTemplate(template: FormTemplate, settings: FormSettings): void {
+    // First, apply the template to get the full schema
+    this.templatesApiService.applyTemplate(template.id).subscribe({
+      next: (response) => {
+        // Get the template schema from API response
+        const templateSchema = response.data;
+
+        // Validate template schema
+        if (!templateSchema) {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Template Error',
+            detail: 'Failed to load template schema',
+            life: 3000,
+          });
+          return;
+        }
+
+        // Merge user settings with template schema
+        const mergedSchema: any = {
+          ...templateSchema,
+          // Preserve template category at schema root level for analytics detection
+          category: template.category,
+          settings: {
+            ...(templateSchema.settings || {}),
+            layout: {
+              columns: settings.columnLayout,
+              spacing: settings.fieldSpacing,
+            },
+            submission: {
+              showSuccessMessage: true,
+              successMessage: settings.successMessage || 'Thank you for your submission!',
+              redirectUrl: settings.redirectUrl || '',
+              allowMultipleSubmissions: settings.allowMultipleSubmissions,
+            },
+            background: {
+              type: settings.backgroundType || 'none',
+              imageUrl: settings.backgroundImageUrl || '',
+              imagePosition: settings.backgroundImagePosition || 'cover',
+              imageOpacity: settings.backgroundImageOpacity ?? 100,
+              imageAlignment: settings.backgroundImageAlignment || 'center',
+              imageBlur: settings.backgroundImageBlur ?? 0,
+              customHtml: settings.backgroundCustomHtml || '',
+              customCss: settings.backgroundCustomCss || '',
+            },
+            // Preserve template category in settings for analytics detection
+            templateCategory: template.category,
+          },
+        };
+
+        // Create form with template schema
+        this.formsApiService
+          .createForm({
+            title: settings.title,
+            description: settings.description,
+            status: FormStatus.DRAFT,
+            schema: mergedSchema as any,
+          })
+          .subscribe({
+            next: (form) => {
+              this.showCreateModal.set(false);
+              this.selectedTemplate.set(null);
+
+              this.messageService.add({
+                severity: 'success',
+                summary: 'Form Created',
+                detail: `Form "${settings.title}" created from template`,
+                life: 2000,
+              });
+
+              setTimeout(() => {
+                this.router.navigate(['/app/dashboard', form.id]);
+              }, 500);
+            },
+            error: (error) => {
+              this.messageService.add({
+                severity: 'error',
+                summary: 'Creation Failed',
+                detail: error.error?.message || 'Failed to create form from template',
+                life: 3000,
+              });
+            },
+          });
+      },
+      error: (error) => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Template Error',
+          detail: error.error?.message || 'Failed to apply template',
+          life: 3000,
+        });
+      },
+    });
   }
 
   /**

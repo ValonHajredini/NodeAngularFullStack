@@ -565,6 +565,7 @@ export class FieldPreviewRendererComponent {
       [FormFieldType.IMAGE]: 'image',
       [FormFieldType.TEXT_BLOCK]: 'text block',
       [FormFieldType.IMAGE_GALLERY]: 'gallery',
+      [FormFieldType.TIME_SLOT]: 'time slot',
     };
     return typeLabels[this.field.type] || this.field.type.toLowerCase();
   }

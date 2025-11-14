@@ -179,6 +179,7 @@ class Server {
     this.app.use('/api/v1/forms', formsRoutes);
     this.app.use('/api/v1/themes', themesRoutes);
     this.app.use('/api/v1/analytics', analyticsRoutes); // Form analytics (Epic 30)
+    this.app.use('/api/analytics', analyticsRoutes); // Non-versioned route for backward compatibility
     this.app.use('/api/v1', templatesRoutes);
     this.app.use('/api/v1/public', publicFormsRoutes);
     this.app.use('/api/v1/inventory', inventoryRoutes); // Real-time stock checking
