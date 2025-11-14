@@ -13,6 +13,7 @@ import { PollAnalyticsStrategy } from '../../src/services/analytics/strategies/p
 import { QuizAnalyticsStrategy } from '../../src/services/analytics/strategies/quiz-analytics.strategy';
 import { formsPool, authPool } from '../../src/config/multi-database.config';
 import { PoolClient } from 'pg';
+import { randomUUID } from 'crypto';
 
 describe('Poll and Quiz Analytics Integration Tests', () => {
   let formsClient: PoolClient;
@@ -27,21 +28,32 @@ describe('Poll and Quiz Analytics Integration Tests', () => {
     authClient = await authPool.connect();
 
     // Create test user first (in auth database)
-    const userResult = await authClient.query(`
-      INSERT INTO users (id, email, password_hash, first_name, last_name, role, created_at, updated_at)
-      VALUES (
-        gen_random_uuid(),
+    testUserId = randomUUID();
+    await authClient.query(
+      `
+        INSERT INTO users (
+          id,
+          email,
+          password_hash,
+          first_name,
+          last_name,
+          role,
+          email_verified,
+          is_active,
+          created_at,
+          updated_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, true, true, NOW(), NOW())
+      `,
+      [
+        testUserId,
         'test-analytics@example.com',
         '$2b$10$dummy.hash.for.testing',
         'Test',
         'User',
         'user',
-        NOW(),
-        NOW()
-      )
-      RETURNING id
-    `);
-    testUserId = userResult.rows[0].id;
+      ]
+    );
 
     // Create test form (in forms database)
     const formResult = await formsClient.query(`

@@ -33,7 +33,7 @@ describe('RegistryApiClient', () => {
 
   describe('authenticate()', () => {
     const mockAdminEmail = 'admin@example.com';
-    const mockAdminPassword = 'Admin123!@#';
+    const mockAdminPassword = 'User123!@#';
     const mockAccessToken = 'mock-jwt-token-12345';
 
     describe('successful authentication', () => {
@@ -224,7 +224,7 @@ describe('RegistryApiClient', () => {
         });
 
         process.env.CREATE_TOOL_ADMIN_EMAIL = 'admin@example.com';
-        process.env.CREATE_TOOL_ADMIN_PASSWORD = 'Admin123!@#';
+        process.env.CREATE_TOOL_ADMIN_PASSWORD = 'User123!@#';
 
         const result = await newClient.registerTool(mockMetadata);
 
@@ -563,7 +563,7 @@ describe('RegistryApiClient', () => {
       });
 
       const startTime = Date.now();
-      const token = await client.authenticate('admin@example.com', 'Admin123!@#');
+      const token = await client.authenticate('admin@example.com', 'User123!@#');
       const elapsed = Date.now() - startTime;
 
       expect(token).toBe('mock-token');
@@ -583,7 +583,7 @@ describe('RegistryApiClient', () => {
         return [200, { data: { accessToken: 'mock-token' } }];
       });
 
-      const token = await client.authenticate('admin@example.com', 'Admin123!@#');
+      const token = await client.authenticate('admin@example.com', 'User123!@#');
 
       expect(token).toBe('mock-token');
       expect(mock.history.post.length).toBe(3);
@@ -608,7 +608,7 @@ describe('RegistryApiClient', () => {
       mock.onPost('/api/v1/auth/login').networkError();
 
       try {
-        await client.authenticate('admin@example.com', 'Admin123!@#');
+        await client.authenticate('admin@example.com', 'User123!@#');
         fail('Expected error to be thrown');
       } catch (error) {
         expect(error).toBeInstanceOf(Error);

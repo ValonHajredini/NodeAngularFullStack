@@ -416,7 +416,7 @@ Use these credentials for testing:
 ```
 Admin User:
   Email: admin@example.com
-  Password: Admin123!@#
+  Password: User123!@#
   Role: admin
 
 Regular User:
@@ -426,7 +426,7 @@ Regular User:
 
 Read-Only User:
   Email: readonly@example.com
-  Password: Read123!@#
+  Password: User123!@#
   Role: readonly
 ```
 

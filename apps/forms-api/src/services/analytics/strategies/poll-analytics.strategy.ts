@@ -34,6 +34,11 @@ import { AnalyticsRepository } from '../../../repositories/analytics.repository'
  * - Targets <300ms response time via indexed queries
  * - Single database roundtrip for vote counts + submission counts
  *
+ * **Poll Field Standardization (Story 30.7, QA Review VAL-001)**:
+ * Poll forms should use 'poll_option' as the standard field name for vote options.
+ * This ensures consistent analytics aggregation across all poll forms. Custom field
+ * names are supported via constructor parameter for legacy forms or special use cases.
+ *
  * @example
  * ```typescript
  * const strategy = new PollAnalyticsStrategy(analyticsRepository);
@@ -53,7 +58,10 @@ import { AnalyticsRepository } from '../../../repositories/analytics.repository'
 export class PollAnalyticsStrategy implements IAnalyticsStrategy {
   /**
    * Default field key for poll option in JSONB submissions.
-   * Can be overridden in constructor for custom poll forms.
+   * Standard: 'poll_option' - All poll template forms should use this field name.
+   * Can be overridden in constructor for legacy forms with custom field names.
+   *
+   * @see Constructor parameter `pollFieldKey` for custom field name support
    */
   private readonly pollFieldKey: string;
 
@@ -196,12 +204,14 @@ export class PollAnalyticsStrategy implements IAnalyticsStrategy {
       };
 
       return metrics;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       console.error(
         `[PollAnalyticsStrategy] Error building metrics for form ${formId}:`,
         error
       );
-      throw new Error(`Failed to build poll analytics: ${error.message}`);
+      throw new Error(`Failed to build poll analytics: ${errorMessage}`);
     }
   }
 }

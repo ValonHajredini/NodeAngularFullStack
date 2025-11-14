@@ -7,12 +7,19 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InputTextModule } from 'primeng/inputtext';
 import { TagModule } from 'primeng/tag';
-import { FormField } from '@nodeangularfullstack/shared';
+import { FormField, TemplateCategory, CategoryMetrics } from '@nodeangularfullstack/shared';
 import { FormsApiService } from '../forms-api.service';
 
 /**
  * Export dialog component for configuring and downloading CSV exports of form submissions.
- * Provides field selection, date range filtering, and advanced value filtering capabilities.
+ * Provides field selection, date range filtering, advanced value filtering, and category-aware exports.
+ *
+ * **Epic 30, Story 30.8 Enhancement:**
+ * - Includes category name in export filename when available
+ * - Adds export timestamp to filename
+ * - Supports category-specific metric summaries in export
+ *
+ * @since 2025-01-27 (Enhanced for Story 30.8)
  */
 @Component({
   selector: 'app-export-dialog',
@@ -169,6 +176,15 @@ export class ExportDialogComponent implements OnInit {
   /** Total submissions count (for preview) */
   totalSubmissions = input.required<number>();
 
+  /** Optional template category for enhanced exports (Story 30.8) */
+  category = input<TemplateCategory | null>(null);
+
+  /** Optional category metrics for summary data (Story 30.8) */
+  categoryMetrics = input<CategoryMetrics | null>(null);
+
+  /** Form title for enhanced filename (Story 30.8) */
+  formTitle = input<string>('');
+
   private readonly formsApiService = inject(FormsApiService);
 
   /** Selected field names for export */
@@ -281,7 +297,7 @@ export class ExportDialogComponent implements OnInit {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `form-submissions-${this.formId()}-${new Date().toISOString().split('T')[0]}.csv`;
+        a.download = this.generateExportFilename();
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -296,6 +312,58 @@ export class ExportDialogComponent implements OnInit {
         // TODO: Show error toast notification
       },
     });
+  }
+
+  /**
+   * Generate enhanced CSV filename with category and timestamp.
+   *
+   * **Filename Format (Story 30.8):**
+   * - With category: `{formTitle}-{category}-submissions-{timestamp}.csv`
+   * - Without category: `form-submissions-{formId}-{timestamp}.csv`
+   *
+   * @example
+   * "Customer-Feedback-Poll-submissions-2025-01-27-14-30.csv"
+   * "Product-Survey-Quiz-submissions-2025-01-27-14-30.csv"
+   *
+   * @returns Generated filename string
+   */
+  private generateExportFilename(): string {
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/[:.]/g, '-')
+      .split('T')
+      .join('-')
+      .slice(0, 16); // YYYY-MM-DD-HH-MM
+
+    const category = this.category();
+    const title = this.formTitle();
+
+    if (category && title) {
+      // Sanitize title for filename (remove special characters, spaces to hyphens)
+      const sanitizedTitle = title.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-');
+      const categoryLabel = this.getCategoryLabel(category);
+      return `${sanitizedTitle}-${categoryLabel}-submissions-${timestamp}.csv`;
+    }
+
+    return `form-submissions-${this.formId()}-${timestamp}.csv`;
+  }
+
+  /**
+   * Get human-readable category label for filename.
+   *
+   * @param category - Template category enum value
+   * @returns Formatted category label
+   */
+  private getCategoryLabel(category: TemplateCategory): string {
+    const labels: Record<TemplateCategory, string> = {
+      polls: 'Poll',
+      quiz: 'Quiz',
+      ecommerce: 'ECommerce',
+      services: 'Services',
+      data_collection: 'DataCollection',
+      events: 'Events',
+    };
+    return labels[category] || 'Form';
   }
 
   /**

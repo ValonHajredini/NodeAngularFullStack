@@ -18,7 +18,7 @@ import { test, expect, Page } from '@playwright/test';
 const BASE_URL = 'http://localhost:4200';
 const API_URL = 'http://localhost:3000';
 const ADMIN_EMAIL = 'admin@example.com';
-const ADMIN_PASSWORD = 'Admin123!@#';
+const ADMIN_PASSWORD = 'User123!@#';
 
 // Performance thresholds
 const THEME_CREATION_THRESHOLD = 2000; // 2 seconds

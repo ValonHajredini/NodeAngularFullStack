@@ -46,7 +46,7 @@ describe('Forms API Theme Integration - Simple', () => {
       .post('/api/v1/auth/login')
       .send({
         email: 'admin@example.com',
-        password: 'Admin123!@#',
+        password: 'User123!@#',
       });
 
     if (adminLoginResponse.status !== 200) {

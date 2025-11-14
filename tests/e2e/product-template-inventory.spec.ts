@@ -23,7 +23,7 @@ const API_URL = 'http://localhost:3001'; // Forms API
 // Test user credentials
 const ADMIN_USER = {
   email: 'admin@example.com',
-  password: 'Admin123!@#',
+  password: 'User123!@#',
 };
 
 // =============================================================================

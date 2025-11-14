@@ -310,7 +310,7 @@ test.describe('Story 24.1: Baseline Screenshot Capture', () => {
     // Login as admin
     await page.goto('/login');
     await page.fill('input[type="email"]', 'admin@example.com');
-    await page.fill('input[type="password"]', 'Admin123!@#');
+    await page.fill('input[type="password"]', 'User123!@#');
     await page.click('button[type="submit"]');
     await page.waitForURL('/app/dashboard');
 

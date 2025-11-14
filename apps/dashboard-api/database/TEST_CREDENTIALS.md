@@ -11,7 +11,7 @@ The following test users are created automatically when running `npm run db:setu
 ### Admin User
 
 - **Email:** admin@example.com
-- **Password:** Admin123!@#
+- **Password:** User123!@#
 - **Role:** admin
 - **Status:** Active, Email Verified
 - **Description:** Full administrative access with all permissions
@@ -27,7 +27,7 @@ The following test users are created automatically when running `npm run db:setu
 ### Readonly User
 
 - **Email:** readonly@example.com
-- **Password:** Read123!@#
+- **Password:** User123!@#
 - **Role:** readonly
 - **Status:** Active, Email Verified
 - **Description:** Limited access user with read-only permissions

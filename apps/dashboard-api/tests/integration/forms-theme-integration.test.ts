@@ -486,7 +486,7 @@ describe('Forms API Theme Integration', () => {
         .post('/api/v1/auth/login')
         .send({
           email: 'admin@example.com',
-          password: 'Admin123!@#',
+          password: 'User123!@#',
         });
 
       const inactiveThemeAdminToken =
@@ -542,7 +542,7 @@ describe('Forms API Theme Integration', () => {
         .post('/api/v1/auth/login')
         .send({
           email: 'admin@example.com',
-          password: 'Admin123!@#',
+          password: 'User123!@#',
         });
 
       const cleanupAdminToken = cleanupAdminLoginResponse.body.data.token;

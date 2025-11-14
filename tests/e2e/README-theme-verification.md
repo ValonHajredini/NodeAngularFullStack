@@ -51,7 +51,7 @@ npx playwright test story-23.6-theme-verification
 
 3. **Admin account** exists:
    - Email: admin@example.com
-   - Password: Admin123!@#
+   - Password: User123!@#
 
 ---
 

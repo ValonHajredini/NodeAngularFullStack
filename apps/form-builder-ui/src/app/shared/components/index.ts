@@ -46,6 +46,7 @@ export {
 } from './image-gallery-selector/image-gallery-selector.component';
 export { FieldPropertiesModalComponent } from './field-properties-modal';
 export { FormSettingsModalComponent, type FormSettings } from './form-settings-modal';
+export { CategoryBadgeComponent } from './category-badge/category-badge.component';
 
 // Welcome Page Components
 export {

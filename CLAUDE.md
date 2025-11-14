@@ -638,9 +638,9 @@ deployed separately, but the core system remains monolithic.
 
 **Test User Credentials:**
 
-- Admin: admin@example.com / Admin123!@#
+- Admin: admin@example.com / User123!@#
 - User: user@example.com / User123!@#
-- ReadOnly: readonly@example.com / Read123!@#
+- ReadOnly: readonly@example.com / User123!@#
 
 ## Documentation Structure
 

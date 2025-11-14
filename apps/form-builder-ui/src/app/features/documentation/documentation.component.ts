@@ -259,7 +259,7 @@ npm install
                     <tr>
                       <td><span class="doc-badge admin">Admin</span></td>
                       <td>admin@example.com</td>
-                      <td><code>Admin123!@#</code></td>
+                      <td><code>User123!@#</code></td>
                     </tr>
                     <tr>
                       <td><span class="doc-badge user">User</span></td>
@@ -269,7 +269,7 @@ npm install
                     <tr>
                       <td><span class="doc-badge readonly">ReadOnly</span></td>
                       <td>readonly@example.com</td>
-                      <td><code>Read123!@#</code></td>
+                      <td><code>User123!@#</code></td>
                     </tr>
                   </tbody>
                 </table>

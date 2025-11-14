@@ -18,7 +18,7 @@ describe('Pre-Flight Validation Integration Tests', () => {
     // Login as admin to get JWT token
     const loginResponse = await request(app).post('/api/v1/auth/login').send({
       email: 'admin@example.com',
-      password: 'Admin123!@#',
+      password: 'User123!@#',
     });
 
     adminToken = loginResponse.body.data.accessToken;

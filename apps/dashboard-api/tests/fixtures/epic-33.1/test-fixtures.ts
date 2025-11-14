@@ -291,7 +291,7 @@ export const createCompleteTestTool = async (
 export const SEED_USERS = {
   admin: {
     email: 'admin@example.com',
-    password: 'Admin123!@#',
+    password: 'User123!@#',
     role: 'admin',
   },
   user: {
@@ -301,7 +301,7 @@ export const SEED_USERS = {
   },
   readonly: {
     email: 'readonly@example.com',
-    password: 'Read123!@#',
+    password: 'User123!@#',
     role: 'readonly',
   },
 };

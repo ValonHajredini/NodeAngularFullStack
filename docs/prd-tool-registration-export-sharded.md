@@ -4416,7 +4416,7 @@ describe('Tool Registry API', () => {
     // Get auth token
     const response = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'admin@example.com', password: 'Admin123!@#' });
+      .send({ email: 'admin@example.com', password: 'User123!@#' });
 
     authToken = response.body.token;
   });

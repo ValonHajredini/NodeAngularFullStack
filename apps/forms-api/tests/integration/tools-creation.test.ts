@@ -9,7 +9,7 @@ describe('Tools Creation with Component Scaffolding', () => {
     // Get admin auth token for testing
     const loginResponse = await request(app).post('/api/auth/login').send({
       email: 'admin@example.com',
-      password: 'Admin123!@#',
+      password: 'User123!@#',
     });
 
     if (loginResponse.body.success) {

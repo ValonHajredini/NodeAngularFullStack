@@ -275,7 +275,7 @@ describe('FormAnalyticsComponent', () => {
   it('should navigate back to forms list', () => {
     component.navigateBack();
 
-    expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/dashboard']);
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/tools/form-builder']);
   });
 
   it('should set error when form ID is missing', () => {
@@ -310,5 +310,127 @@ describe('FormAnalyticsComponent', () => {
 
     expect(mockToolConfigService.getActiveConfig).toHaveBeenCalledWith('form-builder');
     expect(component.isFullWidth()).toBe(true);
+  });
+
+  describe('Category Analytics Integration (Story 30.7)', () => {
+    it('should render PollAnalyticsComponent when category is polls', () => {
+      const mockPollMetrics = {
+        category: 'polls' as const,
+        totalVotes: 150,
+        uniqueVoters: 100,
+        voteDistribution: [
+          { option: 'Option A', count: 80 },
+          { option: 'Option B', count: 70 },
+        ],
+        mostPopularOption: 'Option A',
+      };
+
+      component.categoryMetrics.set(mockPollMetrics);
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const pollAnalytics = compiled.querySelector('app-poll-analytics');
+      const quizAnalytics = compiled.querySelector('app-quiz-analytics');
+
+      expect(pollAnalytics).toBeTruthy();
+      expect(quizAnalytics).toBeFalsy();
+    });
+
+    it('should render QuizAnalyticsComponent when category is quiz', () => {
+      const mockQuizMetrics = {
+        category: 'quiz' as const,
+        totalSubmissions: 50,
+        averageScore: 75.5,
+        medianScore: 80,
+        scoreDistribution: [
+          { range: '0-20', count: 5 },
+          { range: '21-40', count: 10 },
+          { range: '41-60', count: 15 },
+          { range: '61-80', count: 10 },
+          { range: '81-100', count: 10 },
+        ],
+        passRate: 60,
+        passingGrade: 60,
+      };
+
+      component.categoryMetrics.set(mockQuizMetrics);
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const pollAnalytics = compiled.querySelector('app-poll-analytics');
+      const quizAnalytics = compiled.querySelector('app-quiz-analytics');
+
+      expect(quizAnalytics).toBeTruthy();
+      expect(pollAnalytics).toBeFalsy();
+    });
+
+    it('should render placeholder for other categories', () => {
+      const mockEcommerceMetrics = {
+        category: 'ecommerce' as const,
+        totalSubmissions: 25,
+      };
+
+      component.categoryMetrics.set(mockEcommerceMetrics as any);
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const pollAnalytics = compiled.querySelector('app-poll-analytics');
+      const quizAnalytics = compiled.querySelector('app-quiz-analytics');
+      const placeholderText = compiled.textContent;
+
+      expect(pollAnalytics).toBeFalsy();
+      expect(quizAnalytics).toBeFalsy();
+      expect(placeholderText).toContain('Analytics for');
+      expect(placeholderText).toContain('ecommerce');
+      expect(placeholderText).toContain('coming soon');
+    });
+
+    it('should not render any analytics components when categoryMetrics is null', () => {
+      component.categoryMetrics.set(null);
+      fixture.detectChanges();
+
+      const compiled = fixture.nativeElement as HTMLElement;
+      const pollAnalytics = compiled.querySelector('app-poll-analytics');
+      const quizAnalytics = compiled.querySelector('app-quiz-analytics');
+
+      expect(pollAnalytics).toBeFalsy();
+      expect(quizAnalytics).toBeFalsy();
+    });
+
+    it('should switch between poll and quiz components when category changes', () => {
+      const mockPollMetrics = {
+        category: 'polls' as const,
+        totalVotes: 150,
+        uniqueVoters: 100,
+        voteDistribution: [],
+        mostPopularOption: 'Option A',
+      };
+
+      const mockQuizMetrics = {
+        category: 'quiz' as const,
+        totalSubmissions: 50,
+        averageScore: 75.5,
+        medianScore: 80,
+        scoreDistribution: [],
+        passRate: 60,
+        passingGrade: 60,
+      };
+
+      // Start with poll metrics
+      component.categoryMetrics.set(mockPollMetrics);
+      fixture.detectChanges();
+
+      let compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelector('app-poll-analytics')).toBeTruthy();
+      expect(compiled.querySelector('app-quiz-analytics')).toBeFalsy();
+
+      // Switch to quiz metrics
+      component.categoryMetrics.set(mockQuizMetrics);
+      fixture.detectChanges();
+
+      compiled = fixture.nativeElement as HTMLElement;
+      expect(compiled.querySelector('app-poll-analytics')).toBeFalsy();
+      expect(compiled.querySelector('app-quiz-analytics')).toBeTruthy();
+    });
   });
 });

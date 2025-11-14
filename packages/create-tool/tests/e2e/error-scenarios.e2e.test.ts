@@ -196,7 +196,7 @@ describe('Error Scenario Tests (AC6)', () => {
     const originalApiUrl = process.env.API_BASE_URL;
     process.env.API_BASE_URL = 'http://invalid-host-that-does-not-exist:9999';
     process.env.CREATE_TOOL_ADMIN_EMAIL = 'admin@example.com';
-    process.env.CREATE_TOOL_ADMIN_PASSWORD = 'Admin123!@#';
+    process.env.CREATE_TOOL_ADMIN_PASSWORD = 'User123!@#';
 
     try {
       // Act
@@ -250,7 +250,7 @@ describe('Error Scenario Tests (AC6)', () => {
     const originalDbUrl = process.env.DATABASE_URL;
     process.env.DATABASE_URL = 'postgresql://invalid:invalid@invalid-host:5432/invalid_db';
     process.env.CREATE_TOOL_ADMIN_EMAIL = 'admin@example.com';
-    process.env.CREATE_TOOL_ADMIN_PASSWORD = 'Admin123!@#';
+    process.env.CREATE_TOOL_ADMIN_PASSWORD = 'User123!@#';
 
     try {
       // Act

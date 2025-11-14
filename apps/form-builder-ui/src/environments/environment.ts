@@ -7,6 +7,7 @@ export const environment = {
   // Multi-database architecture: Use relative path for proxy routing
   // Proxy routes /api/v1/tools to dashboard-api (3000), /api/v1/forms to forms-api (3001)
   apiUrl: '/api/v1',
+  formsApiUrl: 'http://localhost:3001', // Forms API for analytics and form operations
   shortLinkBaseUrl: 'http://localhost:3001',
   mainAppUrl: 'http://localhost:4200',
   appName: 'NodeAngularFullStack',

@@ -25,7 +25,7 @@ const API_URL = 'http://localhost:3000';
 // Test user credentials (from database seed data)
 const ADMIN_USER = {
   email: 'admin@example.com',
-  password: 'Admin123!@#',
+  password: 'User123!@#',
 };
 
 const REGULAR_USER = {
@@ -35,7 +35,7 @@ const REGULAR_USER = {
 
 const READONLY_USER = {
   email: 'readonly@example.com',
-  password: 'Read123!@#',
+  password: 'User123!@#',
 };
 
 // =============================================================================

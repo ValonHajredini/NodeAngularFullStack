@@ -60,7 +60,7 @@ jobs:
           echo "DATABASE_URL=postgresql://test_user:test_password@localhost:5432/test_db" >> packages/create-tool/.env.e2e
           echo "API_BASE_URL=http://localhost:3000" >> packages/create-tool/.env.e2e
           echo "CREATE_TOOL_ADMIN_EMAIL=e2e-admin@example.com" >> packages/create-tool/.env.e2e
-          echo "CREATE_TOOL_ADMIN_PASSWORD=E2eAdmin123!@#" >> packages/create-tool/.env.e2e
+          echo "CREATE_TOOL_ADMIN_PASSWORD=E2eUser123!@#" >> packages/create-tool/.env.e2e
           echo "CREATE_TOOL_WORKSPACE=/tmp/create-tool-e2e" >> packages/create-tool/.env.e2e
           echo "CLI_TIMEOUT=60000" >> packages/create-tool/.env.e2e
           echo "API_TIMEOUT=30000" >> packages/create-tool/.env.e2e
@@ -193,9 +193,9 @@ jobs:
           echo "- **Utility Coverage**: TestWorkspace (70+ unit tests)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## Artifacts" >> $GITHUB_STEP_SUMMARY
-          echo "- =Ê Test Results: Available in workflow artifacts" >> $GITHUB_STEP_SUMMARY
-          echo "- =Á Generated Files: Available if tests failed" >> $GITHUB_STEP_SUMMARY
-          echo "- =Ý Test Logs: Available if tests failed" >> $GITHUB_STEP_SUMMARY
+          echo "- = Test Results: Available in workflow artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- = Generated Files: Available if tests failed" >> $GITHUB_STEP_SUMMARY
+          echo "- = Test Logs: Available if tests failed" >> $GITHUB_STEP_SUMMARY
 
       - name: Check E2E test results
         run: |

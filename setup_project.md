@@ -224,8 +224,8 @@ make logs               # tail backend + frontend logs
   - Health check: `http://localhost:3000/health`
   - pgWeb: `http://localhost:8080` (start-dev) or `http://localhost:8081` (standalone script)
 - **Seeded credentials** (after `db:seed`):  
-  | Role | Email | Password | | --- | --- | --- | | Admin | `admin@example.com` | `Admin123!@#` | |
-  User | `user@example.com` | `User123!@#` | | ReadOnly | `readonly@example.com` | `Read123!@#` |
+  | Role | Email | Password | | --- | --- | --- | | Admin | `admin@example.com` | `User123!@#` | |
+  User | `user@example.com` | `User123!@#` | | ReadOnly | `readonly@example.com` | `User123!@#` |
 - **Logs**: check `logs/backend.log`, `logs/frontend.log`, `logs/pgweb.log` for runtime errors when
   using the start script.
 

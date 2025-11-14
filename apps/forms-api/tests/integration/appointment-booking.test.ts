@@ -33,7 +33,7 @@ describe('Appointment Booking Integration Tests', () => {
       .post('/api/auth/login')
       .send({
         email: 'admin@example.com',
-        password: 'Admin123!@#'
+        password: 'User123!@#'
       });
 
     adminToken = adminResponse.body.data.accessToken;

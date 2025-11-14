@@ -19,7 +19,7 @@ import { ExportHistoryPage } from './pages/export-history.page';
  * - Database must have test data (run db:seed)
  *
  * **Test Data Requirements:**
- * - At least one admin user (admin@example.com / Admin123!@#)
+ * - At least one admin user (admin@example.com / User123!@#)
  * - At least one regular user (user@example.com / User123!@#)
  * - At least 5 export jobs with various statuses
  */
@@ -108,7 +108,7 @@ test.describe('Export History - Complete Workflow', () => {
       // Login as admin
       await page.goto('/auth/login');
       await page.getByLabel(/email/i).fill('admin@example.com');
-      await page.getByLabel(/password/i).fill('Admin123!@#');
+      await page.getByLabel(/password/i).fill('User123!@#');
       await page.getByRole('button', { name: /sign in|login/i }).click();
 
       // Wait for successful login
@@ -189,7 +189,7 @@ test.describe('Export History - Complete Workflow', () => {
       // Login as admin to see all jobs
       await page.goto('/auth/login');
       await page.getByLabel(/email/i).fill('admin@example.com');
-      await page.getByLabel(/password/i).fill('Admin123!@#');
+      await page.getByLabel(/password/i).fill('User123!@#');
       await page.getByRole('button', { name: /sign in|login/i }).click();
       await page.waitForURL('**/dashboard', { timeout: 10000 });
 
@@ -267,7 +267,7 @@ test.describe('Export History - Complete Workflow', () => {
       // Login as admin
       await page.goto('/auth/login');
       await page.getByLabel(/email/i).fill('admin@example.com');
-      await page.getByLabel(/password/i).fill('Admin123!@#');
+      await page.getByLabel(/password/i).fill('User123!@#');
       await page.getByRole('button', { name: /sign in|login/i }).click();
       await page.waitForURL('**/dashboard', { timeout: 10000 });
 
@@ -346,7 +346,7 @@ test.describe('Export History - Complete Workflow', () => {
       // Login as admin
       await page.goto('/auth/login');
       await page.getByLabel(/email/i).fill('admin@example.com');
-      await page.getByLabel(/password/i).fill('Admin123!@#');
+      await page.getByLabel(/password/i).fill('User123!@#');
       await page.getByRole('button', { name: /sign in|login/i }).click();
       await page.waitForURL('**/dashboard', { timeout: 10000 });
 
@@ -414,7 +414,7 @@ test.describe('Export History - Complete Workflow', () => {
       // Login as admin
       await page.goto('/auth/login');
       await page.getByLabel(/email/i).fill('admin@example.com');
-      await page.getByLabel(/password/i).fill('Admin123!@#');
+      await page.getByLabel(/password/i).fill('User123!@#');
       await page.getByRole('button', { name: /sign in|login/i }).click();
       await page.waitForURL('**/dashboard', { timeout: 10000 });
 
@@ -568,7 +568,7 @@ test.describe('Export History - Complete Workflow', () => {
       // Login as admin
       await page.goto('/auth/login');
       await page.getByLabel(/email/i).fill('admin@example.com');
-      await page.getByLabel(/password/i).fill('Admin123!@#');
+      await page.getByLabel(/password/i).fill('User123!@#');
       await page.getByRole('button', { name: /sign in|login/i }).click();
       await page.waitForURL('**/dashboard', { timeout: 10000 });
 

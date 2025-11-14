@@ -23,10 +23,12 @@ import {
   FieldStatistics,
   ChartType,
   ChartTypeOption,
-  ChoiceDistribution,
+  CategoryMetrics,
+  TemplateCategory,
 } from '@nodeangularfullstack/shared';
 import { FormsApiService } from '../forms-api.service';
-// REMOVED: ToolConfigService not needed in form-builder-ui (tool config is for dashboard-api)
+import { ToolConfigService } from '@core/services/tool-config.service';
+import { CategoryAnalyticsService } from '@core/services/category-analytics.service';
 import { StatisticsEngineService } from './statistics-engine.service';
 import { ChartPreferenceService } from './chart-preference.service';
 import { BarChartComponent } from './charts/bar-chart.component';
@@ -39,6 +41,11 @@ import { AreaChartComponent } from './charts/area-chart.component';
 import { DoughnutChartComponent } from './charts/doughnut-chart.component';
 import { HorizontalBarChartComponent } from './charts/horizontal-bar-chart.component';
 import { ExportDialogComponent } from './export-dialog.component';
+import { PollAnalyticsComponent } from './poll-analytics.component';
+import { QuizAnalyticsComponent } from './quiz-analytics.component';
+import { ProductAnalyticsComponent } from './product-analytics.component';
+import { AppointmentAnalyticsComponent } from './appointment-analytics.component';
+import { RestaurantAnalyticsComponent } from './restaurant-analytics.component';
 
 /**
  * Chart type compatibility matrix defining which chart types work with which data types.
@@ -106,6 +113,11 @@ const ALL_CHART_TYPE_OPTIONS: ChartTypeOption[] = [
     DoughnutChartComponent,
     HorizontalBarChartComponent,
     ExportDialogComponent,
+    PollAnalyticsComponent,
+    QuizAnalyticsComponent,
+    ProductAnalyticsComponent,
+    AppointmentAnalyticsComponent,
+    RestaurantAnalyticsComponent,
   ],
   providers: [MessageService],
   template: `
@@ -116,13 +128,15 @@ const ALL_CHART_TYPE_OPTIONS: ChartTypeOption[] = [
         [class.max-w-7xl]="!isFullWidth()"
         [class.mx-auto]="!isFullWidth()"
       >
-        <a routerLink="/app/dashboard" class="hover:text-blue-600 transition-colors flex items-center">
+        <a routerLink="/app/dashboard" class="hover:text-blue-600 transition-colors">
           <i class="pi pi-home mr-1"></i>
           Dashboard
         </a>
         <i class="pi pi-angle-right mx-2 text-gray-400"></i>
-        <a [routerLink]="['/app/dashboard/forms']" class="hover:text-blue-600 transition-colors">
-          My Forms
+        <a routerLink="/app/tools" class="hover:text-blue-600 transition-colors">Tools</a>
+        <i class="pi pi-angle-right mx-2 text-gray-400"></i>
+        <a routerLink="/app/tools/form-builder" class="hover:text-blue-600 transition-colors">
+          Form Builder
         </a>
         <i class="pi pi-angle-right mx-2 text-gray-400"></i>
         <span class="text-gray-900 font-medium">Analytics</span>
@@ -202,6 +216,84 @@ const ALL_CHART_TYPE_OPTIONS: ChartTypeOption[] = [
             severity="secondary"
             (click)="navigateBack()"
           ></button>
+        </div>
+      }
+
+      <!-- Category-Specific Analytics Section (Epic 30, Story 30.6) -->
+      @if (!isLoading() && !error() && hasCategoryMetrics()) {
+        <div
+          class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-sm p-6 mb-8 border border-blue-200"
+        >
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <i class="pi pi-chart-line text-3xl text-blue-600"></i>
+              <div>
+                <h2 class="text-2xl font-bold text-gray-900">Category Analytics</h2>
+                <p class="text-sm text-gray-600 mt-1">
+                  Specialized metrics for
+                  <span class="font-semibold text-blue-700">{{ category() }}</span>
+                  templates
+                </p>
+              </div>
+            </div>
+            @if (categoryLoading()) {
+              <i class="pi pi-spin pi-spinner text-2xl text-blue-600"></i>
+            }
+          </div>
+
+          <!-- Category Metrics Display -->
+          <div class="bg-white rounded-lg p-6 shadow-sm">
+            @if (categoryMetrics(); as metrics) {
+              <!-- Poll Analytics Component (Story 30.7) -->
+              @if (metrics.category === 'polls') {
+                <app-poll-analytics [metrics]="$any(metrics)"></app-poll-analytics>
+              }
+
+              <!-- Quiz Analytics Component (Story 30.7) -->
+              @if (metrics.category === 'quiz') {
+                <app-quiz-analytics [metrics]="$any(metrics)"></app-quiz-analytics>
+              }
+
+              <!-- Product Analytics Component (Story 30.8) -->
+              @if (metrics.category === 'ecommerce') {
+                <app-product-analytics [metrics]="$any(metrics)"></app-product-analytics>
+              }
+
+              <!-- Appointment Analytics Component (Story 30.8) -->
+              @if (metrics.category === 'services') {
+                <app-appointment-analytics [metrics]="$any(metrics)"></app-appointment-analytics>
+              }
+
+              <!-- Restaurant Analytics Component (Story 30.8) -->
+              @if (metrics.category === 'data_collection') {
+                <app-restaurant-analytics [metrics]="$any(metrics)"></app-restaurant-analytics>
+              }
+
+              <!-- Placeholder for other categories (events) -->
+              @if (
+                metrics.category !== 'polls' &&
+                metrics.category !== 'quiz' &&
+                metrics.category !== 'ecommerce' &&
+                metrics.category !== 'services' &&
+                metrics.category !== 'data_collection'
+              ) {
+                <div class="text-center py-8">
+                  <i class="pi pi-chart-bar text-4xl text-gray-400 mb-3"></i>
+                  <p class="text-gray-600">
+                    Analytics for <strong>{{ metrics.category }}</strong> category coming soon
+                  </p>
+                </div>
+              }
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Category Loading State -->
+      @if (!isLoading() && !error() && categoryLoading() && !hasCategoryMetrics()) {
+        <div class="bg-white rounded-lg shadow-sm p-8 mb-8 text-center">
+          <i class="pi pi-spin pi-spinner text-4xl text-blue-600 mb-3"></i>
+          <p class="text-gray-600">Loading category analytics...</p>
         </div>
       }
 
@@ -301,19 +393,6 @@ const ALL_CHART_TYPE_OPTIONS: ChartTypeOption[] = [
             </ng-template>
           </p-table>
         </div>
-
-        <!-- Quiz Score Distribution Section (Story 29.13) -->
-        @if (isQuizForm() && quizScoreDistribution().length > 0) {
-          <div class="mb-8">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6">Quiz Performance</h2>
-            <div class="bg-white rounded-lg shadow p-6">
-              <app-bar-chart
-                title="Score Distribution"
-                [data]="quizScoreDistribution()"
-              ></app-bar-chart>
-            </div>
-          </div>
-        }
 
         <!-- Charts Dashboard Section -->
         <div class="charts-dashboard">
@@ -444,12 +523,15 @@ const ALL_CHART_TYPE_OPTIONS: ChartTypeOption[] = [
       </div>
     </p-dialog>
 
-    <!-- Export Dialog -->
+    <!-- Export Dialog (Story 30.8: Enhanced with category data) -->
     <app-export-dialog
       [(visible)]="exportDialogVisible"
       [formId]="formId()"
       [formFields]="inputFieldsOnly()"
       [totalSubmissions]="totalSubmissions()"
+      [category]="category()"
+      [categoryMetrics]="categoryMetrics()"
+      [formTitle]="formTitle()"
     ></app-export-dialog>
 
     <!-- Toast -->
@@ -487,18 +569,20 @@ export class FormAnalyticsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly formsApiService = inject(FormsApiService);
-  // REMOVED: toolConfigService not needed in form-builder-ui
+  private readonly toolConfigService = inject(ToolConfigService);
+  private readonly categoryAnalyticsService = inject(CategoryAnalyticsService);
   private readonly messageService = inject(MessageService);
   private readonly statisticsEngine = inject(StatisticsEngineService);
   private readonly chartPreferenceService = inject(ChartPreferenceService);
 
   // Expose FormFieldType enum to template
   protected readonly FormFieldType = FormFieldType;
+  // Expose Object to template for Object.keys() usage
+  protected readonly Object = Object;
 
   readonly formId = signal<string>('');
   readonly formTitle = signal<string>('');
   readonly formFields = signal<FormField[]>([]);
-  readonly formMetadata = signal<FormMetadata | null>(null); // Store full metadata for template access
   readonly submissions = signal<FormSubmission[]>([]);
   readonly isLoading = signal<boolean>(false);
   readonly isLoadingSubmissions = signal<boolean>(false);
@@ -508,9 +592,46 @@ export class FormAnalyticsComponent implements OnInit {
   readonly totalRecords = signal<number>(0);
   readonly currentPage = signal<number>(0);
 
-  // REMOVED: toolConfig signal - not needed in form-builder-ui
-  // Form-builder-ui always uses standard layout (not full-width)
-  readonly isFullWidth = computed(() => false);
+  // Category Analytics Signals (Epic 30, Story 30.6)
+  readonly category = signal<TemplateCategory | null>(null);
+
+  /**
+   * Category-specific analytics metrics (discriminated union: PollMetrics | QuizMetrics | etc.).
+   *
+   * **Template Type Casting Note (Story 30.7, QA Review DOC-001)**:
+   * When passing this signal to specialized components (PollAnalyticsComponent, QuizAnalyticsComponent),
+   * the template uses `$any(metrics)` to bypass TypeScript's discriminated union checking.
+   * This is necessary because Angular's template type system cannot automatically narrow union types
+   * even when the category is checked with @if conditions (e.g., `@if (metrics.category === 'polls')`).
+   *
+   * The type safety is preserved at runtime by:
+   * 1. Conditional rendering ensures only the correct component receives metrics
+   * 2. Each component validates the category property matches expected value
+   * 3. Backend AnalyticsService guarantees metrics match declared category
+   *
+   * @see PollAnalyticsComponent - Expects PollMetrics with category='polls'
+   * @see QuizAnalyticsComponent - Expects QuizMetrics with category='quiz'
+   */
+  readonly categoryMetrics = signal<CategoryMetrics | null>(null);
+  readonly categoryLoading = signal<boolean>(false);
+  readonly categoryError = signal<string | null>(null);
+
+  // Computed: Check if category-specific analytics are available
+  readonly hasCategoryMetrics = computed<boolean>(() => {
+    return this.categoryMetrics() !== null && this.category() !== null;
+  });
+
+  // Computed: Check if form has category detected
+  readonly hasCategory = computed<boolean>(() => {
+    return this.category() !== null;
+  });
+
+  // Tool configuration
+  readonly toolConfig = signal<{ displayMode?: string } | null>(null);
+  readonly isFullWidth = computed(() => {
+    const config = this.toolConfig();
+    return config?.displayMode === 'full-width';
+  });
 
   // Field visibility configuration
   readonly visibleFieldIds = signal<Set<string>>(new Set());
@@ -633,40 +754,6 @@ export class FormAnalyticsComponent implements OnInit {
   });
 
   /**
-   * Detects if the current form uses a quiz template.
-   * Checks template business logic configuration for type='quiz'.
-   * Epic 29: Form Template System with Business Logic
-   * Story 29.13: Quiz Template with Scoring Logic
-   */
-  readonly isQuizForm = computed(() => {
-    const metadata = this.formMetadata();
-    return metadata?.schema?.template?.businessLogicConfig?.type === 'quiz';
-  });
-
-  /**
-   * Quiz score distribution data for chart visualization.
-   * Converts score ranges into ChoiceDistribution format for BarChartComponent.
-   * Only calculated when form is a quiz template and has submissions.
-   * Epic 29: Form Template System with Business Logic
-   * Story 29.13: Quiz Template with Scoring Logic
-   */
-  readonly quizScoreDistribution = computed<ChoiceDistribution[]>(() => {
-    if (!this.isQuizForm() || this.submissions().length === 0) {
-      return [];
-    }
-
-    const chartData = this.statisticsEngine.analyzeQuizScores(this.submissions());
-
-    // Convert ChartData to ChoiceDistribution format for BarChartComponent
-    return chartData.labels.map((label, index) => ({
-      label,
-      value: label,
-      count: chartData.datasets[0].data[index],
-      percentage: 0, // Percentage not needed for quiz scores
-    }));
-  });
-
-  /**
    * Check if a chart type is compatible with a data type.
    * @param dataType - Field data type (numeric, choice, timeseries, toggle, none)
    * @param chartType - Chart type to validate
@@ -719,12 +806,25 @@ export class FormAnalyticsComponent implements OnInit {
     }
 
     this.formId.set(id);
-    // REMOVED: loadToolConfig() - not needed in form-builder-ui
+    this.loadToolConfig();
     this.loadFormDetails();
     this.loadVisibleFieldsPreference();
   }
 
-  // REMOVED: loadToolConfig() method - form-builder-ui doesn't need dynamic display mode config
+  /**
+   * Loads the tool configuration to determine display mode.
+   */
+  private loadToolConfig(): void {
+    this.toolConfigService.getActiveConfig('form-builder').subscribe({
+      next: (config) => {
+        this.toolConfig.set(config || null);
+      },
+      error: (error) => {
+        console.error('Failed to load tool configuration:', error);
+        this.toolConfig.set(null);
+      },
+    });
+  }
 
   /**
    * Loads form details including title and schema fields.
@@ -737,8 +837,20 @@ export class FormAnalyticsComponent implements OnInit {
       next: (form: FormMetadata) => {
         this.formTitle.set(form.title);
         this.formFields.set(form.schema?.fields || []);
-        this.formMetadata.set(form); // Store full metadata for quiz template detection
         this.isLoading.set(false);
+
+        // Detect template category from schema
+        if (form.schema) {
+          const detectedCategory = this.categoryAnalyticsService.detectTemplateCategory(
+            form.schema,
+          );
+          this.category.set(detectedCategory);
+
+          // Load category-specific analytics if category detected
+          if (detectedCategory) {
+            this.loadCategoryAnalytics();
+          }
+        }
 
         // Load submissions after form details
         this.loadSubmissions({ first: 0, rows: this.pageSize() });
@@ -753,6 +865,35 @@ export class FormAnalyticsComponent implements OnInit {
           detail: errorMessage,
           life: 3000,
         });
+      },
+    });
+  }
+
+  /**
+   * Loads category-specific analytics metrics for the form.
+   * Called automatically when a template category is detected.
+   *
+   * Epic 30, Story 30.6: Frontend Category Detection and Analytics Service
+   */
+  private loadCategoryAnalytics(): void {
+    this.categoryLoading.set(true);
+    this.categoryError.set(null);
+
+    this.categoryAnalyticsService.getCategoryMetrics(this.formId()).subscribe({
+      next: (metrics: CategoryMetrics) => {
+        this.categoryMetrics.set(metrics);
+        this.categoryLoading.set(false);
+      },
+      error: (error) => {
+        this.categoryLoading.set(false);
+        const errorMessage = error.message || 'Failed to load category analytics';
+        this.categoryError.set(errorMessage);
+
+        // Don't show error toast - fallback to generic analytics silently
+        console.warn(
+          'Category analytics not available, falling back to generic charts:',
+          errorMessage,
+        );
       },
     });
   }
@@ -872,7 +1013,7 @@ export class FormAnalyticsComponent implements OnInit {
    * Navigates back to forms list.
    */
   navigateBack(): void {
-    this.router.navigate(['/app/dashboard']);
+    this.router.navigate(['/app/tools/form-builder']);
   }
 
   /**

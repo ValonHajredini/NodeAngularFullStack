@@ -29,7 +29,7 @@ describe('Export Package Download (GET /api/tool-registry/export-jobs/:jobId/dow
     // Get authentication tokens
     const adminLogin = await request(app)
       .post('/api/v1/auth/login')
-      .send({ email: 'admin@example.com', password: 'Admin123!@#' });
+      .send({ email: 'admin@example.com', password: 'User123!@#' });
     adminToken = adminLogin.body.data.accessToken;
     adminUserId = adminLogin.body.data.user.id;
 

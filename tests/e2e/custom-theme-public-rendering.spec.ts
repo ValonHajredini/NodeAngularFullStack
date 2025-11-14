@@ -13,7 +13,7 @@ import { test, expect, Page } from '@playwright/test';
 
 // Test constants
 const ADMIN_EMAIL = 'admin@example.com';
-const ADMIN_PASSWORD = 'Admin123!@#';
+const ADMIN_PASSWORD = 'User123!@#';
 const API_BASE_URL = 'http://localhost:3000/api';
 const WEB_BASE_URL = 'http://localhost:4200';
 

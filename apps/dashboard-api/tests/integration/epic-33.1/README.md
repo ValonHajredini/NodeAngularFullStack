@@ -166,7 +166,7 @@ const user = await createTestUser(pool, {
 
 // Use seed users
 const adminCredentials = SEED_USERS.admin;
-// email: 'admin@example.com', password: 'Admin123!@#'
+// email: 'admin@example.com', password: 'User123!@#'
 ```
 
 ## Test Helpers

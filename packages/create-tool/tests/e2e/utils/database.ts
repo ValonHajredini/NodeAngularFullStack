@@ -46,7 +46,7 @@ export class DatabaseSeeder {
    */
   async seedAdminUser(): Promise<{ email: string; password: string }> {
     const email = 'e2e-admin@example.com';
-    const password = 'E2eAdmin123!@#';
+    const password = 'E2eUser123!@#';
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const query = `

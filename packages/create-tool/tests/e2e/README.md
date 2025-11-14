@@ -96,7 +96,7 @@ API_BASE_URL=http://localhost:3000
 
 # Admin credentials for registration tests
 CREATE_TOOL_ADMIN_EMAIL=e2e-admin@example.com
-CREATE_TOOL_ADMIN_PASSWORD=E2eAdmin123!@#
+CREATE_TOOL_ADMIN_PASSWORD=E2eUser123!@#
 
 # CLI options
 CREATE_TOOL_WORKSPACE=/tmp/create-tool-e2e

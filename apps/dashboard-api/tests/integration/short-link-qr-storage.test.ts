@@ -10,7 +10,7 @@ import { storageService } from '../../src/services/storage.service';
 // Test user credentials (from seed data - see apps/api/database/TEST_CREDENTIALS.md)
 const testUser = {
   email: 'admin@example.com',
-  password: 'Admin123!@#',
+  password: 'User123!@#',
 };
 
 describe('Short Link QR Code Storage Integration', () => {

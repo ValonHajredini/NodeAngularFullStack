@@ -254,11 +254,11 @@ To stop all services:
 
 After seeding the database, you can login with these test accounts:
 
-| Role     | Email                | Password    |
-| -------- | -------------------- | ----------- |
-| Admin    | admin@example.com    | Admin123!@# |
-| User     | user@example.com     | User123!@#  |
-| ReadOnly | readonly@example.com | Read123!@#  |
+| Role     | Email                | Password   |
+| -------- | -------------------- | ---------- |
+| Admin    | admin@example.com    | User123!@# |
+| User     | user@example.com     | User123!@# |
+| ReadOnly | readonly@example.com | User123!@# |
 
 ## 6. Environment Variables
 

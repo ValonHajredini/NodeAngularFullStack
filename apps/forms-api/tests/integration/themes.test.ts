@@ -46,7 +46,7 @@ describe('Themes API Endpoints', () => {
       .post('/api/v1/auth/login')
       .send({
         email: 'admin@example.com',
-        password: 'Admin123!@#',
+        password: 'User123!@#',
       });
 
     adminToken = adminLoginResponse.body.data.accessToken;

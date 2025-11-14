@@ -41,6 +41,8 @@ import { AreaChartComponent } from './charts/area-chart.component';
 import { DoughnutChartComponent } from './charts/doughnut-chart.component';
 import { HorizontalBarChartComponent } from './charts/horizontal-bar-chart.component';
 import { ExportDialogComponent } from './export-dialog.component';
+import { PollAnalyticsComponent } from './poll-analytics.component';
+import { QuizAnalyticsComponent } from './quiz-analytics.component';
 
 /**
  * Chart type compatibility matrix defining which chart types work with which data types.
@@ -108,6 +110,8 @@ const ALL_CHART_TYPE_OPTIONS: ChartTypeOption[] = [
     DoughnutChartComponent,
     HorizontalBarChartComponent,
     ExportDialogComponent,
+    PollAnalyticsComponent,
+    QuizAnalyticsComponent,
   ],
   providers: [MessageService],
   template: `
@@ -234,124 +238,23 @@ const ALL_CHART_TYPE_OPTIONS: ChartTypeOption[] = [
           <!-- Category Metrics Display -->
           <div class="bg-white rounded-lg p-6 shadow-sm">
             @if (categoryMetrics(); as metrics) {
-              <!-- Poll Metrics -->
+              <!-- Poll Analytics Component (Story 30.7) -->
               @if (metrics.category === 'polls') {
-                <div class="space-y-4">
-                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="bg-blue-50 rounded-lg p-4">
-                      <div class="text-sm text-gray-600 mb-1">Total Votes</div>
-                      <div class="text-3xl font-bold text-blue-700">
-                        {{ metrics.totalSubmissions }}
-                      </div>
-                    </div>
-                    <div class="bg-green-50 rounded-lg p-4">
-                      <div class="text-sm text-gray-600 mb-1">Unique Voters</div>
-                      <div class="text-3xl font-bold text-green-700">
-                        {{ metrics.uniqueVoters }}
-                      </div>
-                    </div>
-                    <div class="bg-purple-50 rounded-lg p-4">
-                      <div class="text-sm text-gray-600 mb-1">Most Popular</div>
-                      <div class="text-xl font-bold text-purple-700 truncate">
-                        {{ metrics.mostPopularOption || 'N/A' }}
-                      </div>
-                    </div>
-                  </div>
-                  <div class="mt-4">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-3">Vote Distribution</h3>
-                    <div class="space-y-2">
-                      @for (option of Object.keys(metrics.voteCounts); track option) {
-                        <div class="flex items-center gap-3">
-                          <div class="flex-1">
-                            <div class="flex items-center justify-between mb-1">
-                              <span class="text-sm font-medium text-gray-700">{{ option }}</span>
-                              <span class="text-sm text-gray-600">
-                                {{ metrics.voteCounts[option] }} votes ({{
-                                  metrics.votePercentages[option]
-                                }}%)
-                              </span>
-                            </div>
-                            <div class="w-full bg-gray-200 rounded-full h-2.5">
-                              <div
-                                class="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
-                                [style.width.%]="metrics.votePercentages[option]"
-                              ></div>
-                            </div>
-                          </div>
-                        </div>
-                      }
-                    </div>
-                  </div>
-                </div>
+                <app-poll-analytics [metrics]="$any(metrics)"></app-poll-analytics>
               }
 
-              <!-- Quiz Metrics -->
+              <!-- Quiz Analytics Component (Story 30.7) -->
               @if (metrics.category === 'quiz') {
-                <div class="space-y-4">
-                  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div class="bg-blue-50 rounded-lg p-4">
-                      <div class="text-sm text-gray-600 mb-1">Attempts</div>
-                      <div class="text-3xl font-bold text-blue-700">
-                        {{ metrics.totalSubmissions }}
-                      </div>
-                    </div>
-                    <div class="bg-green-50 rounded-lg p-4">
-                      <div class="text-sm text-gray-600 mb-1">Average Score</div>
-                      <div class="text-3xl font-bold text-green-700">
-                        {{ metrics.averageScore }}%
-                      </div>
-                    </div>
-                    <div class="bg-yellow-50 rounded-lg p-4">
-                      <div class="text-sm text-gray-600 mb-1">Pass Rate</div>
-                      <div class="text-3xl font-bold text-yellow-700">{{ metrics.passRate }}%</div>
-                    </div>
-                    <div class="bg-purple-50 rounded-lg p-4">
-                      <div class="text-sm text-gray-600 mb-1">Median</div>
-                      <div class="text-3xl font-bold text-purple-700">
-                        {{ metrics.medianScore }}%
-                      </div>
-                    </div>
-                  </div>
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                    <div>
-                      <h3 class="text-lg font-semibold text-gray-900 mb-3">Score Distribution</h3>
-                      <div class="space-y-2">
-                        @for (bucket of Object.keys(metrics.scoreDistribution); track bucket) {
-                          <div class="flex items-center justify-between">
-                            <span class="text-sm font-medium text-gray-700">{{ bucket }}</span>
-                            <span class="text-sm text-gray-600">
-                              {{ metrics.scoreDistribution[bucket] }} students
-                            </span>
-                          </div>
-                        }
-                      </div>
-                    </div>
-                    @if (Object.keys(metrics.questionAccuracy).length > 0) {
-                      <div>
-                        <h3 class="text-lg font-semibold text-gray-900 mb-3">Question Accuracy</h3>
-                        <div class="space-y-2">
-                          @for (question of Object.keys(metrics.questionAccuracy); track question) {
-                            <div class="flex items-center gap-3">
-                              <span class="text-sm font-medium text-gray-700 min-w-[60px]">
-                                {{ question }}
-                              </span>
-                              <div class="flex-1">
-                                <div class="w-full bg-gray-200 rounded-full h-2">
-                                  <div
-                                    class="bg-green-600 h-2 rounded-full transition-all duration-300"
-                                    [style.width.%]="metrics.questionAccuracy[question]"
-                                  ></div>
-                                </div>
-                              </div>
-                              <span class="text-sm text-gray-600 min-w-[50px] text-right">
-                                {{ metrics.questionAccuracy[question] }}%
-                              </span>
-                            </div>
-                          }
-                        </div>
-                      </div>
-                    }
-                  </div>
+                <app-quiz-analytics [metrics]="$any(metrics)"></app-quiz-analytics>
+              }
+
+              <!-- Placeholder for other categories (ecommerce, services, data_collection, events) -->
+              @if (metrics.category !== 'polls' && metrics.category !== 'quiz') {
+                <div class="text-center py-8">
+                  <i class="pi pi-chart-bar text-4xl text-gray-400 mb-3"></i>
+                  <p class="text-gray-600">
+                    Analytics for <strong>{{ metrics.category }}</strong> category coming soon
+                  </p>
                 </div>
               }
             }
@@ -661,6 +564,24 @@ export class FormAnalyticsComponent implements OnInit {
 
   // Category Analytics Signals (Epic 30, Story 30.6)
   readonly category = signal<TemplateCategory | null>(null);
+
+  /**
+   * Category-specific analytics metrics (discriminated union: PollMetrics | QuizMetrics | etc.).
+   *
+   * **Template Type Casting Note (Story 30.7, QA Review DOC-001)**:
+   * When passing this signal to specialized components (PollAnalyticsComponent, QuizAnalyticsComponent),
+   * the template uses `$any(metrics)` to bypass TypeScript's discriminated union checking.
+   * This is necessary because Angular's template type system cannot automatically narrow union types
+   * even when the category is checked with @if conditions (e.g., `@if (metrics.category === 'polls')`).
+   *
+   * The type safety is preserved at runtime by:
+   * 1. Conditional rendering ensures only the correct component receives metrics
+   * 2. Each component validates the category property matches expected value
+   * 3. Backend AnalyticsService guarantees metrics match declared category
+   *
+   * @see PollAnalyticsComponent - Expects PollMetrics with category='polls'
+   * @see QuizAnalyticsComponent - Expects QuizMetrics with category='quiz'
+   */
   readonly categoryMetrics = signal<CategoryMetrics | null>(null);
   readonly categoryLoading = signal<boolean>(false);
   readonly categoryError = signal<string | null>(null);

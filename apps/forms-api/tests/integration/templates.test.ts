@@ -63,7 +63,7 @@ describe('Templates API Endpoints', () => {
       .post('/api/v1/auth/login')
       .send({
         email: 'admin@example.com',
-        password: 'Admin123!@#',
+        password: 'User123!@#',
       });
 
     if (adminLoginResponse.status !== 200 || !adminLoginResponse.body.data) {

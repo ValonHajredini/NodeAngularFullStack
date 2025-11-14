@@ -15,7 +15,7 @@ export interface LoginOptions {
  */
 export async function loginAsAdmin(page: Page, options: LoginOptions = {}): Promise<void> {
   const email = options.email || 'admin@example.com';
-  const password = options.password || 'Admin123!@#';
+  const password = options.password || 'User123!@#';
 
   await page.goto('/auth/login');
   await page.fill('input[name="email"]', email);
@@ -53,7 +53,7 @@ export async function loginAsUser(page: Page, options: LoginOptions = {}): Promi
  */
 export async function loginAsReadOnly(page: Page, options: LoginOptions = {}): Promise<void> {
   const email = options.email || 'readonly@example.com';
-  const password = options.password || 'Read123!@#';
+  const password = options.password || 'User123!@#';
 
   await page.goto('/auth/login');
   await page.fill('input[name="email"]', email);

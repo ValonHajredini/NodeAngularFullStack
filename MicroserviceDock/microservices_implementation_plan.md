@@ -1017,7 +1017,7 @@ describe('Links API Integration Tests', () => {
     // Get auth token from Platform API
     const loginResponse = await request('http://localhost:3000')
       .post('/api/auth/login')
-      .send({ email: 'admin@example.com', password: 'Admin123!@#' });
+      .send({ email: 'admin@example.com', password: 'User123!@#' });
 
     authToken = loginResponse.body.accessToken;
   });

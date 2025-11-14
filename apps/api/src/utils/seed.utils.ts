@@ -66,7 +66,7 @@ export class SeedUtils {
   private static readonly TEST_USERS: TestUser[] = [
     {
       email: 'admin@example.com',
-      password: 'Admin123!@#',
+      password: 'User123!@#',
       firstName: 'Admin',
       lastName: 'User',
       role: 'admin',
@@ -84,7 +84,7 @@ export class SeedUtils {
     },
     {
       email: 'readonly@example.com',
-      password: 'Read123!@#',
+      password: 'User123!@#',
       firstName: 'Readonly',
       lastName: 'User',
       role: 'readonly',

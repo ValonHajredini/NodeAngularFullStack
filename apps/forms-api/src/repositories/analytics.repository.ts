@@ -119,7 +119,7 @@ export class AnalyticsRepository {
         WHERE fs.form_schema_id = $1
       `;
 
-      const values: any[] = [formSchemaId];
+      const values: (string | null)[] = [formSchemaId];
 
       // Add tenant filter if multi-tenancy is enabled
       if (tenantId !== null) {
@@ -140,12 +140,18 @@ export class AnalyticsRepository {
       const row = result.rows[0];
       return {
         totalSubmissions: parseInt(row.total_submissions, 10),
-        firstSubmissionAt: row.first_submission_at?.toISOString() || null,
-        lastSubmissionAt: row.last_submission_at?.toISOString() || null,
+        firstSubmissionAt: row.first_submission_at !== null
+          ? row.first_submission_at.toISOString()
+          : null,
+        lastSubmissionAt: row.last_submission_at !== null
+          ? row.last_submission_at.toISOString()
+          : null,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       console.error('[AnalyticsRepository] Error fetching submission counts:', error);
-      throw new Error(`Failed to fetch submission counts: ${error.message}`);
+      throw new Error(`Failed to fetch submission counts: ${errorMessage}`);
     } finally {
       client.release();
     }

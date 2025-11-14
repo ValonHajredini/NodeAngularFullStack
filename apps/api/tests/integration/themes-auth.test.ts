@@ -87,7 +87,7 @@ describe('Theme API Authorization', () => {
       .post('/api/v1/auth/register')
       .send({
         email: 'admin-test-themes-auth@example.com',
-        password: 'Admin123!@#',
+        password: 'User123!@#',
         firstName: 'Admin',
         lastName: 'Test',
       });
@@ -103,7 +103,7 @@ describe('Theme API Authorization', () => {
       .post('/api/v1/auth/login')
       .send({
         email: 'admin-test-themes-auth@example.com',
-        password: 'Admin123!@#',
+        password: 'User123!@#',
       });
 
     adminToken = adminLoginResponse.body.data.accessToken;

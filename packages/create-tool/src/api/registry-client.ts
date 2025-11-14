@@ -169,7 +169,7 @@ export class RegistryApiClient {
    * @example
    * ```typescript
    * const token = await client.authenticate();
-   * const token = await client.authenticate('admin@example.com', 'Admin123!@#');
+   * const token = await client.authenticate('admin@example.com', 'User123!@#');
    * ```
    */
   async authenticate(email?: string, password?: string): Promise<string> {

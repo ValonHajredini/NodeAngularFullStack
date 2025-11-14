@@ -5,6 +5,7 @@
 export const environment = {
   production: true,
   apiUrl: 'https://api.yourapp.com/api/v1',
+  formsApiUrl: 'https://api.yourapp.com', // Forms API for analytics and form operations
   shortLinkBaseUrl: 'https://api.yourapp.com',
   mainAppUrl: 'https://yourapp.com',
   appName: 'NodeAngularFullStack',
