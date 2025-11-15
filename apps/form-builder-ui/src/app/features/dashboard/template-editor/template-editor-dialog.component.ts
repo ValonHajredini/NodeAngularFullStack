@@ -152,6 +152,13 @@ export class TemplateEditorDialogComponent {
   protected readonly parsedFields = signal<FormField[]>([]); // Parsed fields from JSON for field editor
   protected readonly screenshotFile = signal<File | null>(null); // Screenshot for Step 4
 
+  // Field editor stepper state
+  protected readonly currentFieldIndex = signal(0); // Current field being edited in the stepper
+  protected readonly totalFields = computed(() => this.parsedFields().length);
+  protected readonly currentField = computed(() => this.parsedFields()[this.currentFieldIndex()]);
+  protected readonly hasNextField = computed(() => this.currentFieldIndex() < this.totalFields() - 1);
+  protected readonly hasPreviousField = computed(() => this.currentFieldIndex() > 0);
+
   // Category options for dropdown
   protected readonly categoryOptions: DropdownOption[] = [
     { label: 'E-commerce', value: TemplateCategory.ECOMMERCE },
@@ -403,12 +410,40 @@ export class TemplateEditorDialogComponent {
   }
 
   /**
+   * Navigate to next field in the field editor stepper
+   */
+  protected nextField(): void {
+    if (this.hasNextField()) {
+      this.currentFieldIndex.update(idx => idx + 1);
+    }
+  }
+
+  /**
+   * Navigate to previous field in the field editor stepper
+   */
+  protected previousField(): void {
+    if (this.hasPreviousField()) {
+      this.currentFieldIndex.update(idx => idx - 1);
+    }
+  }
+
+  /**
+   * Navigate to specific field in the field editor stepper
+   */
+  protected goToField(index: number): void {
+    if (index >= 0 && index < this.totalFields()) {
+      this.currentFieldIndex.set(index);
+    }
+  }
+
+  /**
    * Toggle between JSON and field editor view (Step 2)
    */
   protected toggleViewMode(): void {
     if (this.viewMode() === 'json') {
       // Parse JSON and show fields
       this.parseJsonToFields();
+      this.currentFieldIndex.set(0); // Reset to first field
       this.viewMode.set('fields');
     } else {
       // Convert fields back to JSON and show JSON
@@ -1110,5 +1145,6 @@ export class TemplateEditorDialogComponent {
     this.viewMode.set('json');
     this.parsedFields.set([]);
     this.screenshotFile.set(null);
+    this.currentFieldIndex.set(0);
   }
 }

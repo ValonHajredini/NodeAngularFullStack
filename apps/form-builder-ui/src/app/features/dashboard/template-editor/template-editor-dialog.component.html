@@ -364,170 +364,255 @@
                   </div>
                 }
 
-                <!-- Field Editor View -->
+                <!-- Field Editor View (Stepper Format) -->
                 @if (viewMode() === 'fields') {
-                  <div class="space-y-3">
+                  <div class="space-y-4">
                     @if (parsedFields().length === 0) {
                       <div class="text-center py-8 text-gray-500">
                         <i class="pi pi-inbox text-4xl mb-3 block"></i>
                         <p>No fields found in schema</p>
                       </div>
                     } @else {
-                      <div class="space-y-3 max-h-[600px] overflow-y-auto pr-2">
-                        @for (field of parsedFields(); track field.id; let i = $index) {
-                          <div class="bg-gray-50 border border-gray-200 rounded p-4">
-                            <div class="grid grid-cols-2 gap-4">
-                              <!-- Field Name -->
-                              <div class="field">
-                                <label class="block text-sm font-medium text-gray-700 mb-1"
-                                  >Field Name</label
-                                >
-                                <input
-                                  pInputText
-                                  [value]="field.fieldName"
-                                  (input)="
-                                    updateFieldProperty(i, 'fieldName', $any($event.target).value)
-                                  "
-                                  class="w-full"
-                                />
-                              </div>
+                      <!-- Field Progress Indicator -->
+                      <div class="bg-blue-50 border border-blue-200 rounded p-3">
+                        <div class="flex items-center justify-between mb-2">
+                          <span class="text-sm font-semibold text-gray-700">
+                            Editing Field {{ currentFieldIndex() + 1 }} of {{ totalFields() }}
+                          </span>
+                          <span class="text-xs text-gray-500">
+                            {{ currentField()?.label || 'Unnamed Field' }}
+                          </span>
+                        </div>
+                        <!-- Progress Bar -->
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            class="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                            [style.width.%]="((currentFieldIndex() + 1) / totalFields()) * 100"
+                          ></div>
+                        </div>
+                      </div>
 
-                              <!-- Label -->
-                              <div class="field">
-                                <label class="block text-sm font-medium text-gray-700 mb-1"
-                                  >Label</label
-                                >
-                                <input
-                                  pInputText
-                                  [value]="field.label"
-                                  (input)="
-                                    updateFieldProperty(i, 'label', $any($event.target).value)
-                                  "
-                                  class="w-full"
-                                />
-                              </div>
+                      <!-- Field Editor Form (Current Field Only) -->
+                      <div class="bg-gray-50 border border-gray-200 rounded p-6">
+                        <div class="space-y-4">
+                          <h4 class="text-lg font-semibold text-gray-800 mb-4">
+                            Field Configuration
+                          </h4>
 
-                              <!-- Type (readonly) -->
-                              <div class="field">
-                                <label class="block text-sm font-medium text-gray-700 mb-1"
-                                  >Type</label
-                                >
-                                <input
-                                  pInputText
-                                  [value]="field.type"
-                                  class="w-full bg-gray-100"
-                                  readonly
-                                />
-                              </div>
-
-                              <!-- Required Checkbox -->
-                              <div class="field flex items-center pt-5">
-                                <p-checkbox
-                                  [binary]="true"
-                                  [(ngModel)]="field.required"
-                                  [ngModelOptions]="{ standalone: true }"
-                                  (ngModelChange)="updateFieldProperty(i, 'required', $event)"
-                                  label="Required"
-                                  [inputId]="'required-' + i"
-                                />
-                              </div>
+                          <div class="grid grid-cols-2 gap-4">
+                            <!-- Field Name -->
+                            <div class="field">
+                              <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Field Name <span class="text-red-500">*</span>
+                              </label>
+                              <input
+                                pInputText
+                                [value]="currentField()?.fieldName"
+                                (input)="
+                                  updateFieldProperty(
+                                    currentFieldIndex(),
+                                    'fieldName',
+                                    $any($event.target).value
+                                  )
+                                "
+                                class="w-full"
+                                placeholder="e.g., participant_name"
+                              />
                             </div>
 
-                            <!-- Options Section (for radio, select, dropdown, checkbox fields) -->
-                            @if (fieldHasOptions(field.type)) {
-                              <div class="mt-4 pt-4 border-t border-gray-300">
-                                <div class="flex items-center justify-between mb-3">
-                                  <label class="block text-sm font-medium text-gray-700">
-                                    Options
-                                    <span class="text-xs text-gray-500 ml-2"
-                                      >({{ field.options?.length || 0 }})</span
-                                    >
-                                  </label>
-                                  <button
-                                    pButton
-                                    label="Add Option"
-                                    icon="pi pi-plus"
-                                    class="p-button-sm p-button-outlined"
-                                    type="button"
-                                    (click)="addFieldOption(i)"
-                                  ></button>
-                                </div>
+                            <!-- Label -->
+                            <div class="field">
+                              <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Label <span class="text-red-500">*</span>
+                              </label>
+                              <input
+                                pInputText
+                                [value]="currentField()?.label"
+                                (input)="
+                                  updateFieldProperty(
+                                    currentFieldIndex(),
+                                    'label',
+                                    $any($event.target).value
+                                  )
+                                "
+                                class="w-full"
+                                placeholder="e.g., Your Name"
+                              />
+                            </div>
 
-                                @if (field.options && field.options.length > 0) {
-                                  <div class="space-y-2 max-h-[200px] overflow-y-auto">
-                                    @for (
-                                      option of field.options;
-                                      track option.value;
-                                      let optIdx = $index
-                                    ) {
-                                      <div class="bg-white border border-gray-200 rounded p-3">
-                                        <div class="grid grid-cols-2 gap-3">
-                                          <div class="field">
-                                            <label
-                                              class="block text-xs font-medium text-gray-600 mb-1"
-                                            >
-                                              Label
-                                            </label>
+                            <!-- Type (readonly) -->
+                            <div class="field">
+                              <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Field Type
+                              </label>
+                              <input
+                                pInputText
+                                [value]="currentField()?.type"
+                                class="w-full bg-gray-100"
+                                readonly
+                              />
+                              <small class="text-gray-500 block mt-1">
+                                Field type cannot be changed
+                              </small>
+                            </div>
+
+                            <!-- Required Checkbox -->
+                            <div class="field flex items-center pt-5">
+                              <p-checkbox
+                                [binary]="true"
+                                [(ngModel)]="currentField().required"
+                                [ngModelOptions]="{ standalone: true }"
+                                (ngModelChange)="
+                                  updateFieldProperty(currentFieldIndex(), 'required', $event)
+                                "
+                                label="Required Field"
+                                [inputId]="'required-field'"
+                              />
+                            </div>
+                          </div>
+
+                          <!-- Options Section (for radio, select, dropdown, checkbox fields) -->
+                          @if (currentField() && fieldHasOptions(currentField()!.type)) {
+                            <div class="mt-6 pt-4 border-t border-gray-300">
+                              <div class="flex items-center justify-between mb-4">
+                                <label class="block text-base font-semibold text-gray-800">
+                                  Field Options
+                                  <span class="text-sm text-gray-500 ml-2 font-normal">
+                                    ({{ currentField()?.options?.length || 0 }} options)
+                                  </span>
+                                </label>
+                                <button
+                                  pButton
+                                  label="Add Option"
+                                  icon="pi pi-plus"
+                                  class="p-button-sm p-button-outlined"
+                                  type="button"
+                                  (click)="addFieldOption(currentFieldIndex())"
+                                ></button>
+                              </div>
+
+                              @if (currentField()?.options && currentField()!.options!.length > 0) {
+                                <div class="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                                  @for (
+                                    option of currentField()?.options;
+                                    track option.value;
+                                    let optIdx = $index
+                                  ) {
+                                    <div class="bg-white border border-gray-200 rounded p-4">
+                                      <div class="grid grid-cols-2 gap-4">
+                                        <div class="field">
+                                          <label
+                                            class="block text-xs font-medium text-gray-600 mb-1"
+                                          >
+                                            Option Label
+                                          </label>
+                                          <input
+                                            pInputText
+                                            [value]="option.label"
+                                            (input)="
+                                              updateFieldOptionProperty(
+                                                currentFieldIndex(),
+                                                optIdx,
+                                                'label',
+                                                $any($event.target).value
+                                              )
+                                            "
+                                            class="w-full"
+                                            placeholder="e.g., Option 1"
+                                          />
+                                        </div>
+                                        <div class="field">
+                                          <label
+                                            class="block text-xs font-medium text-gray-600 mb-1"
+                                          >
+                                            Option Value
+                                          </label>
+                                          <div class="flex gap-2">
                                             <input
                                               pInputText
-                                              [value]="option.label"
+                                              [value]="option.value"
                                               (input)="
                                                 updateFieldOptionProperty(
-                                                  i,
+                                                  currentFieldIndex(),
                                                   optIdx,
-                                                  'label',
+                                                  'value',
                                                   $any($event.target).value
                                                 )
                                               "
-                                              class="w-full p-inputtext-sm"
-                                              placeholder="Option label"
+                                              class="w-full"
+                                              placeholder="e.g., option_1"
                                             />
-                                          </div>
-                                          <div class="field">
-                                            <label
-                                              class="block text-xs font-medium text-gray-600 mb-1"
-                                            >
-                                              Value
-                                            </label>
-                                            <div class="flex gap-2">
-                                              <input
-                                                pInputText
-                                                [value]="option.value"
-                                                (input)="
-                                                  updateFieldOptionProperty(
-                                                    i,
-                                                    optIdx,
-                                                    'value',
-                                                    $any($event.target).value
-                                                  )
-                                                "
-                                                class="w-full p-inputtext-sm"
-                                                placeholder="Option value"
-                                              />
-                                              <button
-                                                pButton
-                                                icon="pi pi-trash"
-                                                class="p-button-sm p-button-danger p-button-text"
-                                                type="button"
-                                                (click)="removeFieldOption(i, optIdx)"
-                                                [attr.aria-label]="'Remove option ' + (optIdx + 1)"
-                                              ></button>
-                                            </div>
+                                            <button
+                                              pButton
+                                              icon="pi pi-trash"
+                                              class="p-button-sm p-button-danger p-button-text"
+                                              type="button"
+                                              (click)="
+                                                removeFieldOption(currentFieldIndex(), optIdx)
+                                              "
+                                              [attr.aria-label]="'Remove option ' + (optIdx + 1)"
+                                            ></button>
                                           </div>
                                         </div>
                                       </div>
-                                    }
-                                  </div>
-                                } @else {
-                                  <p class="text-sm text-gray-500 italic py-2">
-                                    <i class="pi pi-info-circle mr-2"></i>
+                                    </div>
+                                  }
+                                </div>
+                              } @else {
+                                <div
+                                  class="text-center py-6 bg-gray-100 border border-dashed border-gray-300 rounded"
+                                >
+                                  <i
+                                    class="pi pi-info-circle text-gray-400 text-2xl mb-2 block"
+                                  ></i>
+                                  <p class="text-sm text-gray-500">
                                     No options defined. Click "Add Option" to create choices.
                                   </p>
-                                }
-                              </div>
-                            }
-                          </div>
-                        }
+                                </div>
+                              }
+                            </div>
+                          }
+                        </div>
+                      </div>
+
+                      <!-- Field Navigation -->
+                      <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+                        <button
+                          pButton
+                          label="Previous Field"
+                          icon="pi pi-arrow-left"
+                          class="p-button-outlined"
+                          [disabled]="!hasPreviousField()"
+                          (click)="previousField()"
+                          type="button"
+                        ></button>
+
+                        <!-- Field Indicator Dots -->
+                        <div class="flex items-center gap-2">
+                          @for (field of parsedFields(); track field.id; let i = $index) {
+                            <button
+                              type="button"
+                              class="w-2 h-2 rounded-full transition-all duration-200"
+                              [class.bg-blue-500]="i === currentFieldIndex()"
+                              [class.w-3]="i === currentFieldIndex()"
+                              [class.h-3]="i === currentFieldIndex()"
+                              [class.bg-gray-300]="i !== currentFieldIndex()"
+                              (click)="goToField(i)"
+                              [attr.aria-label]="'Go to field ' + (i + 1)"
+                            ></button>
+                          }
+                        </div>
+
+                        <button
+                          pButton
+                          label="Next Field"
+                          icon="pi pi-arrow-right"
+                          iconPos="right"
+                          class="p-button-outlined"
+                          [disabled]="!hasNextField()"
+                          (click)="nextField()"
+                          type="button"
+                        ></button>
                       </div>
                     }
                   </div>
