@@ -626,15 +626,16 @@ import { ValidationPresetsService, ValidationPreset } from '../../../features/da
                     >
                       Show If Field
                     </label>
-                    <p-select
+                    <select
+                      id="showIfField"
                       formControlName="showIfField"
-                      [options]="otherFieldsOptions()"
-                      optionLabel="label"
-                      optionValue="value"
-                      placeholder="Select field"
-                      [showClear]="true"
-                      class="w-full"
-                    />
+                      class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                    >
+                      <option value="">Select field</option>
+                      @for (option of otherFieldsOptions(); track option.value) {
+                        <option [value]="option.value">{{ option.label }}</option>
+                      }
+                    </select>
                   </div>
 
                   @if (propertiesForm.get('showIfField')?.value) {
@@ -645,14 +646,15 @@ import { ValidationPresetsService, ValidationPreset } from '../../../features/da
                       >
                         Operator
                       </label>
-                      <p-select
+                      <select
+                        id="showIfOperator"
                         formControlName="showIfOperator"
-                        [options]="operatorOptions"
-                        optionLabel="label"
-                        optionValue="value"
-                        placeholder="Select operator"
-                        class="w-full"
-                      />
+                        class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                      >
+                        @for (option of operatorOptions; track option.value) {
+                          <option [value]="option.value">{{ option.label }}</option>
+                        }
+                      </select>
                     </div>
 
                     <div class="field">

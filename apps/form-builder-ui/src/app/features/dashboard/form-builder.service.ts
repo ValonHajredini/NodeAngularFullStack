@@ -15,6 +15,7 @@ import {
   SubColumnConfig,
   MAX_STEPS,
   FormTemplate,
+  QuizConfig,
 } from '@nodeangularfullstack/shared';
 import { ThemesApiService } from './themes-api.service';
 import { ThemePreviewService } from './theme-preview.service';
@@ -66,6 +67,9 @@ export class FormBuilderService {
   private readonly _selectedTemplate = signal<FormTemplate | null>(null);
   private readonly _templateMetadata = signal<{ id: string; name: string } | null>(null);
 
+  // Quiz configuration state signals (Epic 29, Story 29.13: Quiz Settings in Form Builder)
+  private readonly _quizConfig = signal<QuizConfig | null>(null);
+
   // Property change subjects for real-time preview updates (Story 16.5)
   private readonly propertyChangeSubject = new Subject<{
     fieldId: string;
@@ -105,6 +109,13 @@ export class FormBuilderService {
   readonly selectedTemplate = this._selectedTemplate.asReadonly();
   readonly templateMetadata = this._templateMetadata.asReadonly();
   readonly isTemplateMode = computed(() => this._selectedTemplate() !== null);
+
+  // Quiz configuration public signals (Epic 29, Story 29.13)
+  readonly quizConfig = this._quizConfig.asReadonly();
+  readonly isQuizForm = computed(() => {
+    const template = this._selectedTemplate();
+    return template?.category === 'quiz' || this._quizConfig() !== null;
+  });
 
   // Computed signals
   readonly hasFields = computed(() => this._formFields().length > 0);
@@ -286,7 +297,7 @@ export class FormBuilderService {
 
   /**
    * Resets the form state to default values.
-   * Also resets row layout, sub-column configs, and step form state to default (disabled).
+   * Also resets row layout, sub-column configs, step form state, and quiz config to default (disabled).
    */
   resetForm(): void {
     this._currentForm.set(null);
@@ -299,6 +310,7 @@ export class FormBuilderService {
     this._stepFormEnabled.set(false);
     this._steps.set([]);
     this._activeStepId.set(null);
+    this._quizConfig.set(null); // Epic 29, Story 29.13
   }
 
   /**
@@ -1629,6 +1641,10 @@ export class FormBuilderService {
           : undefined,
         // Include theme ID if a theme is applied (fallback to in-memory selection for unsaved forms)
         themeId: this._currentForm()?.schema?.settings?.themeId ?? this._currentTheme()?.id,
+        // Include quiz configuration if present (Epic 29, Story 29.13)
+        businessLogicConfig: this._quizConfig() ?? undefined,
+        // Include template ID reference if form was created from template
+        templateId: this._templateMetadata()?.id ?? undefined,
       },
     };
 
@@ -2064,6 +2080,19 @@ export class FormBuilderService {
       this.loadTheme(clonedSchema.settings.themeId);
     }
 
+    // Load quiz configuration if present (Epic 29, Story 29.13)
+    if (clonedSchema.settings?.businessLogicConfig?.type === 'quiz') {
+      this._quizConfig.set(clonedSchema.settings.businessLogicConfig);
+    } else {
+      this._quizConfig.set(null);
+    }
+
+    // Load template metadata if present
+    if (clonedSchema.settings?.templateId) {
+      // Note: We don't have the template name here, just the ID
+      // The template name will be populated when form was created from template
+    }
+
     // Clear selection
     this._selectedField.set(null);
 
@@ -2076,6 +2105,7 @@ export class FormBuilderService {
    * Loads the template's schema into the form builder and tracks template metadata.
    * The template is used as a starting point; the resulting form is independent.
    * Story 29.8: Template Application to Form Builder (AC: 3, 5, 7)
+   * Story 29.13: Load quiz config from quiz templates
    * @param template - The template to apply (full FormTemplate object)
    */
   applyTemplate(template: FormTemplate): void {
@@ -2091,8 +2121,24 @@ export class FormBuilderService {
       name: template.name,
     });
 
+    // Load quiz configuration if template has quiz business logic
+    if (template.businessLogicConfig?.type === 'quiz') {
+      this._quizConfig.set(template.businessLogicConfig);
+    }
+
     // Load the template's schema into the form builder
     // This will handle fields, row layouts, step forms, and theme application
     this.loadFormSchema(template.templateSchema);
+  }
+
+  /**
+   * Updates the quiz configuration for the current form.
+   * Marks the form as dirty to indicate unsaved changes.
+   * Epic 29, Story 29.13: Quiz Settings in Form Builder
+   * @param config - The updated quiz configuration
+   */
+  setQuizConfig(config: QuizConfig | null): void {
+    this._quizConfig.set(config);
+    this.markDirty();
   }
 }

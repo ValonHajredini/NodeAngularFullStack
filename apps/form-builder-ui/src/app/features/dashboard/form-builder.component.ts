@@ -25,6 +25,7 @@ import { FieldPaletteComponent } from './field-palette/field-palette.component';
 import { FormCanvasComponent } from './form-canvas/form-canvas.component';
 import { FieldPropertiesModalComponent } from '../../shared/components/field-properties-modal';
 import { FormSettingsModalComponent, FormSettings } from '../../shared/components/form-settings-modal';
+import { QuizSettingsModalComponent } from '../../shared/components/quiz-settings-modal';
 import { PublishDialogComponent, PublishFormData } from './publish-dialog/publish-dialog.component';
 import { RowLayoutSidebarComponent } from './row-layout-sidebar/row-layout-sidebar.component';
 import { StepFormSidebarComponent } from './step-form-sidebar/step-form-sidebar.component';
@@ -34,7 +35,7 @@ import { ThemeDesignerModalComponent } from './theme-designer-modal/theme-design
 import { TokenReuseConfirmationComponent } from './token-reuse-confirmation/token-reuse-confirmation.component';
 import { TemplateSelectionModalComponent } from './template-selection-modal/template-selection-modal.component';
 import { Dialog } from 'primeng/dialog';
-import { FormSchema, FormTheme, TokenStatusResponse, FormTemplate } from '@nodeangularfullstack/shared';
+import { FormSchema, FormTheme, TokenStatusResponse, FormTemplate, QuizConfig } from '@nodeangularfullstack/shared';
 import { trigger, transition, style, animate } from '@angular/animations';
 import { AuthService } from '@core/auth/auth.service';
 
@@ -59,6 +60,7 @@ import { AuthService } from '@core/auth/auth.service';
     FormCanvasComponent,
     FieldPropertiesModalComponent,
     FormSettingsModalComponent,
+    QuizSettingsModalComponent,
     PublishDialogComponent,
     RowLayoutSidebarComponent,
     StepFormSidebarComponent,
@@ -199,6 +201,18 @@ import { AuthService } from '@core/auth/auth.service';
             (click)="showSettingsDialog()"
             [disabled]="formBuilderService.isPublished()"
           ></button>
+          @if (formBuilderService.isQuizForm()) {
+            <button
+              pButton
+              label="Quiz Settings"
+              icon="pi pi-question-circle"
+              severity="secondary"
+              size="small"
+              (click)="showQuizSettingsDialog()"
+              [disabled]="formBuilderService.isPublished()"
+              title="Configure quiz scoring and settings"
+            ></button>
+          }
           <button
             pButton
             label="Preview"
@@ -405,6 +419,14 @@ import { AuthService } from '@core/auth/auth.service';
         (templateSelected)="onTemplateSelected($event)"
         (startBlank)="onStartBlank()"
       ></app-template-selection-modal>
+
+      <!-- Quiz Settings Modal (Epic 29, Story 29.13) -->
+      <app-quiz-settings-modal
+        [(visible)]="quizSettingsModalVisible"
+        [formFields]="formBuilderService.formFields()"
+        [quizConfig]="formBuilderService.quizConfig()"
+        (configSaved)="onQuizConfigSaved($event)"
+      ></app-quiz-settings-modal>
 
       <!-- Toast for notifications -->
       <p-toast position="bottom-right"></p-toast>
@@ -620,6 +642,9 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
 
   // Template loading state (Story 29.8)
   readonly isLoadingTemplate = signal<boolean>(false);
+
+  // Quiz Settings Modal state (Epic 29, Story 29.13)
+  readonly quizSettingsModalVisible = signal<boolean>(false);
 
   // Sidebar tab state (Story 19.2)
   readonly activeSidebarTab = signal<number>(0); // 0 = Row Layout, 1 = Step Form
@@ -942,6 +967,30 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
    */
   showSettingsDialog(): void {
     this.settingsDialogVisible.set(true);
+  }
+
+  /**
+   * Shows the quiz settings dialog.
+   * Epic 29, Story 29.13: Quiz Settings in Form Builder
+   */
+  showQuizSettingsDialog(): void {
+    this.quizSettingsModalVisible.set(true);
+  }
+
+  /**
+   * Handles quiz configuration save.
+   * Updates the quiz config in the service and marks form as dirty.
+   * Epic 29, Story 29.13: Quiz Settings in Form Builder
+   */
+  onQuizConfigSaved(config: QuizConfig): void {
+    this.formBuilderService.setQuizConfig(config);
+    this.quizSettingsModalVisible.set(false);
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Quiz Settings Saved',
+      detail: 'Quiz configuration has been updated successfully',
+      life: 3000,
+    });
   }
 
   /**

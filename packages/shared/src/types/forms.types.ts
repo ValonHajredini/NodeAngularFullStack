@@ -556,6 +556,8 @@ export interface FormSettings {
   themeId?: string;
   /** Optional template ID reference for forms created from templates with business logic */
   templateId?: string;
+  /** Optional business logic configuration for quiz scoring, poll tracking, etc. (Epic 29) */
+  businessLogicConfig?: import('./templates.types').TemplateBusinessLogicConfig;
 }
 
 /**

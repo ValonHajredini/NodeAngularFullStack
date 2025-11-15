@@ -28,6 +28,7 @@ import { ProgressSpinner } from 'primeng/progressspinner';
 import { Toast } from 'primeng/toast';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { Checkbox } from 'primeng/checkbox';
+import { StepperModule } from 'primeng/stepper';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import {
   FormTemplate,
@@ -36,6 +37,8 @@ import {
   CreateFormTemplateRequest,
   FormSchema,
   QuizScoringRule,
+  FormField,
+  FormFieldType,
 } from '@nodeangularfullstack/shared';
 import { TemplatesApiService } from '../templates-api.service';
 
@@ -48,6 +51,8 @@ interface DropdownOption {
 }
 
 interface QuizConfigFormState {
+  questionField: string;
+  answerField: string;
   passingScore: number;
   showResults: boolean;
   scoringRules: QuizScoringRule[];
@@ -106,6 +111,7 @@ interface QuizConfigFormState {
     Toast,
     ConfirmDialog,
     Checkbox,
+    StepperModule,
   ],
   providers: [ConfirmationService, MessageService],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -140,6 +146,12 @@ export class TemplateEditorDialogComponent {
   protected readonly selectedImage = signal<File | null>(null);
   private initialSchemaJson = this.defaultSchema;
 
+  // Wizard state
+  protected readonly currentStep = signal(0);
+  protected readonly viewMode = signal<'json' | 'fields'>('json'); // For Step 2: toggle between JSON and field editor
+  protected readonly parsedFields = signal<FormField[]>([]); // Parsed fields from JSON for field editor
+  protected readonly screenshotFile = signal<File | null>(null); // Screenshot for Step 4
+
   // Category options for dropdown
   protected readonly categoryOptions: DropdownOption[] = [
     { label: 'E-commerce', value: TemplateCategory.ECOMMERCE },
@@ -163,6 +175,9 @@ export class TemplateEditorDialogComponent {
     this.templateForm.status as FormControlStatus,
   );
 
+  // Signal to track form value changes for reactivity
+  private readonly formValueChanged = signal<number>(0);
+
   // Business logic configuration signals (category-specific)
   protected readonly inventoryConfig = signal({
     stockField: '',
@@ -176,12 +191,16 @@ export class TemplateEditorDialogComponent {
   });
 
   protected readonly quizConfig = signal<QuizConfigFormState>({
+    questionField: '',
+    answerField: '',
     passingScore: 70,
     showResults: true,
     scoringRules: [],
   });
 
   protected readonly pollConfig = signal({
+    pollQuestionField: '',
+    optionsField: '',
     preventDuplicates: true,
     showResultsAfterVote: true,
   });
@@ -222,6 +241,95 @@ export class TemplateEditorDialogComponent {
     this.mode() === 'create' ? 'Create Template' : 'Save Changes',
   );
 
+  // Wizard step validation computed signals
+  protected readonly canProceedFromStep1 = computed(() => {
+    // Trigger reactivity by accessing form value changes
+    this.formValueChanged();
+
+    // Check if controls exist and have values
+    const nameValue = this.templateForm.get('name')?.value;
+    const descValue = this.templateForm.get('description')?.value;
+
+    const nameValid = nameValue && typeof nameValue === 'string' && nameValue.trim().length > 0;
+    const descValid = descValue && typeof descValue === 'string' && descValue.trim().length > 0;
+
+    return !!(nameValid && descValid);
+  });
+
+  protected readonly canProceedFromStep2 = computed(() => {
+    return this.schemaErrors().length === 0 && !!this.schemaControl.value;
+  });
+
+  protected readonly canProceedFromStep3 = computed(() => {
+    // Trigger reactivity
+    this.formValueChanged();
+
+    // Check if category is selected
+    const categoryValue = this.templateForm.get('category')?.value;
+    return categoryValue && typeof categoryValue === 'string' && categoryValue.trim().length > 0;
+  });
+
+  protected readonly isLastStep = computed(() => this.currentStep() === 3);
+
+  protected readonly isFirstStep = computed(() => this.currentStep() === 0);
+
+  /**
+   * Get available fields from schema for field mapping
+   */
+  protected readonly availableFields = computed(() => {
+    // Trigger reactivity
+    this.formValueChanged();
+
+    try {
+      const schemaValue = this.schemaControl.value ?? '';
+      if (!schemaValue) return [];
+
+      const schema = JSON.parse(schemaValue);
+      if (!schema.fields || !Array.isArray(schema.fields)) return [];
+
+      return schema.fields.map((field: FormField) => ({
+        label: `${field.label} (${field.fieldName})`,
+        value: field.fieldName,
+        type: field.type,
+        fieldName: field.fieldName,
+      }));
+    } catch (e) {
+      return [];
+    }
+  });
+
+  /**
+   * Get fields filtered by type
+   */
+  protected getFieldsByType(type: FormFieldType | FormFieldType[]): any[] {
+    const fields = this.availableFields();
+    const types = Array.isArray(type) ? type : [type];
+    return fields.filter((f: any) => types.includes(f.type as FormFieldType));
+  }
+
+  /**
+   * Get all quiz question fields (fields with options like radio, select, dropdown, checkbox)
+   */
+  protected readonly quizQuestions = computed(() => {
+    this.formValueChanged();
+
+    try {
+      const schemaValue = this.schemaControl.value ?? '';
+      if (!schemaValue) return [];
+
+      const schema = JSON.parse(schemaValue);
+      if (!schema.fields || !Array.isArray(schema.fields)) return [];
+
+      // Filter fields that have options (quiz questions)
+      const questionTypes = ['radio', 'select', 'dropdown', 'checkbox'];
+      return schema.fields.filter(
+        (field: FormField) => questionTypes.includes(field.type) && field.options && field.options.length > 0,
+      );
+    } catch (e) {
+      return [];
+    }
+  });
+
   /**
    * List form control names that are currently invalid.
    * Helpful for debugging validation state in the UI.
@@ -257,6 +365,273 @@ export class TemplateEditorDialogComponent {
     return Object.keys(errors);
   }
 
+  /**
+   * Navigate to next step
+   */
+  protected nextStep(): void {
+    if (this.currentStep() < 3) {
+      this.currentStep.set(this.currentStep() + 1);
+    }
+  }
+
+  /**
+   * Navigate to previous step
+   */
+  protected previousStep(): void {
+    if (this.currentStep() > 0) {
+      this.currentStep.set(this.currentStep() - 1);
+    }
+  }
+
+  /**
+   * Navigate to specific step
+   */
+  protected goToStep(step: number): void {
+    if (step >= 0 && step <= 3) {
+      this.currentStep.set(step);
+    }
+  }
+
+  /**
+   * Toggle between JSON and field editor view (Step 2)
+   */
+  protected toggleViewMode(): void {
+    if (this.viewMode() === 'json') {
+      // Parse JSON and show fields
+      this.parseJsonToFields();
+      this.viewMode.set('fields');
+    } else {
+      // Convert fields back to JSON and show JSON
+      this.convertFieldsToJson();
+      this.viewMode.set('json');
+    }
+  }
+
+  /**
+   * Parse JSON schema to field editor format
+   */
+  private parseJsonToFields(): void {
+    const schemaValue = this.schemaControl.value ?? '';
+    try {
+      const schema = JSON.parse(schemaValue);
+      if (schema.fields && Array.isArray(schema.fields)) {
+        this.parsedFields.set(schema.fields);
+      }
+    } catch (e) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Invalid JSON. Please fix errors before switching to field editor.',
+        life: 5000,
+      });
+    }
+  }
+
+  /**
+   * Convert field editor data back to JSON
+   */
+  private convertFieldsToJson(): void {
+    try {
+      const schemaValue = this.schemaControl.value ?? '';
+      const schema = JSON.parse(schemaValue);
+      schema.fields = this.parsedFields();
+      const updatedJson = JSON.stringify(schema, null, 2);
+      this.templateForm.patchValue({ schema: updatedJson });
+    } catch (e) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Failed to convert fields to JSON',
+        life: 5000,
+      });
+    }
+  }
+
+  /**
+   * Update a specific field property in field editor
+   */
+  protected updateFieldProperty(fieldIndex: number, property: keyof FormField, value: any): void {
+    const fields = [...this.parsedFields()];
+    fields[fieldIndex] = { ...fields[fieldIndex], [property]: value };
+    this.parsedFields.set(fields);
+  }
+
+  /**
+   * Check if a field type supports options (radio, select, dropdown, checkbox)
+   */
+  protected fieldHasOptions(fieldType: string): boolean {
+    const optionFieldTypes = ['radio', 'select', 'dropdown', 'checkbox'];
+    return optionFieldTypes.includes(fieldType);
+  }
+
+  /**
+   * Add a new option to a field
+   */
+  protected addFieldOption(fieldIndex: number): void {
+    const fields = [...this.parsedFields()];
+    const field = fields[fieldIndex];
+
+    // Initialize options array if it doesn't exist
+    if (!field.options) {
+      field.options = [];
+    }
+
+    // Add new option
+    const newOption = {
+      label: `Option ${field.options.length + 1}`,
+      value: `option_${field.options.length + 1}`,
+    };
+
+    field.options = [...field.options, newOption];
+    this.parsedFields.set(fields);
+  }
+
+  /**
+   * Update a specific option property
+   */
+  protected updateFieldOptionProperty(
+    fieldIndex: number,
+    optionIndex: number,
+    property: 'label' | 'value',
+    value: string,
+  ): void {
+    const fields = [...this.parsedFields()];
+    const field = fields[fieldIndex];
+
+    if (field.options && field.options[optionIndex]) {
+      const updatedOptions = [...field.options];
+      updatedOptions[optionIndex] = {
+        ...updatedOptions[optionIndex],
+        [property]: value,
+      };
+      field.options = updatedOptions;
+      this.parsedFields.set(fields);
+    }
+  }
+
+  /**
+   * Remove an option from a field
+   */
+  protected removeFieldOption(fieldIndex: number, optionIndex: number): void {
+    const fields = [...this.parsedFields()];
+    const field = fields[fieldIndex];
+
+    if (field.options && field.options.length > 1) {
+      field.options = field.options.filter((_: any, idx: number) => idx !== optionIndex);
+      this.parsedFields.set(fields);
+    } else {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Warning',
+        detail: 'At least one option is required for this field type',
+        life: 3000,
+      });
+    }
+  }
+
+  /**
+   * Get scoring rule for a quiz question (or create default)
+   */
+  protected getScoringRuleForQuestion(fieldId: string): QuizScoringRule {
+    const existingRule = this.quizConfig().scoringRules.find((rule) => rule.fieldId === fieldId);
+    return (
+      existingRule || {
+        fieldId,
+        correctAnswer: '',
+        points: 1,
+      }
+    );
+  }
+
+  /**
+   * Update points for a quiz question
+   */
+  protected updateQuizQuestionPoints(fieldId: string, points: number): void {
+    const config = this.quizConfig();
+    const existingRuleIndex = config.scoringRules.findIndex((rule) => rule.fieldId === fieldId);
+
+    if (existingRuleIndex >= 0) {
+      // Update existing rule
+      const updatedRules = [...config.scoringRules];
+      updatedRules[existingRuleIndex] = {
+        ...updatedRules[existingRuleIndex],
+        points,
+      };
+      this.quizConfig.set({ ...config, scoringRules: updatedRules });
+    } else {
+      // Create new rule
+      const newRule: QuizScoringRule = {
+        fieldId,
+        correctAnswer: '',
+        points,
+      };
+      this.quizConfig.set({ ...config, scoringRules: [...config.scoringRules, newRule] });
+    }
+  }
+
+  /**
+   * Update correct answer for a quiz question
+   */
+  protected updateQuizQuestionCorrectAnswer(fieldId: string, correctAnswer: string): void {
+    const config = this.quizConfig();
+    const existingRuleIndex = config.scoringRules.findIndex((rule) => rule.fieldId === fieldId);
+
+    if (existingRuleIndex >= 0) {
+      // Update existing rule
+      const updatedRules = [...config.scoringRules];
+      updatedRules[existingRuleIndex] = {
+        ...updatedRules[existingRuleIndex],
+        correctAnswer,
+      };
+      this.quizConfig.set({ ...config, scoringRules: updatedRules });
+    } else {
+      // Create new rule
+      const newRule: QuizScoringRule = {
+        fieldId,
+        correctAnswer,
+        points: 1,
+      };
+      this.quizConfig.set({ ...config, scoringRules: [...config.scoringRules, newRule] });
+    }
+  }
+
+  /**
+   * Handle screenshot file selection for Step 4
+   */
+  protected onScreenshotSelect(event: any): void {
+    const file = event.files[0];
+    if (file) {
+      // Validate file size (5MB max)
+      if (file.size > 5242880) {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Screenshot size exceeds 5MB limit',
+          life: 5000,
+        });
+        return;
+      }
+
+      this.screenshotFile.set(file);
+    }
+  }
+
+  /**
+   * Remove selected screenshot
+   */
+  protected removeScreenshot(): void {
+    this.screenshotFile.set(null);
+  }
+
+  /**
+   * Get category label by value
+   */
+  protected getCategoryLabel(value: string | null | undefined): string {
+    if (!value) return 'N/A';
+    const option = this.categoryOptions.find((c) => c.value === value);
+    return option?.label || 'N/A';
+  }
+
   // Effects to sync visible input with internal signal
   constructor() {
     effect(() => {
@@ -265,6 +640,11 @@ export class TemplateEditorDialogComponent {
 
     this.templateForm.statusChanges.pipe(takeUntilDestroyed()).subscribe((status) => {
       this.formStatus.set(status as FormControlStatus);
+    });
+
+    // Subscribe to form value changes to trigger reactivity in computed signals
+    this.templateForm.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.formValueChanged.update((v) => v + 1);
     });
 
     this.schemaControl.valueChanges.pipe(takeUntilDestroyed()).subscribe((value) => {
@@ -305,8 +685,12 @@ export class TemplateEditorDialogComponent {
           preview_image_url: template.previewImageUrl,
         });
 
-        // Load schema into Monaco Editor
-        const schemaJson = JSON.stringify(template.templateSchema, null, 2);
+        // Load schema into Monaco Editor (only fields and settings)
+        const simplifiedSchema = {
+          fields: template.templateSchema.fields,
+          settings: template.templateSchema.settings
+        };
+        const schemaJson = JSON.stringify(simplifiedSchema, null, 2);
         this.templateForm.patchValue({ schema: schemaJson });
         this.initialSchemaJson = schemaJson;
 
@@ -351,6 +735,8 @@ export class TemplateEditorDialogComponent {
         break;
       case 'quiz':
         this.quizConfig.set({
+          questionField: config.questionField || '',
+          answerField: config.answerField || '',
           passingScore: config.passingScore ?? 70,
           showResults: config.showResults ?? true,
           scoringRules: config.scoringRules?.map((rule) => ({ ...rule })) ?? [],
@@ -358,6 +744,8 @@ export class TemplateEditorDialogComponent {
         break;
       case 'poll':
         this.pollConfig.set({
+          pollQuestionField: config.pollQuestionField || '',
+          optionsField: config.optionsField || '',
           preventDuplicates: config.preventDuplicates,
           showResultsAfterVote: config.showResultsAfterVote,
         });
@@ -506,6 +894,20 @@ export class TemplateEditorDialogComponent {
     // Build template data
     const formValue = this.templateForm.value;
     const businessLogicConfig = this.getBusinessLogicConfig();
+
+    // Inject category into schema (both root and settings.templateCategory)
+    const selectedCategory = formValue.category as TemplateCategory;
+    templateSchema.category = selectedCategory;
+
+    // Add templateCategory to settings if settings exists, otherwise let backend handle it
+    if (templateSchema.settings) {
+      templateSchema.settings.templateCategory = selectedCategory;
+    } else {
+      // Initialize settings with templateCategory and minimal required properties
+      (templateSchema as any).settings = {
+        templateCategory: selectedCategory,
+      };
+    }
 
     const templateData: CreateFormTemplateRequest = {
       name: formValue.name,
@@ -677,9 +1079,26 @@ export class TemplateEditorDialogComponent {
     this.error.set(null);
     this.inventoryConfig.set({ stockField: '', decrementOnSubmit: false });
     this.appointmentConfig.set({ timeSlotField: '', dateField: '', maxBookingsPerSlot: 1 });
-    this.quizConfig.set({ passingScore: 70, showResults: true, scoringRules: [] });
-    this.pollConfig.set({ preventDuplicates: true, showResultsAfterVote: true });
+    this.quizConfig.set({
+      questionField: '',
+      answerField: '',
+      passingScore: 70,
+      showResults: true,
+      scoringRules: [],
+    });
+    this.pollConfig.set({
+      pollQuestionField: '',
+      optionsField: '',
+      preventDuplicates: true,
+      showResultsAfterVote: true,
+    });
     this.validateSchema(this.defaultSchema);
     this.templateForm.markAsPristine();
+
+    // Reset wizard state
+    this.currentStep.set(0);
+    this.viewMode.set('json');
+    this.parsedFields.set([]);
+    this.screenshotFile.set(null);
   }
 }

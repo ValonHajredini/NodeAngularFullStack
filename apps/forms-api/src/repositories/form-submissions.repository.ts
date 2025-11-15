@@ -359,10 +359,29 @@ export class FormSubmissionsRepository {
    * }
    */
   async updateMetadata(
-    client: any,
-    submissionId: string,
-    metadata: Record<string, any>
+    clientOrSubmissionId: any | string,
+    submissionIdOrMetadata: string | Record<string, any>,
+    metadataOrUndefined?: Record<string, any>
   ): Promise<FormSubmission> {
+    // Overload handling: support both (client, id, metadata) and (id, metadata)
+    let client: any;
+    let submissionId: string;
+    let metadata: Record<string, any>;
+    let shouldReleaseClient = false;
+
+    if (typeof clientOrSubmissionId === 'string') {
+      // Called as updateMetadata(submissionId, metadata)
+      submissionId = clientOrSubmissionId;
+      metadata = submissionIdOrMetadata as Record<string, any>;
+      client = await this.pool.connect();
+      shouldReleaseClient = true;
+    } else {
+      // Called as updateMetadata(client, submissionId, metadata)
+      client = clientOrSubmissionId;
+      submissionId = submissionIdOrMetadata as string;
+      metadata = metadataOrUndefined as Record<string, any>;
+    }
+
     try {
       const query = `
         UPDATE form_submissions
@@ -392,6 +411,10 @@ export class FormSubmissionsRepository {
       } as FormSubmission;
     } catch (error: any) {
       throw new Error(`Failed to update submission metadata: ${error.message}`);
+    } finally {
+      if (shouldReleaseClient) {
+        client.release();
+      }
     }
   }
 

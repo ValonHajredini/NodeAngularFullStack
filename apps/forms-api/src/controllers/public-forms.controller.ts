@@ -471,6 +471,25 @@ export class PublicFormsController {
             undefined, // client (no transaction context needed for public forms)
             sessionId
           );
+
+          // Persist executor result metadata back to submission (Epic 29.13: Quiz Scoring)
+          // This ensures quiz scores, poll results, etc. are saved for analytics
+          if (executorResult?.data) {
+            // Merge executor result with existing metadata
+            const updatedMetadata = {
+              ...submission.metadata,
+              ...executorResult.data,
+            };
+
+            // Update submission metadata in database (pool connection managed internally)
+            await formSubmissionsRepository.updateMetadata(
+              submission.id,
+              updatedMetadata
+            );
+
+            // Update local submission object for response
+            submission.metadata = updatedMetadata;
+          }
         } catch (error: any) {
           // Business logic execution failed - delete submission (compensating transaction)
           try {

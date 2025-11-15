@@ -126,6 +126,10 @@ export interface QuizScoringRule {
 export interface QuizConfig {
   /** Discriminator for type narrowing */
   type: 'quiz';
+  /** Field name containing quiz questions (for analytics) */
+  questionField?: string;
+  /** Field name containing user answers (for analytics) */
+  answerField?: string;
   /** Array of question scoring rules */
   scoringRules: QuizScoringRule[];
   /** Passing percentage (0-100) */
@@ -157,6 +161,10 @@ export interface QuizConfig {
 export interface PollLogicConfig {
   /** Discriminator for type narrowing */
   type: 'poll';
+  /** Field name containing poll question (for analytics) */
+  pollQuestionField?: string;
+  /** Field name containing voting options (for analytics) */
+  optionsField?: string;
   /** Field ID of the poll question */
   voteField: string;
   /** Prevent multiple votes from same session */
