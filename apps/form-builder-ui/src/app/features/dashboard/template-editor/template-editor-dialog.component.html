@@ -46,15 +46,164 @@
     <!-- Wizard Stepper -->
     <p-stepper [(value)]="currentStep" [linear]="false">
       <p-step-list>
-        <p-step [value]="0">Basic Info</p-step>
-        <p-step [value]="1">Schema & Fields</p-step>
-        <p-step [value]="2">Category & Settings</p-step>
-        <p-step [value]="3">Overview & Thumbnail</p-step>
+        <p-step [value]="0">Category</p-step>
+        <p-step [value]="1">Basic Info</p-step>
+        <p-step [value]="2">Schema & Fields</p-step>
+        <p-step [value]="3">Business Logic</p-step>
+        <p-step [value]="4">Overview</p-step>
       </p-step-list>
 
       <p-step-panels>
-        <!-- Step 1: Template Name & Description -->
+        <!-- Step 0: Category Selection -->
         <p-step-panel [value]="0">
+          <ng-template #content>
+            <form [formGroup]="templateForm" class="space-y-6 py-4">
+              <!-- Category Selection -->
+              <div class="field">
+                <label class="block font-medium text-gray-700 mb-4">
+                  Select Template Category <span class="text-red-500">*</span>
+                </label>
+                <p class="text-sm text-gray-600 mb-4">
+                  Choose the category that best fits your template. This determines which business
+                  logic features are available.
+                </p>
+
+                <!-- Category Cards Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                  <!-- E-commerce Card -->
+                  <div
+                    class="category-card border-2 rounded-lg p-4 cursor-pointer transition-all hover:shadow-md"
+                    [class.border-blue-500]="categoryControl?.value === 'ecommerce'"
+                    [class.bg-blue-50]="categoryControl?.value === 'ecommerce'"
+                    [class.border-gray-300]="categoryControl?.value !== 'ecommerce'"
+                    (click)="templateForm.patchValue({ category: 'ecommerce' })"
+                  >
+                    <div class="flex flex-col items-center text-center space-y-2">
+                      <i class="pi pi-shopping-cart text-3xl text-blue-600"></i>
+                      <h4 class="font-semibold text-gray-900">E-commerce</h4>
+                      <p class="text-xs text-gray-600">
+                        Product forms with inventory tracking and stock management
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- Services Card -->
+                  <div
+                    class="category-card border-2 rounded-lg p-4 cursor-pointer transition-all hover:shadow-md"
+                    [class.border-purple-500]="categoryControl?.value === 'services'"
+                    [class.bg-purple-50]="categoryControl?.value === 'services'"
+                    [class.border-gray-300]="categoryControl?.value !== 'services'"
+                    (click)="templateForm.patchValue({ category: 'services' })"
+                  >
+                    <div class="flex flex-col items-center text-center space-y-2">
+                      <i class="pi pi-calendar text-3xl text-purple-600"></i>
+                      <h4 class="font-semibold text-gray-900">Services</h4>
+                      <p class="text-xs text-gray-600">
+                        Appointment booking with time slots and availability tracking
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- Data Collection Card -->
+                  <div
+                    class="category-card border-2 rounded-lg p-4 cursor-pointer transition-all hover:shadow-md"
+                    [class.border-green-500]="categoryControl?.value === 'data_collection'"
+                    [class.bg-green-50]="categoryControl?.value === 'data_collection'"
+                    [class.border-gray-300]="categoryControl?.value !== 'data_collection'"
+                    (click)="templateForm.patchValue({ category: 'data_collection' })"
+                  >
+                    <div class="flex flex-col items-center text-center space-y-2">
+                      <i class="pi pi-database text-3xl text-green-600"></i>
+                      <h4 class="font-semibold text-gray-900">Data Collection</h4>
+                      <p class="text-xs text-gray-600">
+                        General forms for collecting user data and information
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- Events Card -->
+                  <div
+                    class="category-card border-2 rounded-lg p-4 cursor-pointer transition-all hover:shadow-md"
+                    [class.border-orange-500]="categoryControl?.value === 'events'"
+                    [class.bg-orange-50]="categoryControl?.value === 'events'"
+                    [class.border-gray-300]="categoryControl?.value !== 'events'"
+                    (click)="templateForm.patchValue({ category: 'events' })"
+                  >
+                    <div class="flex flex-col items-center text-center space-y-2">
+                      <i class="pi pi-star text-3xl text-orange-600"></i>
+                      <h4 class="font-semibold text-gray-900">Events</h4>
+                      <p class="text-xs text-gray-600">
+                        Event registration forms with attendee management
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- Quiz Card -->
+                  <div
+                    class="category-card border-2 rounded-lg p-4 cursor-pointer transition-all hover:shadow-md"
+                    [class.border-teal-500]="categoryControl?.value === 'quiz'"
+                    [class.bg-teal-50]="categoryControl?.value === 'quiz'"
+                    [class.border-gray-300]="categoryControl?.value !== 'quiz'"
+                    (click)="templateForm.patchValue({ category: 'quiz' })"
+                  >
+                    <div class="flex flex-col items-center text-center space-y-2">
+                      <i class="pi pi-check-square text-3xl text-teal-600"></i>
+                      <h4 class="font-semibold text-gray-900">Quiz</h4>
+                      <p class="text-xs text-gray-600">
+                        Interactive quizzes with scoring rules and results display
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- Polls Card -->
+                  <div
+                    class="category-card border-2 rounded-lg p-4 cursor-pointer transition-all hover:shadow-md"
+                    [class.border-pink-500]="categoryControl?.value === 'polls'"
+                    [class.bg-pink-50]="categoryControl?.value === 'polls'"
+                    [class.border-gray-300]="categoryControl?.value !== 'polls'"
+                    (click)="templateForm.patchValue({ category: 'polls' })"
+                  >
+                    <div class="flex flex-col items-center text-center space-y-2">
+                      <i class="pi pi-chart-bar text-3xl text-pink-600"></i>
+                      <h4 class="font-semibold text-gray-900">Polls</h4>
+                      <p class="text-xs text-gray-600">
+                        Voting polls with duplicate prevention and result visualization
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                @if (
+                  categoryControl?.invalid && (categoryControl?.dirty || categoryControl?.touched)
+                ) {
+                  <small class="text-red-500 block mt-1"> Please select a category </small>
+                }
+              </div>
+            </form>
+
+            <!-- Step Navigation -->
+            <div class="flex pt-4 justify-between">
+              <button
+                pButton
+                label="Cancel"
+                class="p-button-text"
+                [disabled]="saving()"
+                (click)="handleCancel()"
+              ></button>
+              <button
+                pButton
+                label="Next"
+                icon="pi pi-arrow-right"
+                iconPos="right"
+                [disabled]="!canProceedFromStep0()"
+                (click)="nextStep()"
+              ></button>
+            </div>
+          </ng-template>
+        </p-step-panel>
+
+        <!-- Step 1: Basic Info (Template Name & Description) -->
+        <p-step-panel [value]="1">
           <ng-template #content>
             <form [formGroup]="templateForm" class="space-y-6 py-4">
               <div class="space-y-4">
@@ -123,10 +272,10 @@
             <div class="flex pt-4 justify-between">
               <button
                 pButton
-                label="Cancel"
-                class="p-button-text"
-                [disabled]="saving()"
-                (click)="handleCancel()"
+                label="Previous"
+                icon="pi pi-arrow-left"
+                class="p-button-secondary"
+                (click)="previousStep()"
               ></button>
               <button
                 pButton
@@ -141,7 +290,7 @@
         </p-step-panel>
 
         <!-- Step 2: Schema JSON / Field Editor -->
-        <p-step-panel [value]="1">
+        <p-step-panel [value]="2">
           <ng-template #content>
             <form [formGroup]="templateForm">
               <div class="space-y-4 py-4">
@@ -409,128 +558,10 @@
           </ng-template>
         </p-step-panel>
 
-        <!-- Step 3: Category & Analytics Mapping -->
-        <p-step-panel [value]="2">
+        <!-- Step 3: Business Logic Configuration -->
+        <p-step-panel [value]="3">
           <ng-template #content>
             <form [formGroup]="templateForm" class="space-y-6 py-4">
-              <!-- Category Selection -->
-              <div class="field">
-                <label class="block font-medium text-gray-700 mb-4">
-                  Select Category <span class="text-red-500">*</span>
-                </label>
-
-                <!-- Category Cards Grid -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                  <!-- E-commerce Card -->
-                  <div
-                    class="category-card border-2 rounded-lg p-4 cursor-pointer transition-all hover:shadow-md"
-                    [class.border-blue-500]="categoryControl?.value === 'ecommerce'"
-                    [class.bg-blue-50]="categoryControl?.value === 'ecommerce'"
-                    [class.border-gray-300]="categoryControl?.value !== 'ecommerce'"
-                    (click)="templateForm.patchValue({ category: 'ecommerce' })"
-                  >
-                    <div class="flex flex-col items-center text-center space-y-2">
-                      <i class="pi pi-shopping-cart text-3xl text-blue-600"></i>
-                      <h4 class="font-semibold text-gray-900">E-commerce</h4>
-                      <p class="text-xs text-gray-600">
-                        Product forms with inventory tracking and stock management
-                      </p>
-                    </div>
-                  </div>
-
-                  <!-- Services Card -->
-                  <div
-                    class="category-card border-2 rounded-lg p-4 cursor-pointer transition-all hover:shadow-md"
-                    [class.border-purple-500]="categoryControl?.value === 'services'"
-                    [class.bg-purple-50]="categoryControl?.value === 'services'"
-                    [class.border-gray-300]="categoryControl?.value !== 'services'"
-                    (click)="templateForm.patchValue({ category: 'services' })"
-                  >
-                    <div class="flex flex-col items-center text-center space-y-2">
-                      <i class="pi pi-calendar text-3xl text-purple-600"></i>
-                      <h4 class="font-semibold text-gray-900">Services</h4>
-                      <p class="text-xs text-gray-600">
-                        Appointment booking with time slots and availability tracking
-                      </p>
-                    </div>
-                  </div>
-
-                  <!-- Data Collection Card -->
-                  <div
-                    class="category-card border-2 rounded-lg p-4 cursor-pointer transition-all hover:shadow-md"
-                    [class.border-green-500]="categoryControl?.value === 'data_collection'"
-                    [class.bg-green-50]="categoryControl?.value === 'data_collection'"
-                    [class.border-gray-300]="categoryControl?.value !== 'data_collection'"
-                    (click)="templateForm.patchValue({ category: 'data_collection' })"
-                  >
-                    <div class="flex flex-col items-center text-center space-y-2">
-                      <i class="pi pi-database text-3xl text-green-600"></i>
-                      <h4 class="font-semibold text-gray-900">Data Collection</h4>
-                      <p class="text-xs text-gray-600">
-                        General forms for collecting user data and information
-                      </p>
-                    </div>
-                  </div>
-
-                  <!-- Events Card -->
-                  <div
-                    class="category-card border-2 rounded-lg p-4 cursor-pointer transition-all hover:shadow-md"
-                    [class.border-orange-500]="categoryControl?.value === 'events'"
-                    [class.bg-orange-50]="categoryControl?.value === 'events'"
-                    [class.border-gray-300]="categoryControl?.value !== 'events'"
-                    (click)="templateForm.patchValue({ category: 'events' })"
-                  >
-                    <div class="flex flex-col items-center text-center space-y-2">
-                      <i class="pi pi-star text-3xl text-orange-600"></i>
-                      <h4 class="font-semibold text-gray-900">Events</h4>
-                      <p class="text-xs text-gray-600">
-                        Event registration forms with attendee management
-                      </p>
-                    </div>
-                  </div>
-
-                  <!-- Quiz Card -->
-                  <div
-                    class="category-card border-2 rounded-lg p-4 cursor-pointer transition-all hover:shadow-md"
-                    [class.border-teal-500]="categoryControl?.value === 'quiz'"
-                    [class.bg-teal-50]="categoryControl?.value === 'quiz'"
-                    [class.border-gray-300]="categoryControl?.value !== 'quiz'"
-                    (click)="templateForm.patchValue({ category: 'quiz' })"
-                  >
-                    <div class="flex flex-col items-center text-center space-y-2">
-                      <i class="pi pi-check-square text-3xl text-teal-600"></i>
-                      <h4 class="font-semibold text-gray-900">Quiz</h4>
-                      <p class="text-xs text-gray-600">
-                        Interactive quizzes with scoring rules and results display
-                      </p>
-                    </div>
-                  </div>
-
-                  <!-- Polls Card -->
-                  <div
-                    class="category-card border-2 rounded-lg p-4 cursor-pointer transition-all hover:shadow-md"
-                    [class.border-pink-500]="categoryControl?.value === 'polls'"
-                    [class.bg-pink-50]="categoryControl?.value === 'polls'"
-                    [class.border-gray-300]="categoryControl?.value !== 'polls'"
-                    (click)="templateForm.patchValue({ category: 'polls' })"
-                  >
-                    <div class="flex flex-col items-center text-center space-y-2">
-                      <i class="pi pi-chart-bar text-3xl text-pink-600"></i>
-                      <h4 class="font-semibold text-gray-900">Polls</h4>
-                      <p class="text-xs text-gray-600">
-                        Voting polls with duplicate prevention and result visualization
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                @if (
-                  categoryControl?.invalid && (categoryControl?.dirty || categoryControl?.touched)
-                ) {
-                  <small class="text-red-500 block mt-1"> Please select a category </small>
-                }
-              </div>
-
               <!-- Business Logic Configuration Section -->
               <div class="space-y-4">
                 <h3 class="text-lg font-semibold text-gray-800 border-b pb-2">
@@ -898,7 +929,7 @@
         </p-step-panel>
 
         <!-- Step 4: Overview & Screenshot -->
-        <p-step-panel [value]="3">
+        <p-step-panel [value]="4">
           <ng-template #content>
             <div class="space-y-6 py-4">
               <!-- Template Overview -->

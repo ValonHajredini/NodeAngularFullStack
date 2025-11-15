@@ -884,3 +884,36 @@ body {
 ::ng-deep .p-sidebar-mask {
   z-index: 850 !important;
 }
+/* Template Wizard - Hide Step Numbers (Epic 30) */
+::ng-deep {
+  /* Target p-stepper component (new PrimeNG) */
+  .p-stepper,
+  .wizard-steps {
+    .p-step-number {
+      display: none !important;
+      visibility: hidden !important;
+      width: 0 !important;
+      height: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      opacity: 0 !important;
+    }
+
+    .p-step-title {
+      margin-left: 0 !important;
+    }
+  }
+
+  /* Fallback for old p-steps component */
+  .p-steps {
+    .p-steps-item {
+      .p-steps-number {
+        display: none !important;
+      }
+
+      .p-steps-title {
+        margin-left: 0 !important;
+      }
+    }
+  }
+}

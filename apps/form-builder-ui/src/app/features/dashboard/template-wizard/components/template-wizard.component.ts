@@ -79,23 +79,39 @@ export class TemplateWizardComponent {
   /**
    * Computed signal: PrimeNG steps menu items
    * Generates step configuration based on selected category
+   * Steps are dynamically labeled based on category type
    */
   public readonly stepItems: Signal<MenuItem[]> = computed(() => {
     const category = this.category();
+
+    // Step 1: Category Selection (always first)
+    const categoryStep = { label: 'Category', command: () => this.goToStep(0) };
+
     if (!category) {
+      // Before category selection: show minimal steps
       return [
-        { label: 'Select Category', command: () => this.goToStep(0) },
-        { label: 'Configure', command: () => this.goToStep(1) },
-        { label: 'Preview', command: () => this.goToStep(2) },
+        categoryStep,
+        { label: 'Next Steps', command: () => this.goToStep(1) },
       ];
     }
 
-    // Category-specific step labels (will be enhanced in future stories)
+    // After category selection: show category-specific steps
+    const categoryLabels: Record<TemplateCategory, { config: string; preview: string }> = {
+      [TemplateCategory.QUIZ]: { config: 'Quiz Questions', preview: 'Review Quiz' },
+      [TemplateCategory.POLLS]: { config: 'Poll Options', preview: 'Review Poll' },
+      [TemplateCategory.ECOMMERCE]: { config: 'Product Setup', preview: 'Review Products' },
+      [TemplateCategory.SERVICES]: { config: 'Service Config', preview: 'Review Services' },
+      [TemplateCategory.DATA_COLLECTION]: { config: 'Data Fields', preview: 'Review Form' },
+      [TemplateCategory.EVENTS]: { config: 'Event Details', preview: 'Review Event' },
+    };
+
+    const labels = categoryLabels[category] || { config: 'Configure', preview: 'Preview' };
+
     return [
-      { label: 'Select Category', command: () => this.goToStep(0) },
+      categoryStep,
       { label: 'Basic Info', command: () => this.goToStep(1) },
-      { label: 'Configure', command: () => this.goToStep(2) },
-      { label: 'Preview', command: () => this.goToStep(3) },
+      { label: labels.config, command: () => this.goToStep(2) },
+      { label: labels.preview, command: () => this.goToStep(3) },
     ];
   });
 

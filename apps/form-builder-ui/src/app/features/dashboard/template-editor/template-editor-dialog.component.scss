@@ -28,6 +28,31 @@
       .p-select {
         width: 100%;
       }
+
+      // Hide step numbers - show only labels (p-stepper component)
+      // Using ::ng-deep to penetrate Angular's view encapsulation
+      .p-step-number {
+        display: none !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        opacity: 0 !important;
+      }
+
+      // Adjust spacing since numbers are hidden
+      .p-step-title {
+        margin-left: 0 !important;
+      }
+
+      // Active step styling
+      .p-step-active {
+        .p-step-title {
+          font-weight: 600;
+          color: var(--text-color);
+        }
+      }
     }
   }
 

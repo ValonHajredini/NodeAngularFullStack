@@ -11,35 +11,32 @@
  * Wizard Steps Container
  * Provides spacing and styling for PrimeNG p-steps
  */
-.wizard-steps-container {
+:host ::ng-deep .wizard-steps-container {
   margin-bottom: 2rem;
   padding: 1rem 0;
   border-bottom: 1px solid var(--surface-border);
 
-  ::ng-deep .wizard-steps {
-    .p-steps-item {
-      &.p-highlight {
-        .p-steps-number {
-          background-color: var(--primary-color);
-          color: var(--primary-color-text);
-        }
+  // Hide step numbers - show only labels (p-stepper component)
+  // Using ::ng-deep to penetrate Angular's view encapsulation
+  .p-step-number {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    opacity: 0 !important;
+  }
 
-        .p-steps-title {
-          font-weight: 600;
-          color: var(--text-color);
-        }
-      }
+  // Adjust spacing since numbers are hidden
+  .p-step-title {
+    margin-left: 0 !important;
+  }
 
-      .p-steps-number {
-        transition: all 0.2s ease;
-      }
-
-      &:not(.p-disabled):hover {
-        .p-steps-number {
-          background-color: var(--primary-color);
-          color: var(--primary-color-text);
-        }
-      }
+  .p-step-active {
+    .p-step-title {
+      font-weight: 600;
+      color: var(--text-color);
     }
   }
 }

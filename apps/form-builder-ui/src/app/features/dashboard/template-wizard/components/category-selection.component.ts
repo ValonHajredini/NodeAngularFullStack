@@ -125,6 +125,7 @@ export class CategorySelectionComponent {
 
   /**
    * Selects a template category and updates wizard service state
+   * Automatically advances to next step after category selection
    *
    * @param category - Selected template category
    */
@@ -132,6 +133,12 @@ export class CategorySelectionComponent {
     this.selectedCategory.set(category);
     this.wizardService.setCategory(category);
     this.categorySelected.emit(category);
+
+    // Auto-advance to next step after category selection
+    // This ensures users can't proceed without selecting a category
+    setTimeout(() => {
+      this.wizardService.nextStep();
+    }, 300); // Small delay for visual feedback
   }
 
   /**

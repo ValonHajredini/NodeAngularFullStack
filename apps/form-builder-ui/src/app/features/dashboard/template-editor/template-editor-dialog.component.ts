@@ -242,6 +242,18 @@ export class TemplateEditorDialogComponent {
   );
 
   // Wizard step validation computed signals
+
+  // Step 0: Category Selection
+  protected readonly canProceedFromStep0 = computed(() => {
+    // Trigger reactivity
+    this.formValueChanged();
+
+    // Check if category is selected
+    const categoryValue = this.templateForm.get('category')?.value;
+    return categoryValue && typeof categoryValue === 'string' && categoryValue.trim().length > 0;
+  });
+
+  // Step 1: Basic Info (name, description)
   protected readonly canProceedFromStep1 = computed(() => {
     // Trigger reactivity by accessing form value changes
     this.formValueChanged();
@@ -256,20 +268,18 @@ export class TemplateEditorDialogComponent {
     return !!(nameValid && descValid);
   });
 
+  // Step 2: Schema & Fields
   protected readonly canProceedFromStep2 = computed(() => {
     return this.schemaErrors().length === 0 && !!this.schemaControl.value;
   });
 
+  // Step 3: Category-Specific Business Logic
+  // No validation required - business logic is optional
   protected readonly canProceedFromStep3 = computed(() => {
-    // Trigger reactivity
-    this.formValueChanged();
-
-    // Check if category is selected
-    const categoryValue = this.templateForm.get('category')?.value;
-    return categoryValue && typeof categoryValue === 'string' && categoryValue.trim().length > 0;
+    return true; // Always allow proceeding from business logic step
   });
 
-  protected readonly isLastStep = computed(() => this.currentStep() === 3);
+  protected readonly isLastStep = computed(() => this.currentStep() === 4);
 
   protected readonly isFirstStep = computed(() => this.currentStep() === 0);
 
@@ -369,7 +379,7 @@ export class TemplateEditorDialogComponent {
    * Navigate to next step
    */
   protected nextStep(): void {
-    if (this.currentStep() < 3) {
+    if (this.currentStep() < 4) {
       this.currentStep.set(this.currentStep() + 1);
     }
   }
@@ -387,7 +397,7 @@ export class TemplateEditorDialogComponent {
    * Navigate to specific step
    */
   protected goToStep(step: number): void {
-    if (step >= 0 && step <= 3) {
+    if (step >= 0 && step <= 4) {
       this.currentStep.set(step);
     }
   }
