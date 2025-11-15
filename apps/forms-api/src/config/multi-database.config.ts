@@ -53,6 +53,11 @@ const formsPoolConfig: PoolConfig = {
   connectionTimeoutMillis: 2000,
 };
 
+// Debug: Log which database formsPool is connecting to
+console.log(`[DEBUG] Forms database configuration:`);
+console.log(`  FORMS_DB_NAME env var: "${process.env.FORMS_DB_NAME}"`);
+console.log(`  Connecting to database: "${formsPoolConfig.database}"`);
+
 /**
  * Auth database connection pool singleton instance (read-only).
  * Use this for validating users and tenants.

@@ -114,7 +114,23 @@ export class FormBuilderService {
   readonly quizConfig = this._quizConfig.asReadonly();
   readonly isQuizForm = computed(() => {
     const template = this._selectedTemplate();
-    return template?.category === 'quiz' || this._quizConfig() !== null;
+    const quizConfig = this._quizConfig();
+    const fields = this._formFields();
+
+    // Check if created from quiz template
+    if (template?.category === 'quiz') return true;
+
+    // Check if has quiz config
+    if (quizConfig !== null) return true;
+
+    // Check if any field has quiz metadata (correctAnswer configured)
+    // This handles legacy quiz forms that don't have businessLogicConfig
+    const hasQuizFields = fields.some((field) => {
+      const metadata = field.metadata as any;
+      return metadata?.correctAnswer !== undefined;
+    });
+
+    return hasQuizFields;
   });
 
   // Computed signals
@@ -707,6 +723,14 @@ export class FormBuilderService {
       this._stepFormEnabled.set(false);
       this._steps.set([]);
       this._activeStepId.set(null);
+    }
+
+    // Restore quiz configuration if present (Epic 29, Story 29.13: Quiz Field Configuration)
+    if (form.schema?.settings?.businessLogicConfig) {
+      this._quizConfig.set(form.schema.settings.businessLogicConfig as any);
+    } else {
+      // Reset quiz config for non-quiz forms
+      this._quizConfig.set(null);
     }
 
     // Clear selection
@@ -1559,6 +1583,31 @@ export class FormBuilderService {
   }
 
   /**
+   * Generates quiz scoring rules from field metadata.
+   * Extracts quiz configuration (correct answers, points) from field metadata
+   * and builds an array of QuizScoringRule objects for auto-scoring.
+   * @returns Array of quiz scoring rules, or empty array if no quiz fields configured
+   */
+  private generateQuizScoringRules(): any[] {
+    const fields = this._formFields();
+    const quizRules: any[] = [];
+
+    fields.forEach((field) => {
+      // Check if field has quiz metadata
+      const quizMetadata = field.metadata as any;
+      if (quizMetadata?.correctAnswer) {
+        quizRules.push({
+          fieldId: field.id,
+          correctAnswer: quizMetadata.correctAnswer,
+          points: quizMetadata.points ?? 1,
+        });
+      }
+    });
+
+    return quizRules;
+  }
+
+  /**
    * Exports the current form data for saving.
    * Includes row layout, sub-columns, and step form configuration if enabled.
    * Story 27.3: Includes sub-column configuration serialization
@@ -1642,7 +1691,13 @@ export class FormBuilderService {
         // Include theme ID if a theme is applied (fallback to in-memory selection for unsaved forms)
         themeId: this._currentForm()?.schema?.settings?.themeId ?? this._currentTheme()?.id,
         // Include quiz configuration if present (Epic 29, Story 29.13)
-        businessLogicConfig: this._quizConfig() ?? undefined,
+        // Auto-generate scoring rules from field metadata
+        businessLogicConfig: this._quizConfig()
+          ? {
+              ...this._quizConfig()!,
+              scoringRules: this.generateQuizScoringRules(),
+            }
+          : undefined,
         // Include template ID reference if form was created from template
         templateId: this._templateMetadata()?.id ?? undefined,
       },

@@ -23,9 +23,13 @@ import { TemplatesApiService } from './templates-api.service';
 import { ComponentWithUnsavedChanges } from '@core/guards/unsaved-changes.guard';
 import { FieldPaletteComponent } from './field-palette/field-palette.component';
 import { FormCanvasComponent } from './form-canvas/form-canvas.component';
-import { FieldPropertiesModalComponent } from '../../shared/components/field-properties-modal';
+import { BasicSettingsModalComponent } from '../../shared/components/basic-settings-modal/basic-settings-modal.component';
+import { ValidationSettingsModalComponent } from '../../shared/components/validation-settings-modal/validation-settings-modal.component';
+import { ConditionalVisibilityModalComponent } from '../../shared/components/conditional-visibility-modal/conditional-visibility-modal.component';
+import { FieldQuizSettingsModalComponent } from '../../shared/components/field-quiz-settings-modal/field-quiz-settings-modal.component';
 import { FormSettingsModalComponent, FormSettings } from '../../shared/components/form-settings-modal';
 import { QuizSettingsModalComponent } from '../../shared/components/quiz-settings-modal';
+import { SettingsModalType } from '../../shared/components/field-settings-tooltip-menu/field-settings-tooltip-menu.component';
 import { PublishDialogComponent, PublishFormData } from './publish-dialog/publish-dialog.component';
 import { RowLayoutSidebarComponent } from './row-layout-sidebar/row-layout-sidebar.component';
 import { StepFormSidebarComponent } from './step-form-sidebar/step-form-sidebar.component';
@@ -58,7 +62,10 @@ import { AuthService } from '@core/auth/auth.service';
     DragDropModule,
     FieldPaletteComponent,
     FormCanvasComponent,
-    FieldPropertiesModalComponent,
+    BasicSettingsModalComponent,
+    ValidationSettingsModalComponent,
+    ConditionalVisibilityModalComponent,
+    FieldQuizSettingsModalComponent,
     FormSettingsModalComponent,
     QuizSettingsModalComponent,
     PublishDialogComponent,
@@ -272,6 +279,7 @@ import { AuthService } from '@core/auth/auth.service';
             <app-form-canvas
               [settings]="formSettings()"
               (fieldClicked)="onFieldClicked($event)"
+              (openSettingsModal)="onOpenSettingsModal($event)"
             ></app-form-canvas>
           </div>
         </div>
@@ -355,15 +363,38 @@ import { AuthService } from '@core/auth/auth.service';
         }
       </div>
 
-      <!-- Field Properties Modal -->
-      <app-field-properties-modal
-        [(visible)]="fieldPropertiesModalVisible"
+      <!-- Basic Settings Modal -->
+      <app-basic-settings-modal
+        [(visible)]="basicSettingsModalVisible"
         [field]="selectedFieldForModal()"
         [allFields]="formBuilderService.formFields()"
-        (saveChanges)="onFieldPropertiesSaved($event)"
-        (deleteField)="onFieldDeleted()"
-        (cancel)="onFieldPropertiesCancelled()"
-      ></app-field-properties-modal>
+        (saveChanges)="onBasicSettingsSaved($event)"
+        (cancel)="onModalCancelled('basic')"
+      ></app-basic-settings-modal>
+
+      <!-- Validation Settings Modal -->
+      <app-validation-settings-modal
+        [(visible)]="validationSettingsModalVisible"
+        [field]="selectedFieldForModal()"
+        (saveChanges)="onValidationSettingsSaved($event)"
+        (cancel)="onModalCancelled('validation')"
+      ></app-validation-settings-modal>
+
+      <!-- Conditional Visibility Modal -->
+      <app-conditional-visibility-modal
+        [(visible)]="conditionalVisibilityModalVisible"
+        [field]="selectedFieldForModal()"
+        [allFields]="formBuilderService.formFields()"
+        (saveChanges)="onConditionalVisibilitySaved($event)"
+        (cancel)="onModalCancelled('conditional')"
+      ></app-conditional-visibility-modal>
+
+      <!-- Field Quiz Settings Modal -->
+      <app-field-quiz-settings-modal
+        [(visible)]="fieldQuizSettingsModalVisible"
+        [field]="selectedFieldForModal()"
+        (saveChanges)="onFieldQuizSettingsSaved($event)"
+      ></app-field-quiz-settings-modal>
 
       <!-- Form Settings Dialog -->
       <app-form-settings-modal
@@ -593,7 +624,11 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
 
   readonly settingsDialogVisible = signal<boolean>(false);
   readonly publishDialogVisible = signal<boolean>(false);
-  readonly fieldPropertiesModalVisible = signal<boolean>(false);
+  readonly basicSettingsModalVisible = signal<boolean>(false);
+  readonly validationSettingsModalVisible = signal<boolean>(false);
+  readonly conditionalVisibilityModalVisible = signal<boolean>(false);
+  readonly fieldQuizSettingsModalVisible = signal<boolean>(false);
+  readonly quizSettingsModalVisible = signal<boolean>(false);
   readonly tokenReuseDialogVisible = signal<boolean>(false);
   readonly currentTokenStatus = signal<TokenStatusResponse | null>(null);
   readonly selectedFieldForModal = signal<FormField | null>(null);
@@ -642,9 +677,6 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
 
   // Template loading state (Story 29.8)
   readonly isLoadingTemplate = signal<boolean>(false);
-
-  // Quiz Settings Modal state (Epic 29, Story 29.13)
-  readonly quizSettingsModalVisible = signal<boolean>(false);
 
   // Sidebar tab state (Story 19.2)
   readonly activeSidebarTab = signal<number>(0); // 0 = Row Layout, 1 = Step Form
@@ -915,37 +947,150 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
 
   /**
    * Handles field click from canvas.
-   * Opens field properties modal with the selected field.
+   * Just selects the field (modal opening is now handled by tooltip menu)
    */
   onFieldClicked(field: FormField): void {
-    this.selectedFieldForModal.set(field);
-    this.fieldPropertiesModalVisible.set(true);
+    this.formBuilderService.selectField(field);
   }
 
   /**
-   * Handles field properties save from modal.
+   * Handles opening settings modal from tooltip menu.
+   * @param event - Contains field and modal type
    */
-  onFieldPropertiesSaved(updatedField: FormField): void {
-    const fieldIndex = this.formBuilderService.selectedFieldIndex();
+  onOpenSettingsModal(event: { field: FormField; type: SettingsModalType }): void {
+    this.selectedFieldForModal.set(event.field);
+
+    switch (event.type) {
+      case 'basic':
+        this.basicSettingsModalVisible.set(true);
+        break;
+      case 'validation':
+        this.validationSettingsModalVisible.set(true);
+        break;
+      case 'conditional':
+        this.conditionalVisibilityModalVisible.set(true);
+        break;
+      case 'quiz':
+        this.fieldQuizSettingsModalVisible.set(true);
+        break;
+    }
+  }
+
+  /**
+   * Handles basic settings save from modal.
+   */
+  onBasicSettingsSaved(updates: Partial<FormField>): void {
+    const currentField = this.selectedFieldForModal();
+    if (!currentField) return;
+
+    const fieldIndex = this.formBuilderService.getAllFields().findIndex(f => f.id === currentField.id);
     if (fieldIndex >= 0) {
+      const updatedField = { ...currentField, ...updates };
       this.formBuilderService.updateField(fieldIndex, updatedField);
       this.formBuilderService.selectField(updatedField);
     }
 
     this.messageService.add({
       severity: 'success',
-      summary: 'Properties Updated',
-      detail: 'Field properties have been saved',
+      summary: 'Basic Settings Updated',
+      detail: 'Field basic settings have been saved',
       life: 2000,
     });
 
+    this.basicSettingsModalVisible.set(false);
     this.selectedFieldForModal.set(null);
   }
 
   /**
-   * Handles field properties modal cancel.
+   * Handles validation settings save from modal.
    */
-  onFieldPropertiesCancelled(): void {
+  onValidationSettingsSaved(updates: Partial<FormField>): void {
+    const currentField = this.selectedFieldForModal();
+    if (!currentField) return;
+
+    const fieldIndex = this.formBuilderService.getAllFields().findIndex(f => f.id === currentField.id);
+    if (fieldIndex >= 0) {
+      const updatedField = { ...currentField, ...updates };
+      this.formBuilderService.updateField(fieldIndex, updatedField);
+      this.formBuilderService.selectField(updatedField);
+    }
+
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Validation Settings Updated',
+      detail: 'Field validation settings have been saved',
+      life: 2000,
+    });
+
+    this.validationSettingsModalVisible.set(false);
+    this.selectedFieldForModal.set(null);
+  }
+
+  /**
+   * Handles conditional visibility save from modal.
+   */
+  onConditionalVisibilitySaved(updates: Partial<FormField>): void {
+    const currentField = this.selectedFieldForModal();
+    if (!currentField) return;
+
+    const fieldIndex = this.formBuilderService.getAllFields().findIndex(f => f.id === currentField.id);
+    if (fieldIndex >= 0) {
+      const updatedField = { ...currentField, ...updates };
+      this.formBuilderService.updateField(fieldIndex, updatedField);
+      this.formBuilderService.selectField(updatedField);
+    }
+
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Conditional Settings Updated',
+      detail: 'Field conditional visibility has been saved',
+      life: 2000,
+    });
+
+    this.conditionalVisibilityModalVisible.set(false);
+    this.selectedFieldForModal.set(null);
+  }
+
+  /**
+   * Handles field quiz settings save from modal.
+   */
+  onFieldQuizSettingsSaved(updates: Partial<FormField>): void {
+    const currentField = this.selectedFieldForModal();
+    if (!currentField) return;
+
+    const fieldIndex = this.formBuilderService.getAllFields().findIndex(f => f.id === currentField.id);
+    if (fieldIndex >= 0) {
+      const updatedField = { ...currentField, ...updates };
+      this.formBuilderService.updateField(fieldIndex, updatedField);
+      this.formBuilderService.selectField(updatedField);
+    }
+
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Quiz Settings Updated',
+      detail: 'Field quiz configuration has been saved',
+      life: 2000,
+    });
+
+    this.fieldQuizSettingsModalVisible.set(false);
+    this.selectedFieldForModal.set(null);
+  }
+
+  /**
+   * Handles modal cancel.
+   */
+  onModalCancelled(modalType: 'basic' | 'validation' | 'conditional'): void {
+    switch (modalType) {
+      case 'basic':
+        this.basicSettingsModalVisible.set(false);
+        break;
+      case 'validation':
+        this.validationSettingsModalVisible.set(false);
+        break;
+      case 'conditional':
+        this.conditionalVisibilityModalVisible.set(false);
+        break;
+    }
     this.selectedFieldForModal.set(null);
   }
 
@@ -959,6 +1104,12 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
       detail: 'Field has been removed from the form',
       life: 2000,
     });
+
+    // Close all modals
+    this.basicSettingsModalVisible.set(false);
+    this.validationSettingsModalVisible.set(false);
+    this.conditionalVisibilityModalVisible.set(false);
+    this.quizSettingsModalVisible.set(false);
     this.selectedFieldForModal.set(null);
   }
 

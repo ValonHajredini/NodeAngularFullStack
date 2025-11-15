@@ -421,6 +421,22 @@ export class TemplatesService {
         JSON.stringify(template.templateSchema)
       );
 
+      // Merge businessLogicConfig from template into schema settings
+      // Story 29.13: Quiz Field Configuration
+      console.log('[DEBUG] Template business_logic_config:', template.businessLogicConfig);
+      console.log('[DEBUG] formSchema.settings BEFORE merge:', formSchema.settings);
+
+      if (template.businessLogicConfig) {
+        console.log('[DEBUG] Merging businessLogicConfig into formSchema.settings');
+        formSchema.settings = {
+          ...formSchema.settings,
+          businessLogicConfig: template.businessLogicConfig,
+        };
+        console.log('[DEBUG] formSchema.settings AFTER merge:', formSchema.settings);
+      } else {
+        console.log('[DEBUG] No businessLogicConfig found in template');
+      }
+
       // Increment usage count atomically
       await this.templatesRepo.incrementUsageCount(templateId);
 

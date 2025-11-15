@@ -960,6 +960,16 @@ export class FormsService {
       result.templateCategory = settings.templateCategory;
     }
 
+    // Preserve business logic configuration for quiz, poll, inventory tracking (Epic 29)
+    if (settings?.businessLogicConfig) {
+      result.businessLogicConfig = settings.businessLogicConfig;
+    }
+
+    // Preserve template ID reference for forms created from templates
+    if (settings?.templateId) {
+      result.templateId = settings.templateId;
+    }
+
     return result;
   }
 

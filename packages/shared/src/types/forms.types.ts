@@ -283,6 +283,22 @@ export interface TimeSlotMetadata extends BaseFieldMetadata {
 }
 
 /**
+ * Quiz field metadata for quiz-enabled forms
+ * Stores quiz-specific properties for individual question fields
+ * Used to auto-generate scoring rules in FormSchema.settings.businessLogicConfig
+ */
+export interface QuizFieldMetadata extends BaseFieldMetadata {
+  /** Correct answer for this quiz question (matches option value for radio/checkbox/select) */
+  correctAnswer?: string;
+  /** Points awarded for correct answer (default: 1 if not specified) */
+  points?: number;
+  /** Explanation text shown after quiz submission (optional) */
+  explanation?: string;
+  /** Exclude this field from quiz scoring (for fields like name, email that aren't quiz questions) */
+  excludeFromQuiz?: boolean;
+}
+
+/**
  * Product variant metadata for IMAGE_GALLERY fields
  * Used by product templates for inventory tracking and e-commerce functionality
  * Each array element corresponds to an image in the gallery
@@ -451,14 +467,15 @@ export interface FormField {
   order: number;
   /** Parent group ID for nested fields */
   parentGroupId?: string;
-  /** Additional metadata for special field types (e.g., GROUP, HEADING, IMAGE, TEXT_BLOCK, IMAGE_GALLERY, TIME_SLOT) */
+  /** Additional metadata for special field types (e.g., GROUP, HEADING, IMAGE, TEXT_BLOCK, IMAGE_GALLERY, TIME_SLOT, QUIZ) */
   metadata?:
     | GroupMetadata
     | HeadingMetadata
     | ImageMetadata
     | TextBlockMetadata
     | ImageGalleryMetadata
-    | TimeSlotMetadata;
+    | TimeSlotMetadata
+    | QuizFieldMetadata;
   /**
    * Variant metadata for IMAGE_GALLERY fields (e.g., product variants).
    * Each array element corresponds to an image in the gallery.

@@ -13,7 +13,7 @@ import {
 
 /**
  * Detects the template category from a form schema
- * Inspects metadata, business logic config, and template references
+ * Inspects metadata, business logic config, template references, and field quiz metadata
  *
  * @param formSchema - Form schema to inspect
  * @returns Template category enum value or null if not detectable
@@ -54,6 +54,17 @@ export function detectTemplateCategory(
   const metadataCategory = formSchema.metadata?.templateCategory;
   if (metadataCategory && isValidTemplateCategory(metadataCategory)) {
     return metadataCategory as TemplateCategory;
+  }
+
+  // Strategy 5: Detect quiz forms by checking if any field has quiz metadata (correctAnswer)
+  // This handles legacy quiz forms that don't have explicit category or businessLogicConfig
+  const fields = formSchema.fields || [];
+  const hasQuizFields = fields.some((field) => {
+    const metadata = field.metadata as any;
+    return metadata?.correctAnswer !== undefined;
+  });
+  if (hasQuizFields) {
+    return TemplateCategory.QUIZ;
   }
 
   // Cannot determine category - return null for generic handling

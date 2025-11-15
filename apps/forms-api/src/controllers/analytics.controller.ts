@@ -17,7 +17,7 @@ import { AsyncHandler } from '../utils/async-handler.utils';
 import { analyticsService } from '../services/analytics/analytics.service';
 import { ApiError } from '../services/forms.service';
 import { formsRepository } from '../repositories/forms.repository';
-import { TemplateCategory } from '@nodeangularfullstack/shared';
+import { TemplateCategory, detectTemplateCategory } from '@nodeangularfullstack/shared';
 
 /**
  * Analytics controller handling HTTP requests for form analytics operations.
@@ -201,9 +201,11 @@ export class AnalyticsController {
         );
       }
 
-      // Extract category from form schema (properly typed, no 'any' assertions)
-      // Category is stored in form_schemas.schema_json.category
-      const category: TemplateCategory | null = form.schema?.category as TemplateCategory || null;
+      // Detect category from form schema using shared utility
+      // Category detection checks settings.templateCategory and other strategies
+      const category: TemplateCategory | null = form.schema
+        ? detectTemplateCategory(form.schema)
+        : null;
 
       // Delegate analytics computation to service (which uses strategy registry)
       // IMPORTANT: Pass formSchemaId, not formId (submissions are linked to form_schemas table)

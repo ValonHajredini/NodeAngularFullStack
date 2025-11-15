@@ -51,6 +51,10 @@ export class AuthService {
   private readonly loadingSignal = signal<boolean>(false);
   private readonly errorSignal = signal<string | null>(null);
 
+  // Proactive token refresh timer
+  private tokenRefreshTimer: ReturnType<typeof setInterval> | null = null;
+  private readonly TOKEN_CHECK_INTERVAL = 60000; // Check every 1 minute
+
   // Computed properties for component consumption
   readonly user = this.userSignal.asReadonly();
   readonly isAuthenticated = computed(() => !!this.userSignal() && !!this.accessTokenSignal());
@@ -59,6 +63,10 @@ export class AuthService {
 
   constructor() {
     this.initializeFromStorage();
+    // Start proactive token refresh if user is already authenticated
+    if (this.isAuthenticated()) {
+      this.startTokenRefreshTimer();
+    }
   }
 
   /**
@@ -81,6 +89,7 @@ export class AuthService {
       map((response: ApiAuthResponse) => response.data),
       tap((authData: AuthResponse) => {
         this.setAuthData(authData);
+        this.startTokenRefreshTimer(); // Start proactive token refresh
         this.router.navigate(['/app/dashboard']);
       }),
       catchError((error) => {
@@ -106,6 +115,7 @@ export class AuthService {
       map((response: ApiAuthResponse) => response.data),
       tap((authData: AuthResponse) => {
         this.setAuthData(authData);
+        this.startTokenRefreshTimer(); // Start proactive token refresh
         this.router.navigate(['/app/dashboard']);
       }),
       catchError((error) => {
@@ -357,6 +367,7 @@ export class AuthService {
    * Passes logout=true parameter to trigger logout in main app as well.
    */
   private clearAuthData(): void {
+    this.stopTokenRefreshTimer(); // Stop proactive token refresh
     this.userSignal.set(null);
     this.accessTokenSignal.set(null);
     this.refreshTokenSignal.set(null);
@@ -373,6 +384,7 @@ export class AuthService {
    * Used for service-specific logout.
    */
   private clearAuthDataAndRedirectToDashboard(): void {
+    this.stopTokenRefreshTimer(); // Stop proactive token refresh
     this.userSignal.set(null);
     this.accessTokenSignal.set(null);
     this.refreshTokenSignal.set(null);
@@ -389,6 +401,7 @@ export class AuthService {
    * Used for complete logout from all services.
    */
   private clearAuthDataAndRedirectToLogin(): void {
+    this.stopTokenRefreshTimer(); // Stop proactive token refresh
     this.userSignal.set(null);
     this.accessTokenSignal.set(null);
     this.refreshTokenSignal.set(null);
@@ -458,6 +471,46 @@ export class AuthService {
     localStorage.removeItem('user');
     localStorage.removeItem(environment.jwt.tokenKey);
     localStorage.removeItem(environment.jwt.refreshTokenKey);
+  }
+
+  /**
+   * Starts the proactive token refresh timer.
+   * Checks token expiration every minute and refreshes when within 5 minutes of expiration.
+   */
+  private startTokenRefreshTimer(): void {
+    // Clear any existing timer first
+    this.stopTokenRefreshTimer();
+
+    // Set up periodic token check
+    this.tokenRefreshTimer = setInterval(() => {
+      // Check if token needs refresh
+      if (this.isTokenExpired()) {
+        console.log('[AuthService] Token nearing expiration, refreshing proactively...');
+
+        this.refreshAccessToken().subscribe({
+          next: () => {
+            console.log('[AuthService] Token refreshed successfully');
+          },
+          error: (error) => {
+            console.error('[AuthService] Proactive token refresh failed:', error);
+            // Timer will be stopped by clearAuthData in refreshAccessToken's catchError
+          },
+        });
+      }
+    }, this.TOKEN_CHECK_INTERVAL);
+
+    console.log('[AuthService] Token refresh timer started (checking every 1 minute)');
+  }
+
+  /**
+   * Stops the proactive token refresh timer.
+   */
+  private stopTokenRefreshTimer(): void {
+    if (this.tokenRefreshTimer) {
+      clearInterval(this.tokenRefreshTimer);
+      this.tokenRefreshTimer = null;
+      console.log('[AuthService] Token refresh timer stopped');
+    }
   }
 }
 

@@ -18,6 +18,7 @@ import { ProductAnalyticsStrategy } from './strategies/product-analytics.strateg
 import { AppointmentAnalyticsStrategy } from './strategies/appointment-analytics.strategy';
 import { RestaurantAnalyticsStrategy } from './strategies/restaurant-analytics.strategy';
 import { analyticsRepository } from '../../repositories/analytics.repository';
+import { FormSchemasRepository } from '../../repositories/form-schemas.repository';
 import { CategoryMetrics, TemplateCategory } from '@nodeangularfullstack/shared';
 
 /**
@@ -63,10 +64,13 @@ export class AnalyticsService {
    * ```
    */
   constructor() {
+    // Initialize form schemas repository for quiz analytics
+    const schemasRepository = new FormSchemasRepository();
+
     // Initialize registry with all analytics strategies (Story 30.3 + 30.4 + 30.5)
     this.registry = new AnalyticsStrategyRegistry([
       new PollAnalyticsStrategy(analyticsRepository),
-      new QuizAnalyticsStrategy(analyticsRepository),
+      new QuizAnalyticsStrategy(analyticsRepository, schemasRepository),
       new ProductAnalyticsStrategy(analyticsRepository),
       new AppointmentAnalyticsStrategy(analyticsRepository),
       new RestaurantAnalyticsStrategy(analyticsRepository),

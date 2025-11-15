@@ -22,6 +22,7 @@ import { FieldPreviewRendererComponent } from './field-preview-renderer/field-pr
 import { GroupPreviewComponent } from './field-preview-renderer/group-preview.component';
 import { sanitizeCustomBackground } from '../../../shared/utils/sanitizer';
 import { validateCSS, stripDangerousCSS } from '../../../shared/utils/css-validator';
+import { FieldSettingsTooltipMenuComponent, SettingsModalType } from '../../../shared/components/field-settings-tooltip-menu/field-settings-tooltip-menu.component';
 
 interface FieldTypeDefinition {
   type: FormFieldType;
@@ -37,7 +38,7 @@ interface FieldTypeDefinition {
   selector: 'app-form-canvas',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, DragDropModule, FieldPreviewRendererComponent, GroupPreviewComponent],
+  imports: [CommonModule, DragDropModule, FieldPreviewRendererComponent, GroupPreviewComponent, FieldSettingsTooltipMenuComponent],
   styleUrls: ['./form-canvas.component.scss'],
   template: `
     <div class="form-canvas h-full theme-form-canvas-background p-6">
@@ -262,10 +263,21 @@ interface FieldTypeDefinition {
                                             1
                                         "
                                         (click)="onFieldClicked(field)"
+                                        (mouseenter)="onFieldMouseEnter(field)"
+                                        (mouseleave)="onFieldMouseLeave()"
                                         tabindex="0"
                                         role="listitem"
                                         [attr.aria-label]="field.label + ' field'"
                                       >
+                                        <!-- Settings Tooltip Menu (shown on hover) -->
+                                        @if (hoveredFieldId() === field.id) {
+                                          <app-field-settings-tooltip-menu
+                                            [field]="field"
+                                            [isQuizMode]="formBuilderService.isQuizForm()"
+                                            (openSettingsModal)="onOpenSettingsModal(field, $event)"
+                                          />
+                                        }
+
                                         <!-- Delete Button (Top Right) -->
                                         <button
                                           type="button"
@@ -286,7 +298,6 @@ interface FieldTypeDefinition {
                                           <app-field-preview-renderer
                                             [field]="field"
                                             (labelChanged)="onLabelChanged(field, $event)"
-                                            (settingsClick)="openSettingsModal(field)"
                                             (fieldUpdated)="onFieldUpdated(field.id, $event)"
                                           />
                                         </div>
@@ -327,10 +338,21 @@ interface FieldTypeDefinition {
                                           [class.shadow-md]="isFieldSelected(field)"
                                           [class.last:mb-0]="fieldIndex === columnFields.length - 1"
                                           (click)="onFieldClicked(field)"
+                                          (mouseenter)="onFieldMouseEnter(field)"
+                                          (mouseleave)="onFieldMouseLeave()"
                                           tabindex="0"
                                           role="listitem"
                                           [attr.aria-label]="field.label + ' field'"
                                         >
+                                          <!-- Settings Tooltip Menu (shown on hover) -->
+                                          @if (hoveredFieldId() === field.id) {
+                                            <app-field-settings-tooltip-menu
+                                              [field]="field"
+                                              [isQuizMode]="formBuilderService.isQuizForm()"
+                                              (openSettingsModal)="onOpenSettingsModal(field, $event)"
+                                            />
+                                          }
+
                                           <!-- Delete Button (Top Right) -->
                                           <button
                                             type="button"
@@ -351,7 +373,6 @@ interface FieldTypeDefinition {
                                             <app-field-preview-renderer
                                               [field]="field"
                                               (labelChanged)="onLabelChanged(field, $event)"
-                                              (settingsClick)="openSettingsModal(field)"
                                               (fieldUpdated)="onFieldUpdated(field.id, $event)"
                                             />
                                           </div>
@@ -399,11 +420,22 @@ interface FieldTypeDefinition {
                   [class.shadow-md]="isFieldSelected(field)"
                   [class.hover:border-blue-400]="!isFieldSelected(field)"
                   (click)="onFieldClicked(field)"
+                  (mouseenter)="onFieldMouseEnter(field)"
+                  (mouseleave)="onFieldMouseLeave()"
                   tabindex="0"
                   role="listitem"
                   [attr.aria-label]="field.label + ' field'"
                   (keydown)="handleKeyboard($event, field, i)"
                 >
+                  <!-- Settings Tooltip Menu (shown on hover) -->
+                  @if (hoveredFieldId() === field.id) {
+                    <app-field-settings-tooltip-menu
+                      [field]="field"
+                      [isQuizMode]="formBuilderService.isQuizForm()"
+                      (openSettingsModal)="onOpenSettingsModal(field, $event)"
+                    />
+                  }
+
                   <!-- Drag Handle (Top Left) -->
                   @if (field.type !== FormFieldType.GROUP) {
                     <div
@@ -447,11 +479,22 @@ interface FieldTypeDefinition {
                             [class.shadow-md]="isFieldSelected(child)"
                             [class.hover:border-blue-400]="!isFieldSelected(child)"
                             (click)="onFieldClicked(child)"
+                            (mouseenter)="onFieldMouseEnter(child)"
+                            (mouseleave)="onFieldMouseLeave()"
                             tabindex="0"
                             role="listitem"
                             [attr.aria-label]="child.label + ' field'"
                             (keydown)="handleGroupKeyboard($event, child, field.id, childIndex)"
                           >
+                            <!-- Settings Tooltip Menu (shown on hover) -->
+                            @if (hoveredFieldId() === child.id) {
+                              <app-field-settings-tooltip-menu
+                                [field]="child"
+                                [isQuizMode]="formBuilderService.isQuizForm()"
+                                (openSettingsModal)="onOpenSettingsModal(child, $event)"
+                              />
+                            }
+
                             <!-- Drag Handle (Top Left) -->
                             <div
                               class="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
@@ -480,7 +523,6 @@ interface FieldTypeDefinition {
                               <app-field-preview-renderer
                                 [field]="child"
                                 (labelChanged)="onLabelChanged(child, $event)"
-                                (settingsClick)="openSettingsModal(child)"
                                 (fieldUpdated)="onFieldUpdated(child.id, $event)"
                               />
                             </div>
@@ -498,7 +540,6 @@ interface FieldTypeDefinition {
                       <app-field-preview-renderer
                         [field]="field"
                         (labelChanged)="onLabelChanged(field, $event)"
-                        (settingsClick)="openSettingsModal(field)"
                         (fieldUpdated)="onFieldUpdated(field.id, $event)"
                       />
                     </div>
@@ -598,6 +639,11 @@ export class FormCanvasComponent {
   }
 
   @Output() fieldClicked = new EventEmitter<FormField>();
+  @Output() openSettingsModal = new EventEmitter<{ field: FormField; type: SettingsModalType }>();
+
+  // Hover state management
+  protected hoveredFieldId = signal<string | null>(null);
+  private hoverTimeout: any = null;
 
   constructor() {
     // Watch for theme changes and apply theme in real-time
@@ -990,6 +1036,48 @@ export class FormCanvasComponent {
   }
 
   /**
+   * Handle mouse enter on field card - show tooltip menu with delay
+   * @param field - The field being hovered
+   */
+  onFieldMouseEnter(field: FormField): void {
+    // Clear any existing timeout
+    if (this.hoverTimeout) {
+      clearTimeout(this.hoverTimeout);
+    }
+
+    // Set field as hovered with slight delay to prevent flickering
+    this.hoverTimeout = setTimeout(() => {
+      this.hoveredFieldId.set(field.id);
+    }, 100);
+  }
+
+  /**
+   * Handle mouse leave on field card - hide tooltip menu with delay
+   */
+  onFieldMouseLeave(): void {
+    // Clear any existing timeout
+    if (this.hoverTimeout) {
+      clearTimeout(this.hoverTimeout);
+    }
+
+    // Clear hovered field with delay to allow moving to menu
+    this.hoverTimeout = setTimeout(() => {
+      this.hoveredFieldId.set(null);
+    }, 300);
+  }
+
+  /**
+   * Handle opening a settings modal from the tooltip menu
+   * @param field - The field to edit
+   * @param type - The type of settings modal to open
+   */
+  onOpenSettingsModal(field: FormField, type: SettingsModalType): void {
+    this.openSettingsModal.emit({ field, type });
+    // Clear hovered state when opening modal
+    this.hoveredFieldId.set(null);
+  }
+
+  /**
    * Handles keyboard navigation and actions on fields.
    * Supports Enter/Space (select), ArrowUp/ArrowDown (reorder).
    * Note: Delete/Backspace functionality has been disabled to prevent accidental deletion.
@@ -1142,7 +1230,7 @@ export class FormCanvasComponent {
    * Parent FormBuilderComponent handles the unified modal.
    * @param field - The field to edit settings for
    */
-  openSettingsModal(field: FormField): void {
+  onFieldSettingsClick(field: FormField): void {
     this.formBuilderService.selectField(field);
     this.fieldClicked.emit(field);
   }
@@ -1193,7 +1281,7 @@ export class FormCanvasComponent {
     // Only open modal if not clicking on interactive elements
     if (!isInteractive) {
       event.stopPropagation();
-      this.openSettingsModal(field);
+      this.onFieldSettingsClick(field);
     } else {
       // For interactive elements, just stop propagation to prevent field selection
       event.stopPropagation();

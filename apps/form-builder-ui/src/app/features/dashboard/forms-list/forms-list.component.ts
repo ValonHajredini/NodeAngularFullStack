@@ -501,6 +501,11 @@ export class FormsListComponent implements OnInit {
     // First, apply the template to get the full schema
     this.templatesApiService.applyTemplate(template.id).subscribe({
       next: (templateSchema) => {
+        // Debug: Log template schema received from backend
+        console.log('[DEBUG] Template schema received from backend:', templateSchema);
+        console.log('[DEBUG] Template schema settings:', templateSchema.settings);
+        console.log('[DEBUG] businessLogicConfig:', templateSchema.settings?.businessLogicConfig);
+
         // Validate template schema
         if (!templateSchema) {
           this.messageService.add({
@@ -541,8 +546,16 @@ export class FormsListComponent implements OnInit {
             },
             // Preserve template category in settings for analytics detection
             templateCategory: template.category,
+            // Preserve businessLogicConfig from template (e.g., quiz configuration)
+            // Story 29.13: Quiz Field Configuration
+            businessLogicConfig: templateSchema.settings?.businessLogicConfig,
           },
         };
+
+        // Debug: Log merged schema being sent to backend
+        console.log('[DEBUG] Merged schema to be sent to backend:', mergedSchema);
+        console.log('[DEBUG] Merged schema settings:', mergedSchema.settings);
+        console.log('[DEBUG] Merged schema businessLogicConfig:', mergedSchema.settings?.businessLogicConfig);
 
         // Create form with template schema
         this.formsApiService

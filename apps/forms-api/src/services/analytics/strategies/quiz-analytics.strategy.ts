@@ -11,8 +11,9 @@
  */
 
 import { IAnalyticsStrategy } from './analytics-strategy.interface';
-import { QuizMetrics, TemplateCategory } from '@nodeangularfullstack/shared';
+import { QuizMetrics, TemplateCategory, calculateQuizScore } from '@nodeangularfullstack/shared';
 import { AnalyticsRepository } from '../../../repositories/analytics.repository';
+import { FormSchemasRepository } from '../../../repositories/form-schemas.repository';
 
 /**
  * Quiz-specific analytics strategy.
@@ -72,25 +73,34 @@ export class QuizAnalyticsStrategy implements IAnalyticsStrategy {
   private repository: AnalyticsRepository;
 
   /**
+   * Form schemas repository for fetching form field metadata.
+   * Injected via constructor for testability.
+   */
+  private schemasRepository: FormSchemasRepository;
+
+  /**
    * Creates a new quiz analytics strategy.
    *
    * @param repository - Analytics repository instance
+   * @param schemasRepository - Form schemas repository instance
    * @param scoreFieldKey - JSONB field key for quiz score (default: 'score')
    * @param passingThreshold - Minimum score to pass (default: 60)
    *
    * @example
    * ```typescript
-   * const strategy = new QuizAnalyticsStrategy(analyticsRepository);
+   * const strategy = new QuizAnalyticsStrategy(analyticsRepository, schemasRepository);
    * // or with custom field key and threshold
-   * const customStrategy = new QuizAnalyticsStrategy(analyticsRepository, 'quiz_score', 70);
+   * const customStrategy = new QuizAnalyticsStrategy(analyticsRepository, schemasRepository, 'quiz_score', 70);
    * ```
    */
   constructor(
     repository: AnalyticsRepository,
+    schemasRepository: FormSchemasRepository,
     scoreFieldKey: string = 'score',
     passingThreshold: number = 60
   ) {
     this.repository = repository;
+    this.schemasRepository = schemasRepository;
     this.scoreFieldKey = scoreFieldKey;
     this.passingThreshold = passingThreshold;
   }
@@ -173,37 +183,28 @@ export class QuizAnalyticsStrategy implements IAnalyticsStrategy {
         };
       }
 
-      // Fetch score distribution buckets
-      const scoreBuckets = await this.repository.getQuizScoreBuckets(
-        formId,
-        this.scoreFieldKey,
-        tenantId
-      );
+      // Fetch form schema to get field metadata (correctAnswer, points)
+      const formSchema = await this.schemasRepository.findById(formId);
+      if (!formSchema || !formSchema.fields) {
+        throw new Error('Form schema not found or has no fields');
+      }
 
-      // Build scoreDistribution record
-      const scoreDistribution: Record<string, number> = {};
-      scoreBuckets.forEach((bucket) => {
-        scoreDistribution[bucket.bucket] = bucket.count;
-      });
+      const fields = formSchema.fields;
 
-      // Fetch all submission values for statistical calculations
+      // Fetch all submission values
       const submissions = await this.repository.getAllSubmissionValues(formId, tenantId);
 
-      // Extract scores and filter valid numeric values
+      // Calculate scores for each submission using field metadata
       const scores: number[] = [];
+      const scorePercentages: number[] = [];
+
       submissions.forEach((submission) => {
-        const scoreValue = submission[this.scoreFieldKey];
-        if (typeof scoreValue === 'number' && !isNaN(scoreValue)) {
-          scores.push(scoreValue);
-        } else if (typeof scoreValue === 'string') {
-          const parsed = parseFloat(scoreValue);
-          if (!isNaN(parsed)) {
-            scores.push(parsed);
-          }
-        }
+        const result = calculateQuizScore(fields, submission);
+        scores.push(result.score);
+        scorePercentages.push(result.percentage);
       });
 
-      // Handle case where no valid scores exist
+      // Handle case where no submissions exist (shouldn't happen due to check above, but for safety)
       if (scores.length === 0) {
         return {
           category: 'quiz',
@@ -211,7 +212,7 @@ export class QuizAnalyticsStrategy implements IAnalyticsStrategy {
           averageScore: 0,
           medianScore: 0,
           passRate: 0,
-          scoreDistribution,
+          scoreDistribution: {},
           questionAccuracy: {},
           highestScore: 0,
           lowestScore: 0,
@@ -220,25 +221,51 @@ export class QuizAnalyticsStrategy implements IAnalyticsStrategy {
         };
       }
 
-      // Calculate average score
-      const averageScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+      // Calculate average score (percentage)
+      const averageScore =
+        scorePercentages.reduce((sum, score) => sum + score, 0) / scorePercentages.length;
 
-      // Calculate median score
-      const sortedScores = [...scores].sort((a, b) => a - b);
+      // Calculate median score (percentage)
+      const sortedPercentages = [...scorePercentages].sort((a, b) => a - b);
       const medianScore =
-        sortedScores.length % 2 === 0
-          ? (sortedScores[sortedScores.length / 2 - 1] + sortedScores[sortedScores.length / 2]) / 2
-          : sortedScores[Math.floor(sortedScores.length / 2)];
+        sortedPercentages.length % 2 === 0
+          ? (sortedPercentages[sortedPercentages.length / 2 - 1] +
+              sortedPercentages[sortedPercentages.length / 2]) /
+            2
+          : sortedPercentages[Math.floor(sortedPercentages.length / 2)];
 
       // Calculate pass rate (percentage of scores >= passing threshold)
-      const passingCount = scores.filter((score) => score >= this.passingThreshold).length;
-      const passRate = (passingCount / scores.length) * 100;
+      const passingCount = scorePercentages.filter((score) => score >= this.passingThreshold).length;
+      const passRate = (passingCount / scorePercentages.length) * 100;
 
-      // Identify highest and lowest scores
-      const highestScore = Math.max(...scores);
-      const lowestScore = Math.min(...scores);
+      // Identify highest and lowest scores (percentages)
+      const highestScore = Math.max(...scorePercentages);
+      const lowestScore = Math.min(...scorePercentages);
 
-      // Calculate question accuracy
+      // Build score distribution (0-20, 21-40, 41-60, 61-80, 81-100)
+      const scoreDistribution: Record<string, number> = {
+        '0-20': 0,
+        '21-40': 0,
+        '41-60': 0,
+        '61-80': 0,
+        '81-100': 0,
+      };
+
+      scorePercentages.forEach((percentage) => {
+        if (percentage <= 20) {
+          scoreDistribution['0-20']++;
+        } else if (percentage <= 40) {
+          scoreDistribution['21-40']++;
+        } else if (percentage <= 60) {
+          scoreDistribution['41-60']++;
+        } else if (percentage <= 80) {
+          scoreDistribution['61-80']++;
+        } else {
+          scoreDistribution['81-100']++;
+        }
+      });
+
+      // Calculate question accuracy (percentage of correct answers per question)
       const questionAccuracy = this.calculateQuestionAccuracy(submissions);
 
       // Return strongly-typed QuizMetrics
@@ -250,8 +277,8 @@ export class QuizAnalyticsStrategy implements IAnalyticsStrategy {
         passRate: Math.round(passRate * 100) / 100,
         scoreDistribution,
         questionAccuracy,
-        highestScore,
-        lowestScore,
+        highestScore: Math.round(highestScore * 100) / 100,
+        lowestScore: Math.round(lowestScore * 100) / 100,
         firstSubmissionAt: counts.firstSubmissionAt || undefined,
         lastSubmissionAt: counts.lastSubmissionAt || undefined,
       };

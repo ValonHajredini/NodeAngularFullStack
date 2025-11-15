@@ -25,6 +25,7 @@ import {
   ChartTypeOption,
   CategoryMetrics,
   TemplateCategory,
+  calculateQuizScore,
 } from '@nodeangularfullstack/shared';
 import { FormsApiService } from '../forms-api.service';
 import { ToolConfigService } from '@core/services/tool-config.service';
@@ -323,6 +324,9 @@ const ALL_CHART_TYPE_OPTIONS: ChartTypeOption[] = [
                   <p-sortIcon field="submittedAt"></p-sortIcon>
                 </th>
                 <th style="min-width: 150px">IP Address</th>
+                @if (isQuizForm()) {
+                  <th style="min-width: 120px">Score</th>
+                }
                 @for (field of inputFieldsOnly(); track field.id) {
                   @if (field.type === FormFieldType.IMAGE_GALLERY) {
                     <!-- IMAGE_GALLERY: Two separate columns -->
@@ -347,6 +351,9 @@ const ALL_CHART_TYPE_OPTIONS: ChartTypeOption[] = [
               <tr>
                 <td>{{ submission.submittedAt | date: 'MMM dd, yyyy HH:mm' }}</td>
                 <td>{{ maskIpAddress(submission.submitterIp) }}</td>
+                @if (isQuizForm()) {
+                  <td class="font-semibold">{{ calculateSubmissionScore(submission) }}</td>
+                }
                 @for (field of inputFieldsOnly(); track field.id) {
                   @if (field.type === FormFieldType.IMAGE_GALLERY) {
                     <!-- IMAGE_GALLERY: Value column -->
@@ -624,6 +631,11 @@ export class FormAnalyticsComponent implements OnInit {
   // Computed: Check if form has category detected
   readonly hasCategory = computed<boolean>(() => {
     return this.category() !== null;
+  });
+
+  // Computed: Check if form is a quiz
+  readonly isQuizForm = computed<boolean>(() => {
+    return this.category() === TemplateCategory.QUIZ || this.category() === 'quiz';
   });
 
   // Tool configuration
@@ -977,6 +989,32 @@ export class FormAnalyticsComponent implements OnInit {
       return JSON.stringify(value);
     }
     return String(value);
+  }
+
+  /**
+   * Calculates quiz score for a submission.
+   * Uses field metadata (correctAnswer, points) to calculate the score.
+   *
+   * @param submission - Form submission with values
+   * @returns Formatted score percentage string (e.g., "75.00%") or "-" if not applicable
+   */
+  calculateSubmissionScore(submission: FormSubmission): string {
+    if (!this.isQuizForm()) {
+      return '-';
+    }
+
+    const fields = this.formFields();
+    if (!fields || fields.length === 0) {
+      return '-';
+    }
+
+    try {
+      const result = calculateQuizScore(fields, submission.values);
+      return `${result.percentage.toFixed(2)}%`;
+    } catch (error) {
+      console.error('[FormAnalyticsComponent] Error calculating quiz score:', error);
+      return '-';
+    }
   }
 
   /**
