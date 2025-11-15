@@ -518,6 +518,8 @@ export class FormsListComponent implements OnInit {
         }
 
         // Merge user settings with template schema
+        // Note: Backend already migrates quiz scoring rules to field metadata
+        // in templatesService.applyTemplateToForm()
         const mergedSchema: any = {
           ...templateSchema,
           // Preserve template category at schema root level for analytics detection

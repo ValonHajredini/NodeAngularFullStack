@@ -433,6 +433,34 @@ export class TemplatesService {
           businessLogicConfig: template.businessLogicConfig,
         };
         console.log('[DEBUG] formSchema.settings AFTER merge:', formSchema.settings);
+
+        // Migrate quiz scoring rules to field metadata (if quiz template)
+        // Quiz templates store correctAnswer in businessLogicConfig.scoringRules,
+        // but field quiz settings modal expects field.metadata.correctAnswer
+        if (template.businessLogicConfig.type === 'quiz') {
+          const scoringRules = (template.businessLogicConfig as QuizConfig).scoringRules || [];
+          console.log('[DEBUG] Migrating quiz scoring rules to field metadata:', scoringRules);
+
+          // For each scoring rule, find the field and add quiz metadata
+          formSchema.fields = formSchema.fields.map((field: any) => {
+            const scoringRule = scoringRules.find((rule: any) => rule.fieldId === field.id);
+
+            if (scoringRule) {
+              console.log(`[DEBUG] Adding quiz metadata to field ${field.id}:`, scoringRule);
+              return {
+                ...field,
+                metadata: {
+                  ...(field.metadata || {}),
+                  correctAnswer: scoringRule.correctAnswer,
+                  points: scoringRule.points || 1,
+                  excludeFromQuiz: false,
+                },
+              };
+            }
+
+            return field;
+          });
+        }
       } else {
         console.log('[DEBUG] No businessLogicConfig found in template');
       }
