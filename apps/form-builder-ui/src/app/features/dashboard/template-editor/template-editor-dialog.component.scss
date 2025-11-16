@@ -5,6 +5,11 @@
 :host {
   ::ng-deep {
     .template-editor-dialog {
+      .p-dialog-header {
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+      }
+
       .p-dialog-content {
         padding: 1.5rem;
       }
@@ -22,6 +27,67 @@
       // Checkbox label spacing
       .p-checkbox-label {
         margin-left: 0.5rem;
+      }
+
+      // Checkbox styling - ensure proper display when unchecked
+      .p-checkbox {
+        display: inline-flex !important;
+        align-items: center;
+        vertical-align: middle;
+
+        .p-checkbox-box {
+          width: 1.25rem !important;
+          height: 1.25rem !important;
+          min-width: 1.25rem !important;
+          min-height: 1.25rem !important;
+          border: 2px solid #d1d5db !important;
+          border-radius: 0.25rem !important;
+          background-color: #ffffff !important;
+          transition: all 0.2s;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+
+          &:hover {
+            border-color: #3b82f6 !important;
+          }
+
+          &.p-focus {
+            outline: 0 none;
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+          }
+
+          .p-checkbox-icon {
+            width: 0.875rem !important;
+            height: 0.875rem !important;
+            transition: all 0.2s;
+
+            &.pi-check {
+              font-size: 0.75rem !important;
+            }
+          }
+        }
+
+        // Checked state - when parent has p-highlight class
+        &.p-highlight .p-checkbox-box {
+          background-color: #3b82f6 !important;
+          border-color: #3b82f6 !important;
+
+          .p-checkbox-icon {
+            color: #ffffff !important;
+            font-size: 0.875rem !important;
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+          }
+        }
+
+        // Ensure unchecked state shows empty box
+        &:not(.p-checkbox-checked) .p-checkbox-box {
+          background-color: #ffffff !important;
+          border: 2px solid #d1d5db !important;
+        }
       }
 
       // Select dropdown full width
@@ -51,6 +117,29 @@
         .p-step-title {
           font-weight: 600;
           color: var(--text-color);
+        }
+      }
+
+      // Compact stepper header (40% less vertical space)
+      .p-stepper {
+        .p-step-list {
+          padding: 0.5rem 0 !important;
+          margin-bottom: 0.5rem !important;
+        }
+
+        .p-step {
+          padding: 0.3rem 0.5rem !important;
+          min-height: auto !important;
+        }
+
+        .p-step-title {
+          font-size: 0.875rem !important;
+          padding: 0.2rem 0 !important;
+          line-height: 1.2 !important;
+        }
+
+        .p-step-separator {
+          margin: 0 0.5rem !important;
         }
       }
     }
