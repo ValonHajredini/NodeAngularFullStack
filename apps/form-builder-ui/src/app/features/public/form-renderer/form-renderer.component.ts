@@ -882,14 +882,21 @@ export class FormRendererComponent implements OnInit, OnDestroy {
 
   /**
    * Generate time slot options based on field metadata configuration
+   * Uses sensible defaults if metadata is not configured
    */
   getTimeSlotOptions(field: FormField): { label: string; value: string }[] {
-    if (field.type !== FormFieldType.TIME_SLOT || !field.metadata) {
+    if (field.type !== FormFieldType.TIME_SLOT) {
       return [];
     }
 
-    const metadata = field.metadata as TimeSlotMetadata;
+    const metadata = (field.metadata || {}) as TimeSlotMetadata;
     const interval = metadata.interval || '30min';
+
+    // Handle "all-day" special case
+    if (interval === 'all-day') {
+      return [{ label: 'All Day (24 hours)', value: 'all-day' }];
+    }
+
     const startTime = metadata.startTime || '09:00';
     const endTime = metadata.endTime || '17:00';
     const timeFormat = metadata.timeFormat || '12h';
@@ -902,7 +909,7 @@ export class FormRendererComponent implements OnInit, OnDestroy {
     // Calculate interval in minutes
     const intervalMinutes = this.getIntervalMinutes(interval);
 
-    // Generate time slots
+    // Generate time slots with time ranges
     const slots: { label: string; value: string }[] = [];
     let currentHour = startHour;
     let currentMinute = startMinute;
@@ -913,11 +920,27 @@ export class FormRendererComponent implements OnInit, OnDestroy {
         break;
       }
 
-      // Format time slot
-      const timeValue = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
-      const timeLabel = timeFormat === '12h' ? this.formatTime12Hour(currentHour, currentMinute) : timeValue;
+      // Calculate end time for this slot
+      let slotEndMinute = currentMinute + intervalMinutes;
+      let slotEndHour = currentHour;
+      if (slotEndMinute >= 60) {
+        slotEndHour += Math.floor(slotEndMinute / 60);
+        slotEndMinute = slotEndMinute % 60;
+      }
 
-      slots.push({ label: timeLabel, value: timeValue });
+      // Format start and end times
+      const startTimeValue = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
+      const endTimeValue = `${String(slotEndHour).padStart(2, '0')}:${String(slotEndMinute).padStart(2, '0')}`;
+
+      // Format labels based on timeFormat preference
+      const startLabel = timeFormat === '12h' ? this.formatTime12Hour(currentHour, currentMinute) : startTimeValue;
+      const endLabel = timeFormat === '12h' ? this.formatTime12Hour(slotEndHour, slotEndMinute) : endTimeValue;
+
+      // Create time range label (e.g., "09:00 - 09:30" or "9:00 AM - 9:30 AM")
+      const timeRangeLabel = `${startLabel} - ${endLabel}`;
+      const timeRangeValue = `${startTimeValue}-${endTimeValue}`;
+
+      slots.push({ label: timeRangeLabel, value: timeRangeValue });
 
       // Add interval to current time
       currentMinute += intervalMinutes;
@@ -935,16 +958,24 @@ export class FormRendererComponent implements OnInit, OnDestroy {
    */
   private getIntervalMinutes(interval: string): number {
     switch (interval) {
+      case '5min':
+        return 5;
       case '10min':
         return 10;
       case '15min':
         return 15;
       case '30min':
         return 30;
-      case '1hour':
+      case '1h':
+      case '1hour': // Backward compatibility
         return 60;
-      case '1day':
-        return 1440;
+      case '3h':
+        return 180;
+      case '6h':
+        return 360;
+      case 'all-day':
+      case '1day': // Backward compatibility
+        return 1440; // 24 hours
       default:
         return 30;
     }

@@ -267,10 +267,10 @@ export interface ImageGalleryMetadata extends BaseFieldMetadata {
  */
 export interface TimeSlotMetadata extends BaseFieldMetadata {
   /** Time interval for slot generation */
-  interval: '10min' | '15min' | '30min' | '1hour' | '1day';
-  /** Start time (HH:MM format, 24-hour) - Default: '09:00' */
+  interval: '5min' | '10min' | '15min' | '30min' | '1h' | '3h' | '6h' | 'all-day';
+  /** Start time (HH:MM format, 24-hour) - Default: '09:00'. Ignored when interval is 'all-day' */
   startTime?: string;
-  /** End time (HH:MM format, 24-hour) - Default: '17:00' */
+  /** End time (HH:MM format, 24-hour) - Default: '17:00'. Ignored when interval is 'all-day' */
   endTime?: string;
   /** Display format for time slots - Default: '12h' */
   timeFormat?: '12h' | '24h';
@@ -280,6 +280,8 @@ export interface TimeSlotMetadata extends BaseFieldMetadata {
   allowMultiple?: boolean;
   /** Timezone for time slot display (e.g., 'America/New_York') */
   timezone?: string;
+  /** Whether to use global defaults from Business Logic configuration. If true, field-specific startTime/endTime/interval are ignored */
+  useGlobalDefaults?: boolean;
 }
 
 /**

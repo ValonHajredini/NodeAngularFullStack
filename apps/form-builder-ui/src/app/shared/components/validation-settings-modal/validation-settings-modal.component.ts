@@ -30,6 +30,7 @@ import { ToggleSwitch } from 'primeng/toggleswitch';
 import {
   FormField,
   FormFieldType,
+  TimeSlotMetadata,
 } from '@nodeangularfullstack/shared';
 import { Subject, takeUntil } from 'rxjs';
 
@@ -287,6 +288,115 @@ import { ValidationPresetsService, ValidationPreset } from '../../../features/da
               </label>
             </div>
           }
+
+          <!-- Time Slot Field Configuration -->
+          @if (isTimeSlotField()) {
+            <div class="space-y-4">
+              <!-- Use Global Defaults Toggle -->
+              <div class="field flex items-center">
+                <p-toggleswitch
+                  formControlName="useGlobalDefaults"
+                  inputId="useGlobalDefaults"
+                ></p-toggleswitch>
+                <label for="useGlobalDefaults" class="ml-2 text-sm font-medium text-gray-700">
+                  Use global default settings
+                </label>
+              </div>
+
+              @if (!validationForm.get('useGlobalDefaults')?.value) {
+                <!-- Interval Selection -->
+                <div class="field space-y-2">
+                  <label for="interval" class="block text-sm font-medium text-gray-700 mb-1">
+                    Time Interval
+                  </label>
+                  <p-select
+                    formControlName="interval"
+                    inputId="interval"
+                    [options]="intervalOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select interval"
+                    class="w-full"
+                  />
+                  <small class="text-xs text-gray-500">
+                    Duration of each time slot
+                  </small>
+                </div>
+
+                <!-- Start Time -->
+                <div class="field space-y-2">
+                  <label for="startTime" class="block text-sm font-medium text-gray-700 mb-1">
+                    Start Time
+                  </label>
+                  <input
+                    pInputText
+                    type="time"
+                    formControlName="startTime"
+                    id="startTime"
+                    class="w-full"
+                  />
+                  <small class="text-xs text-gray-500">
+                    First available time slot
+                  </small>
+                </div>
+
+                <!-- End Time -->
+                <div class="field space-y-2">
+                  <label for="endTime" class="block text-sm font-medium text-gray-700 mb-1">
+                    End Time
+                  </label>
+                  <input
+                    pInputText
+                    type="time"
+                    formControlName="endTime"
+                    id="endTime"
+                    class="w-full"
+                  />
+                  <small class="text-xs text-gray-500">
+                    Last available time slot
+                  </small>
+                </div>
+
+                <!-- Time Format Dropdown -->
+                <div class="field space-y-2">
+                  <label for="timeFormat" class="block text-sm font-medium text-gray-700 mb-1">
+                    Time Format
+                  </label>
+                  <p-select
+                    formControlName="timeFormat"
+                    inputId="timeFormat"
+                    [options]="timeFormatOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select time format"
+                    class="w-full"
+                  />
+                  <small class="text-xs text-gray-500">
+                    Display format for time slots
+                  </small>
+                </div>
+
+                <!-- Max Slots Slider -->
+                <div class="field">
+                  <label for="maxSlots" class="flex justify-between text-sm font-medium text-gray-700 mb-2">
+                    <span>Maximum Slots</span>
+                    <span class="text-blue-600 font-semibold">{{ validationForm.get('maxSlots')?.value ?? 20 }}</span>
+                  </label>
+                  <p-slider
+                    formControlName="maxSlots"
+                    inputId="maxSlots"
+                    [min]="5"
+                    [max]="100"
+                    [step]="5"
+                    class="w-full"
+                  />
+                  <small class="text-xs text-gray-500 mt-1 block">
+                    Maximum number of time slots to generate
+                  </small>
+                </div>
+              }
+            </div>
+          }
         </form>
       }
 
@@ -332,6 +442,24 @@ export class ValidationSettingsModalComponent implements OnInit, OnDestroy {
   readonly validationPresets: ValidationPreset[] = this.validationPresetsService.getPresets();
   selectedPreset: ValidationPreset | null = null;
 
+  // Time Slot interval options
+  readonly intervalOptions = [
+    { label: '5 minutes', value: '5min' },
+    { label: '10 minutes', value: '10min' },
+    { label: '15 minutes', value: '15min' },
+    { label: '30 minutes', value: '30min' },
+    { label: '1 hour', value: '1h' },
+    { label: '3 hours', value: '3h' },
+    { label: '6 hours', value: '6h' },
+    { label: 'All day', value: 'all-day' },
+  ];
+
+  // Time format options
+  readonly timeFormatOptions = [
+    { label: '12-hour (9:00 AM)', value: '12h' },
+    { label: '24-hour (09:00)', value: '24h' },
+  ];
+
   // Computed signals for field type detection
   readonly isNumberField = computed(() => {
     const fieldType = this.field()?.type;
@@ -348,6 +476,11 @@ export class ValidationSettingsModalComponent implements OnInit, OnDestroy {
     return fieldType === FormFieldType.EMAIL;
   });
 
+  readonly isTimeSlotField = computed(() => {
+    const fieldType = this.field()?.type;
+    return fieldType === FormFieldType.TIME_SLOT;
+  });
+
   constructor() {
     this.validationForm = this.fb.group(
       {
@@ -361,6 +494,13 @@ export class ValidationSettingsModalComponent implements OnInit, OnDestroy {
         errorMessage: ['', Validators.maxLength(200)],
         // Email validation
         emailFormat: [false],
+        // Time Slot configuration
+        useGlobalDefaults: [true],
+        interval: ['30min'],
+        startTime: ['09:00'],
+        endTime: ['17:00'],
+        timeFormat: ['12h'],
+        maxSlots: [20],
       },
       {
         validators: [
@@ -392,6 +532,9 @@ export class ValidationSettingsModalComponent implements OnInit, OnDestroy {
    * Load field properties into form
    */
   private loadFieldProperties(field: FormField): void {
+    // Get TIME_SLOT metadata if available
+    const metadata = (field.metadata || {}) as TimeSlotMetadata;
+
     // Patch form values
     this.validationForm.patchValue(
       {
@@ -402,6 +545,13 @@ export class ValidationSettingsModalComponent implements OnInit, OnDestroy {
         pattern: field.validation?.pattern || '',
         errorMessage: field.validation?.errorMessage || '',
         emailFormat: false,
+        // Time Slot configuration
+        useGlobalDefaults: metadata.useGlobalDefaults ?? true,
+        interval: metadata.interval || '30min',
+        startTime: metadata.startTime || '09:00',
+        endTime: metadata.endTime || '17:00',
+        timeFormat: metadata.timeFormat || '12h',
+        maxSlots: metadata.maxSlots ?? 20,
       },
       { emitEvent: false },
     );
@@ -535,9 +685,23 @@ export class ValidationSettingsModalComponent implements OnInit, OnDestroy {
     if (formValues.pattern) validation.pattern = formValues.pattern;
     if (formValues.errorMessage) validation.errorMessage = formValues.errorMessage;
 
+    // Build TIME_SLOT metadata object
+    let metadata: TimeSlotMetadata | undefined = undefined;
+    if (this.isTimeSlotField()) {
+      metadata = {
+        useGlobalDefaults: formValues.useGlobalDefaults ?? true,
+        interval: formValues.interval || '30min',
+        startTime: formValues.startTime || '09:00',
+        endTime: formValues.endTime || '17:00',
+        timeFormat: formValues.timeFormat || '12h',
+        maxSlots: formValues.maxSlots ?? 20,
+      };
+    }
+
     // Emit partial field update
     const updates: Partial<FormField> = {
       validation: Object.keys(validation).length > 0 ? validation : undefined,
+      metadata: metadata,
     };
 
     this.saveChanges.emit(updates);

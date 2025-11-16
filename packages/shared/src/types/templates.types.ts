@@ -87,6 +87,17 @@ export interface AppointmentConfig {
   bookingsTable: string;
   /** Whether to allow overbooking beyond maxBookingsPerSlot */
   allowOverbook?: boolean;
+  /** Global default time slot settings for all TIME_SLOT fields in this template. Individual fields can override these via useGlobalDefaults=false */
+  globalTimeSlotDefaults?: {
+    /** Time interval for slot generation */
+    interval: '5min' | '10min' | '15min' | '30min' | '1h' | '3h' | '6h' | 'all-day';
+    /** Start time (HH:MM format, 24-hour) - e.g., '08:00' */
+    startTime: string;
+    /** End time (HH:MM format, 24-hour) - e.g., '18:00' */
+    endTime: string;
+    /** Display format for time slots */
+    timeFormat: '12h' | '24h';
+  };
 }
 
 /**

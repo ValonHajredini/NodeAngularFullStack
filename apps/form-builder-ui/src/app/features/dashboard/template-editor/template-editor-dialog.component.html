@@ -347,7 +347,7 @@
                               Editing Field {{ currentFieldIndex() + 1 }} of {{ totalFields() }}
                             </span>
                             <span class="text-xs text-gray-500">
-                              {{ currentField()?.label || 'Unnamed Field' }}
+                              {{ currentField().label || 'Unnamed Field' }}
                             </span>
                           </div>
                           <!-- Progress Bar -->
@@ -376,7 +376,7 @@
                                   </label>
                                   <input
                                     pInputText
-                                    [value]="currentField()?.fieldName"
+                                    [value]="currentField().fieldName"
                                     (input)="
                                       updateFieldProperty(
                                         currentFieldIndex(),
@@ -396,7 +396,7 @@
                                   </label>
                                   <input
                                     pInputText
-                                    [value]="currentField()?.label"
+                                    [value]="currentField().label"
                                     (input)="
                                       updateFieldProperty(
                                         currentFieldIndex(),
@@ -419,7 +419,7 @@
                                   </label>
                                   <input
                                     pInputText
-                                    [value]="currentField()?.type"
+                                    [value]="currentField().type"
                                     class="w-full bg-gray-100"
                                     readonly
                                   />
@@ -461,7 +461,7 @@
                                   <label class="block text-base font-semibold text-gray-800">
                                     Field Options
                                     <span class="text-sm text-gray-500 ml-2 font-normal">
-                                      ({{ currentField()?.options?.length || 0 }} options)
+                                      ({{ currentField().options?.length || 0 }} options)
                                     </span>
                                   </label>
                                   <button
@@ -475,11 +475,11 @@
                                 </div>
 
                                 @if (
-                                  currentField()?.options && currentField()!.options!.length > 0
+                                  currentField().options && currentField()!.options!.length > 0
                                 ) {
                                   <div class="space-y-3 max-h-[300px] overflow-y-auto pr-2">
                                     @for (
-                                      option of currentField()?.options;
+                                      option of currentField().options;
                                       track option.value;
                                       let optIdx = $index
                                     ) {
@@ -553,6 +553,171 @@
                                     <p class="text-sm text-gray-500">
                                       No options defined. Click "Add Option" to create choices.
                                     </p>
+                                  </div>
+                                }
+                              </div>
+                            }
+
+                            <!-- Time Slot Metadata Section (for TIME_SLOT fields) -->
+                            @if (currentField() && currentField().type === 'time_slot') {
+                              <div class="mt-6 pt-4 border-t border-gray-300">
+                                <div class="flex items-center justify-between mb-4">
+                                  <label class="block text-base font-semibold text-gray-800">
+                                    Time Slot Configuration
+                                  </label>
+                                </div>
+
+                                <!-- Use Global Defaults Toggle -->
+                                <div class="field mb-4">
+                                  <div class="flex items-center">
+                                    <p-checkbox
+                                      [binary]="true"
+                                      [ngModel]="usesGlobalDefaults()"
+                                      [ngModelOptions]="{ standalone: true }"
+                                      (ngModelChange)="
+                                        updateTimeSlotMetadata('useGlobalDefaults', $event)
+                                      "
+                                      [inputId]="'use-global-defaults'"
+                                    />
+                                    <label
+                                      for="use-global-defaults"
+                                      class="ml-2 text-sm font-medium text-gray-700 cursor-pointer"
+                                    >
+                                      Use global time slot defaults from Business Logic (Step 3)
+                                    </label>
+                                  </div>
+                                  <small class="text-gray-500 block mt-1 ml-6">
+                                    When enabled, this field will use the global defaults configured
+                                    in Step 3
+                                  </small>
+                                </div>
+
+                                <!-- Override Settings (shown when NOT using global defaults) -->
+                                @if (!usesGlobalDefaults()) {
+                                  <div class="bg-purple-50 border border-purple-200 rounded p-4">
+                                    <h5 class="text-sm font-semibold text-purple-900 mb-3">
+                                      <i class="pi pi-clock mr-2"></i>Field-Specific Time Slot
+                                      Settings
+                                    </h5>
+
+                                    <div class="grid grid-cols-2 gap-4">
+                                      <!-- Interval Dropdown -->
+                                      <div class="field">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                                          Slot Duration
+                                        </label>
+                                        <select
+                                          [ngModel]="
+                                            getTimeSlotMetadataProperty('interval', '30min')
+                                          "
+                                          [ngModelOptions]="{ standalone: true }"
+                                          (ngModelChange)="
+                                            updateTimeSlotMetadata('interval', $event)
+                                          "
+                                          class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                                        >
+                                          <option value="5min">5 minutes</option>
+                                          <option value="10min">10 minutes</option>
+                                          <option value="15min">15 minutes</option>
+                                          <option value="30min">30 minutes</option>
+                                          <option value="1h">1 hour</option>
+                                          <option value="3h">3 hours</option>
+                                          <option value="6h">6 hours</option>
+                                          <option value="all-day">All day</option>
+                                        </select>
+                                      </div>
+
+                                      <!-- Time Format Radio Buttons -->
+                                      <div class="field">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                                          Time Format
+                                        </label>
+                                        <div class="flex gap-4 mt-2">
+                                          <div class="flex items-center">
+                                            <input
+                                              type="radio"
+                                              [id]="'field-format12h-' + currentFieldIndex()"
+                                              name="fieldTimeFormat"
+                                              value="12h"
+                                              [ngModel]="
+                                                getTimeSlotMetadataProperty('timeFormat', '12h')
+                                              "
+                                              [ngModelOptions]="{ standalone: true }"
+                                              (ngModelChange)="
+                                                updateTimeSlotMetadata('timeFormat', $event)
+                                              "
+                                              class="mr-2"
+                                            />
+                                            <label
+                                              [for]="'field-format12h-' + currentFieldIndex()"
+                                              class="text-sm"
+                                            >
+                                              12-hour (AM/PM)
+                                            </label>
+                                          </div>
+                                          <div class="flex items-center">
+                                            <input
+                                              type="radio"
+                                              [id]="'field-format24h-' + currentFieldIndex()"
+                                              name="fieldTimeFormat"
+                                              value="24h"
+                                              [ngModel]="
+                                                getTimeSlotMetadataProperty('timeFormat', '12h')
+                                              "
+                                              [ngModelOptions]="{ standalone: true }"
+                                              (ngModelChange)="
+                                                updateTimeSlotMetadata('timeFormat', $event)
+                                              "
+                                              class="mr-2"
+                                            />
+                                            <label
+                                              [for]="'field-format24h-' + currentFieldIndex()"
+                                              class="text-sm"
+                                            >
+                                              24-hour
+                                            </label>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      <!-- Start Time Input -->
+                                      <div class="field">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                                          Start Time
+                                        </label>
+                                        <input
+                                          pInputText
+                                          type="time"
+                                          [ngModel]="
+                                            getTimeSlotMetadataProperty('startTime', '09:00')
+                                          "
+                                          [ngModelOptions]="{ standalone: true }"
+                                          (ngModelChange)="
+                                            updateTimeSlotMetadata('startTime', $event)
+                                          "
+                                          class="w-full"
+                                        />
+                                      </div>
+
+                                      <!-- End Time Input -->
+                                      <div class="field">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                                          End Time
+                                        </label>
+                                        <input
+                                          pInputText
+                                          type="time"
+                                          [ngModel]="
+                                            getTimeSlotMetadataProperty('endTime', '17:00')
+                                          "
+                                          [ngModelOptions]="{ standalone: true }"
+                                          (ngModelChange)="
+                                            updateTimeSlotMetadata('endTime', $event)
+                                          "
+                                          class="w-full"
+                                        />
+                                      </div>
+                                    </div>
                                   </div>
                                 }
                               </div>
@@ -698,6 +863,126 @@
                             min="1"
                             class="w-full"
                           />
+                        </div>
+
+                        <!-- Global Time Slot Defaults -->
+                        <div class="mt-6 pt-4 border-t border-purple-200">
+                          <h5 class="text-sm font-semibold text-purple-900 mb-3">
+                            <i class="pi pi-clock mr-2"></i>Global Time Slot Defaults
+                          </h5>
+                          <small class="text-gray-600 block mb-4"
+                            >Configure default time slot settings that will be applied to all time
+                            slot fields in this template</small
+                          >
+
+                          <div class="grid grid-cols-2 gap-4">
+                            <!-- Interval Dropdown -->
+                            <div class="field">
+                              <label
+                                for="timeSlotInterval"
+                                class="block text-sm font-medium text-gray-700 mb-2"
+                                >Slot Duration</label
+                              >
+                              <select
+                                id="timeSlotInterval"
+                                [(ngModel)]="appointmentConfig().globalTimeSlotDefaults.interval"
+                                [ngModelOptions]="{ standalone: true }"
+                                class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                              >
+                                <option value="5min">5 minutes</option>
+                                <option value="10min">10 minutes</option>
+                                <option value="15min">15 minutes</option>
+                                <option value="30min">30 minutes</option>
+                                <option value="1h">1 hour</option>
+                                <option value="3h">3 hours</option>
+                                <option value="6h">6 hours</option>
+                                <option value="all-day">All day</option>
+                              </select>
+                              <small class="text-gray-500 block mt-1"
+                                >Duration of each time slot</small
+                              >
+                            </div>
+
+                            <!-- Time Format Radio Buttons -->
+                            <div class="field">
+                              <label class="block text-sm font-medium text-gray-700 mb-2"
+                                >Time Format</label
+                              >
+                              <div class="flex gap-4 mt-2">
+                                <div class="flex items-center">
+                                  <input
+                                    type="radio"
+                                    id="format12h"
+                                    name="timeFormat"
+                                    value="12h"
+                                    [(ngModel)]="
+                                      appointmentConfig().globalTimeSlotDefaults.timeFormat
+                                    "
+                                    [ngModelOptions]="{ standalone: true }"
+                                    class="mr-2"
+                                  />
+                                  <label for="format12h" class="text-sm">12-hour (AM/PM)</label>
+                                </div>
+                                <div class="flex items-center">
+                                  <input
+                                    type="radio"
+                                    id="format24h"
+                                    name="timeFormat"
+                                    value="24h"
+                                    [(ngModel)]="
+                                      appointmentConfig().globalTimeSlotDefaults.timeFormat
+                                    "
+                                    [ngModelOptions]="{ standalone: true }"
+                                    class="mr-2"
+                                  />
+                                  <label for="format24h" class="text-sm">24-hour</label>
+                                </div>
+                              </div>
+                              <small class="text-gray-500 block mt-1"
+                                >Display format for time slots</small
+                              >
+                            </div>
+
+                            <!-- Start Time Input -->
+                            <div class="field">
+                              <label
+                                for="startTime"
+                                class="block text-sm font-medium text-gray-700 mb-2"
+                                >Start Time</label
+                              >
+                              <input
+                                pInputText
+                                id="startTime"
+                                type="time"
+                                [(ngModel)]="appointmentConfig().globalTimeSlotDefaults.startTime"
+                                [ngModelOptions]="{ standalone: true }"
+                                class="w-full"
+                              />
+                              <small class="text-gray-500 block mt-1"
+                                >Earliest available time slot</small
+                              >
+                            </div>
+
+                            <!-- End Time Input -->
+                            <div class="field">
+                              <label
+                                for="endTime"
+                                class="block text-sm font-medium text-gray-700 mb-2"
+                                >End Time</label
+                              >
+                              <input
+                                pInputText
+                                id="endTime"
+                                type="time"
+                                [(ngModel)]="appointmentConfig().globalTimeSlotDefaults.endTime"
+                                [ngModelOptions]="{ standalone: true }"
+                                class="w-full"
+                              />
+                              <small class="text-gray-500 block mt-1"
+                                >Latest available time slot</small
+                              >
+                            </div>
+                          </div>
                         </div>
                       }
                     </div>

@@ -313,14 +313,19 @@ export class QuizSettingsModalComponent implements OnInit {
     allowRetakes: false,
   });
 
-  ngOnInit(): void {
+  constructor() {
     // Initialize local config from input when component initializes
+    // ✅ CORRECT: effect() called in constructor (injection context available)
     effect(() => {
       const config = this.quizConfig();
       if (config) {
         this.localConfig.set({ ...config });
       }
     });
+  }
+
+  ngOnInit(): void {
+    // Lifecycle hook - no effect() calls here
   }
 
   /**

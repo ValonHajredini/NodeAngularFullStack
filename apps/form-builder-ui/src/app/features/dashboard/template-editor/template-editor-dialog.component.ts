@@ -191,10 +191,26 @@ export class TemplateEditorDialogComponent {
     decrementOnSubmit: false,
   });
 
-  protected readonly appointmentConfig = signal({
+  protected readonly appointmentConfig = signal<{
+    timeSlotField: string;
+    dateField: string;
+    maxBookingsPerSlot: number;
+    globalTimeSlotDefaults: {
+      interval: '5min' | '10min' | '15min' | '30min' | '1h' | '3h' | '6h' | 'all-day';
+      startTime: string;
+      endTime: string;
+      timeFormat: '12h' | '24h';
+    };
+  }>({
     timeSlotField: '',
     dateField: '',
     maxBookingsPerSlot: 1,
+    globalTimeSlotDefaults: {
+      interval: '30min',
+      startTime: '09:00',
+      endTime: '17:00',
+      timeFormat: '12h',
+    },
   });
 
   protected readonly quizConfig = signal<QuizConfigFormState>({
@@ -677,6 +693,45 @@ export class TemplateEditorDialogComponent {
     return option?.label || 'N/A';
   }
 
+  /**
+   * Get TimeSlotMetadata from current field (with proper typing)
+   */
+  protected getTimeSlotMetadata(): any {
+    const field = this.currentField();
+    if (!field || field.type !== 'time_slot') return null;
+    return field.metadata || {};
+  }
+
+  /**
+   * Check if current field uses global time slot defaults
+   */
+  protected usesGlobalDefaults(): boolean {
+    const metadata = this.getTimeSlotMetadata();
+    if (!metadata) return true;
+    return metadata.useGlobalDefaults ?? true;
+  }
+
+  /**
+   * Update time slot metadata property
+   */
+  protected updateTimeSlotMetadata(property: string, value: any): void {
+    const currentMetadata = this.getTimeSlotMetadata() || {};
+    const updatedMetadata = {
+      ...currentMetadata,
+      [property]: value,
+    };
+    this.updateFieldProperty(this.currentFieldIndex(), 'metadata', updatedMetadata);
+  }
+
+  /**
+   * Get time slot metadata property value
+   */
+  protected getTimeSlotMetadataProperty(property: string, defaultValue: any): any {
+    const metadata = this.getTimeSlotMetadata();
+    if (!metadata) return defaultValue;
+    return metadata[property] ?? defaultValue;
+  }
+
   // Effects to sync visible input with internal signal
   constructor() {
     effect(() => {
@@ -776,6 +831,12 @@ export class TemplateEditorDialogComponent {
           timeSlotField: config.timeSlotField,
           dateField: config.dateField || '',
           maxBookingsPerSlot: config.maxBookingsPerSlot,
+          globalTimeSlotDefaults: config.globalTimeSlotDefaults || {
+            interval: '30min',
+            startTime: '09:00',
+            endTime: '17:00',
+            timeFormat: '12h',
+          },
         });
         break;
       case 'quiz':
@@ -1033,6 +1094,7 @@ export class TemplateEditorDialogComponent {
           dateField: this.appointmentConfig().dateField,
           maxBookingsPerSlot: this.appointmentConfig().maxBookingsPerSlot,
           bookingsTable: 'appointment_bookings',
+          globalTimeSlotDefaults: this.appointmentConfig().globalTimeSlotDefaults,
         };
       case TemplateCategory.QUIZ:
         // Quiz config requires at least one scoring rule
@@ -1123,7 +1185,17 @@ export class TemplateEditorDialogComponent {
     this.selectedImage.set(null);
     this.error.set(null);
     this.inventoryConfig.set({ stockField: '', decrementOnSubmit: false });
-    this.appointmentConfig.set({ timeSlotField: '', dateField: '', maxBookingsPerSlot: 1 });
+    this.appointmentConfig.set({
+      timeSlotField: '',
+      dateField: '',
+      maxBookingsPerSlot: 1,
+      globalTimeSlotDefaults: {
+        interval: '30min',
+        startTime: '09:00',
+        endTime: '17:00',
+        timeFormat: '12h',
+      },
+    });
     this.quizConfig.set({
       questionField: '',
       answerField: '',

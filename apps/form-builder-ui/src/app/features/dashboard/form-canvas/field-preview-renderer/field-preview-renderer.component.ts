@@ -22,6 +22,7 @@ import { HeadingPreviewComponent } from './heading-preview.component';
 import { ImagePreviewComponent } from './image-preview.component';
 import { TextBlockPreviewComponent } from './text-block-preview.component';
 import { ImageGalleryPreviewComponent } from './image-gallery-preview.component';
+import { TimeSlotPreviewComponent } from './time-slot-preview.component';
 import { InlineLabelEditorComponent } from './inline-label-editor.component';
 import { InlineOptionManagerComponent } from './inline-option-manager.component';
 import { InlineImageGalleryManagerComponent } from './inline-image-gallery-manager.component';
@@ -58,6 +59,7 @@ import { FormBuilderService } from '../../form-builder.service';
     ImagePreviewComponent,
     TextBlockPreviewComponent,
     ImageGalleryPreviewComponent,
+    TimeSlotPreviewComponent,
     InlineLabelEditorComponent,
     InlineOptionManagerComponent,
     InlineImageGalleryManagerComponent,
@@ -168,6 +170,9 @@ import { FormBuilderService } from '../../form-builder.service';
           }
           @case (FormFieldType.IMAGE_GALLERY) {
             <app-image-gallery-preview [field]="field" />
+          }
+          @case (FormFieldType.TIME_SLOT) {
+            <app-time-slot-preview [field]="field" />
           }
           @default {
             <div class="p-4 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">

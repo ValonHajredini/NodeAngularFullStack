@@ -238,7 +238,7 @@ export class TemplatesApiService {
    */
   updateTemplate(id: string, updates: UpdateFormTemplateRequest): Observable<FormTemplate> {
     return this.apiClient
-      .patch<ApiResponse<FormTemplate>>(`/templates/${id}`, updates)
+      .put<ApiResponse<FormTemplate>>(`/templates/${id}`, updates)
       .pipe(
         map((response) => {
           if (response.data) {
