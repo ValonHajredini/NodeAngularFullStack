@@ -237,6 +237,85 @@ sudo tail -f /var/log/nginx/*.error.log
 sudo systemctl restart nginx
 ```
 
+## 🔄 PM2 Process Management
+
+The deployment script uses PM2 to manage backend services (dashboard-api and forms-api).
+
+### Using Ecosystem Configuration (Recommended)
+
+The project includes `ecosystem.config.js` for centralized PM2 configuration:
+
+```bash
+# Start all services
+cd /var/apps/NodeAngularFullStack
+pm2 start ecosystem.config.js
+
+# Restart all services
+pm2 restart ecosystem.config.js
+
+# Stop all services
+pm2 stop ecosystem.config.js
+
+# Delete all services from PM2
+pm2 delete ecosystem.config.js
+
+# View logs for specific service
+pm2 logs dashboard-api
+pm2 logs forms-api
+```
+
+### Manual Service Management
+
+If you need to manage services individually:
+
+```bash
+# Start services manually
+cd /var/apps/NodeAngularFullStack/apps/dashboard-api
+pm2 start npm --name "dashboard-api" -- start
+
+cd /var/apps/NodeAngularFullStack/apps/forms-api
+pm2 start npm --name "forms-api" -- start
+
+# Restart specific service
+pm2 restart dashboard-api
+pm2 restart forms-api
+
+# Stop specific service
+pm2 stop dashboard-api
+```
+
+### PM2 Auto-Restart on Boot
+
+```bash
+# Setup PM2 to start on system boot
+pm2 startup
+
+# Save current process list
+pm2 save
+```
+
+### Common PM2 Commands
+
+```bash
+# View all processes
+pm2 list
+
+# Monitor resource usage
+pm2 monit
+
+# View logs in real-time
+pm2 logs
+
+# Clear all logs
+pm2 flush
+
+# Reload process (0-second downtime)
+pm2 reload dashboard-api
+
+# Show detailed process info
+pm2 show dashboard-api
+```
+
 ## 📊 Monitoring After Deployment
 
 ### View PM2 Processes
