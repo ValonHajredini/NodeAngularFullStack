@@ -272,11 +272,7 @@ import { WidthRatioOption } from '../models/layout-options.model';
                                 id="sub-columns-toggle-{{ row.rowId }}-{{ columnIndex }}"
                                 [(ngModel)]="subColumnToggles()[row.rowId + '-' + columnIndex]"
                                 (onChange)="
-                                  onToggleSubColumns(
-                                    row.rowId,
-                                    columnIndex,
-                                    $event.checked ?? false
-                                  )
+                                  onToggleSubColumns(row.rowId, columnIndex, $event.checked)
                                 "
                                 onLabel="Enabled"
                                 offLabel="Disabled"

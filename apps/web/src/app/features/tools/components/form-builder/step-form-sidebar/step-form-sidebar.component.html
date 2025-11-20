@@ -311,11 +311,7 @@
                                         subColumnToggles()[row.rowId + '-' + columnIndex]
                                       "
                                       (onChange)="
-                                        onToggleSubColumns(
-                                          row.rowId,
-                                          columnIndex,
-                                          $event.checked ?? false
-                                        )
+                                        onToggleSubColumns(row.rowId, columnIndex, $event.checked)
                                       "
                                       onLabel="Enabled"
                                       offLabel="Disabled"

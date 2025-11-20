@@ -50,7 +50,7 @@ export interface FormCardAction {
       <div class="flex items-center justify-between mb-3">
         <p-tag
           [value]="form.status === FormStatus.PUBLISHED ? 'Published' : 'Draft'"
-          [severity]="form.status === FormStatus.PUBLISHED ? 'success' : 'warning'"
+          [severity]="form.status === FormStatus.PUBLISHED ? 'success' : 'warn'"
         ></p-tag>
         <span class="text-xs text-gray-500">
           {{ form.updatedAt | date: 'MMM d, yyyy' }}

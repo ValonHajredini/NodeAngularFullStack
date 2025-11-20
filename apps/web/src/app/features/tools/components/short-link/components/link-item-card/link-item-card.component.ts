@@ -196,7 +196,7 @@ export class LinkItemCardComponent implements OnChanges {
     return 'Active';
   }
 
-  get expirationSeverity(): 'success' | 'warning' | 'danger' {
+  get expirationSeverity(): 'success' | 'warn' | 'danger' {
     if (!this.link.expiresAt) return 'success';
 
     const expiry = new Date(this.link.expiresAt);
@@ -210,7 +210,7 @@ export class LinkItemCardComponent implements OnChanges {
     const diffHours = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60));
 
     if (diffHours <= 24) {
-      return 'warning';
+      return 'warn';
     }
 
     return 'success';

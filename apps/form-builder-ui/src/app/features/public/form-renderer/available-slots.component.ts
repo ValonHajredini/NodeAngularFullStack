@@ -204,7 +204,7 @@ export class AvailableSlotsComponent implements OnInit {
    * Gets severity level for availability tag
    * Used to color-code slots based on remaining capacity
    */
-  getAvailabilitySeverity(slot: AvailableSlot): 'success' | 'warning' | 'danger' {
+  getAvailabilitySeverity(slot: AvailableSlot): 'success' | 'warn' | 'danger' {
     if (!slot.is_available) {
       return 'danger'; // Red for full
     }
@@ -214,7 +214,7 @@ export class AvailableSlotsComponent implements OnInit {
     if (availabilityPercentage >= 50) {
       return 'success'; // Green for 50%+ available
     } else if (availabilityPercentage >= 25) {
-      return 'warning'; // Yellow for 25-50% available
+      return 'warn'; // Yellow for 25-50% available
     } else {
       return 'danger'; // Red for <25% available (limited)
     }
