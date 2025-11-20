@@ -1,8 +1,6 @@
 name: E2E Tests - Create Tool CLI
 
 on:
-  pull_request:
-    branches: [main, develop]
   push:
     branches: [main, develop]
   workflow_dispatch:
@@ -12,7 +10,6 @@ jobs:
     name: E2E Create Tool CLI Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
 
     services:
       postgres:
