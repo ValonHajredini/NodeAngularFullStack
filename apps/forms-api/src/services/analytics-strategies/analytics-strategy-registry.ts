@@ -14,6 +14,7 @@ import { TemplateCategory } from '@nodeangularfullstack/shared';
 import { IAnalyticsStrategy } from './analytics-strategy.interface';
 import { GenericAnalyticsStrategy } from './generic-analytics.strategy';
 import { QuizAnalyticsStrategy } from './quiz-analytics.strategy';
+import { ServicesAnalyticsStrategy } from './services-analytics.strategy';
 import { FormSchemasRepository } from '../../repositories/form-schemas.repository';
 import { FormSubmissionsRepository } from '../../repositories/form-submissions.repository';
 
@@ -51,10 +52,18 @@ export class AnalyticsStrategyRegistry {
       )
     );
 
+    // Services strategy
+    this.strategies.set(
+      TemplateCategory.SERVICES,
+      new ServicesAnalyticsStrategy(
+        this.submissionsRepository,
+        this.schemasRepository
+      )
+    );
+
     // TODO: Register other strategies (Story 30.4)
     // this.strategies.set(TemplateCategory.POLLS, new PollAnalyticsStrategy(...));
     // this.strategies.set(TemplateCategory.ECOMMERCE, new ProductAnalyticsStrategy(...));
-    // this.strategies.set(TemplateCategory.SERVICES, new AppointmentAnalyticsStrategy(...));
     // this.strategies.set(TemplateCategory.DATA_COLLECTION, new RestaurantAnalyticsStrategy(...));
   }
 

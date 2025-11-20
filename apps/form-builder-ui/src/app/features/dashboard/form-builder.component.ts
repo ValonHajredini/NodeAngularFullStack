@@ -228,6 +228,16 @@ import { AuthService } from '@core/auth/auth.service';
             size="small"
             (click)="onPreview()"
           ></button>
+          <button
+            pButton
+            label="Analytics"
+            icon="pi pi-chart-bar"
+            severity="secondary"
+            size="small"
+            (click)="navigateToAnalytics()"
+            [disabled]="!formBuilderService.currentForm()?.id"
+            title="View form submissions and analytics"
+          ></button>
           @if (formBuilderService.isPublished()) {
             <button
               pButton
@@ -1609,6 +1619,24 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
    */
   navigateToToolsList(): void {
     this.router.navigate(['/app/tools']);
+  }
+
+  /**
+   * Navigates to the Form Analytics page for the current form.
+   * Disabled if no form is loaded.
+   */
+  navigateToAnalytics(): void {
+    const currentFormId = this.formBuilderService.currentForm()?.id;
+    if (!currentFormId) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'No Form Loaded',
+        detail: 'Please save the form before viewing analytics',
+        life: 3000,
+      });
+      return;
+    }
+    this.router.navigate(['/app/dashboard', currentFormId, 'analytics']);
   }
 
   /**

@@ -56,14 +56,56 @@ export class AppointmentAnalyticsStrategy implements IAnalyticsStrategy {
   }
 
   /**
+   * Detects if the form has required appointment booking fields.
+   *
+   * Checks a sample submission for the presence of required fields:
+   * - time_slot: Time slot for the appointment
+   * - booking_date: Date of the appointment
+   * - status (optional): Booking status (confirmed, cancelled, pending)
+   *
+   * @param formSchemaId - UUID of the form schema to check
+   * @param tenantId - Optional tenant ID for isolation
+   * @returns Object with detection results and missing field information
+   * @private
+   */
+  private async detectRequiredFields(
+    formSchemaId: string,
+    tenantId: string | null
+  ): Promise<{ hasRequiredFields: boolean; missing: string[] }> {
+    const requiredFields = ['time_slot', 'booking_date'];
+    const submissions = await this.repository.getAllSubmissionValues(formSchemaId, tenantId);
+
+    if (submissions.length === 0) {
+      return { hasRequiredFields: false, missing: [] };
+    }
+
+    // Check first submission for required fields
+    const sampleSubmission = submissions[0];
+    const missing: string[] = [];
+
+    for (const field of requiredFields) {
+      if (!(field in sampleSubmission) || sampleSubmission[field] === null || sampleSubmission[field] === undefined) {
+        missing.push(field);
+      }
+    }
+
+    return {
+      hasRequiredFields: missing.length === 0,
+      missing
+    };
+  }
+
+  /**
    * Builds appointment analytics metrics from form submissions.
    *
    * Process:
    * 1. Fetch submission counts and time range
-   * 2. Get all submission values to count confirmed vs cancelled
-   * 3. Fetch time slot aggregation for heatmap
-   * 4. Calculate booking statistics (averages, rates, peaks)
-   * 5. Determine capacity utilization (placeholder - requires capacity config)
+   * 2. Detect if form has required appointment booking fields
+   * 3. If missing fields, return empty metrics with helpful message
+   * 4. Get all submission values to count confirmed vs cancelled
+   * 5. Fetch time slot aggregation for heatmap
+   * 6. Calculate booking statistics (averages, rates, peaks)
+   * 7. Determine capacity utilization (placeholder - requires capacity config)
    *
    * @param formSchemaId - UUID of the form schema to analyze
    * @param tenantId - Optional tenant ID for isolation
@@ -87,6 +129,31 @@ export class AppointmentAnalyticsStrategy implements IAnalyticsStrategy {
           popularTimeSlots: [],
           capacityUtilization: 0,
           peakBookingDay: undefined,
+        };
+      }
+
+      // Detect if form has required appointment booking fields
+      const fieldDetection = await this.detectRequiredFields(formSchemaId, tenantId);
+
+      // If form doesn't have appointment fields, return empty metrics with helpful message
+      if (!fieldDetection.hasRequiredFields) {
+        return {
+          category: 'services',
+          totalSubmissions: counts.totalSubmissions,
+          totalBookings: 0,
+          cancelledBookings: 0,
+          cancellationRate: 0,
+          averageBookingsPerDay: 0,
+          popularTimeSlots: [],
+          capacityUtilization: 0,
+          peakBookingDay: undefined,
+          firstSubmissionAt: counts.firstSubmissionAt ?? undefined,
+          lastSubmissionAt: counts.lastSubmissionAt ?? undefined,
+          missingFields: {
+            hasRequiredFields: false,
+            missing: fieldDetection.missing,
+            message: `This form does not contain appointment booking fields (${fieldDetection.missing.join(', ')}). Appointment analytics require forms with time_slot and booking_date fields. Consider using a different template category for this type of data collection.`
+          }
         };
       }
 

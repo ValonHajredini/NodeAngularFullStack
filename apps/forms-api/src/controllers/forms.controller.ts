@@ -43,6 +43,8 @@ export class FormsController {
       // Check validation results
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
+        console.error('[VALIDATION ERROR] Form creation validation failed:');
+        console.error(JSON.stringify(errors.array(), null, 2));
         throw new ApiError('Invalid input data', 400, 'VALIDATION_ERROR');
       }
 

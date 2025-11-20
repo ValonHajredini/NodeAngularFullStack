@@ -33,7 +33,7 @@ async function seedHomeServicesTemplate() {
       fields: [
         {
           id: 'service_category',
-          type: 'SELECT',
+          type: 'select',
           label: 'Service Type',
           fieldName: 'service_category',
           required: true,
@@ -50,7 +50,7 @@ async function seedHomeServicesTemplate() {
         },
         {
           id: 'urgency_level',
-          type: 'SELECT',
+          type: 'select',
           label: 'Urgency Level',
           fieldName: 'urgency_level',
           required: true,
@@ -65,7 +65,7 @@ async function seedHomeServicesTemplate() {
         },
         {
           id: 'issue_description',
-          type: 'TEXTAREA',
+          type: 'textarea',
           label: 'Service Description',
           fieldName: 'issue_description',
           required: true,
@@ -75,7 +75,7 @@ async function seedHomeServicesTemplate() {
         },
         {
           id: 'service_address',
-          type: 'TEXT',
+          type: 'text',
           label: 'Service Address',
           fieldName: 'service_address',
           required: true,
@@ -85,7 +85,7 @@ async function seedHomeServicesTemplate() {
         },
         {
           id: 'preferred_date',
-          type: 'DATE',
+          type: 'date',
           label: 'Preferred Service Date',
           fieldName: 'preferred_date',
           required: true,
@@ -96,7 +96,7 @@ async function seedHomeServicesTemplate() {
         },
         {
           id: 'time_slot',
-          type: 'TIME_SLOT',
+          type: 'time_slot',
           label: 'Preferred Time Slot',
           fieldName: 'time_slot',
           required: true,
@@ -114,7 +114,7 @@ async function seedHomeServicesTemplate() {
         },
         {
           id: 'customer_name',
-          type: 'TEXT',
+          type: 'text',
           label: 'Full Name',
           fieldName: 'customer_name',
           required: true,
@@ -124,7 +124,7 @@ async function seedHomeServicesTemplate() {
         },
         {
           id: 'customer_email',
-          type: 'EMAIL',
+          type: 'email',
           label: 'Email Address',
           fieldName: 'customer_email',
           required: true,
@@ -135,18 +135,18 @@ async function seedHomeServicesTemplate() {
         },
         {
           id: 'customer_phone',
-          type: 'TEL',
+          type: 'text',
           label: 'Phone Number',
           fieldName: 'customer_phone',
           required: true,
           order: 9,
           placeholder: '(555) 123-4567',
           description: 'Contact number for service coordination',
-          validation: { required: true }
+          validation: { required: true, pattern: '^[\\d\\s()+-]+$' }
         },
         {
           id: 'contact_preference',
-          type: 'SELECT',
+          type: 'select',
           label: 'Preferred Contact Method',
           fieldName: 'contact_preference',
           required: true,
@@ -167,7 +167,21 @@ async function seedHomeServicesTemplate() {
           allowMultipleSubmissions: true,
           redirectUrl: null
         },
-        styling: { theme: 'default', customCss: null }
+        styling: { theme: 'default', customCss: null },
+        businessLogicConfig: {
+          type: 'appointment',
+          dateField: 'preferred_date',
+          timeSlotField: 'time_slot',
+          maxBookingsPerSlot: 5,
+          bookingsTable: 'appointment_bookings',
+          allowOverbook: false,
+          globalTimeSlotDefaults: {
+            interval: '3h',
+            startTime: '08:00',
+            endTime: '20:00',
+            timeFormat: '12h'
+          }
+        }
       }
     };
 

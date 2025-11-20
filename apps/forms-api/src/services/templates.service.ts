@@ -7,9 +7,11 @@ import {
   QuizConfig,
   CreateFormTemplateRequest,
   UpdateFormTemplateRequest,
+  inferCategoryFromBusinessLogic,
 } from '@nodeangularfullstack/shared';
 import { templatesRepository } from '../repositories/templates.repository';
 import { ApiError } from './forms.service';
+import { CategoryFieldValidator } from '../utils/category-field-validator';
 
 /**
  * Template service for business logic operations.
@@ -109,6 +111,20 @@ export class TemplatesService {
 
       // Validate template schema structure
       this.validateTemplateSchema(templateData.templateSchema);
+
+      // Validate category-specific required fields (Story 29.2)
+      const fieldValidation = CategoryFieldValidator.validateCategoryFields(
+        templateData.category,
+        templateData.templateSchema
+      );
+
+      if (!fieldValidation.isValid) {
+        throw new ApiError(
+          `Template validation failed for category ${templateData.category}`,
+          400,
+          'TEMPLATE_VALIDATION_FAILED'
+        );
+      }
 
       // Create template via repository
       return await this.templatesRepo.create(templateData);
@@ -306,6 +322,31 @@ export class TemplatesService {
 
         // Validate template schema structure
         this.validateTemplateSchema(updateData.templateSchema);
+
+        // Validate category-specific required fields (Story 29.2)
+        // Need to get category from updateData or existing template
+        let category = updateData.category;
+
+        if (!category) {
+          const existingTemplate = await this.templatesRepo.findById(templateId);
+          if (!existingTemplate) {
+            throw new ApiError('Template not found', 404, 'NOT_FOUND');
+          }
+          category = existingTemplate.category;
+        }
+
+        const fieldValidation = CategoryFieldValidator.validateCategoryFields(
+          category,
+          updateData.templateSchema
+        );
+
+        if (!fieldValidation.isValid) {
+          throw new ApiError(
+            `Template validation failed for category ${category}`,
+            400,
+            'TEMPLATE_VALIDATION_FAILED'
+          );
+        }
       }
 
       // Validate business logic config matches category (if both are provided or updating config)
@@ -427,12 +468,20 @@ export class TemplatesService {
       console.log('[DEBUG] formSchema.settings BEFORE merge:', formSchema.settings);
 
       if (template.businessLogicConfig) {
-        console.log('[DEBUG] Merging businessLogicConfig into formSchema.settings');
+        console.log('[DEBUG] Merging businessLogicConfig into formSchema (root level)');
+        // Store at root level for category detection (category-detection.util.ts line 48)
+        formSchema.businessLogicConfig = template.businessLogicConfig;
+
+        // Also set explicit category in settings (Strategy 1 in category detection)
+        // This ensures category detection works via formSchema.settings.templateCategory
+        const category = inferCategoryFromBusinessLogic(template.businessLogicConfig);
         formSchema.settings = {
           ...formSchema.settings,
-          businessLogicConfig: template.businessLogicConfig,
+          templateCategory: category
         };
-        console.log('[DEBUG] formSchema.settings AFTER merge:', formSchema.settings);
+
+        console.log('[DEBUG] formSchema.businessLogicConfig AFTER merge:', formSchema.businessLogicConfig);
+        console.log('[DEBUG] formSchema.settings.templateCategory:', category);
 
         // Migrate quiz scoring rules to field metadata (if quiz template)
         // Quiz templates store correctAnswer in businessLogicConfig.scoringRules,

@@ -336,6 +336,39 @@ export class AuthService {
   }
 
   /**
+   * Fetches fresh user profile data from the API and updates the user signal.
+   * This method should be called on app initialization to ensure user data is up-to-date.
+   * @returns Observable containing the updated user data
+   * @example
+   * authService.loadUserProfile().subscribe({
+   *   next: (user) => console.log('User profile loaded:', user),
+   *   error: (error) => console.error('Failed to load profile:', error)
+   * });
+   */
+  loadUserProfile(): Observable<User> {
+    // Only fetch if user is authenticated
+    if (!this.isAuthenticated()) {
+      return throwError(() => new Error('User not authenticated'));
+    }
+
+    return this.apiClient.get<{ data: User }>('/auth/profile').pipe(
+      map((response) => response.data),
+      tap((user: User) => {
+        console.log('[AuthService] User profile fetched from API:', user);
+        this.updateUserData(user);
+      }),
+      catchError((error) => {
+        console.error('[AuthService] Failed to load user profile:', error);
+        // If profile fetch fails with 401, clear auth data (token might be invalid)
+        if (error.status === 401) {
+          this.clearAuthData();
+        }
+        return throwError(() => error);
+      }),
+    );
+  }
+
+  /**
    * Sets authentication data from SSO (Single Sign-On) token.
    * Used by SSO auth guard to authenticate users coming from another application.
    * @param authResponse - Authentication data containing user and tokens

@@ -170,6 +170,15 @@ const ALL_CHART_TYPE_OPTIONS: ChartTypeOption[] = [
             ></button>
             <button
               pButton
+              label="Edit Form"
+              icon="pi pi-pencil"
+              severity="primary"
+              [outlined]="true"
+              (click)="navigateToEditor()"
+              title="Go back to form editor"
+            ></button>
+            <button
+              pButton
               label="Back to Forms"
               icon="pi pi-arrow-left"
               severity="secondary"
@@ -1069,6 +1078,16 @@ export class FormAnalyticsComponent implements OnInit {
    */
   navigateBack(): void {
     this.router.navigate(['/app/tools/form-builder']);
+  }
+
+  /**
+   * Navigates to the form editor for the current form.
+   */
+  navigateToEditor(): void {
+    const currentFormId = this.formId();
+    if (currentFormId) {
+      this.router.navigate(['/app/dashboard', currentFormId]);
+    }
   }
 
   /**

@@ -651,11 +651,19 @@ export class AnalyticsRepository {
       `;
 
       const result = await client.query(query, values);
-      return result.rows.map((row) => ({
-        timeSlot: row.time_slot,
-        dayOfWeek: row.day_of_week.trim(),
-        bookings: parseInt(row.bookings, 10),
-      }));
+      return result.rows.map((row) => {
+        const dayOfWeekRaw: string | null = row.day_of_week ?? null;
+        const dayOfWeek =
+          dayOfWeekRaw && dayOfWeekRaw.trim().length > 0
+            ? dayOfWeekRaw.trim()
+            : 'Unknown';
+
+        return {
+          timeSlot: row.time_slot,
+          dayOfWeek,
+          bookings: parseInt(row.bookings, 10),
+        };
+      });
     } finally {
       client.release();
     }

@@ -56,14 +56,56 @@ export class RestaurantAnalyticsStrategy implements IAnalyticsStrategy {
   }
 
   /**
+   * Detects if the form has required restaurant order fields.
+   *
+   * Checks a sample submission for the presence of required fields:
+   * - item_name: Menu item name
+   * - quantity: Number of items ordered
+   * - price: Item price
+   *
+   * @param formSchemaId - UUID of the form schema to check
+   * @param tenantId - Optional tenant ID for isolation
+   * @returns Object with detection results and missing field information
+   * @private
+   */
+  private async detectRequiredFields(
+    formSchemaId: string,
+    tenantId: string | null
+  ): Promise<{ hasRequiredFields: boolean; missing: string[] }> {
+    const requiredFields = ['item_name', 'quantity', 'price'];
+    const submissions = await this.repository.getAllSubmissionValues(formSchemaId, tenantId);
+
+    if (submissions.length === 0) {
+      return { hasRequiredFields: false, missing: [] };
+    }
+
+    // Check first submission for required fields
+    const sampleSubmission = submissions[0];
+    const missing: string[] = [];
+
+    for (const field of requiredFields) {
+      if (!(field in sampleSubmission) || sampleSubmission[field] === null || sampleSubmission[field] === undefined) {
+        missing.push(field);
+      }
+    }
+
+    return {
+      hasRequiredFields: missing.length === 0,
+      missing
+    };
+  }
+
+  /**
    * Builds restaurant analytics metrics from form submissions.
    *
    * Process:
    * 1. Fetch submission counts and time range
-   * 2. Aggregate menu item sales data (revenue, quantities, item breakdown)
-   * 3. Calculate average order value and average order size
-   * 4. Rank popular items by quantity sold
-   * 5. Determine peak order time from submission timestamps
+   * 2. Detect if form has required restaurant order fields
+   * 3. If missing fields, return empty metrics with helpful message
+   * 4. Aggregate menu item sales data (revenue, quantities, item breakdown)
+   * 5. Calculate average order value and average order size
+   * 6. Rank popular items by quantity sold
+   * 7. Determine peak order time from submission timestamps
    *
    * @param formSchemaId - UUID of the form schema to analyze
    * @param tenantId - Optional tenant ID for isolation
@@ -86,6 +128,30 @@ export class RestaurantAnalyticsStrategy implements IAnalyticsStrategy {
           popularItems: [],
           peakOrderTime: undefined,
           averageOrderSize: 0,
+        };
+      }
+
+      // Detect if form has required restaurant fields
+      const fieldDetection = await this.detectRequiredFields(formSchemaId, tenantId);
+
+      // If form doesn't have restaurant order fields, return empty metrics with helpful message
+      if (!fieldDetection.hasRequiredFields) {
+        return {
+          category: 'data_collection',
+          totalSubmissions: counts.totalSubmissions,
+          totalRevenue: 0,
+          averageOrderValue: 0,
+          totalItemsOrdered: 0,
+          popularItems: [],
+          peakOrderTime: undefined,
+          averageOrderSize: 0,
+          firstSubmissionAt: counts.firstSubmissionAt ?? undefined,
+          lastSubmissionAt: counts.lastSubmissionAt ?? undefined,
+          missingFields: {
+            hasRequiredFields: false,
+            missing: fieldDetection.missing,
+            message: `This form does not contain restaurant order fields (${fieldDetection.missing.join(', ')}). Restaurant analytics require forms with item_name, quantity, and price fields. Consider using a different template category for this type of data collection.`
+          }
         };
       }
 

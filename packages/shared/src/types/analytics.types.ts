@@ -54,6 +54,18 @@ export interface PollMetrics extends CategoryMetricsBase {
   duplicateVoteAttempts?: number;
   /** Option with highest vote count */
   mostPopularOption: string;
+  /**
+   * Field detection metadata - indicates which required fields are missing
+   * When present, indicates the form doesn't contain poll fields
+   */
+  missingFields?: {
+    /** Whether the form is missing required poll fields */
+    hasRequiredFields: boolean;
+    /** List of missing field names */
+    missing: string[];
+    /** Helpful message for the user */
+    message: string;
+  };
 }
 
 /**
@@ -106,6 +118,18 @@ export interface QuizMetrics extends CategoryMetricsBase {
   highestScore: number;
   /** Lowest score achieved */
   lowestScore: number;
+  /**
+   * Field detection metadata - indicates which required fields are missing
+   * When present, indicates the form doesn't contain quiz fields
+   */
+  missingFields?: {
+    /** Whether the form is missing required quiz fields */
+    hasRequiredFields: boolean;
+    /** List of missing field names */
+    missing: string[];
+    /** Helpful message for the user */
+    message: string;
+  };
 }
 
 /**
@@ -156,6 +180,18 @@ export interface ProductMetrics extends CategoryMetricsBase {
   outOfStockCount: number;
   /** Total value of remaining inventory */
   inventoryValue?: number;
+  /**
+   * Field detection metadata - indicates which required fields are missing
+   * When present, indicates the form doesn't contain product/ecommerce fields
+   */
+  missingFields?: {
+    /** Whether the form is missing required product fields */
+    hasRequiredFields: boolean;
+    /** List of missing field names */
+    missing: string[];
+    /** Helpful message for the user */
+    message: string;
+  };
 }
 
 /**
@@ -204,6 +240,44 @@ export interface AppointmentMetrics extends CategoryMetricsBase {
   capacityUtilization: number;
   /** Day of week with most bookings */
   peakBookingDay?: string;
+  /** Calendar heatmap data - bookings by date AND time slot (2D grid) */
+  calendarHeatmap?: Array<{
+    /** ISO date string (YYYY-MM-DD) */
+    date: string;
+    /** Time slot (e.g., '09:00-10:00') */
+    timeSlot: string;
+    /** Total bookings for this date-time combination */
+    bookings: number;
+    /** Optional status breakdown */
+    statusBreakdown?: {
+      confirmed: number;
+      cancelled: number;
+      pending: number;
+    };
+  }>;
+  /** Field configuration used for data extraction */
+  fieldConfig?: {
+    /** Field name used for booking date */
+    dateField: string;
+    /** Field name used for time slot */
+    timeSlotField: string;
+    /** Optional field name for booking status */
+    statusField?: string;
+    /** How fields were detected: business logic config, heuristics, or not detected */
+    detectionMethod: 'business_logic' | 'heuristic' | 'not_detected';
+  };
+  /**
+   * Field detection metadata - indicates which required fields are missing
+   * When present, indicates the form doesn't contain appointment/booking fields
+   */
+  missingFields?: {
+    /** Whether the form is missing required appointment fields */
+    hasRequiredFields: boolean;
+    /** List of missing field names */
+    missing: string[];
+    /** Helpful message for the user */
+    message: string;
+  };
 }
 
 /**
@@ -251,6 +325,18 @@ export interface RestaurantMetrics extends CategoryMetricsBase {
   peakOrderTime?: string;
   /** Average number of items per order */
   averageOrderSize: number;
+  /**
+   * Field detection metadata - indicates which required fields are missing
+   * When present, indicates the form doesn't contain restaurant order fields
+   */
+  missingFields?: {
+    /** Whether the form is missing required restaurant fields */
+    hasRequiredFields: boolean;
+    /** List of missing field names */
+    missing: string[];
+    /** Helpful message for the user */
+    message: string;
+  };
 }
 
 /**

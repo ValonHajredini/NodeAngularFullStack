@@ -27,16 +27,19 @@ import { authPool } from '../config/multi-database.config';
 export class ApiError extends Error {
   public statusCode: number;
   public code: string;
+  public data?: any;
 
   constructor(
     message: string,
     statusCode: number = 500,
-    code: string = 'API_ERROR'
+    code: string = 'API_ERROR',
+    data?: any
   ) {
     super(message);
     this.name = 'ApiError';
     this.statusCode = statusCode;
     this.code = code;
+    this.data = data;
   }
 }
 

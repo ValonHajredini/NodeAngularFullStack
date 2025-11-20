@@ -55,14 +55,57 @@ export class ProductAnalyticsStrategy implements IAnalyticsStrategy {
   }
 
   /**
+   * Detects if the form has required product/ecommerce fields.
+   *
+   * Checks a sample submission for the presence of required fields:
+   * - product_id: Product identifier
+   * - product_name: Product name
+   * - quantity: Number of items
+   * - price: Item price
+   *
+   * @param formSchemaId - UUID of the form schema to check
+   * @param tenantId - Optional tenant ID for isolation
+   * @returns Object with detection results and missing field information
+   * @private
+   */
+  private async detectRequiredFields(
+    formSchemaId: string,
+    tenantId: string | null
+  ): Promise<{ hasRequiredFields: boolean; missing: string[] }> {
+    const requiredFields = ['product_id', 'product_name', 'quantity', 'price'];
+    const submissions = await this.repository.getAllSubmissionValues(formSchemaId, tenantId);
+
+    if (submissions.length === 0) {
+      return { hasRequiredFields: false, missing: [] };
+    }
+
+    // Check first submission for required fields
+    const sampleSubmission = submissions[0];
+    const missing: string[] = [];
+
+    for (const field of requiredFields) {
+      if (!(field in sampleSubmission) || sampleSubmission[field] === null || sampleSubmission[field] === undefined) {
+        missing.push(field);
+      }
+    }
+
+    return {
+      hasRequiredFields: missing.length === 0,
+      missing
+    };
+  }
+
+  /**
    * Builds product analytics metrics from form submissions.
    *
    * Process:
    * 1. Fetch submission counts and time range
-   * 2. Aggregate product sales data (revenue, quantities, product breakdown)
-   * 3. Calculate average order value
-   * 4. Sort and rank top products by revenue
-   * 5. Compute stock alerts (placeholder - requires inventory table)
+   * 2. Detect if form has required product fields
+   * 3. If missing fields, return empty metrics with helpful message
+   * 4. Aggregate product sales data (revenue, quantities, product breakdown)
+   * 5. Calculate average order value
+   * 6. Sort and rank top products by revenue
+   * 7. Compute stock alerts (placeholder - requires inventory table)
    *
    * @param formSchemaId - UUID of the form schema to analyze
    * @param tenantId - Optional tenant ID for isolation
@@ -86,6 +129,31 @@ export class ProductAnalyticsStrategy implements IAnalyticsStrategy {
           lowStockAlerts: 0,
           outOfStockCount: 0,
           inventoryValue: 0,
+        };
+      }
+
+      // Detect if form has required product fields
+      const fieldDetection = await this.detectRequiredFields(formSchemaId, tenantId);
+
+      // If form doesn't have product fields, return empty metrics with helpful message
+      if (!fieldDetection.hasRequiredFields) {
+        return {
+          category: 'ecommerce',
+          totalSubmissions: counts.totalSubmissions,
+          totalRevenue: 0,
+          averageOrderValue: 0,
+          totalItemsSold: 0,
+          topProducts: [],
+          lowStockAlerts: 0,
+          outOfStockCount: 0,
+          inventoryValue: 0,
+          firstSubmissionAt: counts.firstSubmissionAt ?? undefined,
+          lastSubmissionAt: counts.lastSubmissionAt ?? undefined,
+          missingFields: {
+            hasRequiredFields: false,
+            missing: fieldDetection.missing,
+            message: `This form does not contain product/ecommerce fields (${fieldDetection.missing.join(', ')}). Product analytics require forms with product_id, product_name, quantity, and price fields. Consider using a different template category for this type of data collection.`
+          }
         };
       }
 

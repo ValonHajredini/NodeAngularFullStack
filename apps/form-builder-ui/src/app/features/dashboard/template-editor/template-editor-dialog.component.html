@@ -1,5 +1,6 @@
 <p-dialog
-  [(visible)]="visibleSignal"
+  [visible]="visibleSignal()"
+  (visibleChange)="onVisibilityChange($event)"
   (onHide)="handleDialogClose()"
   [modal]="true"
   [closable]="true"
@@ -11,7 +12,7 @@
   [header]="dialogHeader()"
   styleClass="template-editor-dialog"
 >
-  <p-toast />
+  <p-toast position="bottom-right" />
   <p-confirmDialog />
 
   <!-- Loading State -->
@@ -260,19 +261,44 @@
           <ng-template #content>
             <div class="overflow-y-auto" style="max-height: calc(90vh - 300px)">
               <form [formGroup]="templateForm">
-                <div class="space-y-4 py-4">
-                  <!-- View Mode Toggle -->
+                <div class="space-y-4 pt-4 pb-12">
+                  <!-- Validation Requirements Panel (Epic 29, Story 29.4) -->
+                  @if (categoryControl?.value) {
+                    <div class="mb-4">
+                      <app-validation-requirements
+                        [category]="categoryControl!.value"
+                        [currentSchema]="parsedSchemaForValidation()"
+                        (addField)="handleAddFieldFromValidation($event)"
+                        (fixFieldType)="handleFixFieldTypeFromValidation($event)"
+                      />
+                    </div>
+                  }
+
+                  <!-- View Mode Toggle & Add Field Button -->
                   <div class="flex items-center justify-between mb-4">
                     <h3 class="text-lg font-semibold text-gray-800">Template Schema</h3>
-                    <button
-                      pButton
-                      [label]="viewMode() === 'json' ? 'Show Fields' : 'Show JSON'"
-                      [icon]="viewMode() === 'json' ? 'pi pi-list' : 'pi pi-code'"
-                      class="p-button-sm p-button-outlined"
-                      (click)="toggleViewMode()"
-                      [disabled]="schemaErrors().length > 0"
-                      type="button"
-                    ></button>
+                    <div class="flex gap-2">
+                      <!-- Add Field Button -->
+                      <button
+                        pButton
+                        label="Add Field"
+                        icon="pi pi-plus"
+                        class="p-button-sm p-button-success"
+                        (click)="openAddFieldDialog()"
+                        type="button"
+                        pTooltip="Quick add a field to the schema"
+                      ></button>
+                      <!-- Show Fields/JSON Toggle -->
+                      <button
+                        pButton
+                        [label]="viewMode() === 'json' ? 'Show Fields' : 'Show JSON'"
+                        [icon]="viewMode() === 'json' ? 'pi pi-list' : 'pi pi-code'"
+                        class="p-button-sm p-button-outlined"
+                        (click)="toggleViewMode()"
+                        [disabled]="schemaErrors().length > 0"
+                        type="button"
+                      ></button>
+                    </div>
                   </div>
 
                   <!-- JSON View -->
@@ -1448,3 +1474,10 @@
     }
   </ng-template>
 </p-dialog>
+
+<!-- Add Field Dialog -->
+<app-add-field-dialog
+  [visible]="showAddFieldDialog()"
+  (visibleChange)="showAddFieldDialog.set($event)"
+  (fieldsAdded)="handleFieldsAdded($event)"
+/>

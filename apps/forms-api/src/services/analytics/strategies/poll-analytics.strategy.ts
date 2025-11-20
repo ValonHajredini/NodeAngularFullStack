@@ -110,14 +110,50 @@ export class PollAnalyticsStrategy implements IAnalyticsStrategy {
   }
 
   /**
+   * Detects if the form has the required poll field.
+   *
+   * Checks a sample submission for the presence of the poll option field.
+   *
+   * @param formId - UUID of the form schema to check
+   * @param tenantId - Optional tenant ID for isolation
+   * @returns Object with detection results and missing field information
+   * @private
+   */
+  private async detectRequiredFields(
+    formId: string,
+    tenantId: string | null
+  ): Promise<{ hasRequiredFields: boolean; missing: string[] }> {
+    const submissions = await this.repository.getAllSubmissionValues(formId, tenantId);
+
+    if (submissions.length === 0) {
+      return { hasRequiredFields: false, missing: [] };
+    }
+
+    // Check first submission for poll field
+    const sampleSubmission = submissions[0];
+    const missing: string[] = [];
+
+    if (!(this.pollFieldKey in sampleSubmission) || sampleSubmission[this.pollFieldKey] === null || sampleSubmission[this.pollFieldKey] === undefined) {
+      missing.push(this.pollFieldKey);
+    }
+
+    return {
+      hasRequiredFields: missing.length === 0,
+      missing
+    };
+  }
+
+  /**
    * Builds poll analytics metrics for a form.
    *
    * Process:
    * 1. Fetch submission counts and time range (via repository)
-   * 2. Fetch vote counts per option (via repository JSONB aggregation)
-   * 3. Calculate vote percentages (normalized to 100%)
-   * 4. Identify most popular option (highest vote count)
-   * 5. Return strongly-typed PollMetrics
+   * 2. Detect if form has required poll field
+   * 3. If missing field, return empty metrics with helpful message
+   * 4. Fetch vote counts per option (via repository JSONB aggregation)
+   * 5. Calculate vote percentages (normalized to 100%)
+   * 6. Identify most popular option (highest vote count)
+   * 7. Return strongly-typed PollMetrics
    *
    * Edge cases:
    * - No submissions: Returns zeroed metrics with empty voteCounts/votePercentages
@@ -158,6 +194,28 @@ export class PollAnalyticsStrategy implements IAnalyticsStrategy {
           mostPopularOption: '',
           firstSubmissionAt: undefined,
           lastSubmissionAt: undefined,
+        };
+      }
+
+      // Detect if form has required poll field
+      const fieldDetection = await this.detectRequiredFields(formId, tenantId);
+
+      // If form doesn't have poll field, return empty metrics with helpful message
+      if (!fieldDetection.hasRequiredFields) {
+        return {
+          category: 'polls',
+          totalSubmissions: counts.totalSubmissions,
+          voteCounts: {},
+          votePercentages: {},
+          uniqueVoters: 0,
+          mostPopularOption: '',
+          firstSubmissionAt: counts.firstSubmissionAt ?? undefined,
+          lastSubmissionAt: counts.lastSubmissionAt ?? undefined,
+          missingFields: {
+            hasRequiredFields: false,
+            missing: fieldDetection.missing,
+            message: `This form does not contain a poll option field (${fieldDetection.missing.join(', ')}). Poll analytics require forms with a ${this.pollFieldKey} field containing the selected option. Consider using a different template category for this type of data collection.`
+          }
         };
       }
 

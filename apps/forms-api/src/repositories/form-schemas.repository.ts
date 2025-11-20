@@ -169,7 +169,7 @@ export class FormSchemasRepository {
       const row = result.rows[0];
       const parsedSchemaJson = row.schema_json;
 
-      const schema: FormSchema = {
+      const schema: any = {
         id: row.id,
         formId: row.formId,
         version: row.version,
@@ -186,6 +186,11 @@ export class FormSchemasRepository {
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
       };
+
+      // Preserve template category for analytics detection (Epic 30)
+      if (parsedSchemaJson.category) {
+        schema.category = parsedSchemaJson.category;
+      }
 
       // Add embedded theme object if theme exists
       if (row['theme.id']) {
@@ -206,7 +211,7 @@ export class FormSchemasRepository {
         };
       }
 
-      return schema;
+      return schema as FormSchema;
     } catch (error: any) {
       throw new Error(`Failed to find schema by ID: ${error.message}`);
     } finally {
@@ -246,7 +251,7 @@ export class FormSchemasRepository {
       const result = await client.query(query, [formId]);
       return result.rows.map((row) => {
         const parsedSchemaJson = row.schema_json;
-        return {
+        const returnSchema: any = {
           id: row.id,
           formId: row.formId,
           version: row.version,
@@ -263,6 +268,13 @@ export class FormSchemasRepository {
           createdAt: row.createdAt,
           updatedAt: row.updatedAt,
         };
+
+        // Preserve template category for analytics detection (Epic 30)
+        if (parsedSchemaJson.category) {
+          returnSchema.category = parsedSchemaJson.category;
+        }
+
+        return returnSchema;
       }) as FormSchema[];
     } catch (error: any) {
       throw new Error(`Failed to find schemas by form ID: ${error.message}`);
@@ -321,7 +333,7 @@ export class FormSchemasRepository {
       const row = result.rows[0];
       const parsedSchemaJson = row.schema_json;
 
-      const schema: FormSchema = {
+      const schema: any = {
         id: row.id,
         formId: row.formId,
         version: row.version,
@@ -338,6 +350,11 @@ export class FormSchemasRepository {
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
       };
+
+      // Preserve template category for analytics detection (Epic 30)
+      if (parsedSchemaJson.category) {
+        schema.category = parsedSchemaJson.category;
+      }
 
       // Add embedded theme object if theme exists
       if (row['theme.id']) {
@@ -358,7 +375,7 @@ export class FormSchemasRepository {
         };
       }
 
-      return schema;
+      return schema as FormSchema;
     } catch (error: any) {
       throw new Error(`Failed to find schema by token: ${error.message}`);
     } finally {

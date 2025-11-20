@@ -41,6 +41,9 @@ import {
   FormFieldType,
 } from '@nodeangularfullstack/shared';
 import { TemplatesApiService } from '../templates-api.service';
+import { AddFieldDialogComponent } from './add-field-dialog/add-field-dialog.component';
+import { FieldDefaultsService } from './services/field-defaults.service';
+import { ValidationRequirementsComponent } from './validation-requirements/validation-requirements.component';
 
 /**
  * Dropdown option interface for PrimeNG dropdowns
@@ -112,6 +115,8 @@ interface QuizConfigFormState {
     ConfirmDialog,
     Checkbox,
     StepperModule,
+    AddFieldDialogComponent,
+    ValidationRequirementsComponent,
   ],
   providers: [ConfirmationService, MessageService],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -124,6 +129,7 @@ export class TemplateEditorDialogComponent {
   private readonly templatesApiService = inject(TemplatesApiService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
+  private readonly fieldDefaultsService = inject(FieldDefaultsService);
 
   // Inputs
   readonly visible = input.required<boolean>();
@@ -136,6 +142,7 @@ export class TemplateEditorDialogComponent {
 
   // Internal state for dialog visibility
   protected readonly visibleSignal = signal(false);
+  protected readonly showAddFieldDialog = signal(false);
 
   // State signals
   protected readonly loading = signal(false);
@@ -305,6 +312,23 @@ export class TemplateEditorDialogComponent {
   protected readonly isLastStep = computed(() => this.currentStep() === 4);
 
   protected readonly isFirstStep = computed(() => this.currentStep() === 0);
+
+  /**
+   * Parsed schema for validation requirements component (Epic 29, Story 29.4)
+   */
+  protected readonly parsedSchemaForValidation = computed((): FormSchema | null => {
+    // Trigger reactivity
+    this.formValueChanged();
+
+    try {
+      const schemaValue = this.schemaControl.value ?? '';
+      if (!schemaValue) return null;
+
+      return JSON.parse(schemaValue) as FormSchema;
+    } catch (e) {
+      return null;
+    }
+  });
 
   /**
    * Get available fields from schema for field mapping
@@ -1132,6 +1156,238 @@ export class TemplateEditorDialogComponent {
       });
     } else {
       this.closeDialog();
+    }
+  }
+
+  /**
+   * Open the Add Field dialog
+   */
+  protected openAddFieldDialog(): void {
+    this.showAddFieldDialog.set(true);
+  }
+
+  /**
+   * Handle field type selections from Add Field dialog.
+   * Generates smart defaults for each field type and appends them to the schema JSON.
+   *
+   * @param fieldTypes - Array of selected field types to add
+   */
+  protected handleFieldsAdded(fieldTypes: FormFieldType[]): void {
+    try {
+      // Parse current schema JSON
+      const currentSchemaJson = this.schemaControl.value ?? this.defaultSchema;
+      const schema: FormSchema = JSON.parse(currentSchemaJson);
+
+      // Generate fields with smart defaults for each selected type
+      const newFields: FormField[] = [];
+      for (const fieldType of fieldTypes) {
+        const newField = this.fieldDefaultsService.generateFieldDefaults(fieldType, [
+          ...schema.fields,
+          ...newFields,
+        ]);
+        newFields.push(newField);
+      }
+
+      // Add all new fields to schema
+      schema.fields.push(...newFields);
+
+      // Update JSON textarea with pretty-printed JSON
+      const updatedSchemaJson = JSON.stringify(schema, null, 2);
+      this.schemaControl.setValue(updatedSchemaJson);
+      this.schemaControl.markAsDirty();
+
+      // Trigger schema validation
+      this.validateSchema(updatedSchemaJson);
+
+      // Show success toast
+      const count = fieldTypes.length;
+      const message =
+        count === 1
+          ? `${this.getFieldTypeLabel(fieldTypes[0])} field added successfully`
+          : `${count} fields added successfully`;
+      this.messageService.add({
+        severity: 'success',
+        summary: count === 1 ? 'Field Added' : 'Fields Added',
+        detail: message,
+        life: 3000,
+      });
+    } catch (error) {
+      // Handle JSON parse errors or other exceptions
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Failed to Add Fields',
+        detail: 'Could not parse schema JSON. Please check your JSON syntax.',
+        life: 5000,
+      });
+      console.error('Error adding fields:', error);
+    }
+  }
+
+  /**
+   * Get human-readable label for a field type (for toast messages)
+   */
+  private getFieldTypeLabel(type: FormFieldType): string {
+    const labels: Record<FormFieldType, string> = {
+      [FormFieldType.TEXT]: 'Text',
+      [FormFieldType.EMAIL]: 'Email',
+      [FormFieldType.NUMBER]: 'Number',
+      [FormFieldType.SELECT]: 'Select',
+      [FormFieldType.TEXTAREA]: 'Text Area',
+      [FormFieldType.FILE]: 'File Upload',
+      [FormFieldType.CHECKBOX]: 'Checkbox',
+      [FormFieldType.RADIO]: 'Radio Button',
+      [FormFieldType.DATE]: 'Date',
+      [FormFieldType.DATETIME]: 'Date & Time',
+      [FormFieldType.TOGGLE]: 'Toggle Switch',
+      [FormFieldType.IMAGE_GALLERY]: 'Image Gallery',
+      [FormFieldType.TIME_SLOT]: 'Time Slot',
+      [FormFieldType.DIVIDER]: 'Divider',
+      [FormFieldType.HEADING]: 'Heading',
+      [FormFieldType.IMAGE]: 'Image',
+      [FormFieldType.TEXT_BLOCK]: 'Text Block',
+      [FormFieldType.GROUP]: 'Group',
+    };
+    return labels[type] || 'Field';
+  }
+
+  /**
+   * Handle add field from validation component
+   * Adds a required field with the correct type when user clicks auto-fix suggestion
+   *
+   * @param event - Field name and type to add
+   */
+  protected handleAddFieldFromValidation(event: { fieldName: string; fieldType: string }): void {
+    try {
+      // Parse current schema JSON
+      const currentSchemaJson = this.schemaControl.value ?? this.defaultSchema;
+      const schema: FormSchema = JSON.parse(currentSchemaJson);
+
+      // Generate field with smart defaults
+      const fieldType = event.fieldType as FormFieldType;
+      const newField = this.fieldDefaultsService.generateFieldDefaults(fieldType, schema.fields);
+
+      // Override field name with the required field name
+      newField.fieldName = event.fieldName;
+      newField.label = this.formatFieldLabelFromName(event.fieldName);
+
+      // Add default options for SELECT/RADIO/CHECKBOX fields
+      if (['select', 'radio', 'checkbox'].includes(fieldType)) {
+        newField.options = [
+          { label: 'Option 1', value: 'option_1' },
+          { label: 'Option 2', value: 'option_2' },
+        ];
+      }
+
+      // Add field to schema
+      schema.fields.push(newField);
+
+      // Update JSON textarea
+      const updatedSchemaJson = JSON.stringify(schema, null, 2);
+      this.schemaControl.setValue(updatedSchemaJson);
+      this.schemaControl.markAsDirty();
+
+      // Trigger schema validation
+      this.validateSchema(updatedSchemaJson);
+
+      // Show success toast
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Field Added',
+        detail: `Required field "${event.fieldName}" added successfully`,
+        life: 3000,
+      });
+    } catch (error) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Failed to Add Field',
+        detail: 'Could not parse schema JSON. Please check your JSON syntax.',
+        life: 5000,
+      });
+      console.error('Error adding field from validation:', error);
+    }
+  }
+
+  /**
+   * Handle fix field type from validation component
+   * Changes a field's type when user clicks auto-fix suggestion
+   *
+   * @param event - Field name and target type
+   */
+  protected handleFixFieldTypeFromValidation(event: { fieldName: string; targetType: string }): void {
+    try {
+      // Parse current schema JSON
+      const currentSchemaJson = this.schemaControl.value ?? this.defaultSchema;
+      const schema: FormSchema = JSON.parse(currentSchemaJson);
+
+      // Find field to update
+      const fieldIndex = schema.fields.findIndex((f) => f.fieldName === event.fieldName);
+      if (fieldIndex === -1) {
+        throw new Error(`Field "${event.fieldName}" not found in schema`);
+      }
+
+      const field = schema.fields[fieldIndex];
+      const oldType = field.type;
+
+      // Update field type
+      field.type = event.targetType as FormFieldType;
+
+      // Add default options if changing to SELECT/RADIO/CHECKBOX
+      if (['select', 'radio', 'checkbox'].includes(event.targetType) && !field.options) {
+        field.options = [
+          { label: 'Option 1', value: 'option_1' },
+          { label: 'Option 2', value: 'option_2' },
+        ];
+      }
+
+      // Remove options if changing away from SELECT/RADIO/CHECKBOX
+      if (!['select', 'radio', 'checkbox'].includes(event.targetType) && field.options) {
+        delete field.options;
+      }
+
+      // Update JSON textarea
+      const updatedSchemaJson = JSON.stringify(schema, null, 2);
+      this.schemaControl.setValue(updatedSchemaJson);
+      this.schemaControl.markAsDirty();
+
+      // Trigger schema validation
+      this.validateSchema(updatedSchemaJson);
+
+      // Show success toast
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Field Type Updated',
+        detail: `Field "${event.fieldName}" changed from ${oldType} to ${event.targetType}`,
+        life: 3000,
+      });
+    } catch (error) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Failed to Update Field Type',
+        detail: error instanceof Error ? error.message : 'Unknown error occurred',
+        life: 5000,
+      });
+      console.error('Error fixing field type from validation:', error);
+    }
+  }
+
+  /**
+   * Format field name to human-readable label
+   * Example: "poll_option" → "Poll Option"
+   */
+  private formatFieldLabelFromName(fieldName: string): string {
+    return fieldName
+      .split('_')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }
+
+  /**
+   * Handle visibility change from PrimeNG Dialog (e.g., when X button is clicked)
+   */
+  protected onVisibilityChange(visible: boolean): void {
+    if (!visible) {
+      // Dialog is being closed, trigger close handler
+      this.handleDialogClose();
     }
   }
 

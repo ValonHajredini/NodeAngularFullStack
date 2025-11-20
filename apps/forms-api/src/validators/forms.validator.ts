@@ -173,17 +173,21 @@ export const validateFormSchema = (
       };
     }) => {
       // Validate field type
-      if (!field.type) {
+      if (!field.type || typeof field.type !== 'string') {
         errors.push('All fields must have a type property');
         return;
       }
 
-      if (!allValidFieldTypes.includes(field.type as FormFieldType)) {
+      const normalizedType = field.type.trim().toLowerCase();
+
+      if (!allValidFieldTypes.includes(normalizedType as FormFieldType)) {
         errors.push(`Invalid field type: ${field.type}`);
         return;
       }
 
-      const fieldType = field.type as FormFieldType;
+      // Normalize legacy/seeded field types (e.g., TIME_SLOT) to canonical lowercase values
+      field.type = normalizedType as FormFieldType;
+      const fieldType = normalizedType as FormFieldType;
 
       // Validate fieldName requirement based on field category
       if (!field.fieldName) {
@@ -468,6 +472,8 @@ export const validateFormSchema = (
   }
 
   if (errors.length > 0) {
+    console.error('[SCHEMA VALIDATION ERROR] Schema validation failed:');
+    console.error(JSON.stringify(errors, null, 2));
     res.status(400).json({
       success: false,
       error: {
@@ -683,6 +689,8 @@ export const validateStepFormConfiguration = (
 
   // Return errors if any found
   if (errors.length > 0) {
+    console.error('[STEP VALIDATION ERROR] Step form validation failed:');
+    console.error(JSON.stringify(errors, null, 2));
     res.status(400).json({
       success: false,
       error: {

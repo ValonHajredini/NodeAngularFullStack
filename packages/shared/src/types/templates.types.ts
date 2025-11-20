@@ -81,6 +81,8 @@ export interface AppointmentConfig {
   timeSlotField: string;
   /** Field name for date selection */
   dateField: string;
+  /** Optional field name for booking status (e.g., 'confirmed', 'cancelled', 'pending') */
+  statusField?: string;
   /** Maximum concurrent bookings allowed per time slot */
   maxBookingsPerSlot: number;
   /** Database table storing existing bookings */
@@ -898,3 +900,78 @@ export type TemplateWizardConfig =
   | AppointmentWizardConfig
   | RestaurantWizardConfig
   | EventsWizardConfig;
+
+/**
+ * Template Field Validation Types
+ * Epic 29, Story 29.4: Frontend Validation & UX Enhancement
+ *
+ * Shared validation types used across frontend and backend for category field validation.
+ * Ensures 100% consistency between client-side and server-side validation logic.
+ *
+ * @since 2025-11-19
+ */
+
+/**
+ * Field metadata structure for quiz questions and other fields requiring metadata
+ */
+export interface FieldMetadata {
+  /** Correct answer for quiz questions */
+  correctAnswer?: string | boolean;
+  /** Allow additional metadata properties */
+  [key: string]: unknown;
+}
+
+/**
+ * Field requirement definition for a category
+ * Defines validation rules for template fields based on category
+ */
+export interface FieldRequirement {
+  /** Exact field name to match (e.g., 'poll_option') */
+  fieldName?: string;
+  /** Regex pattern for field name matching (e.g., /^question_\d+$/ for question_1, question_2) */
+  fieldNamePattern?: RegExp;
+  /** Allowed field types (e.g., ['SELECT', 'RADIO']) */
+  allowedTypes: string[];
+  /** Minimum number of matching fields required (default: 1) */
+  minimumCount?: number;
+  /** Metadata requirements (e.g., { correctAnswer: true } for quiz fields) */
+  requiresMetadata?: FieldMetadata;
+  /** Error message for missing field */
+  message: string;
+  /** Auto-fix suggestion for user */
+  autoFixSuggestion: string;
+}
+
+/**
+ * Template field validation error for a specific field requirement
+ * Provides detailed error information for template validation failures
+ */
+export interface TemplateFieldValidationError {
+  /** Field name that failed validation */
+  field: string;
+  /** Expected field type(s) */
+  expectedType: string | string[];
+  /** Actual field type (if field exists but wrong type) */
+  actualType?: string;
+  /** Error message */
+  message: string;
+  /** Auto-fix suggestion */
+  autoFixSuggestion: string;
+  /** Error type discriminator */
+  errorType: 'MISSING_FIELD' | 'WRONG_TYPE' | 'MISSING_METADATA' | 'INSUFFICIENT_COUNT';
+}
+
+/**
+ * Template field validation result for a template schema
+ * Contains validation status and any errors found
+ */
+export interface TemplateFieldValidationResult {
+  /** Whether validation passed */
+  isValid: boolean;
+  /** List of validation errors (empty if valid) */
+  errors: TemplateFieldValidationError[];
+  /** Number of requirements satisfied */
+  satisfiedCount?: number;
+  /** Total number of requirements */
+  totalCount?: number;
+}

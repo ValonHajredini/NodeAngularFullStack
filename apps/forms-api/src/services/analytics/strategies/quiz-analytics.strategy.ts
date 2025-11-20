@@ -126,17 +126,64 @@ export class QuizAnalyticsStrategy implements IAnalyticsStrategy {
   }
 
   /**
+   * Detects if the form has quiz-compatible structure.
+   *
+   * Checks:
+   * - Form schema has fields with correctAnswer metadata (required for quiz scoring)
+   * - At least one submission exists (optional - empty forms are valid)
+   *
+   * @param formId - UUID of the form schema to check
+   * @param tenantId - Optional tenant ID for isolation
+   * @returns Object with detection results and helpful message
+   * @private
+   */
+  private async detectRequiredFields(
+    formId: string,
+    _tenantId: string | null
+  ): Promise<{ hasRequiredFields: boolean; missing: string[] }> {
+    // tenantId not used in this implementation (form schemas already scoped)
+    void _tenantId;
+
+    try {
+      // Fetch form schema to check for quiz metadata
+      const formSchema = await this.schemasRepository.findById(formId);
+
+      if (!formSchema || !formSchema.fields || formSchema.fields.length === 0) {
+        return { hasRequiredFields: false, missing: ['quiz_fields_with_correct_answers'] };
+      }
+
+      // Check if any field has correctAnswer metadata (indicates quiz structure)
+      const hasQuizFields = formSchema.fields.some((field: any) =>
+        field.correctAnswer !== undefined && field.correctAnswer !== null
+      );
+
+      if (!hasQuizFields) {
+        return { hasRequiredFields: false, missing: ['quiz_fields_with_correct_answers'] };
+      }
+
+      return {
+        hasRequiredFields: true,
+        missing: []
+      };
+    } catch (error) {
+      console.error('[QuizAnalyticsStrategy] Error detecting required fields:', error);
+      return { hasRequiredFields: false, missing: ['quiz_fields_with_correct_answers'] };
+    }
+  }
+
+  /**
    * Builds quiz analytics metrics for a form.
    *
    * Process:
    * 1. Fetch submission counts and time range (via repository)
-   * 2. Fetch score distribution buckets (via repository JSONB aggregation)
-   * 3. Fetch all submission values for statistical calculations
-   * 4. Calculate average/median scores
-   * 5. Calculate pass rate (submissions >= passing threshold)
-   * 6. Calculate question accuracy (correct answers / total attempts per question)
-   * 7. Identify highest/lowest scores
-   * 8. Return strongly-typed QuizMetrics
+   * 2. Detect if form has quiz-compatible structure (fields with correctAnswer metadata)
+   * 3. If missing quiz fields, return empty metrics with helpful message
+   * 4. Fetch all submission values for statistical calculations
+   * 5. Calculate average/median scores
+   * 6. Calculate pass rate (submissions >= passing threshold)
+   * 7. Calculate question accuracy (correct answers / total attempts per question)
+   * 8. Identify highest/lowest scores
+   * 9. Return strongly-typed QuizMetrics
    *
    * Edge cases:
    * - No submissions: Returns zeroed metrics with empty scoreDistribution/questionAccuracy
@@ -183,10 +230,35 @@ export class QuizAnalyticsStrategy implements IAnalyticsStrategy {
         };
       }
 
+      // Detect if form has required quiz fields (fields with correctAnswer metadata)
+      const fieldDetection = await this.detectRequiredFields(formId, tenantId);
+
       // Fetch form schema to get field metadata (correctAnswer, points)
       const formSchema = await this.schemasRepository.findById(formId);
       if (!formSchema || !formSchema.fields) {
         throw new Error('Form schema not found or has no fields');
+      }
+
+      // If form doesn't have quiz fields, return empty metrics with helpful message
+      if (!fieldDetection.hasRequiredFields) {
+        return {
+          category: 'quiz',
+          totalSubmissions: counts.totalSubmissions,
+          averageScore: 0,
+          medianScore: 0,
+          passRate: 0,
+          scoreDistribution: {},
+          questionAccuracy: {},
+          highestScore: 0,
+          lowestScore: 0,
+          firstSubmissionAt: counts.firstSubmissionAt ?? undefined,
+          lastSubmissionAt: counts.lastSubmissionAt ?? undefined,
+          missingFields: {
+            hasRequiredFields: false,
+            missing: fieldDetection.missing,
+            message: `This form does not contain quiz fields with correct answer metadata. Quiz analytics require forms with fields that have 'correctAnswer' properties for scoring. Consider using a different template category for this type of data collection.`
+          }
+        };
       }
 
       const fields = formSchema.fields;

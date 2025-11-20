@@ -7,6 +7,8 @@ import {
   computed,
   OnInit,
   OnDestroy,
+  input,
+  inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -15,9 +17,12 @@ import { InputTextModule } from 'primeng/inputtext';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { ButtonModule } from 'primeng/button';
+import { TooltipModule } from 'primeng/tooltip';
+import { BadgeModule } from 'primeng/badge';
 import { DragDropModule } from '@angular/cdk/drag-drop';
-import { FormFieldType, isInputField, isDisplayElement } from '@nodeangularfullstack/shared';
+import { FormFieldType, isInputField, isDisplayElement, TemplateCategory } from '@nodeangularfullstack/shared';
 import { trigger, state, style, transition, animate } from '@angular/animations';
+import { TemplateValidationService } from '../template-editor/services/template-validation.service';
 
 interface FieldTypeDefinition {
   type: FormFieldType;
@@ -43,6 +48,8 @@ interface FieldTypeDefinition {
     IconFieldModule,
     InputIconModule,
     ButtonModule,
+    TooltipModule,
+    BadgeModule,
     DragDropModule,
   ],
   animations: [
@@ -139,14 +146,24 @@ interface FieldTypeDefinition {
                       <div
                         cdkDrag
                         [cdkDragData]="fieldType"
-                        class="field-type-card border border-gray-300 rounded-lg cursor-move hover:bg-green-50 hover:border-green-400 transition-all"
+                        [class]="isFieldTypeRequired(fieldType.type)
+                          ? 'field-type-card border-2 border-blue-400 bg-blue-50 rounded-lg cursor-move hover:bg-blue-100 hover:border-blue-500 transition-all'
+                          : 'field-type-card border border-gray-300 rounded-lg cursor-move hover:bg-green-50 hover:border-green-400 transition-all'"
+                        [pTooltip]="isFieldTypeRequired(fieldType.type) ? getRequiredFieldTooltip(fieldType.type) : ''"
+                        [tooltipPosition]="'right'"
+                        [escape]="false"
                         (click)="onFieldTypeSelected(fieldType.type)"
                       >
-                        <div class="flex items-center gap-3">
-                          <i [class]="'pi ' + fieldType.icon + ' text-green-600 text-xl'"></i>
-                          <span class="text-sm font-medium text-gray-800">{{
-                            fieldType.label
-                          }}</span>
+                        <div class="flex items-center gap-3 justify-between">
+                          <div class="flex items-center gap-3">
+                            <i [class]="'pi ' + fieldType.icon + ' text-green-600 text-xl'"></i>
+                            <span class="text-sm font-medium text-gray-800">{{
+                              fieldType.label
+                            }}</span>
+                          </div>
+                          @if (isFieldTypeRequired(fieldType.type)) {
+                            <p-badge value="Required" severity="info" />
+                          }
                         </div>
 
                         <div
@@ -283,6 +300,15 @@ interface FieldTypeDefinition {
 export class FieldPaletteComponent implements OnInit, OnDestroy {
   @Output() fieldSelected = new EventEmitter<FormFieldType>();
 
+  /**
+   * Template category for showing required field hints (AC 4)
+   * When provided, highlights required field types and shows tooltips
+   */
+  readonly templateCategory = input<TemplateCategory | null>(null);
+
+  // Inject validation service for required field detection
+  private readonly validationService = inject(TemplateValidationService);
+
   private readonly STORAGE_KEY = 'formBuilder.fieldPaletteSidebarCollapsed';
   private inactivityTimer?: number;
   private timeoutStartTime?: number;
@@ -354,6 +380,82 @@ export class FieldPaletteComponent implements OnInit, OnDestroy {
     if (!query) return this.previewFields;
     return this.previewFields.filter((field) => field.label.toLowerCase().includes(query));
   });
+
+  /**
+   * Map of required field types for the current template category (AC 4)
+   * Returns a map of field type -> requirement explanation
+   */
+  readonly requiredFieldTypes = computed(() => {
+    const category = this.templateCategory();
+    if (!category) return new Map<string, string>();
+
+    const requirements = this.validationService.getRequirementsForCategory(category);
+    const requiredTypes = new Map<string, string>();
+
+    for (const req of requirements) {
+      // Extract field types from requirement
+      for (const fieldType of req.allowedTypes) {
+        // Map backend field type names to frontend FormFieldType enum values
+        const frontendType = this.mapBackendToFrontendType(fieldType);
+        if (frontendType) {
+          const fieldName = req.fieldName || req.fieldNamePattern?.source || 'field';
+          requiredTypes.set(frontendType, `${fieldType} field required for ${fieldName} (${this.getCategoryPurpose(category)})`);
+        }
+      }
+    }
+
+    return requiredTypes;
+  });
+
+  /**
+   * Maps backend field type names to frontend FormFieldType enum values
+   */
+  private mapBackendToFrontendType(backendType: string): string | null {
+    const typeMap: Record<string, string> = {
+      'TEXT': FormFieldType.TEXT,
+      'EMAIL': FormFieldType.EMAIL,
+      'NUMBER': FormFieldType.NUMBER,
+      'SELECT': FormFieldType.SELECT,
+      'TEXTAREA': FormFieldType.TEXTAREA,
+      'CHECKBOX': FormFieldType.CHECKBOX,
+      'RADIO': FormFieldType.RADIO,
+      'DATE': FormFieldType.DATE,
+      'DATETIME': FormFieldType.DATETIME,
+      'TIME_SLOT': FormFieldType.TIME_SLOT,
+      'FILE': FormFieldType.FILE,
+      'TOGGLE': FormFieldType.TOGGLE,
+    };
+    return typeMap[backendType] || null;
+  }
+
+  /**
+   * Gets a user-friendly purpose description for the category
+   */
+  private getCategoryPurpose(category: TemplateCategory): string {
+    const purposeMap: Record<TemplateCategory, string> = {
+      [TemplateCategory.POLLS]: 'vote tracking',
+      [TemplateCategory.QUIZ]: 'quiz questions',
+      [TemplateCategory.ECOMMERCE]: 'product orders',
+      [TemplateCategory.SERVICES]: 'appointment booking',
+      [TemplateCategory.DATA_COLLECTION]: 'menu orders',
+      [TemplateCategory.EVENTS]: 'event registration',
+    };
+    return purposeMap[category] || 'data collection';
+  }
+
+  /**
+   * Checks if a field type is required for the current template category
+   */
+  isFieldTypeRequired(fieldType: FormFieldType): boolean {
+    return this.requiredFieldTypes().has(fieldType);
+  }
+
+  /**
+   * Gets the tooltip text explaining why a field type is required
+   */
+  getRequiredFieldTooltip(fieldType: FormFieldType): string {
+    return this.requiredFieldTypes().get(fieldType) || '';
+  }
 
   /**
    * Lifecycle hook that initializes the component.

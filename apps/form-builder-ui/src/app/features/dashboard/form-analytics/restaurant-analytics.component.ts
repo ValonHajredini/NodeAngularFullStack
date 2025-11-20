@@ -187,14 +187,43 @@ import { Message } from 'primeng/message';
         <div
           class="bg-white p-8 rounded-lg border border-gray-200 shadow-sm"
           role="status"
-          aria-label="No restaurant orders yet"
+          [attr.aria-label]="metrics().missingFields ? 'Incompatible form fields' : 'No restaurant orders yet'"
         >
-          <p-message
-            severity="info"
-            text="No menu orders have been received yet. Order data will appear here once customers submit their orders."
-            [closable]="false"
-            styleClass="w-full"
-          ></p-message>
+          @if (metrics().missingFields) {
+            <!-- Missing Fields Warning -->
+            <p-message
+              severity="warn"
+              [text]="metrics().missingFields!.message"
+              [closable]="false"
+              styleClass="w-full"
+            >
+              <ng-template pTemplate="content">
+                <div class="flex flex-col gap-3">
+                  <div class="flex items-start gap-3">
+                    <i class="pi pi-exclamation-triangle text-xl"></i>
+                    <div>
+                      <p class="font-semibold mb-2">Incompatible Form Type</p>
+                      <p class="mb-2">{{ metrics().missingFields!.message }}</p>
+                      <p class="text-sm">
+                        <strong>Missing fields:</strong> {{ metrics().missingFields!.missing.join(', ') }}
+                      </p>
+                      <p class="text-sm mt-2">
+                        <strong>Tip:</strong> This form appears to be a survey or feedback form. Consider viewing the generic form analytics instead.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </ng-template>
+            </p-message>
+          } @else {
+            <!-- Standard Empty State -->
+            <p-message
+              severity="info"
+              text="No menu orders have been received yet. Order data will appear here once customers submit their orders."
+              [closable]="false"
+              styleClass="w-full"
+            ></p-message>
+          }
         </div>
       }
 

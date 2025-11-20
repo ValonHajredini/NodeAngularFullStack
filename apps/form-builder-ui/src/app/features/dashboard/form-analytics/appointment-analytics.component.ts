@@ -12,16 +12,16 @@
 
 import { Component, ChangeDetectionStrategy, input, computed, signal, inject, effect } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
-import { AppointmentMetrics } from '@nodeangularfullstack/shared';
+import { AppointmentMetrics, FormSubmission } from '@nodeangularfullstack/shared';
 import { HorizontalBarChartComponent } from './charts/horizontal-bar-chart.component';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { Message } from 'primeng/message';
 import { Tabs, TabList, Tab, TabPanels, TabPanel } from 'primeng/tabs';
-import { CalendarModule, CalendarEvent, CalendarView, DateAdapter, CalendarUtils, CalendarDateFormatter, CalendarEventTitleFormatter, CalendarA11y, CalendarEventTimesChangedEventType } from 'angular-calendar';
+import { CalendarModule, CalendarEvent, CalendarView, DateAdapter, CalendarUtils, CalendarDateFormatter, CalendarEventTitleFormatter, CalendarA11y } from 'angular-calendar';
 import { adapterFactory } from 'angular-calendar/date-adapters/date-fns';
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, format } from 'date-fns';
-import { HttpClient } from '@angular/common/http';
+import { startOfWeek, endOfWeek, format } from 'date-fns';
+import { FormsApiService } from '../forms-api.service';
 
 /**
  * Interface for heatmap cell data
@@ -31,22 +31,6 @@ interface HeatmapCell {
   bookings: number;
   percentage: number;
   intensity: number; // 0-100 for color intensity
-}
-
-/**
- * Interface for appointment submission
- */
-interface AppointmentSubmission {
-  id: string;
-  formSchemaId: string;
-  valuesJson: {
-    booking_date: string;
-    time_slot: string;
-    service_type: string;
-    customer_name: string;
-    customer_email: string;
-  };
-  submittedAt: string;
 }
 
 /**
@@ -326,14 +310,43 @@ interface AppointmentSubmission {
             <div
               class="bg-white p-8 rounded-lg border border-gray-200 shadow-sm"
               role="status"
-              aria-label="No appointment bookings yet"
+              [attr.aria-label]="metrics().missingFields ? 'Incompatible form fields' : 'No appointment bookings yet'"
             >
-              <p-message
-                severity="info"
-                text="No appointment bookings have been recorded yet. Booking data will appear here once appointments are submitted."
-                [closable]="false"
-                styleClass="w-full"
-              ></p-message>
+              @if (metrics().missingFields) {
+                <!-- Missing Fields Warning -->
+                <p-message
+                  severity="warn"
+                  [text]="metrics().missingFields!.message"
+                  [closable]="false"
+                  styleClass="w-full"
+                >
+                  <ng-template pTemplate="content">
+                    <div class="flex flex-col gap-3">
+                      <div class="flex items-start gap-3">
+                        <i class="pi pi-exclamation-triangle text-xl"></i>
+                        <div>
+                          <p class="font-semibold mb-2">Incompatible Form Type</p>
+                          <p class="mb-2">{{ metrics().missingFields!.message }}</p>
+                          <p class="text-sm">
+                            <strong>Missing fields:</strong> {{ metrics().missingFields!.missing.join(', ') }}
+                          </p>
+                          <p class="text-sm mt-2">
+                            <strong>Tip:</strong> This form appears to be a different type. Consider viewing the appropriate analytics category instead.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </ng-template>
+                </p-message>
+              } @else {
+                <!-- Standard Empty State -->
+                <p-message
+                  severity="info"
+                  text="No appointment bookings have been recorded yet. Booking data will appear here once appointments are submitted."
+                  [closable]="false"
+                  styleClass="w-full"
+                ></p-message>
+              }
             </div>
           }
           </p-tabpanel>
@@ -345,30 +358,66 @@ interface AppointmentSubmission {
               <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-2">
                   <h3 class="text-lg font-semibold text-gray-900">Appointments Calendar</h3>
+                  @if (metrics().fieldConfig) {
+                    <span
+                      class="text-xs px-2 py-1 rounded"
+                      [class.bg-green-100]="metrics().fieldConfig!.detectionMethod === 'business_logic'"
+                      [class.text-green-700]="metrics().fieldConfig!.detectionMethod === 'business_logic'"
+                      [class.bg-yellow-100]="metrics().fieldConfig!.detectionMethod === 'heuristic'"
+                      [class.text-yellow-700]="metrics().fieldConfig!.detectionMethod === 'heuristic'"
+                      [attr.title]="
+                        'Date: ' + metrics().fieldConfig!.dateField + ', Time: ' + metrics().fieldConfig!.timeSlotField
+                      "
+                    >
+                      {{ metrics().fieldConfig!.detectionMethod === 'business_logic' ? 'Configured' : 'Auto-detected' }}
+                    </span>
+                  }
                 </div>
-                <div class="flex items-center gap-2">
-                  <!-- View Buttons -->
-                  <button
-                    pButton
-                    type="button"
-                    label="Month"
-                    [class]="calendarView() === 'month' ? 'p-button-sm' : 'p-button-sm p-button-outlined'"
-                    (click)="setCalendarView('month')"
-                  ></button>
-                  <button
-                    pButton
-                    type="button"
-                    label="Week"
-                    [class]="calendarView() === 'week' ? 'p-button-sm' : 'p-button-sm p-button-outlined'"
-                    (click)="setCalendarView('week')"
-                  ></button>
-                  <button
-                    pButton
-                    type="button"
-                    label="Day"
-                    [class]="calendarView() === 'day' ? 'p-button-sm' : 'p-button-sm p-button-outlined'"
-                    (click)="setCalendarView('day')"
-                  ></button>
+                <div class="flex items-center gap-4">
+                  <!-- Calendar Mode Toggle -->
+                  <div class="flex items-center gap-2">
+                    <button
+                      pButton
+                      type="button"
+                      label="Appointments"
+                      [class]="calendarViewMode() === 'appointments' ? 'p-button-sm' : 'p-button-sm p-button-outlined'"
+                      (click)="calendarViewMode.set('appointments')"
+                      [attr.aria-label]="'Switch to individual appointments view'"
+                    ></button>
+                    <button
+                      pButton
+                      type="button"
+                      label="Heatmap"
+                      [class]="calendarViewMode() === 'heatmap' ? 'p-button-sm' : 'p-button-sm p-button-outlined'"
+                      (click)="calendarViewMode.set('heatmap')"
+                      [attr.aria-label]="'Switch to aggregated heatmap view'"
+                    ></button>
+                  </div>
+
+                  <!-- View Period Buttons -->
+                  <div class="flex items-center gap-2">
+                    <button
+                      pButton
+                      type="button"
+                      label="Month"
+                      [class]="calendarView() === 'month' ? 'p-button-sm' : 'p-button-sm p-button-outlined'"
+                      (click)="setCalendarView('month')"
+                    ></button>
+                    <button
+                      pButton
+                      type="button"
+                      label="Week"
+                      [class]="calendarView() === 'week' ? 'p-button-sm' : 'p-button-sm p-button-outlined'"
+                      (click)="setCalendarView('week')"
+                    ></button>
+                    <button
+                      pButton
+                      type="button"
+                      label="Day"
+                      [class]="calendarView() === 'day' ? 'p-button-sm' : 'p-button-sm p-button-outlined'"
+                      (click)="setCalendarView('day')"
+                    ></button>
+                  </div>
                 </div>
               </div>
 
@@ -399,7 +448,7 @@ interface AppointmentSubmission {
                   @case ('month') {
                     <mwl-calendar-month-view
                       [viewDate]="viewDate()"
-                      [events]="calendarEvents()"
+                      [events]="calendarViewMode() === 'appointments' ? calendarEvents() : heatmapCalendarEvents()"
                       [locale]="'en'"
                       [weekStartsOn]="1"
                     ></mwl-calendar-month-view>
@@ -407,7 +456,7 @@ interface AppointmentSubmission {
                   @case ('week') {
                     <mwl-calendar-week-view
                       [viewDate]="viewDate()"
-                      [events]="calendarEvents()"
+                      [events]="calendarViewMode() === 'appointments' ? calendarEvents() : heatmapCalendarEvents()"
                       [locale]="'en'"
                       [weekStartsOn]="1"
                     ></mwl-calendar-week-view>
@@ -415,7 +464,7 @@ interface AppointmentSubmission {
                   @case ('day') {
                     <mwl-calendar-day-view
                       [viewDate]="viewDate()"
-                      [events]="calendarEvents()"
+                      [events]="calendarViewMode() === 'appointments' ? calendarEvents() : heatmapCalendarEvents()"
                       [locale]="'en'"
                     ></mwl-calendar-day-view>
                   }
@@ -598,12 +647,12 @@ interface AppointmentSubmission {
   ],
 })
 export class AppointmentAnalyticsComponent {
-  private http = inject(HttpClient);
+  private formsApiService = inject(FormsApiService);
 
   /** Appointment metrics data from backend API */
   metrics = input.required<AppointmentMetrics>();
 
-  /** Form schema ID for fetching appointment submissions */
+  /** Form identifier used to fetch submissions (kept as schemaId for backwards compatibility) */
   formSchemaId = input.required<string>();
 
   /** Active tab index */
@@ -619,7 +668,10 @@ export class AppointmentAnalyticsComponent {
   viewDate = signal<Date>(new Date());
 
   /** Calendar events (appointments) */
-  appointments = signal<AppointmentSubmission[]>([]);
+  appointments = signal<FormSubmission[]>([]);
+
+  /** Calendar view mode: 'appointments' shows individual bookings, 'heatmap' shows aggregated counts */
+  calendarViewMode = signal<'appointments' | 'heatmap'>('appointments');
 
   /** CalendarView enum for template */
   CalendarView = CalendarView;
@@ -628,19 +680,24 @@ export class AppointmentAnalyticsComponent {
     // Fetch appointments when component initializes or formSchemaId changes
     effect(() => {
       const schemaId = this.formSchemaId();
-      if (!schemaId) return;
+      if (!schemaId) {
+        this.appointments.set([]);
+        return;
+      }
 
-      this.http.get<{ submissions: AppointmentSubmission[] }>(
-        `/api/forms/${schemaId}/submissions`
-      ).subscribe({
-        next: (response) => {
-          this.appointments.set(response.submissions);
-        },
-        error: (error) => {
-          console.error('Failed to fetch appointments:', error);
-          this.appointments.set([]);
-        }
-      });
+      const subscription = this.formsApiService
+        .getSubmissions(schemaId, 1, 200)
+        .subscribe({
+          next: (response) => {
+            this.appointments.set(response.data ?? []);
+          },
+          error: (error) => {
+            console.error('Failed to fetch appointments:', error);
+            this.appointments.set([]);
+          },
+        });
+
+      return () => subscription.unsubscribe();
     }, { allowSignalWrites: true });
   }
 
@@ -759,51 +816,290 @@ export class AppointmentAnalyticsComponent {
 
   /**
    * Transform appointments to calendar events with color coding by service type.
+   * Only submissions that include both a preferred date and time slot are rendered.
    */
   calendarEvents = computed((): CalendarEvent[] => {
-    return this.appointments().map((appointment) => {
-      const { booking_date, time_slot, service_type, customer_name } = appointment.valuesJson;
+    const submissions = this.appointments();
+    if (submissions.length === 0) {
+      return [];
+    }
 
-      // Parse date and time
-      const [hours, minutes] = time_slot.split(':').map(Number);
-      const startDate = new Date(booking_date);
-      startDate.setHours(hours, minutes, 0, 0);
+    const events: CalendarEvent[] = [];
 
-      const endDate = new Date(startDate);
-      endDate.setHours(hours + 1, minutes, 0, 0); // 1-hour appointments
+    submissions.forEach((submission) => {
+      const values = (submission.values ?? {}) as Record<string, unknown>;
+      const dateValue = this.extractDateField(values);
+      const timeSlotValue = this.extractTimeSlotField(values);
 
-      return {
-        title: `${customer_name} - ${this.getServiceLabel(service_type)}`,
+      if (!dateValue || !timeSlotValue) {
+        return;
+      }
+
+      const range = this.parseTimeSlotRange(timeSlotValue);
+      if (!range) {
+        return;
+      }
+
+      const startDate = new Date(dateValue as string);
+      if (isNaN(startDate.getTime())) {
+        return;
+      }
+
+      startDate.setHours(range.start.hours, range.start.minutes, 0, 0);
+      const endDate = new Date(startDate.getTime() + range.durationMinutes * 60 * 1000);
+
+      const serviceType = this.extractServiceType(values);
+      const customerName = this.extractCustomerName(values);
+
+      const event: CalendarEvent = {
+        title: `${customerName} • ${this.getServiceLabel(serviceType)}`.trim(),
         start: startDate,
         end: endDate,
-        color: this.getServiceColor(service_type),
-        meta: appointment,
+        color: this.getServiceColor(serviceType),
+        meta: submission,
       };
+
+      events.push(event);
     });
+
+    return events;
   });
 
   /**
-   * Get human-readable label for service type.
+   * Transform calendar heatmap data to calendar events for visualization.
+   * Creates aggregated events showing booking counts per date×timeslot combination.
+   *
+   * **Epic 30.5: Calendar Heatmap with Dynamic Field Detection**
+   *
+   * This computed signal converts the backend's 2D heatmap data (date × timeslot grid)
+   * into CalendarEvent[] format for rendering in angular-calendar.
+   *
+   * @returns Array of calendar events with booking count titles and intensity-based colors
    */
-  private getServiceLabel(serviceType: string): string {
+  heatmapCalendarEvents = computed((): CalendarEvent[] => {
+    const heatmap = this.metrics().calendarHeatmap;
+    if (!heatmap || heatmap.length === 0) {
+      return [];
+    }
+
+    const maxBookings = Math.max(...heatmap.map(cell => cell.bookings));
+    const events: CalendarEvent[] = [];
+
+    heatmap.forEach((cell) => {
+      const range = this.parseTimeSlotRange(cell.timeSlot);
+      if (!range) {
+        return; // Skip invalid time slots
+      }
+
+      const startDate = new Date(cell.date);
+      if (isNaN(startDate.getTime())) {
+        return; // Skip invalid dates
+      }
+
+      startDate.setHours(range.start.hours, range.start.minutes, 0, 0);
+      const endDate = new Date(startDate.getTime() + range.durationMinutes * 60 * 1000);
+
+      // Calculate intensity for color (0-100)
+      const intensity = maxBookings > 0 ? (cell.bookings / maxBookings) * 100 : 0;
+      const heatmapColor = this.getHeatmapColor(intensity);
+
+      // Build title with status breakdown if available
+      let title = `${cell.bookings} booking${cell.bookings !== 1 ? 's' : ''}`;
+      if (cell.statusBreakdown) {
+        const parts: string[] = [];
+        if (cell.statusBreakdown.confirmed > 0) parts.push(`${cell.statusBreakdown.confirmed} confirmed`);
+        if (cell.statusBreakdown.pending > 0) parts.push(`${cell.statusBreakdown.pending} pending`);
+        if (cell.statusBreakdown.cancelled > 0) parts.push(`${cell.statusBreakdown.cancelled} cancelled`);
+        if (parts.length > 0) {
+          title += ` (${parts.join(', ')})`;
+        }
+      }
+
+      const event: CalendarEvent = {
+        title,
+        start: startDate,
+        end: endDate,
+        color: { primary: heatmapColor, secondary: heatmapColor + '20' }, // Add transparency to secondary
+        meta: { heatmapCell: cell, intensity },
+      };
+
+      events.push(event);
+    });
+
+    return events;
+  });
+
+  /**
+   * Attempt to extract the configured service date field from submission values.
+   * Uses fieldConfig from backend if available, otherwise tries common field names.
+   */
+  private extractDateField(values: Record<string, unknown>): string | null {
+    const fieldConfig = this.metrics().fieldConfig;
+
+    // Try configured date field first
+    if (fieldConfig?.dateField) {
+      const raw = values[fieldConfig.dateField];
+      if (typeof raw === 'string' && raw.trim().length > 0) {
+        return raw;
+      }
+    }
+
+    // Fallback to common field names if config not available or field not found
+    const dateFieldCandidates = ['booking_date', 'preferred_date', 'service_date', 'appointment_date', 'date'];
+    for (const field of dateFieldCandidates) {
+      const raw = values[field];
+      if (typeof raw === 'string' && raw.trim().length > 0) {
+        return raw;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Extract the configured time-slot field from submission values.
+   * Uses fieldConfig from backend if available, otherwise tries common field names.
+   */
+  private extractTimeSlotField(values: Record<string, unknown>): string | null {
+    const fieldConfig = this.metrics().fieldConfig;
+
+    // Try configured time slot field first
+    if (fieldConfig?.timeSlotField) {
+      const raw = values[fieldConfig.timeSlotField];
+      if (typeof raw === 'string' && raw.trim().length > 0) {
+        return raw;
+      }
+    }
+
+    // Fallback to common field names if config not available or field not found
+    const timeFieldCandidates = ['time_slot', 'appointment_time', 'service_time', 'preferred_time', 'time'];
+    for (const field of timeFieldCandidates) {
+      const raw = values[field];
+      if (typeof raw === 'string' && raw.trim().length > 0) {
+        return raw;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Parse a time slot string (e.g. "11:00-14:00" or "9:00 AM - 11:00 AM") into start/end ranges.
+   */
+  private parseTimeSlotRange(value: string): {
+    start: { hours: number; minutes: number };
+    durationMinutes: number;
+  } | null {
+    const normalizedValue = value.replace(/–/g, '-');
+    const parts = normalizedValue
+      .split('-')
+      .map((part) => part.trim())
+      .filter(Boolean);
+    if (parts.length === 0) {
+      return null;
+    }
+
+    const start = this.parseTimeComponent(parts[0]);
+    const end = parts.length > 1 ? this.parseTimeComponent(parts[1]) : null;
+
+    if (!start) {
+      return null;
+    }
+
+    const startMinutes = start.hours * 60 + start.minutes;
+    let durationMinutes = 60; // default 1 hour
+
+    if (end) {
+      let endMinutes = end.hours * 60 + end.minutes;
+      if (endMinutes <= startMinutes) {
+        endMinutes += 24 * 60; // allow wrap past midnight
+      }
+      durationMinutes = endMinutes - startMinutes;
+    }
+
+    return {
+      start,
+      durationMinutes,
+    };
+  }
+
+  /**
+   * Parse a single time component into hours/minutes (supports 12h or 24h formats).
+   */
+  private parseTimeComponent(value: string): { hours: number; minutes: number } | null {
+    const trimmed = value.replace(/\s+/g, ' ').trim();
+    const match = trimmed.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+    if (!match) {
+      return null;
+    }
+
+    let hours = parseInt(match[1], 10);
+    const minutes = match[2] ? parseInt(match[2], 10) : 0;
+    const period = match[3]?.toLowerCase();
+
+    if (period === 'am' && hours === 12) {
+      hours = 0;
+    } else if (period === 'pm' && hours < 12) {
+      hours += 12;
+    }
+
+    hours = Math.min(Math.max(hours, 0), 23);
+    return { hours, minutes: Math.min(Math.max(minutes, 0), 59) };
+  }
+
+  /**
+   * Resolve a friendly service label from stored values.
+   */
+  private getServiceLabel(serviceType: string | null): string {
+    if (!serviceType) {
+      return 'Service';
+    }
+
     const labels: Record<string, string> = {
-      general: 'General Consultation',
-      technical: 'Technical Review',
-      strategy: 'Strategy Session',
+      plumbing: 'Plumbing',
+      electrical: 'Electrical',
+      hvac: 'HVAC',
+      cleaning: 'Cleaning',
+      appliance_repair: 'Appliance Repair',
+      handyman: 'Handyman',
     };
     return labels[serviceType] || serviceType;
   }
 
   /**
-   * Get color scheme for service type based on existing color palette.
+   * Resolve color palette based on service type; fallback to neutral gray.
    */
-  private getServiceColor(serviceType: string): { primary: string; secondary: string } {
+  private getServiceColor(serviceType: string | null): { primary: string; secondary: string } {
+    if (!serviceType) {
+      return { primary: '#6b7280', secondary: '#f3f4f6' };
+    }
+
     const colors: Record<string, { primary: string; secondary: string }> = {
-      general: { primary: '#3b82f6', secondary: '#dbeafe' }, // blue
-      technical: { primary: '#10b981', secondary: '#d1fae5' }, // green
-      strategy: { primary: '#8b5cf6', secondary: '#ede9fe' }, // purple
+      plumbing: { primary: '#3b82f6', secondary: '#dbeafe' },
+      electrical: { primary: '#f97316', secondary: '#ffedd5' },
+      hvac: { primary: '#0ea5e9', secondary: '#cffafe' },
+      cleaning: { primary: '#22c55e', secondary: '#dcfce7' },
+      appliance_repair: { primary: '#8b5cf6', secondary: '#ede9fe' },
+      handyman: { primary: '#facc15', secondary: '#fef9c3' },
     };
     return colors[serviceType] || { primary: '#6b7280', secondary: '#f3f4f6' };
+  }
+
+  /**
+   * Extracts a service/appointment type from submission values.
+   */
+  private extractServiceType(values: Record<string, unknown>): string | null {
+    const raw = values['service_category'] ?? values['service_type'];
+    return typeof raw === 'string' ? raw : null;
+  }
+
+  /**
+   * Extracts the customer name for display purposes.
+   */
+  private extractCustomerName(values: Record<string, unknown>): string {
+    const raw = values['customer_name'] ?? values['client_name'] ?? values['name'];
+    if (typeof raw === 'string' && raw.trim().length > 0) {
+      return raw.trim();
+    }
+    return 'Appointment';
   }
 
   /**

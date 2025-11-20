@@ -11,10 +11,6 @@ import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { ButtonDirective } from 'primeng/button';
 import { ToggleSwitch } from 'primeng/toggleswitch';
-import { Select } from 'primeng/select';
-import { InputText } from 'primeng/inputtext';
-import { IconField } from 'primeng/iconfield';
-import { InputIcon } from 'primeng/inputicon';
 import { Toast } from 'primeng/toast';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { ProgressSpinner } from 'primeng/progressspinner';
@@ -77,10 +73,6 @@ interface DropdownOption {
     TableModule,
     ButtonDirective,
     ToggleSwitch,
-    Select,
-    InputText,
-    IconField,
-    InputIcon,
     Toast,
     ConfirmDialog,
     ProgressSpinner,

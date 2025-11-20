@@ -1392,6 +1392,22 @@
                             />
                           }
 
+                          <!-- Time Slot -->
+                          @if (field.type === fieldTypes.TIME_SLOT) {
+                            <select
+                              [id]="field.fieldName"
+                              [formControlName]="field.fieldName"
+                              class="w-full theme-select theme-transition"
+                            >
+                              <option value="">
+                                {{ field.placeholder || 'Select a time slot' }}
+                              </option>
+                              @for (slot of getTimeSlotOptions(field); track slot.value) {
+                                <option [value]="slot.value">{{ slot.label }}</option>
+                              }
+                            </select>
+                          }
+
                           <!-- Divider -->
                           @if (field.type === fieldTypes.DIVIDER) {
                             <hr class="col-span-full my-4 border-gray-300" />

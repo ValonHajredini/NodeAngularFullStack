@@ -117,7 +117,15 @@ class Server {
       if (skipJsonParsing) {
         next();
       } else {
-        express.json({ limit: '10mb' })(req, res, next);
+        // DEBUG: Log the body after JSON parsing for form creation
+        const originalJson = express.json({ limit: '10mb' });
+        originalJson(req, res, (err) => {
+          if (req.path === '/api/v1/forms' && req.method === 'POST') {
+            console.log('[DEBUG] Parsed request body for form creation:');
+            console.log(JSON.stringify(req.body, null, 2).substring(0, 2000));
+          }
+          next(err);
+        });
       }
     });
 
@@ -231,13 +239,15 @@ class Server {
       const isDevelopment =
         config.NODE_ENV === 'development' || config.NODE_ENV === 'test';
       const statusCode = (err as any).statusCode || 500;
+      const errorCode = (err as any).code || (statusCode >= 500 ? 'INTERNAL_SERVER_ERROR' : 'BAD_REQUEST');
 
       res.status(statusCode).json({
         success: false,
-        error: statusCode >= 500 ? 'Internal Server Error' : 'Bad Request',
+        error: errorCode,
         message: isDevelopment ? err.message : 'An error occurred',
         timestamp: new Date().toISOString(),
         ...((err as any).errors && { errors: (err as any).errors }),
+        ...((err as any).data && (err as any).data),
         ...(isDevelopment && { stack: err.stack }),
       });
     });
