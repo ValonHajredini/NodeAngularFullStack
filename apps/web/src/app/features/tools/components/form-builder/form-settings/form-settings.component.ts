@@ -22,7 +22,10 @@ import { RadioButtonModule } from 'primeng/radiobutton';
 import { SliderModule } from 'primeng/slider';
 import { MonacoEditorModule } from 'ngx-monaco-editor-v2';
 import { FormsModule } from '@angular/forms';
-import { sanitizeCustomBackground, containsDangerousPatterns } from '../../../../../shared/utils/sanitizer';
+import {
+  sanitizeCustomBackground,
+  containsDangerousPatterns,
+} from '../../../../../shared/utils/sanitizer';
 import { validateCSS, CSSValidationResult } from '../../../../../shared/utils/css-validator';
 import { FormsApiService } from '../forms-api.service';
 
@@ -31,6 +34,7 @@ export interface FormSettings {
   description: string;
   columnLayout: 1 | 2 | 3;
   fieldSpacing: 'compact' | 'normal' | 'relaxed';
+  submitButtonText?: string;
   successMessage: string;
   redirectUrl: string;
   allowMultipleSubmissions: boolean;
@@ -159,6 +163,23 @@ export interface FormSettings {
           <h4 class="text-sm font-semibold text-gray-800 mb-3">Submission Settings</h4>
 
           <div class="field">
+            <label for="submitButtonText" class="block text-sm font-medium text-gray-700 mb-1">
+              Submit Button Text
+            </label>
+            <input
+              pInputText
+              id="submitButtonText"
+              formControlName="submitButtonText"
+              class="w-full"
+              placeholder="Submit"
+              maxlength="50"
+            />
+            <small class="text-gray-500 text-xs"
+              >Text displayed on the submit button (default: "Submit")</small
+            >
+          </div>
+
+          <div class="field">
             <label for="successMessage" class="block text-sm font-medium text-gray-700 mb-1">
               Success Message
             </label>
@@ -246,119 +267,132 @@ export interface FormSettings {
               <p-accordion-panel value="0">
                 <p-accordion-header>Image Background Settings</p-accordion-header>
                 <p-accordion-content>
-                <div class="space-y-3">
-                  <div class="field">
-                    <label for="bgImageUrl" class="block text-sm font-medium text-gray-700 mb-1">
-                      Image URL
-                    </label>
-                    <input
-                      pInputText
-                      id="bgImageUrl"
-                      formControlName="backgroundImageUrl"
-                      class="w-full"
-                      placeholder="https://example.com/image.jpg"
-                    />
-                    @if (
-                      settingsForm.get('backgroundImageUrl')?.hasError('pattern') &&
-                      settingsForm.get('backgroundImageUrl')?.touched
-                    ) {
-                      <small class="text-red-500">Please enter a valid URL (http:// or https://) or upload an image</small>
-                    }
-                  </div>
+                  <div class="space-y-3">
+                    <div class="field">
+                      <label for="bgImageUrl" class="block text-sm font-medium text-gray-700 mb-1">
+                        Image URL
+                      </label>
+                      <input
+                        pInputText
+                        id="bgImageUrl"
+                        formControlName="backgroundImageUrl"
+                        class="w-full"
+                        placeholder="https://example.com/image.jpg"
+                      />
+                      @if (
+                        settingsForm.get('backgroundImageUrl')?.hasError('pattern') &&
+                        settingsForm.get('backgroundImageUrl')?.touched
+                      ) {
+                        <small class="text-red-500"
+                          >Please enter a valid URL (http:// or https://) or upload an image</small
+                        >
+                      }
+                    </div>
 
-                  <div class="field">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                      Or Upload Image
-                    </label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      class="block w-full text-sm text-gray-500
+                    <div class="field">
+                      <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Or Upload Image
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        class="block w-full text-sm text-gray-500
                         file:mr-4 file:py-2 file:px-4
                         file:rounded file:border-0
                         file:text-sm file:font-semibold
                         file:bg-blue-50 file:text-blue-700
                         hover:file:bg-blue-100"
-                      (change)="onImageFileSelected($event)"
-                      [disabled]="uploadingImage()"
-                    />
-                    @if (uploadingImage()) {
-                      <div class="mt-2">
-                        <small class="text-blue-600 flex items-center gap-2">
-                          <i class="pi pi-spin pi-spinner"></i>
-                          Uploading image to cloud storage...
-                        </small>
-                      </div>
-                    }
-                    @if (uploadError()) {
-                      <div class="mt-2">
-                        <small class="text-red-600 flex items-center gap-2">
-                          <i class="pi pi-times-circle"></i>
-                          {{ uploadError() }}
-                        </small>
-                      </div>
-                    }
-                    <small class="text-gray-500 text-xs">Upload an image file (jpg, png, gif, webp, svg) - max 5MB</small>
-                  </div>
+                        (change)="onImageFileSelected($event)"
+                        [disabled]="uploadingImage()"
+                      />
+                      @if (uploadingImage()) {
+                        <div class="mt-2">
+                          <small class="text-blue-600 flex items-center gap-2">
+                            <i class="pi pi-spin pi-spinner"></i>
+                            Uploading image to cloud storage...
+                          </small>
+                        </div>
+                      }
+                      @if (uploadError()) {
+                        <div class="mt-2">
+                          <small class="text-red-600 flex items-center gap-2">
+                            <i class="pi pi-times-circle"></i>
+                            {{ uploadError() }}
+                          </small>
+                        </div>
+                      }
+                      <small class="text-gray-500 text-xs"
+                        >Upload an image file (jpg, png, gif, webp, svg) - max 5MB</small
+                      >
+                    </div>
 
-                  <div class="field">
-                    <label for="bgImagePosition" class="block text-sm font-medium text-gray-700 mb-1">
-                      Position
-                    </label>
-                    <p-select
-                      id="bgImagePosition"
-                      formControlName="backgroundImagePosition"
-                      [options]="imagePositionOptions"
-                      optionLabel="label"
-                      optionValue="value"
-                      placeholder="Select position"
-                      styleClass="w-full"
-                    ></p-select>
-                  </div>
+                    <div class="field">
+                      <label
+                        for="bgImagePosition"
+                        class="block text-sm font-medium text-gray-700 mb-1"
+                      >
+                        Position
+                      </label>
+                      <p-select
+                        id="bgImagePosition"
+                        formControlName="backgroundImagePosition"
+                        [options]="imagePositionOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select position"
+                        styleClass="w-full"
+                      ></p-select>
+                    </div>
 
-                  <div class="field">
-                    <label for="bgImageAlignment" class="block text-sm font-medium text-gray-700 mb-1">
-                      Alignment
-                    </label>
-                    <p-select
-                      id="bgImageAlignment"
-                      formControlName="backgroundImageAlignment"
-                      [options]="imageAlignmentOptions"
-                      optionLabel="label"
-                      optionValue="value"
-                      placeholder="Select alignment"
-                      styleClass="w-full"
-                    ></p-select>
-                  </div>
+                    <div class="field">
+                      <label
+                        for="bgImageAlignment"
+                        class="block text-sm font-medium text-gray-700 mb-1"
+                      >
+                        Alignment
+                      </label>
+                      <p-select
+                        id="bgImageAlignment"
+                        formControlName="backgroundImageAlignment"
+                        [options]="imageAlignmentOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select alignment"
+                        styleClass="w-full"
+                      ></p-select>
+                    </div>
 
-                  <div class="field">
-                    <label for="bgImageOpacity" class="block text-sm font-medium text-gray-700 mb-1">
-                      Opacity: {{ settingsForm.get('backgroundImageOpacity')?.value }}%
-                    </label>
-                    <p-slider
-                      id="bgImageOpacity"
-                      formControlName="backgroundImageOpacity"
-                      [min]="0"
-                      [max]="100"
-                      [step]="5"
-                      styleClass="w-full"
-                    ></p-slider>
-                  </div>
+                    <div class="field">
+                      <label
+                        for="bgImageOpacity"
+                        class="block text-sm font-medium text-gray-700 mb-1"
+                      >
+                        Opacity: {{ settingsForm.get('backgroundImageOpacity')?.value }}%
+                      </label>
+                      <p-slider
+                        id="bgImageOpacity"
+                        formControlName="backgroundImageOpacity"
+                        [min]="0"
+                        [max]="100"
+                        [step]="5"
+                        styleClass="w-full"
+                      ></p-slider>
+                    </div>
 
-                  <div class="field">
-                    <label for="bgImageBlur" class="block text-sm font-medium text-gray-700 mb-1">
-                      Blur: {{ settingsForm.get('backgroundImageBlur')?.value }}px
-                    </label>
-                    <p-slider
-                      id="bgImageBlur"
-                      formControlName="backgroundImageBlur"
-                      [min]="0"
-                      [max]="20"
-                      [step]="1"
-                      styleClass="w-full"
-                    ></p-slider>
+                    <div class="field">
+                      <label for="bgImageBlur" class="block text-sm font-medium text-gray-700 mb-1">
+                        Blur: {{ settingsForm.get('backgroundImageBlur')?.value }}px
+                      </label>
+                      <p-slider
+                        id="bgImageBlur"
+                        formControlName="backgroundImageBlur"
+                        [min]="0"
+                        [max]="20"
+                        [step]="1"
+                        styleClass="w-full"
+                      ></p-slider>
+                    </div>
                   </div>
-                </div>
                 </p-accordion-content>
               </p-accordion-panel>
             </p-accordion>
@@ -369,76 +403,79 @@ export interface FormSettings {
               <p-accordion-panel value="0">
                 <p-accordion-header>Custom Background Settings</p-accordion-header>
                 <p-accordion-content>
-                <div class="space-y-3">
-                  <div class="field">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                      Custom HTML
-                    </label>
-                    <div class="border border-gray-300 rounded">
-                      <ngx-monaco-editor
-                        formControlName="backgroundCustomHtml"
-                        [options]="htmlEditorOptions"
-                        style="height: 200px;"
-                        (ngModelChange)="onCustomHtmlChange($event)"
-                      ></ngx-monaco-editor>
-                    </div>
-                    @if (htmlContainsDangerousPatterns()) {
-                      <small class="text-amber-600">
-                        <i class="pi pi-exclamation-triangle"></i> Warning: HTML contains potentially dangerous patterns and will be sanitized
+                  <div class="space-y-3">
+                    <div class="field">
+                      <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Custom HTML
+                      </label>
+                      <div class="border border-gray-300 rounded">
+                        <ngx-monaco-editor
+                          formControlName="backgroundCustomHtml"
+                          [options]="htmlEditorOptions"
+                          style="height: 200px;"
+                          (ngModelChange)="onCustomHtmlChange($event)"
+                        ></ngx-monaco-editor>
+                      </div>
+                      @if (htmlContainsDangerousPatterns()) {
+                        <small class="text-amber-600">
+                          <i class="pi pi-exclamation-triangle"></i> Warning: HTML contains
+                          potentially dangerous patterns and will be sanitized
+                        </small>
+                      }
+                      <small class="text-gray-500 text-xs">
+                        {{ settingsForm.get('backgroundCustomHtml')?.value?.length || 0 }}/10000
+                        characters
                       </small>
-                    }
-                    <small class="text-gray-500 text-xs">
-                      {{ settingsForm.get('backgroundCustomHtml')?.value?.length || 0 }}/10000 characters
-                    </small>
-                  </div>
-
-                  <div class="field">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                      Custom CSS
-                    </label>
-                    <div class="border border-gray-300 rounded">
-                      <ngx-monaco-editor
-                        formControlName="backgroundCustomCss"
-                        [options]="cssEditorOptions"
-                        style="height: 200px;"
-                        (ngModelChange)="onCustomCssChange($event)"
-                      ></ngx-monaco-editor>
                     </div>
-                    @if (cssValidationErrors().length > 0) {
-                      <div class="mt-1">
-                        @for (error of cssValidationErrors(); track error) {
-                          <small class="text-red-500 block">
-                            <i class="pi pi-times-circle"></i> {{ error }}
-                          </small>
-                        }
-                      </div>
-                    }
-                    @if (cssValidationWarnings().length > 0) {
-                      <div class="mt-1">
-                        @for (warning of cssValidationWarnings(); track warning) {
-                          <small class="text-amber-600 block">
-                            <i class="pi pi-exclamation-triangle"></i> {{ warning }}
-                          </small>
-                        }
-                      </div>
-                    }
-                    <small class="text-gray-500 text-xs">
-                      {{ settingsForm.get('backgroundCustomCss')?.value?.length || 0 }}/5000 characters
-                    </small>
-                  </div>
 
-                  <div class="bg-blue-50 border border-blue-200 rounded p-3">
-                    <h5 class="text-sm font-semibold text-blue-900 mb-2">
-                      <i class="pi pi-info-circle"></i> Security Information
-                    </h5>
-                    <ul class="text-xs text-blue-800 space-y-1 ml-4 list-disc">
-                      <li>HTML will be sanitized to remove potentially dangerous content</li>
-                      <li>Scripts, iframes, and interactive elements will be removed</li>
-                      <li>CSS will be validated for security issues</li>
-                      <li>Content is rendered in a sandboxed environment</li>
-                    </ul>
+                    <div class="field">
+                      <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Custom CSS
+                      </label>
+                      <div class="border border-gray-300 rounded">
+                        <ngx-monaco-editor
+                          formControlName="backgroundCustomCss"
+                          [options]="cssEditorOptions"
+                          style="height: 200px;"
+                          (ngModelChange)="onCustomCssChange($event)"
+                        ></ngx-monaco-editor>
+                      </div>
+                      @if (cssValidationErrors().length > 0) {
+                        <div class="mt-1">
+                          @for (error of cssValidationErrors(); track error) {
+                            <small class="text-red-500 block">
+                              <i class="pi pi-times-circle"></i> {{ error }}
+                            </small>
+                          }
+                        </div>
+                      }
+                      @if (cssValidationWarnings().length > 0) {
+                        <div class="mt-1">
+                          @for (warning of cssValidationWarnings(); track warning) {
+                            <small class="text-amber-600 block">
+                              <i class="pi pi-exclamation-triangle"></i> {{ warning }}
+                            </small>
+                          }
+                        </div>
+                      }
+                      <small class="text-gray-500 text-xs">
+                        {{ settingsForm.get('backgroundCustomCss')?.value?.length || 0 }}/5000
+                        characters
+                      </small>
+                    </div>
+
+                    <div class="bg-blue-50 border border-blue-200 rounded p-3">
+                      <h5 class="text-sm font-semibold text-blue-900 mb-2">
+                        <i class="pi pi-info-circle"></i> Security Information
+                      </h5>
+                      <ul class="text-xs text-blue-800 space-y-1 ml-4 list-disc">
+                        <li>HTML will be sanitized to remove potentially dangerous content</li>
+                        <li>Scripts, iframes, and interactive elements will be removed</li>
+                        <li>CSS will be validated for security issues</li>
+                        <li>Content is rendered in a sandboxed environment</li>
+                      </ul>
+                    </div>
                   </div>
-                </div>
                 </p-accordion-content>
               </p-accordion-panel>
             </p-accordion>
@@ -473,6 +510,7 @@ export class FormSettingsComponent implements OnInit {
     description: '',
     columnLayout: 1,
     fieldSpacing: 'normal',
+    submitButtonText: 'Submit',
     successMessage: 'Thank you for your submission!',
     redirectUrl: '',
     allowMultipleSubmissions: true,
@@ -568,6 +606,7 @@ export class FormSettingsComponent implements OnInit {
       description: [this.defaultSettings.description, Validators.maxLength(2000)],
       columnLayout: [this.defaultSettings.columnLayout, Validators.required],
       fieldSpacing: [this.defaultSettings.fieldSpacing, Validators.required],
+      submitButtonText: [this.defaultSettings.submitButtonText, Validators.maxLength(50)],
       successMessage: [this.defaultSettings.successMessage, Validators.maxLength(500)],
       redirectUrl: [this.defaultSettings.redirectUrl, Validators.pattern(/^(https?:\/\/.+)?$/)],
       allowMultipleSubmissions: [this.defaultSettings.allowMultipleSubmissions],
@@ -580,7 +619,10 @@ export class FormSettingsComponent implements OnInit {
       backgroundImageOpacity: [this.defaultSettings.backgroundImageOpacity],
       backgroundImageAlignment: [this.defaultSettings.backgroundImageAlignment],
       backgroundImageBlur: [this.defaultSettings.backgroundImageBlur],
-      backgroundCustomHtml: [this.defaultSettings.backgroundCustomHtml, Validators.maxLength(10000)],
+      backgroundCustomHtml: [
+        this.defaultSettings.backgroundCustomHtml,
+        Validators.maxLength(10000),
+      ],
       backgroundCustomCss: [this.defaultSettings.backgroundCustomCss, Validators.maxLength(5000)],
     });
   }
@@ -714,7 +756,7 @@ export class FormSettingsComponent implements OnInit {
       next: (response) => {
         // Update form with cloud URL
         this.settingsForm.patchValue({
-          backgroundImageUrl: response.url
+          backgroundImageUrl: response.url,
         });
         this.settingsForm.get('backgroundImageUrl')?.markAsTouched();
 
@@ -731,12 +773,13 @@ export class FormSettingsComponent implements OnInit {
         this.uploadingImage.set(false);
         this.uploadProgress.set(0);
 
-        const errorMessage = error?.error?.message || error?.message || 'Failed to upload image. Please try again.';
+        const errorMessage =
+          error?.error?.message || error?.message || 'Failed to upload image. Please try again.';
         this.uploadError.set(errorMessage);
 
         // Clear input so user can try again
         input.value = '';
-      }
+      },
     });
   }
 }

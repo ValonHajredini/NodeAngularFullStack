@@ -1,5 +1,5 @@
-import { Component, inject, computed } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, inject, computed, OnInit } from '@angular/core';
+import { Router, ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { ThemeService } from '../../core/services/theme.service';
 import { AuthService } from '../../core/auth/auth.service';
@@ -24,10 +24,46 @@ import {
   `,
   styles: [],
 })
-export class LandingComponent {
+export class LandingComponent implements OnInit {
   readonly themeService = inject(ThemeService);
   readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+
+  /**
+   * Lifecycle hook - handles logout from external apps and complete logout from all services
+   */
+  ngOnInit(): void {
+    // Check for logout parameter from Form Builder or other satellite apps
+    this.route.queryParams.subscribe((params) => {
+      const logoutParam = params['logout'];
+
+      // Handle both 'sso' (legacy) and 'complete' logout parameters
+      if (logoutParam === 'sso' || logoutParam === 'complete') {
+        console.log(`Logout triggered from external app: ${logoutParam}`);
+
+        // Log out the user from the main app
+        if (this.authService.isAuthenticated()) {
+          this.authService.logout().subscribe({
+            next: () => {
+              console.log('Main app logout completed - tokens cleared');
+              // Clean up URL by removing the logout parameter
+              this.router.navigate(['/welcome'], { replaceUrl: true });
+            },
+            error: (error) => {
+              console.error('Main app logout failed:', error);
+              // Force navigation even if logout fails
+              this.router.navigate(['/welcome'], { replaceUrl: true });
+            },
+          });
+        } else {
+          // User already logged out, just clean up URL
+          console.log('User already logged out, cleaning URL');
+          this.router.navigate(['/welcome'], { replaceUrl: true });
+        }
+      }
+    });
+  }
 
   /**
    * Welcome page configuration - computed to adapt to authentication state

@@ -1,0 +1,164 @@
+<!-- Validation Requirements Panel -->
+@if (category() && currentSchema()) {
+  <div class="validation-requirements" role="region" aria-labelledby="validation-header">
+    <!-- Accordion -->
+    <p-accordion [multiple]="false" [value]="allSatisfied() ? '' : '0'">
+      <p-accordion-panel value="0">
+        <!-- Accordion Header -->
+        <p-accordion-header>
+          <div class="accordion-custom-header">
+            <div class="validation-title">
+              <i class="pi pi-check-circle"></i>
+              <span>Required Fields for {{ categoryLabel() }}</span>
+            </div>
+
+            <!-- Validation Summary Badge -->
+            <div
+              class="validation-summary"
+              [class.all-satisfied]="allSatisfied()"
+              [class.has-errors]="!allSatisfied()"
+              role="status"
+              [attr.aria-live]="allSatisfied() ? 'polite' : 'assertive'"
+            >
+              <p-badge
+                [value]="validationSummary()"
+                [severity]="allSatisfied() ? 'success' : 'warn'"
+              ></p-badge>
+            </div>
+          </div>
+        </p-accordion-header>
+
+        <!-- Accordion Content (Requirements List) -->
+        <p-accordion-content>
+          <div class="requirements-list">
+            @for (
+              status of requirementStatuses();
+              track status.requirement.fieldName || status.requirement.fieldNamePattern
+            ) {
+              <div
+                class="requirement-item"
+                [class.satisfied]="status.satisfied"
+                [class.has-error]="!status.satisfied"
+              >
+                <!-- Requirement Header -->
+                <div class="requirement-header">
+                  <!-- Status Icon -->
+                  <span
+                    class="status-icon"
+                    [attr.aria-label]="
+                      status.satisfied ? 'Requirement satisfied' : 'Requirement not satisfied'
+                    "
+                    role="img"
+                  >
+                    @if (status.satisfied) {
+                      <i class="pi pi-check-circle text-green-500"></i>
+                    } @else {
+                      <i class="pi pi-exclamation-triangle text-yellow-500"></i>
+                    }
+                  </span>
+
+                  <!-- Field Name and Type -->
+                  <div class="requirement-info">
+                    <strong>{{ formatFieldName(status.requirement) }}</strong>
+                    <span class="field-types">
+                      ({{ formatAllowedTypes(status.requirement.allowedTypes) }})
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Requirement Message -->
+                @if (!status.satisfied && status.errors.length > 0) {
+                  <div class="requirement-errors">
+                    @for (error of status.errors; track error.field) {
+                      <div class="error-item" role="alert">
+                        <!-- Error Message -->
+                        <p-message
+                          [severity]="'warn'"
+                          [text]="error.message"
+                          [closable]="false"
+                        ></p-message>
+
+                        <!-- Auto-fix Suggestion -->
+                        <div class="auto-fix-suggestion">
+                          <p class="suggestion-text">
+                            <i class="pi pi-lightbulb"></i>
+                            {{ error.autoFixSuggestion }}
+                          </p>
+
+                          <!-- Auto-fix Button -->
+                          @if (error.errorType === 'MISSING_FIELD') {
+                            <button
+                              pButton
+                              type="button"
+                              label="Add Field"
+                              icon="pi pi-plus"
+                              class="p-button-sm p-button-success"
+                              [attr.aria-label]="'Add ' + error.field + ' field'"
+                              (click)="handleAddField(status.requirement)"
+                            ></button>
+                          }
+
+                          @if (error.errorType === 'WRONG_TYPE') {
+                            <button
+                              pButton
+                              type="button"
+                              [label]="'Change to ' + getExpectedTypeLabel(error)"
+                              icon="pi pi-sync"
+                              class="p-button-sm p-button-warning"
+                              [attr.aria-label]="
+                                'Change ' +
+                                error.field +
+                                ' field type to ' +
+                                getExpectedTypeLabel(error)
+                              "
+                              (click)="handleFixFieldType(error)"
+                            ></button>
+                          }
+
+                          @if (error.errorType === 'MISSING_METADATA') {
+                            <button
+                              pButton
+                              type="button"
+                              label="Add Metadata"
+                              icon="pi pi-plus"
+                              class="p-button-sm p-button-info"
+                              [attr.aria-label]="'Add required metadata to ' + error.field"
+                              (click)="handleFixFieldType(error)"
+                            ></button>
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+
+                <!-- Success Message -->
+                @if (status.satisfied) {
+                  <div class="success-message">
+                    <span class="text-sm text-gray-600"> Field requirement satisfied </span>
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- Empty State -->
+            @if (requirementStatuses().length === 0) {
+              <div class="empty-state">
+                <i class="pi pi-info-circle"></i>
+                <p>No field requirements for this category</p>
+              </div>
+            }
+          </div>
+        </p-accordion-content>
+      </p-accordion-panel>
+    </p-accordion>
+  </div>
+}
+
+<!-- No Category Selected -->
+@if (!category()) {
+  <div class="no-category-selected">
+    <i class="pi pi-exclamation-circle"></i>
+    <p>Select a template category to see field requirements</p>
+  </div>
+}

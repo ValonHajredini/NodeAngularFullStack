@@ -1,0 +1,113 @@
+import { Pool, QueryResult } from 'pg';
+import {
+  <%= className %>Record,
+  Create<%= className %>Input,
+  Update<%= className %>Input,
+} from '@nodeangularfullstack/shared';
+
+/**
+ * <%= toolName %> Repository
+ *
+ * Data access layer for <%= tableName %> table.
+ * Handles PostgreSQL queries and row mapping.
+ */
+export class <%= className %>Repository {
+  constructor(private pool: Pool) {}
+
+  /**
+   * Find all <%= toolName %> records.
+   * @returns Promise containing array of records
+   */
+  async findAll(): Promise<<%= className %>Record[]> {
+    const query = 'SELECT * FROM <%= tableName %> ORDER BY created_at DESC';
+    const result: QueryResult = await this.pool.query(query);
+    return result.rows.map(this.mapRow);
+  }
+
+  /**
+   * Find <%= toolName %> record by ID.
+   * @param id - Record ID (UUID)
+   * @returns Promise containing record or null
+   */
+  async findById(id: string): Promise<<%= className %>Record | null> {
+    const query = 'SELECT * FROM <%= tableName %> WHERE id = $1';
+    const result: QueryResult = await this.pool.query(query, [id]);
+    return result.rows[0] ? this.mapRow(result.rows[0]) : null;
+  }
+
+  /**
+   * Create new <%= toolName %> record.
+   * @param input - Record data
+   * @returns Promise containing created record
+   */
+  async create(input: Create<%= className %>Input): Promise<<%= className %>Record> {
+    const query = `
+      INSERT INTO <%= tableName %> (name, description, created_by)
+      VALUES ($1, $2, $3)
+      RETURNING *
+    `;
+    const values = [input.name, input.description || null, input.createdBy];
+    const result: QueryResult = await this.pool.query(query, values);
+    return this.mapRow(result.rows[0]);
+  }
+
+  /**
+   * Update <%= toolName %> record.
+   * @param id - Record ID
+   * @param input - Updated data
+   * @returns Promise containing updated record
+   */
+  async update(id: string, input: Update<%= className %>Input): Promise<<%= className %>Record> {
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramCount = 1;
+
+    if (input.name !== undefined) {
+      updates.push(`name = $${paramCount++}`);
+      values.push(input.name);
+    }
+    if (input.description !== undefined) {
+      updates.push(`description = $${paramCount++}`);
+      values.push(input.description);
+    }
+
+    updates.push(`updated_at = NOW()`);
+    values.push(id);
+
+    const query = `
+      UPDATE <%= tableName %>
+      SET ${updates.join(', ')}
+      WHERE id = $${paramCount}
+      RETURNING *
+    `;
+
+    const result: QueryResult = await this.pool.query(query, values);
+    return this.mapRow(result.rows[0]);
+  }
+
+  /**
+   * Delete <%= toolName %> record.
+   * @param id - Record ID
+   * @returns Promise of void
+   */
+  async delete(id: string): Promise<void> {
+    const query = 'DELETE FROM <%= tableName %> WHERE id = $1';
+    await this.pool.query(query, [id]);
+  }
+
+  /**
+   * Map database row to TypeScript record.
+   * @param row - PostgreSQL row
+   * @returns Typed record
+   */
+  private mapRow(row: any): <%= className %>Record {
+    return {
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      createdBy: row.created_by,
+    };
+  }
+}

@@ -1,0 +1,49 @@
+# <!-- Powered by BMAD™ Core -->
+schema: 1
+story: '30.1'
+story_title: 'Story 30.1: Shared Types and Category Detection Infrastructure'
+gate: PASS
+status_reason: 'All six TemplateCategory discriminators now align across analytics types and wizard configs, shared consumers compile in both workspaces, and category detection utilities operate without suppressing types.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2025-11-13T16:40:50Z'
+
+waiver: { active: false }
+
+top_issues: []
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+quality_score: 100
+expires: '2025-11-27T16:40:50Z'
+
+evidence:
+  tests_reviewed: 0
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Typing-only work; no runtime security impact detected.'
+  performance:
+    status: PASS
+    notes: 'No performance-sensitive code paths touched.'
+  reliability:
+    status: PASS
+    notes: 'Shared contracts compile cleanly across services.'
+  maintainability:
+    status: PASS
+    notes: 'Strict typing restored without @ts-ignore usage.'
+
+recommendations:
+  immediate: []
+  future:
+    - action: 'Consider adding Jest specs for category detection utilities to guard the metadata fallbacks.'
+      refs:
+        - 'packages/shared/src/utils/category-detection.util.ts'

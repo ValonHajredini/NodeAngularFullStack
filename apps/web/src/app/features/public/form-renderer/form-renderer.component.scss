@@ -2,6 +2,35 @@
   position: relative;
   // Remove overflow hidden to allow dropdowns to expand on mobile
   overflow: visible;
+  min-height: 100vh;
+  // Background color applied to container (no blur/opacity on this)
+  background-color: var(--theme-background-color, transparent);
+
+  // Use ::before pseudo-element for background image with blur and opacity
+  // This separates the background layer from the content layer
+  &::before {
+    content: '';
+    position: fixed; // Fixed positioning like background-attachment: fixed
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0; // Place behind content but not negative (negative can hide it)
+    background-image: var(--theme-background-image, none);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    // Apply opacity and blur ONLY to the background layer
+    opacity: var(--theme-background-image-opacity, 1);
+    filter: blur(var(--theme-background-image-blur, 0px));
+    pointer-events: none; // Allow clicks to pass through
+  }
+
+  // Ensure content is above the background layer
+  > * {
+    position: relative;
+    z-index: 1;
+  }
 
   .background-image-layer {
     pointer-events: none;
@@ -22,17 +51,177 @@
       // Ensure card doesn't clip dropdown content
       overflow: visible !important;
 
+      // Apply theme container background with alpha transparency (Story 24.9)
+      // Use rgba variable instead of opacity property to avoid making text transparent
+      background-color: var(
+        --theme-container-background-rgba,
+        var(--theme-container-background, #ffffff)
+      ) !important;
+      border-radius: var(--theme-container-border-radius, 0.375rem) !important;
+
       .p-card-body {
         padding: 15px !important;
         // Ensure body doesn't clip dropdown content
         overflow: visible !important;
+        // Inherit background from parent card
+        background: transparent !important;
       }
 
       .p-card-content {
         padding: 0 !important;
         // Ensure content doesn't clip dropdown content
         overflow: visible !important;
+        // Inherit background from parent card
+        background: transparent !important;
       }
+    }
+  }
+
+  // PrimeNG DatePicker (Calendar) theme overrides
+  ::ng-deep .p-datepicker {
+    background-color: var(--theme-input-background, #ffffff);
+    border: 1px solid var(--theme-input-border-color, #d1d5db);
+    border-radius: var(--theme-border-radius, 0.375rem);
+    font-family: var(--theme-body-font, system-ui);
+
+    // Calendar header (month/year navigation)
+    .p-datepicker-header {
+      background-color: var(--theme-primary-color, #3b82f6);
+      color: white;
+      border-bottom: none;
+      padding: 0.5rem;
+      border-top-left-radius: var(--theme-border-radius, 0.375rem);
+      border-top-right-radius: var(--theme-border-radius, 0.375rem);
+
+      .p-datepicker-title {
+        color: white;
+      }
+
+      button {
+        color: white;
+
+        &:hover {
+          background-color: rgba(255, 255, 255, 0.1);
+        }
+      }
+    }
+
+    // Calendar body (date grid)
+    .p-datepicker-calendar {
+      td {
+        padding: 0.25rem;
+
+        // Regular dates
+        > span {
+          color: var(--theme-input-text-color, #1f2937);
+          border-radius: var(--theme-border-radius, 0.375rem);
+
+          &:hover {
+            background-color: rgba(var(--theme-primary-color-rgb, 59, 130, 246), 0.1);
+          }
+        }
+
+        // Today's date
+        &.p-datepicker-today > span {
+          background-color: var(--theme-secondary-color, #6b7280);
+          color: white;
+          font-weight: 500;
+        }
+
+        // Selected date
+        &.p-datepicker-today > span.p-highlight,
+        > span.p-highlight {
+          background-color: var(--theme-primary-color, #3b82f6);
+          color: white;
+        }
+      }
+
+      th {
+        color: var(--theme-label-color, #374151);
+        font-weight: 500;
+      }
+    }
+
+    // Time picker section (for datetime fields)
+    .p-datepicker-time-picker {
+      border-top: 1px solid var(--theme-input-border-color, #d1d5db);
+      padding: 0.5rem;
+
+      button {
+        color: var(--theme-primary-color, #3b82f6);
+
+        &:hover {
+          background-color: rgba(var(--theme-primary-color-rgb, 59, 130, 246), 0.1);
+        }
+      }
+
+      span {
+        color: var(--theme-input-text-color, #1f2937);
+      }
+    }
+  }
+
+  // PrimeNG ToggleSwitch theme overrides
+  ::ng-deep p-toggleswitch {
+    .p-toggleswitch {
+      .p-toggleswitch-slider {
+        background-color: var(--theme-input-border-color, #cbd5e0);
+        border-radius: 0.75rem;
+        transition: background-color 0.2s ease;
+
+        &::before {
+          background-color: white;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+      }
+
+      &.p-toggleswitch-checked .p-toggleswitch-slider {
+        background-color: var(--theme-primary-color, #3b82f6);
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--theme-primary-color, #3b82f6);
+        outline-offset: 2px;
+      }
+    }
+  }
+
+  // PrimeNG FileUpload theme overrides
+  ::ng-deep p-fileupload {
+    .p-fileupload-choose {
+      background-color: var(--theme-button-primary-background, #3b82f6);
+      color: var(--theme-button-primary-text, #ffffff);
+      border: none;
+      border-radius: var(--theme-border-radius, 0.375rem);
+      font-family: var(--theme-body-font, system-ui);
+      font-weight: 500;
+      padding: 0.5rem 1rem;
+      transition:
+        opacity 0.2s ease,
+        box-shadow 0.2s ease;
+
+      &:hover:not(:disabled) {
+        opacity: 0.9;
+        background-color: var(--theme-button-primary-background, #3b82f6);
+      }
+
+      &:focus {
+        outline: 2px solid var(--theme-primary-color, #3b82f6);
+        outline-offset: 2px;
+      }
+    }
+
+    .p-fileupload-content {
+      background-color: var(--theme-input-background, #ffffff);
+      border: 1px solid var(--theme-input-border-color, #d1d5db);
+      border-radius: var(--theme-border-radius, 0.375rem);
+      color: var(--theme-input-text-color, #1f2937);
+      font-family: var(--theme-body-font, system-ui);
+    }
+
+    .p-fileupload-file {
+      color: var(--theme-input-text-color, #1f2937);
+      font-family: var(--theme-body-font, system-ui);
     }
   }
 
@@ -67,23 +256,210 @@
   }
 }
 
+// Container positioning utility classes (Story 24.9)
+.form-container-center {
+  max-width: 72rem; // 1152px (max-w-6xl equivalent)
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+
+.form-container-left {
+  max-width: 72rem; // 1152px (max-w-6xl equivalent)
+  margin-left: 0;
+  margin-right: auto;
+  width: 100%;
+}
+
+.form-container-full-width {
+  max-width: none !important; // Remove any max-width constraints
+  margin-left: -1.5rem; // Counteract parent container padding (24px)
+  margin-right: -1.5rem;
+  width: calc(100% + 3rem) !important; // Extend to full width including padding
+
+  // Remove padding constraints on mobile
+  @media (max-width: 1024px) {
+    margin-left: -0.5rem; // Counteract smaller mobile padding
+    margin-right: -0.5rem;
+    width: calc(100% + 1rem) !important;
+  }
+}
+
 .field-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.2rem;
 }
 
 .field-label {
-  font-weight: 600;
-  color: #374151;
+  font-weight: 500;
+  color: var(--theme-label-color, #374151);
   font-size: 0.875rem;
+  font-family: var(--theme-body-font, system-ui);
+}
+
+// Basic input field styling with theme variables
+input[type='text'],
+input[type='email'],
+input[type='number'],
+textarea {
+  background-color: var(--theme-input-background, #ffffff);
+  border: 1px solid var(--theme-input-border-color, #d1d5db);
+  color: var(--theme-input-text-color, #1f2937);
+  font-family: var(--theme-body-font, system-ui);
+  border-radius: var(--theme-border-radius, 0.375rem);
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:focus {
+    outline: none;
+    border-color: var(--theme-primary-color, #3b82f6);
+    box-shadow: 0 0 0 3px rgba(var(--theme-primary-color-rgb, 59, 130, 246), 0.1);
+  }
+
+  &::placeholder {
+    color: var(--theme-help-text-color, #9ca3af);
+  }
+}
+
+// SELECT dropdown styling with theme variables
+select {
+  background-color: var(--theme-input-background, #ffffff);
+  border: 1px solid var(--theme-input-border-color, #d1d5db);
+  color: var(--theme-input-text-color, #1f2937);
+  font-family: var(--theme-body-font, system-ui);
+  border-radius: var(--theme-border-radius, 0.375rem);
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: var(--theme-primary-color, #3b82f6);
+    box-shadow: 0 0 0 3px rgba(var(--theme-primary-color-rgb, 59, 130, 246), 0.1);
+  }
+
+  &:hover {
+    border-color: var(--theme-primary-color, #3b82f6);
+  }
+
+  option {
+    background-color: var(--theme-input-background, #ffffff);
+    color: var(--theme-input-text-color, #1f2937);
+    padding: 0.5rem;
+  }
+}
+
+// Custom RADIO button styling with theme variables
+input[type='radio'] {
+  appearance: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid var(--theme-input-border-color, #d1d5db);
+  border-radius: 50%;
+  position: relative;
+  cursor: pointer;
+  background-color: var(--theme-input-background, #ffffff);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:hover {
+    border-color: var(--theme-primary-color, #3b82f6);
+  }
+
+  &:checked {
+    border-color: var(--theme-primary-color, #3b82f6);
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 0.625rem;
+      height: 0.625rem;
+      border-radius: 50%;
+      background-color: var(--theme-primary-color, #3b82f6);
+    }
+  }
+
+  &:focus {
+    outline: 2px solid var(--theme-primary-color, #3b82f6);
+    outline-offset: 2px;
+  }
+}
+
+// Custom CHECKBOX styling with theme variables
+input[type='checkbox'] {
+  appearance: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid var(--theme-input-border-color, #d1d5db);
+  border-radius: var(--theme-border-radius, 0.375rem);
+  position: relative;
+  cursor: pointer;
+  background-color: var(--theme-input-background, #ffffff);
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:hover {
+    border-color: var(--theme-primary-color, #3b82f6);
+  }
+
+  &:checked {
+    background-color: var(--theme-primary-color, #3b82f6);
+    border-color: var(--theme-primary-color, #3b82f6);
+
+    &::after {
+      content: '✓';
+      position: absolute;
+      color: white;
+      font-size: 1rem;
+      font-weight: bold;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+  }
+
+  &:focus {
+    outline: 2px solid var(--theme-primary-color, #3b82f6);
+    outline-offset: 2px;
+  }
+}
+
+// Radio and checkbox label styling
+.radio-label,
+.checkbox-label {
+  color: var(--theme-label-color, #374151);
+  font-family: var(--theme-body-font, system-ui);
+  font-size: 0.875rem;
+  margin-left: 0.5rem;
+  cursor: pointer;
+}
+
+// Help text styling
+.field-help-text {
+  color: var(--theme-help-text-color, #6b7280);
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  font-family: var(--theme-body-font, system-ui);
 }
 
 // Row-based layout styles (Story 14.2)
 .row-layout-container {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem; // 24px gap between rows
+  gap: var(--theme-row-spacing, var(--theme-field-spacing, 0));
 }
 
 .row-wrapper {
@@ -92,20 +468,20 @@
 
 .row-grid {
   display: grid;
-  gap: 1rem; // 16px gap between columns
+  gap: var(--theme-row-spacing, var(--theme-field-spacing, 0));
   width: 100%;
 
   // Responsive: stack columns on mobile
   @media (max-width: 767px) {
     grid-template-columns: 1fr !important; // Override inline style
-    gap: 0.75rem; // 12px gap between stacked columns
+    gap: var(--theme-row-spacing, var(--theme-field-spacing, 0.75rem));
   }
 }
 
 .column-container {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem; // 12px gap between fields in column (Story 14.1 multi-field support)
+  gap: var(--theme-column-gap, var(--theme-field-spacing, 0.75rem));
   width: 100%;
 
   .form-field {
@@ -118,10 +494,48 @@
   }
 }
 
+// Sub-column layout styles (Story 27.6)
+.sub-columns-grid {
+  display: grid;
+  gap: 12px; // Spacing between sub-columns
+  width: 100%;
+  grid-template-columns: var(--sub-column-widths); // Dynamically set via [style]
+
+  // Mobile responsive: stack sub-columns vertically
+  @media (max-width: 767px) {
+    grid-template-columns: 1fr !important; // Force vertical stacking on mobile
+  }
+}
+
+.sub-column-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px; // Spacing between fields within sub-column
+  width: 100%;
+
+  .form-field {
+    width: 100%;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+// Ensure no horizontal scroll on mobile for nested layouts
+@media (max-width: 767px) {
+  .form-row,
+  .sub-columns-grid,
+  .sub-column-container {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+}
+
 // Global grid layout styles (backward compatibility)
 .form-fields-grid {
   display: grid;
-  gap: 1.5rem;
+  gap: var(--theme-field-spacing, 1.5rem);
 }
 
 .grid-cols-1 {
@@ -166,18 +580,51 @@
   gap: 2.5rem;
 }
 
+// DATE and DATETIME input styling with theme variables
+input[type='date'],
+input[type='datetime-local'] {
+  background-color: var(--theme-input-background, #ffffff);
+  border: 1px solid var(--theme-input-border-color, #d1d5db);
+  color: var(--theme-input-text-color, #1f2937);
+  font-family: var(--theme-body-font, system-ui);
+  border-radius: var(--theme-border-radius, 0.375rem);
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:focus {
+    outline: none;
+    border-color: var(--theme-primary-color, #3b82f6);
+    box-shadow: 0 0 0 3px rgba(var(--theme-primary-color-rgb, 59, 130, 246), 0.1);
+  }
+
+  // Browser-specific calendar picker indicator
+  &::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+}
+
+// TOGGLE switch styling with theme variables
 .toggle-switch {
   appearance: none;
   width: 3rem;
   height: 1.5rem;
-  background-color: #cbd5e0;
+  background-color: var(--theme-input-border-color, #cbd5e0);
   border-radius: 0.75rem;
   position: relative;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s ease;
 
   &:checked {
-    background-color: #3b82f6;
+    background-color: var(--theme-primary-color, #3b82f6);
   }
 
   &::before {
@@ -189,11 +636,87 @@
     background-color: white;
     top: 0.125rem;
     left: 0.125rem;
-    transition: transform 0.2s;
+    transition: transform 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   }
 
   &:checked::before {
     transform: translateX(1.5rem);
+  }
+
+  &:focus {
+    outline: 2px solid var(--theme-primary-color, #3b82f6);
+    outline-offset: 2px;
+  }
+
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+}
+
+// Toggle label styling
+.toggle-label {
+  color: var(--theme-label-color, #374151);
+  font-family: var(--theme-body-font, system-ui);
+  font-size: 0.875rem;
+  margin-left: 0.75rem;
+  cursor: pointer;
+}
+
+// FILE upload styling with theme variables
+.file-upload-container {
+  width: 100%;
+
+  .file-upload-button {
+    background-color: var(--theme-button-primary-background, #3b82f6);
+    color: var(--theme-button-primary-text, #ffffff);
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: var(--theme-border-radius, 0.375rem);
+    font-family: var(--theme-body-font, system-ui);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition:
+      opacity 0.2s ease,
+      box-shadow 0.2s ease;
+
+    &:hover:not(:disabled) {
+      opacity: 0.9;
+    }
+
+    &:focus {
+      outline: 2px solid var(--theme-primary-color, #3b82f6);
+      outline-offset: 2px;
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+
+  .file-name-display {
+    color: var(--theme-input-text-color, #1f2937);
+    font-family: var(--theme-body-font, system-ui);
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+  }
+
+  .file-upload-label {
+    color: var(--theme-label-color, #374151);
+    font-family: var(--theme-body-font, system-ui);
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+
+  .file-constraints {
+    color: var(--theme-help-text-color, #6b7280);
+    font-family: var(--theme-body-font, system-ui);
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
   }
 }
 
@@ -221,6 +744,115 @@
     overflow: hidden;
   }
 
+  // Mobile theme overrides for basic input fields
+  input[type='text'],
+  input[type='email'],
+  input[type='number'],
+  textarea {
+    // Ensure theme variables work correctly on mobile
+    // Mobile-specific adjustments if needed
+    min-height: 44px; // Touch target size for accessibility
+
+    // Ensure theme variables are inherited properly
+    background-color: var(--theme-input-background, #ffffff);
+    border-color: var(--theme-input-border-color, #d1d5db);
+    color: var(--theme-input-text-color, #1f2937);
+    font-family: var(--theme-body-font, system-ui);
+  }
+
+  // Mobile theme overrides for selection fields
+  select {
+    // Ensure theme variables work correctly on mobile
+    min-height: 44px; // Touch target size for accessibility
+
+    // Ensure theme variables are inherited properly
+    background-color: var(--theme-input-background, #ffffff);
+    border-color: var(--theme-input-border-color, #d1d5db);
+    color: var(--theme-input-text-color, #1f2937);
+    font-family: var(--theme-body-font, system-ui);
+  }
+
+  // Mobile theme overrides for radio and checkbox
+  input[type='radio'],
+  input[type='checkbox'] {
+    // Ensure minimum touch target size for accessibility
+    min-width: 44px;
+    min-height: 44px;
+    margin: 0.5rem 0;
+
+    // Ensure theme variables are inherited properly
+    background-color: var(--theme-input-background, #ffffff);
+    border-color: var(--theme-input-border-color, #d1d5db);
+  }
+
+  // Mobile theme overrides for date and datetime inputs
+  input[type='date'],
+  input[type='datetime-local'] {
+    // Touch target size for accessibility
+    min-height: 44px;
+
+    // Ensure theme variables work correctly on mobile
+    background-color: var(--theme-input-background, #ffffff);
+    border-color: var(--theme-input-border-color, #d1d5db);
+    color: var(--theme-input-text-color, #1f2937);
+    font-family: var(--theme-body-font, system-ui);
+
+    // Make calendar picker indicator larger for touch targets
+    &::-webkit-calendar-picker-indicator {
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+  }
+
+  // Mobile theme overrides for toggle switch
+  .toggle-switch {
+    // Ensure theme variables work correctly on mobile
+    background-color: var(--theme-input-border-color, #cbd5e0);
+
+    &:checked {
+      background-color: var(--theme-primary-color, #3b82f6);
+    }
+
+    // Increase touch target size
+    width: 3.5rem;
+    height: 2rem;
+
+    &::before {
+      width: 1.5rem;
+      height: 1.5rem;
+      top: 0.25rem;
+      left: 0.25rem;
+    }
+
+    &:checked::before {
+      transform: translateX(1.5rem);
+    }
+  }
+
+  .toggle-label {
+    font-size: 1rem; // Larger text on mobile for readability
+  }
+
+  // Mobile theme overrides for file upload
+  .file-upload-container {
+    .file-upload-button {
+      // Touch target size for accessibility
+      min-height: 44px;
+      padding: 0.75rem 1.25rem;
+      font-size: 1rem;
+
+      // Ensure theme variables work correctly on mobile
+      background-color: var(--theme-button-primary-background, #3b82f6);
+      color: var(--theme-button-primary-text, #ffffff);
+    }
+
+    .file-name-display,
+    .file-upload-label,
+    .file-constraints {
+      font-size: 1rem; // Larger text on mobile for readability
+    }
+  }
+
   // Ensure form fields don't have restrictive containers
   .form-field,
   .field-wrapper,
@@ -229,5 +861,303 @@
   .row-wrapper,
   .form-fields-grid {
     overflow: visible !important;
+  }
+}
+
+// ============================================================================
+// Display Element Styling with Theme Variables (Story 24.6)
+// ============================================================================
+
+// HEADING elements - all heading levels use theme font and color
+.heading-field {
+  font-family: var(--theme-heading-font, system-ui);
+  color: var(--theme-heading-color, #1f2937);
+  line-height: 1.2;
+  margin-bottom: var(--theme-field-spacing, 1rem);
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    margin: 0;
+    font-family: var(--theme-heading-font, system-ui);
+    color: var(--theme-heading-color, #1f2937);
+    line-height: 1.2;
+  }
+
+  h1 {
+    font-size: 2.25rem;
+    font-weight: 700;
+  }
+
+  h2 {
+    font-size: 1.875rem;
+    font-weight: 600;
+  }
+
+  h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+
+  h4 {
+    font-size: 1.25rem;
+    font-weight: 500;
+  }
+
+  h5 {
+    font-size: 1.125rem;
+    font-weight: 500;
+  }
+
+  h6 {
+    font-size: 1rem;
+    font-weight: 500;
+  }
+
+  // Responsive font scaling for mobile viewports
+  @media (max-width: 767px) {
+    h1 {
+      font-size: 1.875rem;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+    }
+
+    h3 {
+      font-size: 1.25rem;
+    }
+  }
+}
+
+// TEXT_BLOCK elements - use theme body font and text color
+.text-block-field {
+  font-family: var(--theme-body-font, system-ui);
+  color: var(--theme-text-primary, #1f2937);
+  line-height: 1.6;
+  margin-bottom: var(--theme-field-spacing, 1rem);
+
+  p {
+    margin-bottom: 0.75rem;
+    font-family: var(--theme-body-font, system-ui);
+    color: var(--theme-text-primary, #1f2937);
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  // Optional background padding (when backgroundColor is set in metadata)
+  &.has-background {
+    background-color: var(--theme-container-background, #f9fafb);
+    padding: 1rem;
+    border-radius: var(--theme-border-radius, 0.375rem);
+  }
+}
+
+// IMAGE elements - captions use theme secondary text color
+.image-field {
+  margin-bottom: var(--theme-field-spacing, 1rem);
+
+  img {
+    border-radius: var(--theme-border-radius, 0.375rem);
+    max-width: 100%;
+    height: auto;
+  }
+
+  p {
+    margin-top: 0.5rem;
+    margin-bottom: 0;
+    color: var(--theme-text-secondary, #6b7280);
+    font-size: 0.875rem;
+    font-family: var(--theme-body-font, system-ui);
+    text-align: center;
+  }
+}
+
+// DIVIDER elements - use theme border color
+hr {
+  border: none;
+  border-top: 1px solid var(--theme-input-border-color, #d1d5db);
+  margin: var(--theme-field-spacing, 1rem) 0;
+}
+
+// ============================================================================
+// Container Styling CSS Rules (Epic 25, Story 25.3)
+// ============================================================================
+
+::ng-deep .form-container-themed {
+  // Ensure container is visible and positioned correctly
+  position: relative !important;
+
+  // Container border styling (conditional via CSS calc)
+  border-width: calc(
+    var(--theme-form-container-border-enabled, 0) * var(--theme-form-container-border-width, 1px)
+  ) !important;
+  border-color: var(--theme-form-container-border-color, #d1d5db) !important;
+  border-style: var(--theme-form-container-border-style, solid) !important;
+  border-radius: var(--theme-form-container-border-radius, 8px) !important;
+
+  // Container box shadow (conditional via CSS variable)
+  box-shadow: var(--theme-form-container-shadow, none) !important;
+
+  // Container layout alignment
+  max-width: var(--theme-form-container-max-width, 1024px);
+  // Alignment handled by parent container positioning class
+
+  // IMPORTANT: Do NOT apply opacity to the entire container as it makes all children transparent
+  // Instead, use rgba background colors or apply opacity only to ::before pseudo-element
+
+  // Apply background with opacity via rgba conversion
+  // Background color with opacity applied via rgba (handled in ThemePreviewService)
+  background-color: var(--theme-form-container-bg-color, #ffffff) !important;
+
+  // Background image applied via pseudo-element to support opacity without affecting content
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1; // Place behind content
+    border-radius: inherit; // Match parent border-radius
+    pointer-events: none; // Allow clicks to pass through
+
+    // Background image styling (injected via style tag in ThemePreviewService)
+    background-size: var(--theme-form-container-bg-size, cover);
+    background-position: calc(var(--theme-form-container-bg-pos-x, 50) * 1%)
+      calc(var(--theme-form-container-bg-pos-y, 50) * 1%);
+    background-repeat: no-repeat;
+
+    // Apply opacity ONLY to background layer, not content
+    opacity: calc(var(--theme-form-container-opacity, 100) / 100);
+  }
+
+  // Backdrop blur with feature detection
+  @supports (backdrop-filter: blur(1px)) {
+    backdrop-filter: blur(var(--theme-form-container-backdrop-blur, 0px));
+  }
+
+  // Responsive behavior for mobile viewports
+  @media (max-width: 767px) {
+    max-width: 100% !important; // Full width on mobile
+    margin: 0 !important; // Remove centering margin
+    backdrop-filter: none !important; // Disable backdrop blur on mobile (performance)
+  }
+}
+
+// ============================================================================
+// Step Form Pagination Dots Styling (New Design)
+// ============================================================================
+
+.step-name-display {
+  h2 {
+    font-family: var(--theme-heading-font, system-ui);
+    color: var(--theme-heading-color, #1f2937);
+  }
+
+  p {
+    font-family: var(--theme-body-font, system-ui);
+    color: var(--theme-text-secondary, #6b7280);
+  }
+}
+
+.pagination-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: #d1d5db; // Gray for inactive steps
+  border: none;
+  padding: 0;
+  cursor: default;
+  transition: all 0.3s ease;
+  flex-shrink: 0; // Prevent dots from shrinking when many steps
+
+  // Active step (current step)
+  &.active {
+    width: 32px; // Elongated oval shape for active
+    border-radius: 6px;
+    background-color: var(--theme-primary-color, #3b82f6);
+    box-shadow: 0 0 0 3px rgba(var(--theme-primary-color-rgb, 59, 130, 246), 0.2);
+  }
+
+  // Completed steps (green checkmark)
+  &.completed:not(.active) {
+    background-color: #10b981; // Green for completed
+    cursor: pointer;
+
+    &:hover {
+      transform: scale(1.2);
+      box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+    }
+  }
+
+  // Clickable dots (completed steps)
+  &.clickable {
+    cursor: pointer;
+  }
+
+  // Disabled appearance for future steps
+  &:not(.active):not(.completed):not(.clickable) {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  // Mobile responsive sizing
+  @media (max-width: 767px) {
+    width: 10px;
+    height: 10px;
+
+    &.active {
+      width: 28px;
+      border-radius: 5px;
+    }
+  }
+}
+
+// Pagination ellipsis styling
+.pagination-ellipsis {
+  color: #9ca3af; // Gray text
+  font-size: 1rem;
+  font-weight: bold;
+  line-height: 1;
+  user-select: none;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 12px;
+  flex-shrink: 0;
+
+  @media (max-width: 767px) {
+    font-size: 0.875rem;
+    height: 10px;
+  }
+}
+
+// Step navigation buttons layout
+.step-navigation-buttons {
+  // Mobile: stack vertically with dots in middle
+  @media (max-width: 767px) {
+    flex-direction: column !important;
+
+    button {
+      order: 1 !important; // Buttons at top and bottom
+    }
+
+    > div {
+      order: 2 !important; // Dots in the middle
+      width: 100%;
+      justify-content: center;
+      margin: 1rem 0;
+    }
+
+    .order-3 {
+      order: 3 !important;
+    }
   }
 }

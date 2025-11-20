@@ -1,0 +1,76 @@
+<div class="export-pagination-container">
+  <!-- Page Size Selector -->
+  <div class="page-size-selector">
+    <label for="page-size-dropdown" class="page-size-label">Items per page:</label>
+    <p-select
+      inputId="page-size-dropdown"
+      [options]="pageSizeOptions"
+      [(ngModel)]="pageSize"
+      (ngModelChange)="onPageSizeChange($event)"
+      optionLabel="label"
+      optionValue="value"
+      styleClass="page-size-dropdown"
+    />
+  </div>
+
+  <!-- Pagination Info -->
+  <div class="pagination-info">
+    <span class="item-range">{{ getItemRange() }}</span>
+  </div>
+
+  <!-- Pagination Controls -->
+  <div class="pagination-controls">
+    <!-- First Page Button -->
+    <button
+      pButton
+      type="button"
+      icon="pi pi-angle-double-left"
+      class="p-button-outlined p-button-sm pagination-button"
+      [disabled]="isFirstPage()"
+      (click)="goToFirstPage()"
+      pTooltip="First Page"
+      tooltipPosition="top"
+    ></button>
+
+    <!-- Previous Page Button -->
+    <button
+      pButton
+      type="button"
+      icon="pi pi-angle-left"
+      class="p-button-outlined p-button-sm pagination-button"
+      [disabled]="isFirstPage()"
+      (click)="goToPreviousPage()"
+      pTooltip="Previous Page"
+      tooltipPosition="top"
+    ></button>
+
+    <!-- Current Page Display -->
+    <div class="page-display">
+      <span class="current-page-text">Page {{ currentPage }} of {{ totalPages }}</span>
+    </div>
+
+    <!-- Next Page Button -->
+    <button
+      pButton
+      type="button"
+      icon="pi pi-angle-right"
+      class="p-button-outlined p-button-sm pagination-button"
+      [disabled]="isLastPage()"
+      (click)="goToNextPage()"
+      pTooltip="Next Page"
+      tooltipPosition="top"
+    ></button>
+
+    <!-- Last Page Button -->
+    <button
+      pButton
+      type="button"
+      icon="pi pi-angle-double-right"
+      class="p-button-outlined p-button-sm pagination-button"
+      [disabled]="isLastPage()"
+      (click)="goToLastPage()"
+      pTooltip="Last Page"
+      tooltipPosition="top"
+    ></button>
+  </div>
+</div>

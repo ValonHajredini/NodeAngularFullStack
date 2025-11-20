@@ -164,8 +164,9 @@ rankings updated daily
 HTML/CSS) with clear precedence rules: **theme provides base styles, custom backgrounds override
 theme backgrounds**
 
-**FR10:** _(Future epic)_ Admin users SHALL have the ability to create, edit, and delete custom
-themes through a dedicated theme management interface
+**FR10:** All authenticated users SHALL have the ability to create custom themes through a modal
+wizard accessible from the Form Builder toolbar via "Build Your Own Custom Color Theme" button.
+Users can edit/delete their own themes. Admins can edit/delete any theme.
 
 ### Non-Functional Requirements
 
@@ -584,12 +585,12 @@ that** the frontend can fetch, create, and apply themes.
 
 1. Implement `GET /api/themes` (active themes, sorted by usage)
 2. Implement `GET /api/themes/:id`
-3. Implement `POST /api/themes` (admin only, validated)
-4. Implement `PUT /api/themes/:id` (admin only)
-5. Implement `DELETE /api/themes/:id` (soft-delete)
+3. Implement `POST /api/themes` (authenticated users, validated)
+4. Implement `PUT /api/themes/:id` (creator or admin only)
+5. Implement `DELETE /api/themes/:id` (soft-delete, creator or admin only)
 6. Implement `POST /api/themes/:id/apply` (increment usage)
 7. Add Swagger/OpenAPI documentation
-8. Write integration tests with auth scenarios
+8. Write integration tests with auth scenarios (non-admin creation, ownership checks)
 
 **Integration Verification:**
 
@@ -741,6 +742,45 @@ immediate options at launch.
 
 ---
 
+### Story 1.9: Form Builder Theme Designer Modal Wizard
+
+**As a** form creator, **I want** to create custom themes from within the Form Builder, **so that**
+I can design unique form styling without leaving my workflow.
+
+**Acceptance Criteria:**
+
+1. Add "Build Your Own Custom Color Theme" button to theme dropdown footer
+2. Create `ThemeDesignerModalComponent` with PrimeNG Dialog (modal)
+3. Implement 5-step wizard with PrimeNG Stepper:
+   - Step 1: Colors (primary, secondary color pickers with PrimeNG ColorPicker)
+   - Step 2: Background (solid color, linear gradient, radial gradient, image upload)
+   - Step 3: Typography (heading font, body font dropdowns with web-safe + Google Fonts)
+   - Step 4: Field Styling (border radius slider, spacing inputs)
+   - Step 5: Preview & Save (real-time preview, theme name input, save button)
+4. Real-time preview updates within 300ms of user input changes
+5. Save creates theme via `POST /api/themes` and applies to current form
+6. Successful save closes modal and shows success toast notification
+7. Cancel button discards changes without saving
+8. Modal state isolated from Form Builder state (form fields/settings persist)
+9. Write component tests with 80%+ coverage
+
+**Integration Verification:**
+
+- IV1: Modal opens without disrupting Form Builder drag-drop
+- IV2: Theme creation saves to database and appears in dropdown
+- IV3: Created theme applies immediately to current form
+- IV4: Cancel closes modal without side effects
+- IV5: Form Builder state (fields, settings) persists after modal close/save
+- IV6: Created themes visible to theme creator in dropdown on next form edit
+
+**Notes:**
+
+- This story implements the requirement from FR10 (user-accessible custom theme creation)
+- Replaces the planned Epic 22 admin-only theme designer
+- See Epic 23 for complete implementation details
+
+---
+
 ## Implementation Notes
 
 ### Backward Compatibility Strategy
@@ -779,11 +819,11 @@ immediate options at launch.
 
 ## Future Enhancements (Out of Scope)
 
-- **Custom theme creator** (admin-only theme management UI)
 - **Theme marketplace** (share/import community themes)
 - **Theme variants** (light/dark mode per theme)
 - **Brand kits** (organization-level theme libraries)
 - **AI-powered theme suggestions** (based on form content)
+- **Theme versioning** (track theme changes over time)
 
 ---
 

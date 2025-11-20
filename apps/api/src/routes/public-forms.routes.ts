@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { PublicFormsController } from '../controllers/public-forms.controller';
 import { RateLimitMiddleware } from '../middleware/rate-limit.middleware';
 
@@ -8,6 +9,27 @@ import { RateLimitMiddleware } from '../middleware/rate-limit.middleware';
  */
 const router = Router();
 const publicFormsController = new PublicFormsController();
+
+/**
+ * Middleware to allow iframe embedding for public forms.
+ * Story 26.4: Iframe Embed Code Generator
+ * Sets security headers to permit external website embedding.
+ */
+const allowIframeEmbedding = (
+  _req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  // Allow all origins to embed this content in iframes
+  res.setHeader('X-Frame-Options', 'ALLOWALL');
+  res.setHeader('Content-Security-Policy', "frame-ancestors 'self' *");
+
+  // Additional security headers for iframe embedding
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+  next();
+};
 
 /**
  * @swagger
@@ -91,6 +113,7 @@ const publicFormsController = new PublicFormsController();
  */
 router.get(
   '/forms/render/:token',
+  allowIframeEmbedding,
   RateLimitMiddleware.publicFormRenderLimit(),
   publicFormsController.renderForm
 );
@@ -188,6 +211,70 @@ router.post(
   '/forms/submit/:token',
   RateLimitMiddleware.publicFormSubmitLimit(),
   publicFormsController.submitForm
+);
+
+/**
+ * @swagger
+ * /api/public/forms/{shortCode}:
+ *   get:
+ *     summary: Get form schema for public rendering by short code
+ *     description: Retrieves form schema with embedded theme using short code (alternative to JWT token method)
+ *     tags: [Public Forms]
+ *     parameters:
+ *       - in: path
+ *         name: shortCode
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Short code for the published form
+ *         example: "abc123"
+ *     responses:
+ *       200:
+ *         description: Form schema retrieved successfully with optional theme
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Form schema retrieved successfully"
+ *                 form:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                     schema:
+ *                       $ref: '#/components/schemas/FormSchema'
+ *                     settings:
+ *                       type: object
+ *                       description: Form settings for rendering
+ *                     theme:
+ *                       nullable: true
+ *                       description: Optional theme object (null if no theme or theme deleted)
+ *                       $ref: '#/components/schemas/FormTheme'
+ *                     shortCode:
+ *                       type: string
+ *                       example: "abc123"
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *       404:
+ *         description: Form not found or short code invalid
+ *       410:
+ *         description: Form has expired
+ *       429:
+ *         description: Rate limit exceeded
+ */
+router.get(
+  '/forms/:shortCode',
+  allowIframeEmbedding,
+  RateLimitMiddleware.publicFormRenderLimit(),
+  publicFormsController.getPublicFormByShortCode
 );
 
 export { router as publicFormsRoutes };

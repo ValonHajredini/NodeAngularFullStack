@@ -1,0 +1,56 @@
+/**
+ * <%= toolName %> Type Definitions
+ *
+ * Shared TypeScript interfaces for <%= toolName %> domain.
+ * Used by both frontend and backend for type safety.
+ */
+
+/**
+ * <%= toolName %> database record.
+ * Represents a single <%= toolName.toLowerCase() %> entry.
+ */
+export interface <%= className %>Record {
+  /** Unique identifier (UUID) */
+  id: string;
+
+  /** <%= toolName %> name */
+  name: string;
+
+  /** Optional description */
+  description?: string;
+
+  /** Creation timestamp */
+  createdAt: Date;
+
+  /** Last update timestamp */
+  updatedAt: Date;
+
+  /** User who created the record (UUID) */
+  createdBy: string;
+}
+
+/**
+ * Input for creating new <%= toolName %> record.
+ */
+export interface Create<%= className %>Input {
+  /** <%= toolName %> name (required, 3-255 chars) */
+  name: string;
+
+  /** Optional description (max 500 chars) */
+  description?: string;
+
+  /** User creating the record (UUID) */
+  createdBy: string;
+}
+
+/**
+ * Input for updating <%= toolName %> record.
+ * All fields optional (partial update).
+ */
+export interface Update<%= className %>Input {
+  /** Updated name */
+  name?: string;
+
+  /** Updated description */
+  description?: string;
+}

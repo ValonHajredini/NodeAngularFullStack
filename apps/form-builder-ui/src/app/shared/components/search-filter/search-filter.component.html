@@ -1,0 +1,117 @@
+<div class="search-filter-container mb-4">
+  <!-- Compact Single Row Layout -->
+  <div
+    class="flex flex-wrap items-center gap-2 p-3 bg-white rounded-lg shadow-sm border border-gray-200"
+  >
+    <!-- Search Input - Compact -->
+    <div class="flex-1 min-w-[250px]">
+      <div class="relative">
+        <input
+          pInputText
+          id="search"
+          [(ngModel)]="searchQuery"
+          [placeholder]="searchPlaceholder()"
+          class="w-full pl-3 pr-8 py-2 text-sm border-gray-200 rounded-lg focus:ring-1 focus:ring-blue-400 focus:border-blue-400 transition-all"
+        />
+        <button
+          *ngIf="searchQuery()"
+          type="button"
+          class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+          (click)="searchQuery.set('')"
+        >
+          <i class="pi pi-times text-xs"></i>
+        </button>
+        <i
+          *ngIf="!searchQuery()"
+          class="pi pi-search absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs pointer-events-none"
+        ></i>
+      </div>
+    </div>
+
+    <!-- Status Filter Pills - Inline Connected Toggle -->
+    <div class="flex items-center" *ngIf="showStatusFilter()">
+      <div class="status-toggle-group">
+        <button
+          type="button"
+          class="status-toggle status-toggle-left"
+          [class.status-toggle-active]="statusFilter() === 'all'"
+          (click)="statusFilter.set('all')"
+        >
+          All
+        </button>
+        <button
+          type="button"
+          class="status-toggle status-toggle-middle status-toggle-success"
+          [class.status-toggle-active]="statusFilter() === 'active'"
+          (click)="statusFilter.set('active')"
+        >
+          <i class="pi pi-check-circle text-xs"></i>
+          Active
+        </button>
+        <button
+          type="button"
+          class="status-toggle status-toggle-right status-toggle-inactive"
+          [class.status-toggle-active]="statusFilter() === 'inactive'"
+          (click)="statusFilter.set('inactive')"
+        >
+          <i class="pi pi-times-circle text-xs"></i>
+          Inactive
+        </button>
+      </div>
+    </div>
+
+    <!-- Bulk Actions - Compact -->
+    <div
+      class="flex items-center gap-1"
+      *ngIf="showBulkActions() && hasBulkActions() && selectedCount() > 0"
+    >
+      <span class="text-xs text-gray-500 px-2">{{ selectedCount() }} selected</span>
+      <button
+        *ngFor="let action of enableBulkActions()"
+        type="button"
+        class="action-btn action-btn-success"
+        [disabled]="action.disabled"
+        (click)="onBulkEnable()"
+        [title]="action.label"
+      >
+        <i [class]="action.icon + ' text-xs'"></i>
+      </button>
+      <button
+        *ngFor="let action of disableBulkActions()"
+        type="button"
+        class="action-btn action-btn-danger"
+        [disabled]="action.disabled"
+        (click)="onBulkDisable()"
+        [title]="action.label"
+      >
+        <i [class]="action.icon + ' text-xs'"></i>
+      </button>
+      <button type="button" class="action-btn" (click)="onClearSelection()" title="Clear selection">
+        <i class="pi pi-times text-xs"></i>
+      </button>
+    </div>
+
+    <!-- Action Buttons - Compact -->
+    <div class="flex items-center gap-2">
+      <button
+        *ngIf="searchQuery() || statusFilter() !== 'all'"
+        type="button"
+        class="action-btn"
+        (click)="clearFilters()"
+        title="Clear filters"
+      >
+        <i class="pi pi-filter-slash text-xs"></i>
+      </button>
+      <ng-content select="[slot=actions]"></ng-content>
+      <button
+        *ngIf="showRefreshButton()"
+        type="button"
+        class="action-btn"
+        (click)="onRefresh()"
+        title="Refresh"
+      >
+        <i class="pi pi-refresh text-xs"></i>
+      </button>
+    </div>
+  </div>
+</div>

@@ -2,6 +2,12 @@ import { Component, signal, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
+import { ThemeService } from '../../../core/services/theme.service';
+import { TenantContextService } from '../../../core/services/tenant-context.service';
+import {
+  LogoutConfirmationModalComponent,
+  LogoutType,
+} from '../logout-confirmation-modal/logout-confirmation-modal.component';
 
 /**
  * Interface for user menu items.
@@ -12,6 +18,7 @@ export interface UserMenuItem {
   icon?: string;
   action?: string;
   separator?: boolean;
+  themeValue?: 'light' | 'dark' | 'system';
 }
 
 /**
@@ -38,7 +45,7 @@ export interface UserMenuItem {
 @Component({
   selector: 'app-user-dropdown-menu',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, LogoutConfirmationModalComponent],
   template: `
     <!-- User Menu Dropdown -->
     <div class="ml-3 relative">
@@ -85,17 +92,25 @@ export interface UserMenuItem {
                 {{ user()!.firstName }} {{ user()!.lastName }}
               </p>
               <p class="text-sm dropdown-text-secondary">{{ user()!.email }}</p>
-              <span
-                class="inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs font-medium"
-                [class.bg-blue-100]="user()!.role === 'admin'"
-                [class.text-blue-800]="user()!.role === 'admin'"
-                [class.bg-green-100]="user()!.role === 'user'"
-                [class.text-green-800]="user()!.role === 'user'"
-                [class.bg-gray-100]="user()!.role === 'readonly'"
-                [class.text-gray-800]="user()!.role === 'readonly'"
-              >
-                {{ getRoleDisplayName(user()!.role) }}
-              </span>
+              <div class="flex items-center gap-2 mt-1">
+                <span
+                  class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                  [class.bg-blue-100]="user()!.role === 'admin'"
+                  [class.text-blue-800]="user()!.role === 'admin'"
+                  [class.bg-green-100]="user()!.role === 'user'"
+                  [class.text-green-800]="user()!.role === 'user'"
+                  [class.bg-gray-100]="user()!.role === 'readonly'"
+                  [class.text-gray-800]="user()!.role === 'readonly'"
+                >
+                  {{ getRoleDisplayName(user()!.role) }}
+                </span>
+              </div>
+              @if (currentTenant()) {
+                <p class="text-xs dropdown-text-secondary mt-2 flex items-center gap-1">
+                  <i class="pi pi-building text-xs"></i>
+                  {{ currentTenant()!.name }}
+                </p>
+              }
             </div>
           }
 
@@ -105,18 +120,30 @@ export interface UserMenuItem {
               <div class="dropdown-divider my-1"></div>
             } @else {
               <a
-                [routerLink]="item.route!"
+                [routerLink]="item.route || null"
                 (click)="handleUserMenuClick(item)"
                 class="dropdown-item"
+                [class.theme-item-active]="item.themeValue && currentTheme() === item.themeValue"
               >
                 <i [class]="item.icon!" class="mr-2 dropdown-icon"></i>
                 {{ item.label! }}
+                @if (item.themeValue && currentTheme() === item.themeValue) {
+                  <i class="pi pi-check ml-auto text-primary-600"></i>
+                }
               </a>
             }
           }
         </div>
       }
     </div>
+
+    <!-- Logout Confirmation Modal -->
+    @if (showLogoutModal()) {
+      <app-logout-confirmation-modal
+        (logoutConfirmed)="handleLogoutConfirmed($event)"
+        (cancelled)="handleLogoutCancelled()"
+      />
+    }
   `,
   styles: [
     `
@@ -154,7 +181,8 @@ export interface UserMenuItem {
       }
 
       .dropdown-item {
-        display: block;
+        display: flex;
+        align-items: center;
         padding: var(--spacing-2) var(--spacing-4);
         font-size: var(--font-size-sm);
         color: var(--color-text-secondary);
@@ -167,8 +195,21 @@ export interface UserMenuItem {
         color: var(--color-text-primary);
       }
 
+      .theme-item-active {
+        background-color: var(--color-primary-50);
+        color: var(--color-primary-700);
+      }
+
       .dropdown-icon {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         color: var(--color-text-muted);
+        font-size: 1rem;
+        width: 1.25rem;
+        height: 1.25rem;
+        flex-shrink: 0;
       }
 
       /* Animations */
@@ -233,10 +274,15 @@ export interface UserMenuItem {
 export class UserDropdownMenuComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
+  private readonly themeService = inject(ThemeService);
+  private readonly tenantService = inject(TenantContextService);
 
   protected readonly user = this.authService.user;
   protected readonly userMenuOpen = signal(false);
   protected readonly imageLoadError = signal(false);
+  protected readonly currentTheme = this.themeService.currentTheme;
+  protected readonly currentTenant = this.tenantService.currentTenant;
+  protected readonly showLogoutModal = signal(false);
 
   private clickOutsideHandler: ((event: Event) => void) | null = null;
 
@@ -258,6 +304,27 @@ export class UserDropdownMenuComponent implements OnInit, OnDestroy {
       label: 'Help & Support',
       route: '/app/support',
       icon: 'pi pi-question-circle',
+    },
+    {
+      separator: true,
+    },
+    {
+      label: 'Light Mode',
+      icon: 'pi pi-sun',
+      action: 'theme',
+      themeValue: 'light',
+    },
+    {
+      label: 'Dark Mode',
+      icon: 'pi pi-moon',
+      action: 'theme',
+      themeValue: 'dark',
+    },
+    {
+      label: 'System Default',
+      icon: 'pi pi-desktop',
+      action: 'theme',
+      themeValue: 'system',
     },
     {
       separator: true,
@@ -346,7 +413,35 @@ export class UserDropdownMenuComponent implements OnInit, OnDestroy {
     this.userMenuOpen.set(false);
 
     if (item.action === 'logout') {
-      this.authService.logout().subscribe({
+      // Show logout confirmation modal instead of logging out immediately
+      this.showLogoutModal.set(true);
+    } else if (item.action === 'theme' && item.themeValue) {
+      this.themeService.setTheme(item.themeValue);
+    }
+  }
+
+  /**
+   * Handles logout confirmation from modal.
+   */
+  protected handleLogoutConfirmed(logoutType: LogoutType): void {
+    this.showLogoutModal.set(false);
+
+    if (logoutType === LogoutType.SERVICE_ONLY) {
+      // Logout from this service only, redirect to dashboard
+      this.authService.logoutFromService().subscribe({
+        next: () => {
+          // Navigation handled by AuthService
+        },
+        error: (error) => {
+          // eslint-disable-next-line no-console
+          console.error('Logout failed:', error);
+          // Force navigation to dashboard even if server logout fails
+          void this.router.navigate(['/app/dashboard']);
+        },
+      });
+    } else if (logoutType === LogoutType.COMPLETE) {
+      // Complete logout from all services
+      this.authService.logoutFromAllServices().subscribe({
         next: () => {
           // Navigation handled by AuthService
         },
@@ -354,9 +449,16 @@ export class UserDropdownMenuComponent implements OnInit, OnDestroy {
           // eslint-disable-next-line no-console
           console.error('Logout failed:', error);
           // Force navigation to login even if server logout fails
-          void this.router.navigate(['/auth/login']);
+          void this.router.navigate(['/welcome']);
         },
       });
     }
+  }
+
+  /**
+   * Handles logout cancellation from modal.
+   */
+  protected handleLogoutCancelled(): void {
+    this.showLogoutModal.set(false);
   }
 }

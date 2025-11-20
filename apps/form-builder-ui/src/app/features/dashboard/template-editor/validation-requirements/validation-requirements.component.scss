@@ -1,0 +1,446 @@
+/**
+ * Validation Requirements Component Styles
+ *
+ * Responsive, accessible styles for validation requirements panel
+ * Follows PrimeNG design system and WCAG AA accessibility standards
+ *
+ * Epic 29, Story 29.4: Frontend Validation & UX Enhancement
+ */
+
+.validation-requirements {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+
+  // Accordion custom header styles
+  ::ng-deep {
+    .p-accordion {
+      .p-accordion-header {
+        border: none;
+        background: transparent;
+
+        .p-accordion-header-link {
+          border: none;
+          background: transparent;
+          padding: 1.25rem 1.5rem;
+          border-radius: 8px 8px 0 0;
+          transition: background-color 0.2s;
+
+          &:hover {
+            background-color: #f9fafb;
+          }
+
+          &:focus {
+            box-shadow: none;
+            outline: 2px solid #3b82f6;
+            outline-offset: -2px;
+          }
+        }
+
+        .p-accordionheader-toggle-icon {
+          margin-left: 0.75rem;
+        }
+      }
+
+      .p-accordion-content {
+        border: none;
+        background: transparent;
+        padding: 0 1.5rem 1.5rem 1.5rem;
+      }
+    }
+  }
+
+  .accordion-custom-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 1rem;
+
+    .validation-title {
+      margin: 0;
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #111827;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex: 1;
+
+      i {
+        color: #3b82f6;
+        font-size: 1.25rem;
+      }
+
+      span {
+        flex: 1;
+      }
+    }
+
+    .validation-summary {
+      flex-shrink: 0;
+
+      p-badge {
+        font-size: 0.875rem;
+      }
+
+      &.all-satisfied {
+        p-badge::ng-deep .p-badge {
+          background-color: #10b981;
+        }
+      }
+
+      &.has-errors {
+        p-badge::ng-deep .p-badge {
+          background-color: #f59e0b;
+        }
+      }
+    }
+  }
+
+  .requirements-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 0.75rem;
+    align-items: stretch;
+
+    .requirement-item {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      padding: 0.625rem 0.75rem;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+      transition: all 0.2s ease-in-out;
+
+      &.satisfied {
+        background-color: #f0fdf4;
+        border-color: #86efac;
+
+        .status-icon i {
+          color: #10b981;
+        }
+      }
+
+      &.has-error {
+        background-color: #fffbeb;
+        border-color: #fde68a;
+
+        .status-icon i {
+          color: #f59e0b;
+        }
+      }
+
+      .requirement-header {
+        display: flex;
+        align-items: start;
+        gap: 0.5rem;
+        margin-bottom: 0.375rem;
+
+        .status-icon {
+          font-size: 1.25rem;
+          line-height: 1;
+          margin-top: 0.125rem;
+
+          i {
+            font-size: 1.25rem;
+          }
+        }
+
+        .requirement-info {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+
+          strong {
+            font-size: 0.9375rem;
+            font-weight: 600;
+            color: #111827;
+          }
+
+          .field-types {
+            font-size: 0.8125rem;
+            color: #6b7280;
+            font-style: italic;
+          }
+        }
+      }
+
+      .requirement-errors {
+        margin-top: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        flex: 1 1 auto;
+
+        .error-item {
+          p-message {
+            width: 100%;
+
+            ::ng-deep .p-message {
+              width: 100%;
+              padding-top: 0;
+              padding-bottom: 0;
+
+              .p-message-content {
+                padding: 0.15rem 0.5rem;
+                min-height: auto;
+              }
+            }
+          }
+
+          .auto-fix-suggestion {
+            margin-top: 0.5rem;
+            padding: 0.5rem 0.625rem;
+            background-color: #f9fafb;
+            border-left: 3px solid #3b82f6;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+
+            .suggestion-text {
+              margin: 0;
+              font-size: 0.8125rem;
+              color: #374151;
+              display: flex;
+              align-items: start;
+              gap: 0.375rem;
+              line-height: 1.4;
+
+              i {
+                color: #f59e0b;
+                margin-top: 0.0625rem;
+                font-size: 0.875rem;
+              }
+            }
+
+            button {
+              align-self: flex-start;
+            }
+          }
+        }
+      }
+
+      .success-message {
+        margin-top: 0.5rem;
+        padding-left: 2rem;
+      }
+    }
+
+    .empty-state {
+      padding: 2rem;
+      text-align: center;
+      color: #6b7280;
+
+      i {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        display: block;
+        color: #9ca3af;
+      }
+
+      p {
+        margin: 0;
+        font-size: 0.9375rem;
+      }
+    }
+  }
+}
+
+.no-category-selected {
+  padding: 2rem;
+  text-align: center;
+  background-color: #f9fafb;
+  border: 1px dashed #d1d5db;
+  border-radius: 8px;
+  color: #6b7280;
+
+  i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    display: block;
+    color: #9ca3af;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.9375rem;
+  }
+}
+
+// Responsive Design - Mobile (< 768px)
+@media (max-width: 767px) {
+  .validation-requirements {
+    ::ng-deep {
+      .p-accordion {
+        .p-accordion-header {
+          .p-accordion-header-link {
+            padding: 1rem;
+          }
+        }
+
+        .p-accordion-content {
+          padding: 0 1rem 1rem 1rem;
+        }
+      }
+    }
+
+    .accordion-custom-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.75rem;
+
+      .validation-title {
+        font-size: 1rem;
+        width: 100%;
+
+        i {
+          font-size: 1rem;
+        }
+      }
+
+      .validation-summary {
+        width: 100%;
+      }
+    }
+
+    .requirements-list {
+      grid-template-columns: 1fr;
+
+      .requirement-item {
+        padding: 0.5rem 0.625rem;
+
+        .requirement-header {
+          .status-icon {
+            font-size: 1rem;
+
+            i {
+              font-size: 1rem;
+            }
+          }
+
+          .requirement-info {
+            strong {
+              font-size: 0.875rem;
+            }
+
+            .field-types {
+              font-size: 0.75rem;
+            }
+          }
+        }
+
+        .requirement-errors {
+          .error-item {
+            .auto-fix-suggestion {
+              padding: 0.375rem 0.5rem;
+
+              .suggestion-text {
+                font-size: 0.8125rem;
+              }
+
+              button {
+                width: 100%;
+                justify-content: center;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// Accessibility - High Contrast Mode
+@media (prefers-contrast: high) {
+  .validation-requirements {
+    border-width: 2px;
+
+    .requirement-item {
+      border-width: 2px;
+
+      &.satisfied {
+        border-color: #059669;
+      }
+
+      &.has-error {
+        border-color: #d97706;
+      }
+    }
+  }
+}
+
+// Accessibility - Reduced Motion
+@media (prefers-reduced-motion: reduce) {
+  .validation-requirements {
+    .requirement-item {
+      transition: none;
+    }
+  }
+}
+
+// Dark Mode Support - DISABLED
+// Automatic dark mode detection removed to ensure consistent light mode styling
+// across the application. Dark mode will be implemented when the application
+// has a global theme toggle mechanism.
+//
+// @media (prefers-color-scheme: dark) {
+//   .validation-requirements {
+//     background: #1f2937;
+//     border-color: #374151;
+//
+//     .validation-header {
+//       border-color: #374151;
+//
+//       .validation-title {
+//         color: #f9fafb;
+//       }
+//     }
+//
+//     .requirements-list {
+//       .requirement-item {
+//         background-color: #111827;
+//         border-color: #374151;
+//
+//         &.satisfied {
+//           background-color: #064e3b;
+//           border-color: #10b981;
+//         }
+//
+//         &.has-error {
+//           background-color: #78350f;
+//           border-color: #f59e0b;
+//         }
+//
+//         .requirement-info {
+//           strong {
+//             color: #f9fafb;
+//           }
+//
+//           .field-types {
+//             color: #9ca3af;
+//           }
+//         }
+//
+//         .auto-fix-suggestion {
+//           background-color: #1f2937;
+//           border-color: #3b82f6;
+//
+//           .suggestion-text {
+//             color: #d1d5db;
+//           }
+//         }
+//       }
+//     }
+//   }
+//
+//   .no-category-selected {
+//     background-color: #111827;
+//     border-color: #374151;
+//     color: #9ca3af;
+//   }
+// }

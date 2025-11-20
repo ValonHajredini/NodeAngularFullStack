@@ -1,0 +1,30 @@
+Database Migration Report
+=========================
+Date: Fri Nov  7 22:29:17 CET 2025
+Source Database: nodeangularfullstack
+Target Databases:
+  - AUTH: nodeangularfullstack_auth
+  - DASHBOARD: nodeangularfullstack_dashboard
+  - FORMS: nodeangularfullstack_forms
+
+AUTH Tables (6 tables):
+  - users: 0 rows (source: 5)
+  - tenants: 1 rows (source: 6)
+  - sessions: 0 rows (source: 29)
+  - api_tokens: 0 rows (source: 2)
+  - api_token_usage: 0 rows (source: 0)
+  - password_resets: 0 rows (source: 0)
+
+DASHBOARD Tables (6 tables):
+  - tools: 0 rows (source: 4)
+  - tool_configs: 0 rows (source: 5)
+  - tool_registry: 0 rows (source: 48)
+  - drawing_projects: 0 rows (source: 0)
+  - export_jobs: 0 rows (source: 0)
+
+FORMS Tables (5 tables):
+  - forms: 0 rows (source: 1)
+  - form_schemas: 0 rows (source: 3)
+  - form_submissions: 0 rows (source: 2)
+  - form_themes: 0 rows (source: 34)
+  - short_links: 0 rows (source: 39)

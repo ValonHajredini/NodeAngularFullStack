@@ -7,13 +7,16 @@ import {
   inject,
   signal,
   computed,
+  effect,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DragDropModule, CdkDragDrop, CdkDrag, CdkDropList } from '@angular/cdk/drag-drop';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { FormField, FormFieldType, FieldPosition } from '@nodeangularfullstack/shared';
+import { FormField, FormFieldType, FieldPosition, FormTheme } from '@nodeangularfullstack/shared';
 import { FormBuilderService } from '../form-builder.service';
 import { FormSettings } from '../form-settings/form-settings.component';
+import { ThemePreviewService } from '../theme-preview.service';
+import { FormsApiService } from '../forms-api.service';
 import { FieldPreviewRendererComponent } from './field-preview-renderer/field-preview-renderer.component';
 import { GroupPreviewComponent } from './field-preview-renderer/group-preview.component';
 import { sanitizeCustomBackground } from '../../../../../shared/utils/sanitizer';
@@ -34,8 +37,9 @@ interface FieldTypeDefinition {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, DragDropModule, FieldPreviewRendererComponent, GroupPreviewComponent],
+  styleUrls: ['./form-canvas.component.scss'],
   template: `
-    <div class="form-canvas h-full bg-gray-50 p-6">
+    <div class="form-canvas h-full theme-form-canvas-background p-6">
       <!-- Step Navigation Tabs (shown when step mode enabled) -->
       @if (stepFormEnabled()) {
         <div class="step-navigation-container mb-6">
@@ -45,14 +49,14 @@ interface FieldTypeDefinition {
             @for (step of steps(); track step.id) {
               <button
                 type="button"
-                class="step-tab flex items-center gap-2 px-4 py-2 rounded-t-md border border-b-0 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors whitespace-nowrap"
+                class="step-tab flex items-center gap-2 px-4 py-2 rounded-t-md border border-b-0 theme-button-secondary transition-colors whitespace-nowrap"
                 [class.active]="step.id === activeStepId()"
                 [attr.aria-selected]="step.id === activeStepId()"
                 [attr.aria-label]="'Switch to ' + step.title"
                 (click)="onStepTabClick(step.id)"
               >
                 <span
-                  class="step-number flex items-center justify-center w-6 h-6 rounded-full bg-primary-100 text-primary-700 text-sm font-bold"
+                  class="step-number theme-step-indicator flex items-center justify-center w-6 h-6 text-sm"
                 >
                   {{ step.order + 1 }}
                 </span>
@@ -66,13 +70,13 @@ interface FieldTypeDefinition {
             class="step-indicator-bar flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-200"
           >
             <span
-              class="badge-primary inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-primary-100 text-primary-700"
+              class="badge-primary theme-step-indicator inline-flex items-center px-3 py-1 rounded-full text-sm"
             >
               Step {{ activeStepOrder() + 1 }} of {{ steps().length }}
             </span>
-            <span class="text-gray-700 font-medium">{{ activeStep()?.title }}</span>
+            <span class="theme-label">{{ activeStep()?.title }}</span>
             @if (activeStep()?.description) {
-              <span class="text-sm text-gray-500">{{ activeStep()?.description }}</span>
+              <span class="text-sm theme-help-text">{{ activeStep()?.description }}</span>
             }
           </div>
         </div>
@@ -88,8 +92,8 @@ interface FieldTypeDefinition {
           (cdkDropListDropped)="onFieldDropped($event)"
         >
           <i class="pi pi-file-edit text-6xl text-gray-300 mb-4"></i>
-          <h3 class="text-xl font-semibold text-gray-700 mb-2">Start Building Your Form</h3>
-          <p class="text-gray-500 max-w-md">
+          <h3 class="theme-heading mb-2">Start Building Your Form</h3>
+          <p class="theme-help-text max-w-md">
             Drag fields from the palette to start building your form
           </p>
         </div>
@@ -127,17 +131,17 @@ interface FieldTypeDefinition {
           }
 
           <div class="mb-4" style="position: relative; z-index: 2;">
-            <h3 class="text-lg font-semibold text-gray-900">
+            <h3 class="theme-heading">
               {{ settings.title || 'Untitled Form' }}
             </h3>
-            <p class="text-sm text-gray-600">
+            <p class="text-sm theme-text-secondary">
               This is a live preview of your form. Click on a field to edit its properties
               @if (settings.columnLayout > 1) {
-                <span class="ml-2 text-blue-600">{{ settings.columnLayout }} columns</span>
+                <span class="ml-2 theme-text-primary">{{ settings.columnLayout }} columns</span>
               }
             </p>
             @if (settings.description) {
-              <p class="text-sm text-gray-500 mt-1">{{ settings.description }}</p>
+              <p class="text-sm theme-help-text mt-1">{{ settings.description }}</p>
             }
           </div>
 
@@ -152,15 +156,13 @@ interface FieldTypeDefinition {
                 <div class="empty-icon mb-4">
                   <i class="pi pi-inbox text-gray-300" style="font-size: 6rem;"></i>
                 </div>
-                <h3 class="text-xl font-semibold text-gray-700 mb-2">
+                <h3 class="theme-heading mb-2">
                   No fields in Step {{ activeStepOrder() + 1 }} yet
                 </h3>
-                <p class="text-gray-600 mb-4 max-w-md">
+                <p class="theme-text-secondary mb-4 max-w-md">
                   Drag field types from the palette on the left to add them to this step.
                 </p>
-                <p
-                  class="flex items-center gap-2 text-sm text-gray-500 bg-blue-50 px-4 py-2 rounded-md"
-                >
+                <p class="flex items-center gap-2 text-sm theme-help-text px-4 py-2 rounded-md">
                   <i class="pi pi-info-circle"></i>
                   You can organize fields within this step using rows and columns.
                 </p>
@@ -171,7 +173,7 @@ interface FieldTypeDefinition {
                   <div class="row-wrapper">
                     <!-- Row separator with label -->
                     <div class="row-separator mb-2 flex items-center gap-2">
-                      <span class="text-sm font-medium text-gray-600">
+                      <span class="text-sm theme-label">
                         Row {{ row.order + 1 }} ({{ row.columnCount }} columns)
                       </span>
                       <div class="flex-1 h-px bg-gray-300"></div>
@@ -179,75 +181,189 @@ interface FieldTypeDefinition {
 
                     <!-- Row columns grid -->
                     <div
-                      class="row-grid"
-                      [style.grid-template-columns]="'repeat(' + row.columnCount + ', 1fr)'"
+                      class="row-grid theme-row-container"
+                      [style.grid-template-columns]="getColumnGridTemplate(row)"
                       style="display: grid; gap: 16px; min-height: 120px;"
                     >
                       @for (columnIndex of getColumnIndices(row.columnCount); track columnIndex) {
-                        <div
-                          class="column-drop-zone"
-                          [attr.data-row-id]="row.rowId"
-                          [attr.data-column-index]="columnIndex"
-                          [class.occupied]="getFieldsInColumn(row.rowId, columnIndex).length > 0"
-                          cdkDropList
-                          [cdkDropListData]="{ rowId: row.rowId, columnIndex: columnIndex }"
-                          [cdkDropListEnterPredicate]="canDropIntoColumn"
-                          (cdkDropListDropped)="onFieldDroppedInRow($event)"
-                        >
-                          @if (getFieldsInColumn(row.rowId, columnIndex); as columnFields) {
-                            @if (columnFields.length > 0) {
-                              <!-- Occupied column: render fields vertically stacked -->
-                              <div class="column-fields-container">
-                                @for (
-                                  field of columnFields;
-                                  track field.id;
-                                  let fieldIndex = $index
-                                ) {
-                                  <!-- Field wrapper with drag support -->
-                                  <div class="field-wrapper mb-3" cdkDrag [cdkDragData]="field">
-                                    <div
-                                      class="field-preview-container p-4 bg-white border-2 border-solid border-gray-300 rounded-lg transition-all relative group hover:border-blue-400 hover:shadow-md"
-                                      [class.border-blue-500]="isFieldSelected(field)"
-                                      [class.shadow-md]="isFieldSelected(field)"
-                                      [class.last:mb-0]="fieldIndex === columnFields.length - 1"
-                                      (click)="onFieldClicked(field)"
-                                      tabindex="0"
-                                      role="listitem"
-                                      [attr.aria-label]="field.label + ' field'"
-                                    >
-                                      <!-- Delete Button (Top Right) -->
-                                      <button
-                                        type="button"
-                                        class="delete-button-card absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                        (click)="onDeleteFieldFromCard($event, field)"
-                                        [attr.aria-label]="'Delete ' + field.label"
-                                        title="Delete field"
-                                      >
-                                        <i class="pi pi-times text-red-500 hover:text-red-700"></i>
-                                      </button>
+                        <div class="column-wrapper">
+                          @if (hasSubColumns(row.rowId, columnIndex)) {
+                            <!-- Sub-column layout: render sub-column drop zones -->
+                            <div
+                              class="sub-columns-container"
+                              [style.grid-template-columns]="
+                                getSubColumnWidths(row.rowId, columnIndex)
+                              "
+                              style="display: grid; gap: 12px; min-height: 100px;"
+                            >
+                              @for (
+                                subColumn of subColumnsForColumn(row.rowId, columnIndex);
+                                track subColumn.index
+                              ) {
+                                <div
+                                  class="sub-column-drop-zone"
+                                  [class.sub-column-drop-zone--empty]="
+                                    isSubColumnEmpty(row.rowId, columnIndex, subColumn.index)
+                                  "
+                                  [id]="
+                                    'subColumn-' +
+                                    row.rowId +
+                                    '-' +
+                                    columnIndex +
+                                    '-' +
+                                    subColumn.index
+                                  "
+                                  cdkDropList
+                                  [cdkDropListData]="
+                                    getSubColumnDropData(row.rowId, columnIndex, subColumn.index)
+                                  "
+                                  [cdkDropListEnterPredicate]="canDropIntoColumn"
+                                  (cdkDropListDropped)="onFieldDroppedInRow($event)"
+                                  role="region"
+                                  [attr.aria-label]="
+                                    'Sub-column ' +
+                                    (subColumn.index + 1) +
+                                    ' of ' +
+                                    subColumnsForColumn(row.rowId, columnIndex).length +
+                                    ' drop zone'
+                                  "
+                                >
+                                  @if (isSubColumnEmpty(row.rowId, columnIndex, subColumn.index)) {
+                                    <!-- Empty sub-column placeholder -->
+                                    <div class="empty-placeholder">
+                                      <i class="pi pi-inbox text-gray-300 text-2xl mb-2"></i>
+                                      <span class="text-xs theme-help-text">Drop field here</span>
+                                    </div>
+                                  }
 
+                                  <!-- Fields in sub-column -->
+                                  @for (
+                                    field of fieldsInSubColumn(
+                                      row.rowId,
+                                      columnIndex,
+                                      subColumn.index
+                                    );
+                                    track field.id;
+                                    let fieldIndex = $index
+                                  ) {
+                                    <div class="field-wrapper mb-3" cdkDrag [cdkDragData]="field">
                                       <div
-                                        class="field-preview-content cursor-pointer"
-                                        (click)="onFieldPreviewClicked($event, field)"
+                                        class="field-preview-container p-4 bg-white border-2 border-solid border-gray-300 rounded-lg transition-all relative group hover:border-blue-400 hover:shadow-md"
+                                        [class.border-blue-500]="isFieldSelected(field)"
+                                        [class.shadow-md]="isFieldSelected(field)"
+                                        [class.last:mb-0]="
+                                          fieldIndex ===
+                                          fieldsInSubColumn(row.rowId, columnIndex, subColumn.index)
+                                            .length -
+                                            1
+                                        "
+                                        (click)="onFieldClicked(field)"
+                                        tabindex="0"
+                                        role="listitem"
+                                        [attr.aria-label]="field.label + ' field'"
                                       >
-                                        <app-field-preview-renderer
-                                          [field]="field"
-                                          (labelChanged)="onLabelChanged(field, $event)"
-                                          (settingsClick)="openSettingsModal(field)"
-                                          (fieldUpdated)="onFieldUpdated(field.id, $event)"
-                                        />
+                                        <!-- Delete Button (Top Right) -->
+                                        <button
+                                          type="button"
+                                          class="delete-button-card absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                          (click)="onDeleteFieldFromCard($event, field)"
+                                          [attr.aria-label]="'Delete ' + field.label"
+                                          title="Delete field"
+                                        >
+                                          <i
+                                            class="pi pi-times text-red-500 hover:text-red-700"
+                                          ></i>
+                                        </button>
+
+                                        <div
+                                          class="field-preview-content cursor-pointer"
+                                          (click)="onFieldPreviewClicked($event, field)"
+                                        >
+                                          <app-field-preview-renderer
+                                            [field]="field"
+                                            (labelChanged)="onLabelChanged(field, $event)"
+                                            (settingsClick)="openSettingsModal(field)"
+                                            (fieldUpdated)="onFieldUpdated(field.id, $event)"
+                                          />
+                                        </div>
                                       </div>
                                     </div>
+                                  }
+                                </div>
+                              }
+                            </div>
+                          } @else {
+                            <!-- Parent column drop zone (no sub-columns) -->
+                            <div
+                              class="column-drop-zone theme-column-container"
+                              [attr.data-row-id]="row.rowId"
+                              [attr.data-column-index]="columnIndex"
+                              [class.occupied]="
+                                getFieldsInColumn(row.rowId, columnIndex).length > 0
+                              "
+                              cdkDropList
+                              [cdkDropListData]="getParentColumnDropData(row.rowId, columnIndex)"
+                              [cdkDropListEnterPredicate]="canDropIntoColumn"
+                              (cdkDropListDropped)="onFieldDroppedInRow($event)"
+                            >
+                              @if (getFieldsInColumn(row.rowId, columnIndex); as columnFields) {
+                                @if (columnFields.length > 0) {
+                                  <!-- Occupied column: render fields vertically stacked -->
+                                  <div class="column-fields-container">
+                                    @for (
+                                      field of columnFields;
+                                      track field.id;
+                                      let fieldIndex = $index
+                                    ) {
+                                      <!-- Field wrapper with drag support -->
+                                      <div class="field-wrapper mb-3" cdkDrag [cdkDragData]="field">
+                                        <div
+                                          class="field-preview-container p-4 bg-white border-2 border-solid border-gray-300 rounded-lg transition-all relative group hover:border-blue-400 hover:shadow-md"
+                                          [class.border-blue-500]="isFieldSelected(field)"
+                                          [class.shadow-md]="isFieldSelected(field)"
+                                          [class.last:mb-0]="fieldIndex === columnFields.length - 1"
+                                          (click)="onFieldClicked(field)"
+                                          tabindex="0"
+                                          role="listitem"
+                                          [attr.aria-label]="field.label + ' field'"
+                                        >
+                                          <!-- Delete Button (Top Right) -->
+                                          <button
+                                            type="button"
+                                            class="delete-button-card absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                            (click)="onDeleteFieldFromCard($event, field)"
+                                            [attr.aria-label]="'Delete ' + field.label"
+                                            title="Delete field"
+                                          >
+                                            <i
+                                              class="pi pi-times text-red-500 hover:text-red-700"
+                                            ></i>
+                                          </button>
+
+                                          <div
+                                            class="field-preview-content cursor-pointer"
+                                            (click)="onFieldPreviewClicked($event, field)"
+                                          >
+                                            <app-field-preview-renderer
+                                              [field]="field"
+                                              (labelChanged)="onLabelChanged(field, $event)"
+                                              (settingsClick)="openSettingsModal(field)"
+                                              (fieldUpdated)="onFieldUpdated(field.id, $event)"
+                                            />
+                                          </div>
+                                        </div>
+                                      </div>
+                                    }
+                                  </div>
+                                } @else {
+                                  <!-- Empty column: placeholder -->
+                                  <div class="empty-column-placeholder">
+                                    <i class="pi pi-inbox text-gray-300 text-2xl mb-2"></i>
+                                    <span class="text-xs theme-help-text">Drop field here</span>
                                   </div>
                                 }
-                              </div>
-                            } @else {
-                              <!-- Empty column: placeholder -->
-                              <div class="empty-column-placeholder">
-                                <i class="pi pi-inbox text-gray-300 text-2xl mb-2"></i>
-                                <span class="text-xs text-gray-400">Drop field here</span>
-                              </div>
-                            }
+                              }
+                            </div>
                           }
                         </div>
                       }
@@ -264,7 +380,7 @@ interface FieldTypeDefinition {
               id="canvas-drop-list"
               [cdkDropListData]="formBuilderService.formFields()"
               (cdkDropListDropped)="onFieldDropped($event)"
-              class="form-fields-grid"
+              class="form-fields-grid theme-form-container-wrapper"
               [ngClass]="[getGridClass(), getSpacingClass()]"
               style="position: relative; z-index: 2;"
             >
@@ -395,265 +511,12 @@ interface FieldTypeDefinition {
       <!-- Field Settings Modal removed - now handled by parent UnifiedFieldEditorModal (Story 16.8) -->
     </div>
   `,
-  styles: [
-    `
-      .form-canvas {
-        min-height: 400px;
-      }
-
-      .drop-zone {
-        min-height: 400px;
-        transition: border-color 200ms;
-      }
-
-      .drop-zone.empty {
-        border: 2px dashed #e5e7eb;
-        border-radius: 8px;
-      }
-
-      .drop-zone.cdk-drop-list-dragging {
-        border-color: #60a5fa;
-        background-color: #eff6ff;
-      }
-
-      .form-fields-grid {
-        display: grid;
-        gap: 1rem;
-        min-height: 200px;
-      }
-
-      .form-fields-grid.spacing-compact {
-        gap: 0.5rem;
-      }
-
-      .form-fields-grid.spacing-normal {
-        gap: 1rem;
-      }
-
-      .form-fields-grid.spacing-relaxed {
-        gap: 1.5rem;
-      }
-
-      .form-fields-grid.grid-cols-1 {
-        grid-template-columns: 1fr;
-      }
-
-      .form-fields-grid.grid-cols-2 {
-        grid-template-columns: repeat(2, 1fr);
-      }
-
-      .form-fields-grid.grid-cols-3 {
-        grid-template-columns: repeat(3, 1fr);
-      }
-
-      .field-preview-container {
-        user-select: none;
-        cursor: pointer;
-      }
-
-      .field-preview-container:hover {
-        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-      }
-
-      .field-preview-container:focus {
-        outline: 2px solid #60a5fa;
-        outline-offset: 2px;
-      }
-
-      .field-preview-header {
-        cursor: pointer;
-      }
-
-      .delete-button-card {
-        background: white;
-        border: 1px solid #fee2e2;
-        border-radius: 0.375rem;
-        padding: 0.375rem 0.5rem;
-        cursor: pointer;
-        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-      }
-
-      .delete-button-card:hover {
-        background: #fef2f2;
-        border-color: #ef4444;
-      }
-
-      .field-preview-content {
-        cursor: pointer;
-        position: relative;
-      }
-
-      .field-placeholder {
-        background: #dbeafe;
-        border: 2px dashed #3b82f6;
-        border-radius: 8px;
-        min-height: 60px;
-      }
-
-      .cdk-drag-preview {
-        opacity: 0.8;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-      }
-
-      .cdk-drag-animating {
-        transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
-      }
-
-      .cdk-drop-list-dragging .field-preview-container:not(.cdk-drag-placeholder) {
-        transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
-      }
-
-      /* Responsive breakpoints */
-      @media (max-width: 768px) {
-        .form-fields-grid {
-          grid-template-columns: 1fr !important;
-        }
-      }
-
-      /* Row layout styles */
-      .row-layout-container {
-        .row-grid {
-          display: grid;
-          gap: 16px;
-          min-height: 120px;
-        }
-
-        .column-drop-zone {
-          border: 2px dashed #d1d5db;
-          border-radius: 8px;
-          padding: 12px;
-          background: #f9fafb;
-          min-height: 100px;
-          display: flex;
-          align-items: flex-start;
-          justify-content: center;
-          transition: all 0.2s ease;
-
-          &.cdk-drop-list-dragging {
-            border-color: #10b981;
-            background: rgba(16, 185, 129, 0.1);
-          }
-
-          &.cdk-drop-list-receiving {
-            border-color: #10b981;
-            border-style: solid;
-            background: rgba(16, 185, 129, 0.15);
-          }
-
-          &.occupied {
-            border: 1px solid #e5e7eb;
-            background: transparent;
-            padding: 0;
-          }
-        }
-
-        .column-fields-container {
-          display: flex;
-          flex-direction: column;
-          gap: 0;
-          width: 100%;
-        }
-
-        .empty-column-placeholder {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          text-align: center;
-          width: 100%;
-          height: 100%;
-          min-height: 100px;
-        }
-
-        .field-wrapper {
-          cursor: move;
-          width: 100%;
-          margin-bottom: 12px;
-
-          &:last-child {
-            margin-bottom: 0;
-          }
-
-          &.cdk-drag-preview {
-            opacity: 0.8;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-          }
-        }
-
-        .row-separator {
-          user-select: none;
-        }
-      }
-
-      .global-layout-container {
-        display: grid;
-        gap: 16px;
-        grid-auto-rows: auto;
-      }
-
-      /* Step navigation styles */
-      .step-navigation-container {
-        .step-tabs-bar {
-          /* Horizontal scrolling for many steps */
-          scrollbar-width: thin;
-          scrollbar-color: #cbd5e0 #f7fafc;
-
-          &::-webkit-scrollbar {
-            height: 6px;
-          }
-
-          &::-webkit-scrollbar-track {
-            background: #f7fafc;
-          }
-
-          &::-webkit-scrollbar-thumb {
-            background: #cbd5e0;
-            border-radius: 3px;
-          }
-        }
-
-        .step-tab {
-          &.active {
-            background: white;
-            border-color: #3b82f6;
-            color: #1d4ed8;
-            font-weight: 600;
-            border-bottom: 2px solid white;
-            position: relative;
-            margin-bottom: -1px;
-
-            .step-number {
-              background: #3b82f6;
-              color: white;
-            }
-          }
-        }
-
-        .step-indicator-bar {
-          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-        }
-      }
-
-      .empty-step-state {
-        animation: fadeIn 0.3s ease-in;
-      }
-
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(-10px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-    `,
-  ],
 })
 export class FormCanvasComponent {
   readonly formBuilderService = inject(FormBuilderService);
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly themePreviewService = inject(ThemePreviewService);
+  private readonly formsApiService = inject(FormsApiService);
   protected readonly FormFieldType = FormFieldType;
 
   private _settings = signal<FormSettings>({
@@ -676,6 +539,20 @@ export class FormCanvasComponent {
 
   @Output() fieldClicked = new EventEmitter<FormField>();
 
+  constructor() {
+    // Watch for theme changes and apply theme in real-time
+    effect(() => {
+      const themeId = this.formBuilderService.currentForm()?.schema?.settings?.themeId;
+
+      if (themeId) {
+        this.loadAndApplyTheme(themeId);
+      } else {
+        // No theme selected - clear theme CSS to use defaults
+        this.themePreviewService.clearThemeCss();
+      }
+    });
+  }
+
   // Step form computed signals
   protected readonly stepFormEnabled = this.formBuilderService.stepFormEnabled;
   protected readonly steps = this.formBuilderService.steps;
@@ -687,7 +564,7 @@ export class FormCanvasComponent {
    * Computed signal: Visible fields filtered by active step
    * Returns all fields when step mode is disabled, or only fields for active step when enabled
    */
-  protected readonly visibleFields = computed(() => {
+  public readonly visibleFields = computed(() => {
     if (!this.stepFormEnabled()) {
       return this.formBuilderService.formFields();
     }
@@ -702,7 +579,7 @@ export class FormCanvasComponent {
    * Computed signal: Visible rows filtered by active step
    * Returns all rows when step mode is disabled, or only rows for active step when enabled
    */
-  protected readonly visibleRows = computed(() => {
+  public readonly visibleRows = computed(() => {
     const rows = this.formBuilderService.rowConfigs();
     if (!this.stepFormEnabled()) {
       return rows;
@@ -733,6 +610,40 @@ export class FormCanvasComponent {
       s.backgroundType === 'custom' &&
       (s.backgroundCustomHtml !== undefined || s.backgroundCustomCss !== undefined)
     );
+  });
+
+  /**
+   * Computed signal: Fields grouped by sub-column position for O(1) lookup.
+   * Map key format: "${rowId}-${columnIndex}-${subColumnIndex}"
+   * Performance optimization to avoid filtering on every render.
+   */
+  protected readonly fieldsBySubColumn = computed(() => {
+    const map = new Map<string, FormField[]>();
+
+    this.formBuilderService.formFields().forEach((field) => {
+      if (
+        field.position?.rowId &&
+        field.position?.columnIndex !== undefined &&
+        field.position?.subColumnIndex !== undefined
+      ) {
+        const key = `${field.position.rowId}-${field.position.columnIndex}-${field.position.subColumnIndex}`;
+        if (!map.has(key)) {
+          map.set(key, []);
+        }
+        map.get(key)!.push(field);
+      }
+    });
+
+    // Sort fields within each sub-column by orderInColumn
+    map.forEach((fields) => {
+      fields.sort((a, b) => {
+        const orderA = a.position?.orderInColumn ?? 0;
+        const orderB = b.position?.orderInColumn ?? 0;
+        return orderA - orderB;
+      });
+    });
+
+    return map;
   });
 
   /**
@@ -980,6 +891,29 @@ export class FormCanvasComponent {
       default:
         return 'spacing-normal';
     }
+  }
+
+  /**
+   * Generates CSS Grid template columns string for a row.
+   * Uses custom columnWidths if defined, otherwise falls back to equal-width columns.
+   *
+   * @param row - Row configuration object
+   * @returns CSS grid-template-columns value (e.g., "1fr 3fr" or "repeat(2, 1fr)")
+   *
+   * @example
+   * // Row with custom widths
+   * getColumnGridTemplate({ columnCount: 2, columnWidths: ['1fr', '3fr'] })
+   * // Returns: "1fr 3fr"
+   *
+   * // Row without custom widths (equal width fallback)
+   * getColumnGridTemplate({ columnCount: 3 })
+   * // Returns: "repeat(3, 1fr)"
+   */
+  getColumnGridTemplate(row: { columnCount: number; columnWidths?: string[] }): string {
+    if (row.columnWidths && row.columnWidths.length === row.columnCount) {
+      return row.columnWidths.join(' '); // Custom widths: "1fr 3fr"
+    }
+    return `repeat(${row.columnCount}, 1fr)`; // Equal width fallback
   }
 
   /**
@@ -1265,6 +1199,111 @@ export class FormCanvasComponent {
   }
 
   /**
+   * Check if a column has sub-columns configured.
+   * Story 27.5: Sub-Column Drag-Drop Support
+   * @param rowId - Row identifier
+   * @param columnIndex - Column index to check
+   * @returns True if sub-columns are configured for this column
+   */
+  protected hasSubColumns(rowId: string, columnIndex: number): boolean {
+    const key = `${rowId}-${columnIndex}`;
+    return this.formBuilderService.subColumnsByRowColumn().has(key);
+  }
+
+  /**
+   * Get drop data for sub-column drop zone.
+   * Story 27.5: Type-safe helper for sub-column drop data
+   * @param rowId - Row identifier
+   * @param columnIndex - Parent column index
+   * @param subColumnIndex - Sub-column index
+   * @returns Drop data with correct typing
+   */
+  protected getSubColumnDropData(
+    rowId: string,
+    columnIndex: number,
+    subColumnIndex: number,
+  ): { rowId: string; columnIndex: number; subColumnIndex?: number } {
+    return { rowId, columnIndex, subColumnIndex };
+  }
+
+  /**
+   * Get drop data for parent column drop zone.
+   * Story 27.5: Type-safe helper for parent column drop data
+   * @param rowId - Row identifier
+   * @param columnIndex - Column index
+   * @returns Drop data with correct typing
+   */
+  protected getParentColumnDropData(
+    rowId: string,
+    columnIndex: number,
+  ): { rowId: string; columnIndex: number; subColumnIndex?: number } {
+    return { rowId, columnIndex, subColumnIndex: undefined };
+  }
+
+  /**
+   * Get array of sub-column indices for rendering.
+   * Story 27.5: Sub-Column Drag-Drop Support
+   * @param rowId - Row identifier
+   * @param columnIndex - Parent column index
+   * @returns Array of sub-column indices [{index: 0}, {index: 1}, ...]
+   */
+  protected subColumnsForColumn(rowId: string, columnIndex: number): { index: number }[] {
+    const key = `${rowId}-${columnIndex}`;
+    const config = this.formBuilderService.subColumnsByRowColumn().get(key);
+    if (!config) return [];
+    return Array.from({ length: config.subColumnCount }, (_, i) => ({ index: i }));
+  }
+
+  /**
+   * Get CSS grid-template-columns value for sub-columns.
+   * Story 27.5: Sub-Column Drag-Drop Support
+   * @param rowId - Row identifier
+   * @param columnIndex - Parent column index
+   * @returns CSS grid-template-columns string (e.g., "1fr 2fr" or "repeat(2, 1fr)")
+   */
+  protected getSubColumnWidths(rowId: string, columnIndex: number): string {
+    const key = `${rowId}-${columnIndex}`;
+    const config = this.formBuilderService.subColumnsByRowColumn().get(key);
+    if (!config) return '1fr';
+
+    // Use custom widths if defined, otherwise equal-width fallback
+    if (config.subColumnWidths && config.subColumnWidths.length === config.subColumnCount) {
+      return config.subColumnWidths.join(' ');
+    }
+    return `repeat(${config.subColumnCount}, 1fr)`;
+  }
+
+  /**
+   * Get all fields in a specific sub-column, sorted by orderInColumn.
+   * Story 27.5: Sub-Column Drag-Drop Support
+   * Performance optimized using computed signal for O(1) lookup instead of O(n) filtering.
+   * @param rowId - Row identifier
+   * @param columnIndex - Parent column index
+   * @param subColumnIndex - Sub-column index within parent column
+   * @returns Array of fields in the sub-column (already sorted by orderInColumn)
+   */
+  public fieldsInSubColumn(
+    rowId: string,
+    columnIndex: number,
+    subColumnIndex: number,
+  ): FormField[] {
+    const key = `${rowId}-${columnIndex}-${subColumnIndex}`;
+    return this.fieldsBySubColumn().get(key) ?? [];
+  }
+
+  /**
+   * Check if a sub-column is empty (has no fields).
+   * Story 27.5: Sub-Column Drag-Drop Support
+   * @param rowId - Row identifier
+   * @param columnIndex - Parent column index
+   * @param subColumnIndex - Sub-column index
+   * @returns True if sub-column has no fields
+   */
+  protected isSubColumnEmpty(rowId: string, columnIndex: number, subColumnIndex: number): boolean {
+    return this.fieldsInSubColumn(rowId, columnIndex, subColumnIndex).length === 0;
+  }
+
+  /**
    * Can drop predicate for row-column drop zones.
    * With multi-field column support, all drops are now allowed (no more "occupied" restriction).
    * @param drag - The CDK dragged item
@@ -1277,27 +1316,62 @@ export class FormCanvasComponent {
   };
 
   /**
-   * Handle field dropped into row-column position.
+   * Handle field dropped into row-column or sub-column position.
    * Creates new field from palette or moves existing field to new position.
-   * Calculates orderInColumn based on drop index within column.
+   * Calculates orderInColumn based on drop index within column or sub-column.
    * Assigns stepId to field when step mode is enabled.
-   * @param event - The CdkDragDrop event with row-column position data
+   * Story 27.5: Extended to support sub-column positioning via subColumnIndex
+   * @param event - The CdkDragDrop event with row-column-subColumn position data
    */
-  onFieldDroppedInRow(event: CdkDragDrop<{ rowId: string; columnIndex: number }>): void {
-    const dropData = event.container.data as { rowId: string; columnIndex: number };
+  onFieldDroppedInRow(
+    event: CdkDragDrop<{ rowId: string; columnIndex: number; subColumnIndex?: number }>,
+  ): void {
+    // Runtime validation of drop data structure (Story 27.5 - REL-001)
+    const dropData = event.container.data;
+    if (
+      !dropData ||
+      typeof dropData !== 'object' ||
+      typeof dropData.rowId !== 'string' ||
+      typeof dropData.columnIndex !== 'number'
+    ) {
+      console.error('Invalid drop data structure:', dropData);
+      this.showErrorToast('Invalid drop position. Please try again.');
+      return;
+    }
+
+    const validatedDropData = dropData as {
+      rowId: string;
+      columnIndex: number;
+      subColumnIndex?: number;
+    };
     const dragData = event.item.data;
 
-    // Get fields currently in target column
-    const columnFields = this.getFieldsInColumn(dropData.rowId, dropData.columnIndex);
+    // Get fields in target column or sub-column
+    let targetFields: FormField[];
+    if (validatedDropData.subColumnIndex !== undefined) {
+      // Dropping into sub-column: filter by subColumnIndex
+      targetFields = this.fieldsInSubColumn(
+        validatedDropData.rowId,
+        validatedDropData.columnIndex,
+        validatedDropData.subColumnIndex,
+      );
+    } else {
+      // Dropping into parent column: filter out fields with subColumnIndex
+      targetFields = this.getFieldsInColumn(
+        validatedDropData.rowId,
+        validatedDropData.columnIndex,
+      ).filter((f) => f.position?.subColumnIndex === undefined);
+    }
 
-    // Calculate orderInColumn based on drop index (defaults to end of column)
-    const orderInColumn = event.currentIndex ?? columnFields.length;
+    // Calculate orderInColumn based on drop index (defaults to end of column/sub-column)
+    const orderInColumn = event.currentIndex ?? targetFields.length;
 
     // Check if dragging field type from palette (create new field)
     if (this.isFieldTypeDefinition(dragData)) {
       this.createFieldAtPosition(dragData.type, {
-        rowId: dropData.rowId,
-        columnIndex: dropData.columnIndex,
+        rowId: validatedDropData.rowId,
+        columnIndex: validatedDropData.columnIndex,
+        subColumnIndex: validatedDropData.subColumnIndex,
         orderInColumn,
       });
       return;
@@ -1318,8 +1392,9 @@ export class FormCanvasComponent {
     }
 
     const position: FieldPosition = {
-      rowId: dropData.rowId,
-      columnIndex: dropData.columnIndex,
+      rowId: validatedDropData.rowId,
+      columnIndex: validatedDropData.columnIndex,
+      subColumnIndex: validatedDropData.subColumnIndex, // Includes undefined for parent column drops
       orderInColumn,
       stepId: this.stepFormEnabled() ? this.activeStepId() || undefined : undefined,
     };
@@ -1328,6 +1403,7 @@ export class FormCanvasComponent {
     if (
       field.position?.rowId === position.rowId &&
       field.position?.columnIndex === position.columnIndex &&
+      field.position?.subColumnIndex === position.subColumnIndex &&
       field.position?.orderInColumn === orderInColumn
     ) {
       return;
@@ -1338,23 +1414,30 @@ export class FormCanvasComponent {
   }
 
   /**
-   * Create new field at specific row-column position.
-   * Called when dropping field type from palette into row-column zone.
+   * Create new field at specific row-column or sub-column position.
+   * Called when dropping field type from palette into row-column or sub-column zone.
    * Assigns stepId when step mode is enabled.
+   * Story 27.5: Extended to support sub-column positioning
    * @param type - The field type to create
-   * @param position - The row-column position with orderInColumn
+   * @param position - The row-column-subColumn position with orderInColumn
    */
   private createFieldAtPosition(
     type: FormFieldType,
-    position: { rowId: string; columnIndex: number; orderInColumn?: number },
+    position: {
+      rowId: string;
+      columnIndex: number;
+      subColumnIndex?: number;
+      orderInColumn?: number;
+    },
   ): void {
     // Create field using service (auto-generates ID and defaults)
     const newField = this.formBuilderService.addFieldFromType(type);
 
-    // Set position after creation (includes orderInColumn and stepId)
+    // Set position after creation (includes orderInColumn, subColumnIndex, and stepId)
     this.formBuilderService.setFieldPosition(newField.id, {
       rowId: position.rowId,
       columnIndex: position.columnIndex,
+      subColumnIndex: position.subColumnIndex, // Undefined for parent column drops
       orderInColumn: position.orderInColumn ?? 0,
       stepId: this.stepFormEnabled() ? this.activeStepId() || undefined : undefined,
     });
@@ -1414,4 +1497,22 @@ export class FormCanvasComponent {
 
     return true;
   };
+
+  /**
+   * Loads theme from API and applies CSS variables to canvas.
+   * Called by effect() when themeId changes.
+   * @param themeId - The ID of the theme to load
+   * @private
+   */
+  private loadAndApplyTheme(themeId: string): void {
+    this.formsApiService.getTheme(themeId).subscribe({
+      next: (theme: FormTheme) => {
+        this.themePreviewService.applyThemeCss(theme);
+      },
+      error: (err: Error) => {
+        console.warn('Failed to load theme for canvas, using defaults', err);
+        this.themePreviewService.clearThemeCss();
+      },
+    });
+  }
 }

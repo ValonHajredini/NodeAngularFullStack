@@ -9,6 +9,7 @@ import {
   FormStatus,
   FormSubmission,
   SubmissionFilterOptions,
+  IframeEmbedOptions,
 } from '@nodeangularfullstack/shared';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { AsyncHandler } from '../utils/async-handler.utils';
@@ -33,7 +34,8 @@ export class FormsController {
    * {
    *   "title": "Contact Form",
    *   "description": "Customer feedback form",
-   *   "status": "draft"
+   *   "status": "draft",
+   *   "themeId": "uuid-here"
    * }
    */
   createForm = AsyncHandler(
@@ -53,11 +55,20 @@ export class FormsController {
       }
 
       // Prepare form data
+      // Extract themeId from schema.settings.themeId (new format from frontend)
+      // or fallback to top-level themeId (old format for backward compatibility)
+      const themeId = req.body.schema?.settings?.themeId || req.body.themeId;
+
       const formData = {
         title: req.body.title,
         description: req.body.description,
         status: req.body.status || FormStatus.DRAFT,
-        schema: req.body.schema,
+        schema: req.body.schema
+          ? {
+              ...req.body.schema,
+              themeId: themeId,
+            }
+          : undefined,
       };
 
       // Create form using service
@@ -202,7 +213,8 @@ export class FormsController {
    * Authorization: Bearer <token>
    * {
    *   "title": "Updated Contact Form",
-   *   "description": "Updated description"
+   *   "description": "Updated description",
+   *   "themeId": "new-theme-uuid"
    * }
    */
   updateForm = AsyncHandler(
@@ -256,11 +268,23 @@ export class FormsController {
         updateData.description = req.body.description;
       if (req.body.status !== undefined) updateData.status = req.body.status;
 
+      // Prepare schema data with themeId
+      // Extract themeId from schema.settings.themeId (new format from frontend)
+      // or fallback to top-level themeId (old format for backward compatibility)
+      const themeId = req.body.schema?.settings?.themeId || req.body.themeId;
+
+      const schemaData = req.body.schema
+        ? {
+            ...req.body.schema,
+            themeId: themeId,
+          }
+        : undefined;
+
       // Update form using service
       const updatedForm = await formsService.updateForm(
         id,
         updateData,
-        req.body.schema
+        schemaData
       );
 
       res.status(200).json({
@@ -328,9 +352,9 @@ export class FormsController {
   );
 
   /**
-   * Publishes a form and generates render token.
+   * Publishes a form and generates render token with optional iframe embed configuration.
    * @route POST /api/forms/:id/publish
-   * @param req - Express request object with form ID and expiration days
+   * @param req - Express request object with form ID, expiration days, and iframe settings
    * @param res - Express response object
    * @param next - Express next function
    * @returns HTTP response with published form data and render URL
@@ -342,7 +366,15 @@ export class FormsController {
    * POST /api/forms/form-uuid/publish
    * Authorization: Bearer <token>
    * {
-   *   "expiresInDays": 30
+   *   "expiresInDays": 30,
+   *   "iframeEmbedOptions": {
+   *     "width": "600px",
+   *     "height": "800px",
+   *     "responsive": true,
+   *     "showBorder": false,
+   *     "allowScrolling": true,
+   *     "title": "My Form"
+   *   }
    * }
    */
   publishForm = AsyncHandler(
@@ -354,20 +386,37 @@ export class FormsController {
         throw new ApiError('Authentication required', 401, 'UNAUTHORIZED');
       }
 
-      // Parse expiration days (default to 30)
-      const expiresInDays = parseInt(req.body.expiresInDays) || 30;
+      // Parse expiration days (optional, null for no expiration)
+      let expirationDate: Date | null = null;
 
-      // Validate expiration days range
-      if (expiresInDays < 1 || expiresInDays > 365) {
-        throw new ApiError(
-          'Expiration days must be between 1 and 365',
-          400,
-          'VALIDATION_ERROR'
-        );
+      if (req.body.expiresInDays !== undefined) {
+        const expiresInDays = parseInt(req.body.expiresInDays);
+
+        // Validate expiration days range
+        if (isNaN(expiresInDays) || expiresInDays < 1 || expiresInDays > 365) {
+          throw new ApiError(
+            'Expiration days must be between 1 and 365',
+            400,
+            'VALIDATION_ERROR'
+          );
+        }
+
+        // Calculate expiration date
+        expirationDate = new Date();
+        expirationDate.setDate(expirationDate.getDate() + expiresInDays);
       }
 
-      // Publish form using service
-      const result = await formsService.publishForm(id, userId, expiresInDays);
+      // Extract iframe embed options (optional)
+      const iframeEmbedOptions: IframeEmbedOptions | undefined =
+        req.body.iframeEmbedOptions;
+
+      // Publish form using service with iframe settings
+      const result = await formsService.publishForm(
+        id,
+        userId,
+        expirationDate,
+        iframeEmbedOptions
+      );
 
       res.status(200).json({
         success: true,
@@ -742,6 +791,46 @@ export class FormsController {
 
     res.end();
   }
+
+  /**
+   * Gets token status for a form to enable smart token management.
+   * @route GET /api/forms/:id/tokens/status
+   * @param req - Express request object with form ID parameter
+   * @param res - Express response object
+   * @returns HTTP response with token status information
+   * @throws {ApiError} 401 - Authentication required
+   * @throws {ApiError} 403 - Insufficient permissions
+   * @throws {ApiError} 404 - Form not found
+   * @example
+   * GET /api/forms/form-uuid/tokens/status
+   * Authorization: Bearer <token>
+   */
+  getTokenStatus = AsyncHandler(
+    async (req: AuthRequest, res: Response): Promise<void> => {
+      // Check validation results
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        throw new ApiError('Invalid form ID format', 400, 'VALIDATION_ERROR');
+      }
+
+      const { id } = req.params;
+      const userId = req.user?.id;
+
+      if (!userId) {
+        throw new ApiError('Authentication required', 401, 'UNAUTHORIZED');
+      }
+
+      // Get token status using service
+      const tokenStatus = await formsService.checkExistingTokens(id, userId);
+
+      res.status(200).json({
+        success: true,
+        message: 'Token status retrieved successfully',
+        data: tokenStatus,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  );
 }
 
 // Export singleton instance

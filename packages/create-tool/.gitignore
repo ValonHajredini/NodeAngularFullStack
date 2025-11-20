@@ -1,0 +1,19 @@
+# Build output (only in dist directory)
+dist/
+
+# Dependencies
+node_modules/
+
+# Testing
+coverage/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

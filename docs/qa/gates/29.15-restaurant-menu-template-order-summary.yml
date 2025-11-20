@@ -1,0 +1,193 @@
+# Quality Gate Decision - Story 29.15
+# Restaurant Menu Template with Order Summary
+# Specification Review (Implementation Not Started)
+
+schema: 1
+story: "29.15"
+story_title: "Restaurant Menu Template with Order Summary"
+gate: CONCERNS
+status_reason: "Critical type specification mismatch blocks implementation. Shared types package has simplified OrderConfig but story requires detailed OrderLogicConfig with MenuItemConfig[] and OrderMetadata. Must fix before development starts. Specification is otherwise comprehensive and high-quality."
+reviewer: "Quinn (Test Architect)"
+updated: "2025-11-13T00:00:00Z"
+
+# Gate Decision: CONCERNS
+# Specification quality: 7.5/10
+# One critical blocker + minor test specification gaps
+
+waiver: { active: false }
+
+top_issues:
+  - id: "TYPE-001"
+    severity: high
+    finding: "Type specification mismatch between story and shared types package"
+    impact: "Will cause TypeScript compilation errors during implementation. OrderConfig (simplified) exists but story requires OrderLogicConfig with MenuItemConfig, OrderMetadata interfaces and detailed per-item pricing fields."
+    suggested_action: "Update packages/shared/src/types/templates.types.ts to match story specification before starting implementation"
+    suggested_owner: dev
+    refs:
+      - "packages/shared/src/types/templates.types.ts:247-258"
+      - "docs/stories/29/29.15.restaurant-menu-template-order-summary.md:82-124"
+
+  - id: "TEST-001"
+    severity: medium
+    finding: "Missing integration test specification for order submission flow"
+    impact: "Task 10 states 'Write backend integration tests' but provides no specification for what to validate. Could result in incomplete test coverage."
+    suggested_action: "Add integration test specification to Dev Notes detailing end-to-end order submission flow validation"
+    suggested_owner: dev
+    refs:
+      - "docs/stories/29/29.15.restaurant-menu-template-order-summary.md:1347"
+
+  - id: "TEST-002"
+    severity: low
+    finding: "Analytics method test coverage gap"
+    impact: "Story provides analyzeOrderRevenue() implementation but no unit test specification for the method itself"
+    suggested_action: "Add unit test specification for StatisticsEngineService.analyzeOrderRevenue() covering revenue calculation, average order value, and top items"
+    suggested_owner: dev
+    refs:
+      - "docs/stories/29/29.15.restaurant-menu-template-order-summary.md:717-765"
+      - "docs/stories/29/29.15.restaurant-menu-template-order-summary.md:1344-1345"
+
+risk_summary:
+  totals: { critical: 0, high: 1, medium: 1, low: 2 }
+  highest:
+    level: high
+    item_id: "TYPE-001"
+    score: 8
+    reason: "Type mismatch will block implementation and cause compilation errors"
+  recommendations:
+    must_fix:
+      - "Fix type specification mismatch (TYPE-001) before implementation starts"
+    monitor:
+      - "Integration test specification completeness (TEST-001)"
+      - "Analytics method test coverage (TEST-002)"
+
+quality_score: 70
+# Calculation: 100 - (20 × 1 high issue) - (10 × 1 medium issue) = 70
+# Note: Low severity issues don't reduce score in this calculation
+
+expires: "2025-11-27T00:00:00Z"  # 2 weeks from review
+
+evidence:
+  implementation_status: "Not Started"
+  implementation_files_found: 0
+  implementation_files_expected: 3
+  tests_reviewed: 0
+  tests_specified: 13  # Unit tests (9) + Frontend component tests (4)
+  specification_completeness: 73  # 8 of 11 ACs/IVs fully specified
+  risks_identified: 5
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 8]  # AC numbers with complete specification
+    ac_gaps: [7]  # AC7 - integration test spec incomplete
+    iv_covered: [1, 2]
+    iv_gaps: [3]  # IV3 - analytics method test spec missing
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "No SQL injection risk (parameterized queries), no XSS risk (numeric prices), proper input validation"
+  performance:
+    status: PASS
+    notes: "Clear targets: <50ms backend calculation (P95), <16ms frontend updates (60fps). Synchronous execution pattern optimal."
+  reliability:
+    status: PASS
+    notes: "Error handling present, transaction support in seed script, graceful degradation"
+  maintainability:
+    status: CONCERNS
+    notes: "Good separation of concerns and JSDoc comments, but type mismatch will cause maintenance issues if not fixed"
+
+architecture_compliance:
+  strategy_pattern: PASS  # ITemplateExecutor interface correctly applied
+  jsonb_metadata: PASS    # Uses existing form_submissions.metadata column
+  synchronous_execution: PASS  # Matches QuizExecutor pattern
+  service_integration: PASS    # Integrates via TemplateExecutorRegistry
+
+coding_standards:
+  jsdoc_comments: PASS
+  type_safety: CONCERNS  # Type mismatch issue
+  sql_injection_prevention: PASS
+  input_validation: PASS
+
+testability:
+  controllability: HIGH  # All inputs controllable via form data
+  observability: HIGH    # Metadata stored in DB, UI displays values
+  debuggability: HIGH    # Synchronous execution, detailed error messages
+
+specification_strengths:
+  - "Excellent architecture following proven QuizExecutor pattern"
+  - "Comprehensive implementation guide with detailed code examples"
+  - "Currency handling uses cents-based arithmetic (avoids floating-point issues)"
+  - "Clear performance requirements (50ms backend, 16ms frontend)"
+  - "Detailed unit test scenarios with expected values"
+  - "Pattern consistency with ITemplateExecutor interface"
+  - "UX considerations well-addressed (two-column layout, mobile responsive)"
+
+recommendations:
+  immediate:  # Must fix before implementation starts
+    - action: "Update packages/shared/src/types/templates.types.ts to match story specification"
+      details: "Add MenuItemConfig, OrderLogicConfig, OrderMetadata interfaces. Replace OrderConfig with OrderLogicConfig in TemplateBusinessLogicConfig union type."
+      priority: CRITICAL
+      estimated_effort: "1 hour"
+      refs:
+        - "packages/shared/src/types/templates.types.ts:247-282"
+      validation: "Run npm run build:shared && npm run typecheck to verify compilation"
+
+    - action: "Add integration test specification to Dev Notes"
+      details: "Document end-to-end order submission flow: public form submission → executor validation → order total calculation → metadata storage in form_submissions.metadata JSONB"
+      priority: HIGH
+      estimated_effort: "0.5 hours"
+      refs:
+        - "docs/stories/29/29.15.restaurant-menu-template-order-summary.md:1347"
+
+    - action: "Add unit test specification for analyzeOrderRevenue() method"
+      details: "Specify tests for total revenue calculation, average order value, top 10 items by revenue, empty submissions handling, missing metadata handling"
+      priority: MEDIUM
+      estimated_effort: "0.5 hours"
+      refs:
+        - "docs/stories/29/29.15.restaurant-menu-template-order-summary.md:717-765"
+
+  future:  # Can be addressed during or after implementation
+    - action: "Make quantity limit configurable via OrderLogicConfig"
+      details: "Add maxQuantityPerItem?: number field (default: 100) to support different restaurant types (fast food vs catering)"
+      priority: LOW
+      refs:
+        - "docs/stories/29/29.15.restaurant-menu-template-order-summary.md:202"
+
+    - action: "Add responsive layout test specification"
+      details: "Specify component tests for two-column desktop layout (>=768px) and mobile stacking (<768px)"
+      priority: LOW
+      refs:
+        - "docs/stories/29/29.15.restaurant-menu-template-order-summary.md:688-708"
+
+    - action: "Document tax rounding strategy"
+      details: "Clarify whether Math.round() is appropriate or if regulatory requirements mandate specific rounding (round down, round up, banker's rounding)"
+      priority: INFO
+      refs:
+        - "docs/stories/29/29.15.restaurant-menu-template-order-summary.md:270"
+
+estimated_remediation_effort: "2 hours total (1 hour critical + 1 hour high/medium priority items)"
+
+next_steps:
+  - "Developer fixes type mismatch in shared package"
+  - "Developer adds missing test specifications"
+  - "Quinn re-reviews updated specification"
+  - "Gate transitions to PASS"
+  - "Story moves to 'Ready for Implementation' status"
+
+notes:
+  - "Story 29.15 is in specification phase only - no implementation files exist"
+  - "Specification quality is high (7.5/10) with comprehensive implementation guidance"
+  - "Type mismatch is the only critical blocker preventing implementation"
+  - "All architectural patterns are sound and follow proven executor patterns"
+  - "Once type mismatch resolved, story is ready for implementation"
+  - "Estimated implementation effort: 29 hours (per task breakdown in story)"
+
+implementation_readiness: "BLOCKED"
+blocking_issues: ["TYPE-001"]
+
+review_type: "Specification Review"
+story_status_at_review: "Approved"
+story_implementation_status: "Not Started"
+
+related_stories:
+  - "29.11: Product Template with Inventory Tracking (defines ITemplateExecutor)"
+  - "29.13: Quiz Template with Scoring Logic (similar synchronous pattern)"
+  - "29.14: Poll Template with Vote Aggregation (recently implemented)"

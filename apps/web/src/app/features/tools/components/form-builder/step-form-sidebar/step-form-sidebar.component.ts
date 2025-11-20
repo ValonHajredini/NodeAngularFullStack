@@ -19,8 +19,12 @@ import { TextareaModule } from 'primeng/textarea';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
 import { ConfirmDialog } from 'primeng/confirmdialog';
+import { SelectModule } from 'primeng/select';
+import { MessageModule } from 'primeng/message';
+import { AccordionModule } from 'primeng/accordion';
 import { FormBuilderService } from '../form-builder.service';
-import { FormStep, RowLayoutConfig } from '@nodeangularfullstack/shared';
+import { FormStep, RowLayoutConfig, MAX_STEPS } from '@nodeangularfullstack/shared';
+import { WidthRatioOption } from '../models/layout-options.model';
 
 /**
  * Step Form Sidebar Component
@@ -43,6 +47,9 @@ import { FormStep, RowLayoutConfig } from '@nodeangularfullstack/shared';
     DragDropModule,
     TooltipModule,
     ConfirmDialog,
+    SelectModule,
+    MessageModule,
+    AccordionModule,
   ],
   providers: [ConfirmationService],
   templateUrl: './step-form-sidebar.component.html',
@@ -57,7 +64,7 @@ export class StepFormSidebarComponent {
   private readonly changeDetectorRef = inject(ChangeDetectorRef);
 
   // Expose service signals
-  protected readonly steps = this.formBuilderService.steps;
+  public readonly steps = this.formBuilderService.steps;
   protected readonly stepFormEnabled = this.formBuilderService.stepFormEnabled;
   protected readonly canAddStep = this.formBuilderService.canAddStep;
   protected readonly canDeleteStep = this.formBuilderService.canDeleteStep;
@@ -86,6 +93,59 @@ export class StepFormSidebarComponent {
 
   // Step expansion state (Map<stepId, boolean>)
   protected stepExpansionState = signal<Map<string, boolean>>(new Map());
+
+  /**
+   * Selected width ratio for each row (rowId => selected value).
+   * Value can be a preset array (e.g., ['1fr', '2fr']) or 'custom' string.
+   */
+  protected readonly selectedWidthRatios = signal<Record<string, string | string[]>>({});
+
+  /**
+   * Custom width input values for each row (rowId => input string).
+   */
+  protected readonly customWidthInputs = signal<Record<string, string>>({});
+
+  /**
+   * Validation errors for custom width inputs (rowId => error message).
+   */
+  protected readonly widthValidationErrors = signal<Record<string, string>>({});
+
+  /**
+   * Sub-column toggle states (rowId-columnIndex => boolean).
+   * Used for two-way binding with ToggleButton components.
+   */
+  protected readonly subColumnToggles = signal<Record<string, boolean>>({});
+
+  /**
+   * Sub-column count selections (rowId-columnIndex => count).
+   * Tracks the selected number of sub-columns for each column.
+   */
+  protected readonly subColumnCounts = signal<Record<string, number>>({});
+
+  /**
+   * Options for sub-column count dropdown (2, 3, or 4 sub-columns).
+   */
+  protected readonly subColumnCountOptions = [
+    { label: '2 Sub-Columns', value: 2 as const },
+    { label: '3 Sub-Columns', value: 3 as const },
+    { label: '4 Sub-Columns', value: 4 as const },
+  ];
+
+  /**
+   * Selected width ratio for each sub-column (rowId-columnIndex => selected value).
+   * Value can be a preset array (e.g., ['1fr', '2fr']) or 'custom' string.
+   */
+  protected readonly subColumnWidthRatios = signal<Record<string, string | string[]>>({});
+
+  /**
+   * Custom width input values for sub-columns (rowId-columnIndex => input string).
+   */
+  protected readonly customSubColumnWidthInputs = signal<Record<string, string>>({});
+
+  /**
+   * Validation errors for custom sub-column width inputs (rowId-columnIndex => error message).
+   */
+  protected readonly subColumnWidthValidationErrors = signal<Record<string, string>>({});
 
   // Initialize all steps collapsed by default; do not auto-expand first
   private readonly initExpansionEffect = effect(() => {
@@ -122,7 +182,7 @@ export class StepFormSidebarComponent {
 
   // Computed tooltip messages
   protected addStepTooltip = computed(() =>
-    this.canAddStep() ? 'Add new step' : 'Maximum 10 steps reached',
+    this.canAddStep() ? 'Add new step' : `Maximum ${MAX_STEPS} steps reached`,
   );
 
   protected deleteStepTooltip = computed(() =>
@@ -450,5 +510,431 @@ export class StepFormSidebarComponent {
    */
   onSetActiveStep(stepId: string): void {
     this.formBuilderService.setActiveStep(stepId);
+  }
+
+  /**
+   * Generates width ratio options based on column count.
+   * Options adapt to the number of columns (2-4).
+   */
+  getWidthRatioOptions(columnCount: number): WidthRatioOption[] {
+    if (columnCount === 2) {
+      return [
+        { label: 'Equal (50-50)', value: ['1fr', '1fr'] },
+        { label: 'Narrow-Wide (33-67)', value: ['1fr', '2fr'] },
+        { label: 'Narrow-Wider (25-75)', value: ['1fr', '3fr'] },
+        { label: 'Wide-Narrow (67-33)', value: ['2fr', '1fr'] },
+        { label: 'Wider-Narrow (75-25)', value: ['3fr', '1fr'] },
+        { label: 'Custom...', value: 'custom' },
+      ];
+    } else if (columnCount === 3) {
+      return [
+        { label: 'Equal (33-33-33)', value: ['1fr', '1fr', '1fr'] },
+        { label: 'Narrow-Wide-Narrow (25-50-25)', value: ['1fr', '2fr', '1fr'] },
+        { label: 'Wide-Narrow-Narrow (50-25-25)', value: ['2fr', '1fr', '1fr'] },
+        { label: 'Custom...', value: 'custom' },
+      ];
+    } else if (columnCount === 4) {
+      return [
+        { label: 'Equal (25-25-25-25)', value: ['1fr', '1fr', '1fr', '1fr'] },
+        { label: 'Wide-Narrow-Narrow-Narrow (40-20-20-20)', value: ['2fr', '1fr', '1fr', '1fr'] },
+        { label: 'Custom...', value: 'custom' },
+      ];
+    }
+    return [];
+  }
+
+  /**
+   * Generates placeholder text for custom width input based on column count.
+   */
+  getCustomWidthsPlaceholder(columnCount: number): string {
+    const examples: Record<number, string> = {
+      2: 'e.g., 1fr, 2fr',
+      3: 'e.g., 1fr, 2fr, 1fr',
+      4: 'e.g., 1fr, 2fr, 1fr, 2fr',
+    };
+    return examples[columnCount] || 'e.g., 1fr, 2fr';
+  }
+
+  /**
+   * Returns an array of column indices for iteration in the template.
+   * Used to generate accordion tabs for each column.
+   *
+   * @example
+   * getColumnIndices(3) => [0, 1, 2]
+   */
+  getColumnIndices(columnCount: number): number[] {
+    return Array.from({ length: columnCount }, (_, i) => i);
+  }
+
+  /**
+   * Checks if a specific column has sub-columns configured.
+   * Uses the FormBuilderService subColumnsByRowColumn map for efficient lookup.
+   *
+   * @param rowId - The row identifier
+   * @param columnIndex - The column index (0-based)
+   * @returns True if sub-columns are configured for this column
+   */
+  hasSubColumns(rowId: string, columnIndex: number): boolean {
+    const key = `${rowId}-${columnIndex}`;
+    return this.formBuilderService.subColumnsByRowColumn().has(key);
+  }
+
+  /**
+   * Gets the number of sub-columns configured for a specific column.
+   * Returns null if no sub-columns are configured.
+   *
+   * @param rowId - The row identifier
+   * @param columnIndex - The column index (0-based)
+   * @returns The sub-column count (1-4) or null
+   */
+  getSubColumnCount(rowId: string, columnIndex: number): number | null {
+    const key = `${rowId}-${columnIndex}`;
+    const config = this.formBuilderService.subColumnsByRowColumn().get(key);
+    return config?.subColumnCount ?? null;
+  }
+
+  /**
+   * Gets sub-column width ratio options based on sub-column count.
+   * Options adapt to the number of sub-columns (2-4).
+   *
+   * @param count - The number of sub-columns
+   * @returns Array of width ratio options
+   */
+  getSubColumnWidthOptions(count: number): WidthRatioOption[] {
+    if (count === 2) {
+      return [
+        { label: 'Equal (50-50)', value: ['1fr', '1fr'] },
+        { label: 'Narrow-Wide (33-67)', value: ['1fr', '2fr'] },
+        { label: 'Narrow-Wider (25-75)', value: ['1fr', '3fr'] },
+        { label: 'Wide-Narrow (67-33)', value: ['2fr', '1fr'] },
+        { label: 'Wider-Narrow (75-25)', value: ['3fr', '1fr'] },
+        { label: 'Custom...', value: 'custom' },
+      ];
+    } else if (count === 3) {
+      return [
+        { label: 'Equal (33-33-33)', value: ['1fr', '1fr', '1fr'] },
+        { label: 'Custom...', value: 'custom' },
+      ];
+    } else if (count === 4) {
+      return [
+        { label: 'Equal (25-25-25-25)', value: ['1fr', '1fr', '1fr', '1fr'] },
+        { label: 'Custom...', value: 'custom' },
+      ];
+    }
+    return [];
+  }
+
+  /**
+   * Gets placeholder text for custom sub-column width input based on count.
+   *
+   * @param count - The number of sub-columns
+   * @returns Placeholder text
+   */
+  getSubColumnWidthPlaceholder(count: number): string {
+    const placeholders: Record<number, string> = {
+      2: 'e.g., 1fr, 2fr',
+      3: 'e.g., 1fr, 2fr, 1fr',
+      4: 'e.g., 1fr, 1fr, 2fr, 1fr',
+    };
+    return placeholders[count] || 'e.g., 1fr, 2fr';
+  }
+
+  /**
+   * Handles width ratio dropdown change.
+   * Applies preset widths or enables custom input mode.
+   */
+  onWidthRatioChange(rowId: string, event: any): void {
+    const value = event.value;
+
+    if (value === 'custom') {
+      // Enable custom input mode - don't update service yet
+      this.selectedWidthRatios.update((ratios) => ({ ...ratios, [rowId]: 'custom' }));
+    } else if (Array.isArray(value)) {
+      // Apply preset width ratio
+      try {
+        this.formBuilderService.updateRowColumnWidths(rowId, value);
+        this.selectedWidthRatios.update((ratios) => ({ ...ratios, [rowId]: value }));
+        // Clear any validation errors
+        this.widthValidationErrors.update((errors) => {
+          const updated = { ...errors };
+          delete updated[rowId];
+          return updated;
+        });
+      } catch (error: any) {
+        console.error('Failed to update column widths:', error);
+      }
+    }
+  }
+
+  /**
+   * Handles custom width input change with debounced validation.
+   * Validates syntax and applies widths if valid.
+   */
+  onCustomWidthsChange(rowId: string, value: string): void {
+    // Update input value
+    this.customWidthInputs.update((inputs) => ({ ...inputs, [rowId]: value }));
+
+    if (!value || value.trim() === '') {
+      this.widthValidationErrors.update((errors) => {
+        const updated = { ...errors };
+        delete updated[rowId];
+        return updated;
+      });
+      return;
+    }
+
+    // Validate and parse input
+    const validation = this.validateWidthInput(value, rowId);
+
+    if (!validation.valid) {
+      this.widthValidationErrors.update((errors) => ({
+        ...errors,
+        [rowId]: validation.error || 'Invalid width syntax',
+      }));
+    } else if (validation.widths) {
+      // Valid input - apply widths
+      try {
+        this.formBuilderService.updateRowColumnWidths(rowId, validation.widths);
+        this.widthValidationErrors.update((errors) => {
+          const updated = { ...errors };
+          delete updated[rowId];
+          return updated;
+        });
+      } catch (error: any) {
+        this.widthValidationErrors.update((errors) => ({
+          ...errors,
+          [rowId]: error.message || 'Failed to apply widths',
+        }));
+      }
+    }
+  }
+
+  /**
+   * Validates custom width input string.
+   * Returns validation result with parsed widths array if valid.
+   */
+  private validateWidthInput(
+    input: string,
+    rowId: string,
+  ): { valid: boolean; error?: string; widths?: string[] } {
+    const row = this.formBuilderService.getRowLayout().find((r) => r.rowId === rowId);
+    if (!row) {
+      return { valid: false, error: 'Row not found' };
+    }
+
+    // Parse comma-separated values
+    const widths = input
+      .split(',')
+      .map((w) => w.trim())
+      .filter((w) => w.length > 0);
+
+    // Validate count
+    if (widths.length !== row.columnCount) {
+      return {
+        valid: false,
+        error: `Must provide exactly ${row.columnCount} values`,
+      };
+    }
+
+    // Validate fractional unit syntax
+    const fractionalUnitPattern = /^\d+fr$/;
+    const invalidWidths = widths.filter((w) => !fractionalUnitPattern.test(w));
+    if (invalidWidths.length > 0) {
+      return {
+        valid: false,
+        error: "Invalid syntax. Use format like '1fr, 2fr'",
+      };
+    }
+
+    return { valid: true, widths };
+  }
+
+  /**
+   * Handles toggle button state change for sub-columns.
+   * When enabling, adds sub-columns with default count of 2.
+   * When disabling, shows confirmation dialog (fields may be affected).
+   *
+   * @param rowId - The row identifier
+   * @param columnIndex - The column index (0-based)
+   * @param enabled - True if enabling sub-columns, false if disabling
+   */
+  onToggleSubColumns(rowId: string, columnIndex: number, enabled: boolean): void {
+    const key = `${rowId}-${columnIndex}`;
+
+    if (enabled) {
+      // Enable sub-columns with default 2 columns
+      this.formBuilderService.addSubColumn(rowId, columnIndex, 2);
+      // Update toggle state
+      this.subColumnToggles.update((toggles) => ({ ...toggles, [key]: true }));
+      // Initialize count state
+      this.subColumnCounts.update((counts) => ({ ...counts, [key]: 2 }));
+    } else {
+      // Show confirmation dialog before disabling
+      this.confirmationService.confirm({
+        message: 'This will move all fields in sub-columns back to the parent column. Continue?',
+        header: 'Disable Sub-Columns?',
+        icon: 'pi pi-exclamation-triangle',
+        acceptButtonStyleClass: 'p-button-danger',
+        rejectButtonStyleClass: 'p-button-outlined',
+        accept: () => {
+          // User confirmed - remove sub-columns
+          this.formBuilderService.removeSubColumn(rowId, columnIndex);
+          // Update toggle state
+          this.subColumnToggles.update((toggles) => ({ ...toggles, [key]: false }));
+          // Clear count state
+          this.subColumnCounts.update((counts) => {
+            const { [key]: _, ...updated } = counts;
+            return updated;
+          });
+        },
+        reject: () => {
+          // User cancelled - revert toggle state
+          this.subColumnToggles.update((toggles) => ({ ...toggles, [key]: true }));
+        },
+      });
+    }
+  }
+
+  /**
+   * Handles sub-column count dropdown change.
+   * Updates count while preserving field positions.
+   *
+   * @param rowId - The row identifier
+   * @param columnIndex - The column index (0-based)
+   * @param count - The new sub-column count (2, 3, or 4)
+   */
+  onSubColumnCountChange(rowId: string, columnIndex: number, count: number): void {
+    const key = `${rowId}-${columnIndex}`;
+
+    // Update sub-column count (preserves fields)
+    this.formBuilderService.updateSubColumnCount(rowId, columnIndex, count as 1 | 2 | 3 | 4);
+
+    // Update count state
+    this.subColumnCounts.update((counts) => ({ ...counts, [key]: count }));
+  }
+
+  /**
+   * Handles sub-column width ratio dropdown change.
+   * Applies preset widths or enables custom input mode.
+   *
+   * @param rowId - The row identifier
+   * @param columnIndex - The column index (0-based)
+   * @param value - The selected value (preset array or 'custom' string)
+   */
+  onSubColumnWidthRatioChange(rowId: string, columnIndex: number, value: string | string[]): void {
+    const key = `${rowId}-${columnIndex}`;
+
+    if (value === 'custom') {
+      // Enable custom input mode - don't update service yet
+      this.subColumnWidthRatios.update((ratios) => ({ ...ratios, [key]: 'custom' }));
+    } else if (Array.isArray(value)) {
+      // Apply preset width ratio
+      try {
+        this.formBuilderService.updateSubColumnWidths(rowId, columnIndex, value);
+        this.subColumnWidthRatios.update((ratios) => ({ ...ratios, [key]: value }));
+        // Clear any validation errors
+        this.subColumnWidthValidationErrors.update((errors) => {
+          const { [key]: _, ...updated } = errors;
+          return updated;
+        });
+      } catch (error: unknown) {
+        const errorMessage =
+          error instanceof Error ? error.message : 'Failed to update sub-column widths';
+        console.error(errorMessage, error);
+      }
+    }
+  }
+
+  /**
+   * Handles custom sub-column width input change with validation.
+   * Validates syntax and applies widths if valid.
+   *
+   * @param rowId - The row identifier
+   * @param columnIndex - The column index (0-based)
+   * @param value - The custom width input string
+   */
+  onCustomSubWidthsChange(rowId: string, columnIndex: number, value: string): void {
+    const key = `${rowId}-${columnIndex}`;
+
+    // Update input value
+    this.customSubColumnWidthInputs.update((inputs) => ({ ...inputs, [key]: value }));
+
+    if (!value || value.trim() === '') {
+      this.subColumnWidthValidationErrors.update((errors) => {
+        const { [key]: _, ...updated } = errors;
+        return updated;
+      });
+      return;
+    }
+
+    // Get expected count
+    const expectedCount = this.getSubColumnCount(rowId, columnIndex);
+    if (!expectedCount) {
+      return;
+    }
+
+    // Validate and parse input
+    const validation = this.validateSubColumnWidthInput(value, expectedCount);
+
+    if (!validation.valid) {
+      this.subColumnWidthValidationErrors.update((errors) => ({
+        ...errors,
+        [key]: validation.error || 'Invalid width syntax',
+      }));
+    } else if (validation.widths) {
+      // Valid input - apply widths
+      try {
+        this.formBuilderService.updateSubColumnWidths(rowId, columnIndex, validation.widths);
+        this.subColumnWidthValidationErrors.update((errors) => {
+          const { [key]: _, ...updated } = errors;
+          return updated;
+        });
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to apply widths';
+        this.subColumnWidthValidationErrors.update((errors) => ({
+          ...errors,
+          [key]: errorMessage,
+        }));
+      }
+    }
+  }
+
+  /**
+   * Validates custom sub-column width input string.
+   * Returns validation result with parsed widths array if valid.
+   *
+   * @param input - The custom width input string
+   * @param expectedCount - The expected number of width values
+   * @returns Validation result with widths if valid
+   */
+  private validateSubColumnWidthInput(
+    input: string,
+    expectedCount: number,
+  ): { valid: boolean; error?: string; widths?: string[] } {
+    // Parse comma-separated values
+    const widths = input
+      .split(',')
+      .map((w) => w.trim())
+      .filter((w) => w.length > 0);
+
+    // Validate count
+    if (widths.length !== expectedCount) {
+      return {
+        valid: false,
+        error: `Must provide exactly ${expectedCount} values`,
+      };
+    }
+
+    // Validate fractional unit syntax
+    const fractionalUnitPattern = /^\d+fr$/;
+    const invalidWidths = widths.filter((w) => !fractionalUnitPattern.test(w));
+    if (invalidWidths.length > 0) {
+      return {
+        valid: false,
+        error: "Invalid syntax. Use format like '1fr, 2fr'",
+      };
+    }
+
+    return { valid: true, widths };
   }
 }

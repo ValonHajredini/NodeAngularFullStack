@@ -1,0 +1,355 @@
+<p-dialog
+  header="Publish Form"
+  [(visible)]="visible"
+  (onHide)="onHide()"
+  [modal]="true"
+  [closable]="!loading"
+  [closeOnEscape]="!loading"
+  [draggable]="false"
+  [resizable]="false"
+  styleClass="w-[500px]"
+  xmlns=""
+>
+  <div class="space-y-4">
+    <!-- Validation Errors -->
+    <div *ngIf="validationErrors.length > 0" class="space-y-2">
+      <p-message *ngFor="let error of validationErrors" severity="error" [text]="error"></p-message>
+    </div>
+
+    <!-- Publish Form -->
+    <form
+      *ngIf="validationErrors.length === 0 && !renderUrl"
+      [formGroup]="publishForm"
+      class="space-y-4"
+    >
+      <!-- Publishing Mode Info -->
+      <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <div class="flex items-center gap-2 text-blue-700">
+          <i class="pi pi-info-circle"></i>
+          <span class="font-medium">Publishing Mode</span>
+        </div>
+        <p class="text-sm text-blue-600 mt-1">
+          By default, forms are published permanently with no expiration. You can optionally set a
+          custom expiration date if needed.
+        </p>
+      </div>
+
+      <!-- Iframe Embed Settings -->
+      <div class="flex flex-col gap-3 border-t pt-4">
+        <div class="flex items-center gap-2">
+          <p-checkbox
+            formControlName="useIframeEmbed"
+            [binary]="true"
+            inputId="useIframeEmbed"
+            [disabled]="loading"
+          ></p-checkbox>
+          <label for="useIframeEmbed" class="font-semibold cursor-pointer">
+            Generate iframe embed code for this form
+          </label>
+        </div>
+
+        <!-- Iframe Settings (conditional) -->
+        <div
+          *ngIf="isIframeEmbedEnabled"
+          class="flex flex-col gap-3 ml-6 p-3 bg-gray-50 rounded-lg"
+        >
+          <!-- Size Preset -->
+          <div class="flex flex-col gap-2">
+            <label for="preset" class="font-medium text-gray-700">Size Preset</label>
+            <p-select
+              id="preset"
+              formControlName="preset"
+              [options]="sizePresets"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Select size preset"
+              [disabled]="loading"
+              appendTo="body"
+              class="w-full"
+            />
+          </div>
+
+          <!-- Width & Height Inputs (shown for all presets) -->
+          <div class="grid grid-cols-2 gap-3">
+            <div class="flex flex-col gap-2">
+              <label for="width" class="font-medium text-gray-700">Width</label>
+              <input
+                type="text"
+                pInputText
+                id="width"
+                formControlName="width"
+                placeholder="e.g., 600px"
+                [disabled]="loading || !isCustomPreset"
+                class="w-full"
+              />
+            </div>
+
+            <div class="flex flex-col gap-2">
+              <label for="height" class="font-medium text-gray-700">Height</label>
+              <input
+                type="text"
+                pInputText
+                id="height"
+                formControlName="height"
+                placeholder="e.g., 800px"
+                [disabled]="loading || !isCustomPreset"
+                class="w-full"
+              />
+            </div>
+          </div>
+
+          <!-- Iframe Options Checkboxes -->
+          <div class="flex flex-col gap-2">
+            <label class="font-medium text-gray-700">Iframe Options</label>
+
+            <div class="flex items-center gap-2">
+              <p-checkbox
+                formControlName="fullWidth"
+                [binary]="true"
+                inputId="fullWidth"
+                [disabled]="loading"
+              ></p-checkbox>
+              <label for="fullWidth" class="cursor-pointer">
+                Full width (100% of parent container)
+              </label>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <p-checkbox
+                formControlName="responsive"
+                [binary]="true"
+                inputId="responsive"
+                [disabled]="loading"
+              ></p-checkbox>
+              <label for="responsive" class="cursor-pointer">
+                Responsive width (uses percentage-based width)
+              </label>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <p-checkbox
+                formControlName="showBorder"
+                [binary]="true"
+                inputId="showBorder"
+                [disabled]="loading"
+              ></p-checkbox>
+              <label for="showBorder" class="cursor-pointer">Show iframe border</label>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <p-checkbox
+                formControlName="allowScrolling"
+                [binary]="true"
+                inputId="allowScrolling"
+                [disabled]="loading"
+              ></p-checkbox>
+              <label for="allowScrolling" class="cursor-pointer">
+                Allow scrolling within iframe
+              </label>
+            </div>
+          </div>
+
+          <!-- Title for Accessibility -->
+          <div class="flex flex-col gap-2">
+            <label for="iframeTitle" class="font-medium text-gray-700">
+              Title (for accessibility)
+            </label>
+            <input
+              type="text"
+              pInputText
+              id="iframeTitle"
+              formControlName="title"
+              placeholder="Form title"
+              [disabled]="loading"
+              class="w-full"
+            />
+            <small class="text-gray-600">
+              Used for screen readers. Defaults to form title if not specified.
+            </small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Custom Expiration Toggle -->
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center gap-2">
+          <p-checkbox
+            formControlName="useCustomExpiration"
+            [binary]="true"
+            inputId="useCustomExpiration"
+            [disabled]="loading"
+          ></p-checkbox>
+          <label for="useCustomExpiration" class="font-semibold cursor-pointer">
+            Set custom expiration date
+          </label>
+        </div>
+
+        <!-- Expiration Date/Time Picker (conditional) -->
+        <div *ngIf="isCustomExpirationEnabled" class="flex flex-col gap-2 ml-6">
+          <label for="expirationDate" class="font-medium text-gray-700">Expiration Date</label>
+          <p-datepicker
+            id="expirationDate"
+            formControlName="expirationDate"
+            [showTime]="true"
+            [showIcon]="true"
+            [minDate]="minDate"
+            [maxDate]="maxDate"
+            dateFormat="yy-mm-dd"
+            placeholder="Select expiration date and time"
+            [disabled]="loading"
+            appendTo="body"
+            class="w-full"
+          />
+          <small class="text-gray-600">
+            Form will be accessible via public URL until this date
+          </small>
+        </div>
+
+        <!-- No Expiration Info -->
+        <div
+          *ngIf="!isCustomExpirationEnabled"
+          class="ml-6 p-2 bg-green-50 border border-green-200 rounded"
+        >
+          <div class="flex items-center gap-2 text-green-700">
+            <i class="pi pi-check-circle"></i>
+            <span class="text-sm font-medium"
+              >No expiration - form will be permanently accessible</span
+            >
+          </div>
+        </div>
+      </div>
+
+      <!-- Form Validation Error Message -->
+      <p-message
+        *ngIf="hasFormErrors"
+        severity="warn"
+        text="Please select a valid expiration date"
+      ></p-message>
+    </form>
+
+    <!-- Render URL Display (after publish) -->
+    <div *ngIf="renderUrl" class="space-y-4">
+      <p-message severity="success" text="Form published successfully!"></p-message>
+
+      <div class="flex flex-col gap-2">
+        <label class="font-semibold">Public Form URL</label>
+        <div class="flex gap-2">
+          <input type="text" pInputText [value]="shortUrl || renderUrl" readonly class="flex-1" />
+          <p-button
+            icon="pi pi-copy"
+            label="Copy"
+            (onClick)="onCopyUrl()"
+            [disabled]="loading"
+          ></p-button>
+        </div>
+        <small class="text-gray-600">
+          Share this URL with respondents to collect form submissions
+        </small>
+      </div>
+
+      <!-- QR Code and Embed Code Sections (Stories 26.3 & 26.4) -->
+      <div class="mt-4">
+        <p-accordion [multiple]="false">
+          <!-- QR Code Panel -->
+          <p-accordionpanel>
+            <ng-template pTemplate="header">
+              <div class="flex items-center gap-2">
+                <i class="pi pi-qrcode text-blue-600"></i>
+                <span>QR Code</span>
+              </div>
+            </ng-template>
+
+            <!-- QR Code Loading State -->
+            <div
+              *ngIf="qrCodeLoading"
+              class="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg"
+            >
+              <i class="pi pi-spin pi-spinner text-blue-600"></i>
+              <span class="text-blue-700 font-medium">Generating QR code...</span>
+            </div>
+
+            <!-- QR Code Display -->
+            <app-qr-code-display
+              *ngIf="qrCodeUrl && qrCodeGenerated && !qrCodeLoading"
+              [qrCodeUrl]="qrCodeUrl"
+              [label]="'Form QR Code'"
+              [helperText]="'Scan to access form on mobile devices'"
+              [downloadTooltip]="'Download QR code image'"
+              (download)="onDownloadQrCode()"
+            />
+
+            <!-- QR Code Error State -->
+            <div
+              *ngIf="!qrCodeLoading && !qrCodeGenerated && renderUrl"
+              class="p-3 bg-orange-50 border border-orange-200 rounded-lg"
+            >
+              <div class="flex items-center gap-2 text-orange-700">
+                <i class="pi pi-exclamation-triangle"></i>
+                <span class="font-medium">QR code generation failed</span>
+              </div>
+              <p class="text-sm text-orange-600 mt-1">
+                Form is published successfully, but QR code could not be generated. You can still
+                share the URL above.
+              </p>
+            </div>
+          </p-accordionpanel>
+
+          <!-- Embed Code Panel (Story 26.4) -->
+          <p-accordionpanel>
+            <ng-template pTemplate="header">
+              <div class="flex items-center gap-2">
+                <i class="pi pi-code text-purple-600"></i>
+                <span>Embed Code</span>
+              </div>
+            </ng-template>
+
+            <!-- Iframe Embed Generator Component -->
+            <app-iframe-embed-generator
+              *ngIf="renderUrl && formTitle && shortCode"
+              [formUrl]="shortUrl || renderUrl"
+              [formTitle]="formTitle"
+              [shortCode]="shortCode"
+              [initialOptions]="publishedIframeOptions"
+              [hideCustomization]="true"
+            ></app-iframe-embed-generator>
+
+            <!-- Error State for Missing Data -->
+            <div
+              *ngIf="renderUrl && (!formTitle || !shortCode)"
+              class="p-3 bg-orange-50 border border-orange-200 rounded-lg"
+            >
+              <div class="flex items-center gap-2 text-orange-700">
+                <i class="pi pi-exclamation-triangle"></i>
+                <span class="font-medium">Embed code unavailable</span>
+              </div>
+              <p class="text-sm text-orange-600 mt-1">
+                Form title or short code missing. You can still use the URL above to share the form.
+              </p>
+            </div>
+          </p-accordionpanel>
+        </p-accordion>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dialog Footer -->
+  <ng-template pTemplate="footer">
+    <div class="flex justify-end gap-2">
+      <p-button
+        label="Cancel"
+        severity="secondary"
+        (onClick)="onHide()"
+        [disabled]="loading"
+      ></p-button>
+      <p-button
+        *ngIf="!renderUrl"
+        label="Publish"
+        icon="pi pi-check"
+        (onClick)="onPublish()"
+        [disabled]="loading || publishForm.invalid || validationErrors.length > 0"
+        [loading]="loading"
+      ></p-button>
+      <p-button *ngIf="renderUrl" label="Close" (onClick)="onHide()"></p-button>
+    </div>
+  </ng-template>
+</p-dialog>

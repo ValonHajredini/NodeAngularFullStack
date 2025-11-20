@@ -1,0 +1,353 @@
+# QA Gate: Story 29.3 - Validated Template Examples & Migration
+# Epic 29: Template Field Validation Framework
+# Story: Validated Template Examples & Migration - 18 New Templates
+
+story_id: "29.3"
+story_name: "Validated Template Examples & Migration"
+epic: "Epic 29 - Template Field Validation Framework"
+created_date: "2025-11-19"
+status: "PENDING"
+depends_on: ["29.1", "29.2"]
+
+# Gate Criteria
+gate_criteria:
+  template_quality:
+    weight: 35
+    criteria:
+      - id: "TQ-001"
+        name: "All 18 templates defined"
+        description: "Seed script contains 18 template definitions (3 per category)"
+        status: "PENDING"
+        validation: "Review seed-templates.js: count TEMPLATES array length"
+
+      - id: "TQ-002"
+        name: "All templates pass validation"
+        description: "All 18 templates pass CategoryFieldValidator validation"
+        status: "PENDING"
+        validation: "Run seed script: all templates created without validation errors"
+
+      - id: "TQ-003"
+        name: "Required fields present"
+        description: "Each template contains category-specific required fields"
+        status: "PENDING"
+        validation: "Manual review: check each template against validation rules"
+
+      - id: "TQ-004"
+        name: "businessLogicConfig present"
+        description: "All templates include businessLogicConfig matching category"
+        status: "PENDING"
+        validation: "Review: all templates have businessLogicConfig property"
+
+      - id: "TQ-005"
+        name: "Production-ready quality"
+        description: "Templates have realistic fields, proper labels, valid options"
+        status: "PENDING"
+        validation: "Manual review: templates are production-ready"
+
+  seeding:
+    weight: 30
+    criteria:
+      - id: "SEED-001"
+        name: "Seed script runs successfully"
+        description: "Seed script completes without errors"
+        status: "PENDING"
+        validation: "Run: npm --workspace=apps/forms-api run db:seed"
+
+      - id: "SEED-002"
+        name: "All 18 templates created"
+        description: "Database contains all 18 templates after seeding"
+        status: "PENDING"
+        validation: "Query database: SELECT COUNT(*) FROM form_templates WHERE..."
+
+      - id: "SEED-003"
+        name: "Old templates removed"
+        description: "Old non-validated templates removed from database"
+        status: "PENDING"
+        validation: "Query database: old template names not found"
+
+      - id: "SEED-004"
+        name: "Idempotent seeding"
+        description: "Seed script can run multiple times safely"
+        status: "PENDING"
+        validation: "Run seed script twice: no duplicate errors"
+
+  functionality:
+    weight: 25
+    criteria:
+      - id: "FUNC-001"
+        name: "POLLS templates work"
+        description: "All 3 POLLS templates create working forms"
+        status: "PENDING"
+        validation: "Manual test: apply each POLLS template"
+
+      - id: "FUNC-002"
+        name: "QUIZ templates work"
+        description: "All 3 QUIZ templates create working forms"
+        status: "PENDING"
+        validation: "Manual test: apply each QUIZ template"
+
+      - id: "FUNC-003"
+        name: "ECOMMERCE templates work"
+        description: "All 3 ECOMMERCE templates create working forms"
+        status: "PENDING"
+        validation: "Manual test: apply each ECOMMERCE template"
+
+      - id: "FUNC-004"
+        name: "SERVICES templates work"
+        description: "All 3 SERVICES templates create working forms"
+        status: "PENDING"
+        validation: "Manual test: apply each SERVICES template"
+
+      - id: "FUNC-005"
+        name: "DATA_COLLECTION templates work"
+        description: "All 3 DATA_COLLECTION templates create working forms"
+        status: "PENDING"
+        validation: "Manual test: apply each DATA_COLLECTION template"
+
+      - id: "FUNC-006"
+        name: "EVENTS templates work"
+        description: "All 3 EVENTS templates create working forms"
+        status: "PENDING"
+        validation: "Manual test: apply each EVENTS template"
+
+  analytics:
+    weight: 10
+    criteria:
+      - id: "ANALYTICS-001"
+        name: "No missingFields errors"
+        description: "Analytics display correctly for all template categories"
+        status: "PENDING"
+        validation: "Manual test: create forms from templates, check analytics"
+
+      - id: "ANALYTICS-002"
+        name: "Analytics strategies work"
+        description: "All 6 analytics strategies return valid metrics"
+        status: "PENDING"
+        validation: "Manual test: verify analytics display for each category"
+
+# Template Catalog Validation
+template_catalog:
+  polls:
+    - name: "Opinion Poll"
+      required_fields: ["poll_option"]
+      field_types: ["SELECT"]
+      validated: false
+
+    - name: "Customer Feedback Poll"
+      required_fields: ["poll_option"]
+      field_types: ["RADIO"]
+      validated: false
+
+    - name: "Yes/No Vote"
+      required_fields: ["poll_option"]
+      field_types: ["RADIO"]
+      validated: false
+
+  quiz:
+    - name: "Trivia Quiz"
+      required_fields: ["question_1", "question_2", "question_3", "question_4", "question_5"]
+      field_types: ["RADIO"]
+      has_metadata: true
+      validated: false
+
+    - name: "Knowledge Assessment"
+      required_fields: ["question_1", "question_2", "question_3", "question_4", "question_5", "question_6", "question_7", "question_8", "question_9", "question_10"]
+      field_types: ["RADIO"]
+      has_metadata: true
+      validated: false
+
+    - name: "Certification Test"
+      required_fields: ["question_1", "...", "question_20"]
+      field_types: ["SELECT"]
+      has_metadata: true
+      validated: false
+
+  ecommerce:
+    - name: "Product Order Form"
+      required_fields: ["product_id", "quantity", "price"]
+      field_types: ["SELECT", "NUMBER", "NUMBER"]
+      validated: false
+
+    - name: "Multi-Product Catalog"
+      required_fields: ["product_id", "quantity", "price"]
+      field_types: ["SELECT", "NUMBER", "NUMBER"]
+      validated: false
+
+    - name: "Variant Selection Form"
+      required_fields: ["product_id", "quantity", "price"]
+      field_types: ["SELECT", "NUMBER", "NUMBER"]
+      validated: false
+
+  services:
+    - name: "Appointment Booking"
+      required_fields: ["date", "time_slot"]
+      field_types: ["DATE", "TIME_SLOT"]
+      validated: false
+
+    - name: "Service Request Form"
+      required_fields: ["date", "time_slot"]
+      field_types: ["DATE", "SELECT"]
+      validated: false
+
+    - name: "Time Slot Reservation"
+      required_fields: ["date", "time_slot"]
+      field_types: ["DATE", "TIME_SLOT"]
+      validated: false
+
+  data_collection:
+    - name: "Restaurant Order Form"
+      required_fields: ["menu_item", "quantity"]
+      field_types: ["SELECT", "NUMBER"]
+      validated: false
+
+    - name: "Meal Preferences Survey"
+      required_fields: ["menu_item", "quantity"]
+      field_types: ["SELECT", "NUMBER"]
+      validated: false
+
+    - name: "Catering Request"
+      required_fields: ["menu_item", "quantity"]
+      field_types: ["SELECT", "NUMBER"]
+      validated: false
+
+  events:
+    - name: "Event RSVP Form"
+      required_fields: ["attendee_name", "rsvp_status"]
+      field_types: ["TEXT", "RADIO"]
+      validated: false
+
+    - name: "Ticket Purchase Form"
+      required_fields: ["attendee_name", "rsvp_status"]
+      field_types: ["TEXT", "SELECT"]
+      validated: false
+
+    - name: "Guest Registration"
+      required_fields: ["attendee_name", "rsvp_status"]
+      field_types: ["TEXT", "RADIO"]
+      validated: false
+
+# Manual Testing Checklist
+manual_tests:
+  - id: "MANUAL-001"
+    name: "Apply Opinion Poll template"
+    description: "Create form from Opinion Poll template, verify fields"
+    status: "PENDING"
+
+  - id: "MANUAL-002"
+    name: "Apply Customer Feedback Poll template"
+    description: "Create form from Customer Feedback Poll template, verify fields"
+    status: "PENDING"
+
+  - id: "MANUAL-003"
+    name: "Apply Yes/No Vote template"
+    description: "Create form from Yes/No Vote template, verify fields"
+    status: "PENDING"
+
+  - id: "MANUAL-004"
+    name: "Apply Trivia Quiz template"
+    description: "Create form from Trivia Quiz template, verify questions"
+    status: "PENDING"
+
+  - id: "MANUAL-005"
+    name: "Apply Knowledge Assessment template"
+    description: "Create form from Knowledge Assessment template, verify questions"
+    status: "PENDING"
+
+  - id: "MANUAL-006"
+    name: "Apply Certification Test template"
+    description: "Create form from Certification Test template, verify questions"
+    status: "PENDING"
+
+  - id: "MANUAL-007"
+    name: "Verify analytics for poll forms"
+    description: "Create poll form, submit votes, check analytics display"
+    status: "PENDING"
+
+  - id: "MANUAL-008"
+    name: "Verify analytics for quiz forms"
+    description: "Create quiz form, submit answers, check analytics display"
+    status: "PENDING"
+
+  - id: "MANUAL-009"
+    name: "Verify analytics for ecommerce forms"
+    description: "Create product order form, submit orders, check analytics"
+    status: "PENDING"
+
+# Files Modified
+files:
+  created:
+    - path: "apps/forms-api/seed-templates.js"
+      lines: 0
+      status: "COMPLETE"
+
+    - path: "apps/forms-api/migrations/YYYYMMDDHHMMSS-remove-old-templates.js"
+      lines: 0
+      status: "PENDING"
+
+  modified: []
+
+# Acceptance Criteria Validation
+acceptance_criteria:
+  - id: "AC-001"
+    description: "18 template definitions created in seed-templates.js (3 per category)"
+    status: "PENDING"
+
+  - id: "AC-002"
+    description: "All templates include required fields per CategoryFieldValidator rules"
+    status: "PENDING"
+
+  - id: "AC-003"
+    description: "All templates include businessLogicConfig matching category"
+    status: "PENDING"
+
+  - id: "AC-004"
+    description: "Seed script runs successfully without validation errors"
+    status: "PENDING"
+
+  - id: "AC-005"
+    description: "Database migration removes old non-validated templates"
+    status: "PENDING"
+
+  - id: "AC-006"
+    description: "Manual test: Each template creates a working form"
+    status: "PENDING"
+
+  - id: "AC-007"
+    description: "Manual test: Analytics display correctly for each category"
+    status: "PENDING"
+
+# Quality Score
+quality_score:
+  total: 0
+  template_quality: 0
+  seeding: 0
+  functionality: 0
+  analytics: 0
+
+# Sign-off
+sign_off:
+  developer: null
+  reviewer: null
+  qa_engineer: null
+  date: null
+
+# Notes
+notes: |
+  This gate validates template examples and seeding (Story 29.3).
+  Critical: All templates must pass validation before seeding.
+  Manual testing required to verify templates create working forms.
+
+# Blockers
+blockers: []
+
+# Risks
+risks:
+  - id: "RISK-001"
+    description: "Seed script fails due to validation errors"
+    mitigation: "Validate template definitions locally before committing"
+    severity: "MEDIUM"
+
+  - id: "RISK-002"
+    description: "Templates work but analytics fail"
+    mitigation: "Manual testing verifies analytics for all categories"
+    severity: "MEDIUM"

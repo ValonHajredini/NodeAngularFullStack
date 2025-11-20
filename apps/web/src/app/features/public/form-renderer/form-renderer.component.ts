@@ -24,6 +24,7 @@ import {
   FormField,
   FormFieldType,
   FormBackgroundSettings,
+  FormTheme,
   HeadingMetadata,
   TextBlockMetadata,
   ImageMetadata,
@@ -32,6 +33,7 @@ import {
   RowLayoutConfig,
   isInputField,
   isDisplayElement,
+  TimeSlotMetadata,
 } from '@nodeangularfullstack/shared';
 
 // Shared Services
@@ -40,10 +42,10 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
 // Service
 import { FormRendererService, FormRenderError, FormRenderErrorType } from './form-renderer.service';
+import { ThemePreviewService } from '../../tools/components/form-builder/theme-preview.service';
 
 // Field Renderers
 import { ImageGalleryRendererComponent } from './image-gallery-renderer.component';
-import { StepProgressIndicatorComponent } from './step-progress-indicator/step-progress-indicator.component';
 
 /**
  * Component state for UI management
@@ -55,6 +57,15 @@ interface ComponentState {
   submitting: boolean;
   submitted: boolean;
   submissionMessage: string | null;
+}
+
+/**
+ * Step dot item for pagination display
+ */
+interface StepDotItem {
+  type: 'dot' | 'ellipsis';
+  index?: number;
+  step?: FormStep;
 }
 
 /**
@@ -78,7 +89,6 @@ interface ComponentState {
     Card,
     ButtonDirective,
     ImageGalleryRendererComponent,
-    StepProgressIndicatorComponent,
   ],
   providers: [MessageService],
   templateUrl: './form-renderer.component.html',
@@ -102,14 +112,39 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   settings: FormSettings | null = null;
   isPreview = false;
 
+  // Theme loading signal (Story 20.7)
+  private readonly _themeLoaded = signal<boolean>(false);
+  readonly themeLoaded = this._themeLoaded.asReadonly();
+
+  // Current theme signal (Story 24.9)
+  private readonly _currentTheme = signal<FormTheme | null>(null);
+
+  // Computed container position class based on theme (Story 24.9)
+  readonly containerPositionClass = computed(() => {
+    const theme = this._currentTheme();
+    if (!theme) {
+      return 'form-container-center'; // Default to center when no theme
+    }
+
+    const position = theme.themeConfig.desktop.containerPosition;
+    switch (position) {
+      case 'left':
+        return 'form-container-left';
+      case 'full-width':
+        return 'form-container-full-width';
+      case 'center':
+      default:
+        return 'form-container-center';
+    }
+  });
+
   // Step Form Navigation Signals
   private readonly _formSchemaSignal = signal<FormSchema | null>(null);
+  private readonly _settingsSignal = signal<FormSettings | null>(null);
   protected readonly isStepFormEnabled = computed(
-    () => this._formSchemaSignal()?.settings?.stepForm?.enabled === true,
+    () => this._settingsSignal()?.stepForm?.enabled === true,
   );
-  protected readonly steps = computed(
-    () => this._formSchemaSignal()?.settings?.stepForm?.steps ?? [],
-  );
+  protected readonly steps = computed(() => this._settingsSignal()?.stepForm?.steps ?? []);
 
   private readonly _currentStepIndex = signal<number>(0);
   readonly currentStepIndex = this._currentStepIndex.asReadonly();
@@ -129,6 +164,66 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   protected readonly currentStepFields = computed(() => {
     const fields = this._formSchemaSignal()?.fields ?? [];
     return this.filterFieldsForCurrentStep(fields);
+  });
+
+  /**
+   * Smart pagination for step dots - shows sliding window with ellipsis
+   * @returns Array of step indicators to display with type: 'dot' | 'ellipsis'
+   *
+   * Examples:
+   * - 7 steps or less: Show all dots
+   * - At step 1 of 30: [1, 2, 3, 4, ..., 29, 30]
+   * - At step 20 of 30: [1, 2, ..., 18, 19, 20, 21, 22, ..., 29, 30]
+   * - At step 29 of 30: [1, 2, ..., 26, 27, 28, 29, 30]
+   */
+  protected readonly visibleStepDots = computed<StepDotItem[]>(() => {
+    const steps = this.steps();
+    const totalSteps = steps.length;
+    const currentIndex = this._currentStepIndex();
+
+    // If 7 steps or fewer, show all dots (no ellipsis needed)
+    if (totalSteps <= 7) {
+      return steps.map((step, index) => ({ type: 'dot' as const, index, step }));
+    }
+
+    const dots: StepDotItem[] = [];
+
+    // Always show first 2 steps
+    dots.push({ type: 'dot', index: 0, step: steps[0] });
+    dots.push({ type: 'dot', index: 1, step: steps[1] });
+
+    // Near the beginning (steps 0-3): show first 4 steps + ellipsis + last 2
+    if (currentIndex <= 3) {
+      if (totalSteps > 2) dots.push({ type: 'dot', index: 2, step: steps[2] });
+      if (totalSteps > 3) dots.push({ type: 'dot', index: 3, step: steps[3] });
+      if (totalSteps > 6) dots.push({ type: 'ellipsis' });
+    }
+    // Near the end (last 4 steps): show first 2 + ellipsis + last 4 steps
+    else if (currentIndex >= totalSteps - 4) {
+      dots.push({ type: 'ellipsis' });
+      for (let i = totalSteps - 4; i < totalSteps - 2; i++) {
+        if (i > 1) dots.push({ type: 'dot', index: i, step: steps[i] });
+      }
+    }
+    // In the middle: show first 2 + ellipsis + window around current + ellipsis + last 2
+    else {
+      dots.push({ type: 'ellipsis' });
+
+      // Show 2 steps before, current, and 2 steps after
+      for (let i = currentIndex - 2; i <= currentIndex + 2; i++) {
+        if (i > 1 && i < totalSteps - 2) {
+          dots.push({ type: 'dot', index: i, step: steps[i] });
+        }
+      }
+
+      dots.push({ type: 'ellipsis' });
+    }
+
+    // Always show last 2 steps
+    dots.push({ type: 'dot', index: totalSteps - 2, step: steps[totalSteps - 2] });
+    dots.push({ type: 'dot', index: totalSteps - 1, step: steps[totalSteps - 1] });
+
+    return dots;
   });
 
   state: ComponentState = {
@@ -157,6 +252,7 @@ export class FormRendererComponent implements OnInit, OnDestroy {
     private htmlSanitizer: HtmlSanitizerService,
     private domSanitizer: DomSanitizer,
     private messageService: MessageService,
+    private themePreviewService: ThemePreviewService,
   ) {}
 
   ngOnInit(): void {
@@ -165,10 +261,17 @@ export class FormRendererComponent implements OnInit, OnDestroy {
       this.schema = this.formSchema;
       this._formSchemaSignal.set(this.formSchema);
       this.settings = this.formSchema.settings as FormSettings;
+      this._settingsSignal.set(this.settings);
       this.isPreview = true;
       this.formGroup = this.buildFormGroup(this.formSchema);
       this.setupConditionalVisibility();
       this.state = { ...this.state, loading: false };
+
+      // Apply theme CSS if available (Story 20.7)
+      // Note: Preview mode may not include theme data
+      const themeIdFromSettings = this.settings?.themeId;
+      const theme = (this.formSchema as any).theme; // Theme might be attached to schema
+      this.applyThemeIfAvailable(theme, themeIdFromSettings);
 
       // Record initial 'view' event for step forms (Story 19.5)
       if (this.isStepFormEnabled()) {
@@ -178,15 +281,22 @@ export class FormRendererComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Otherwise, detect if this is a preview route or published form route
+    // Otherwise, detect if this is a preview route, short code route, or published form route
     this.route.url.pipe(takeUntil(this.destroy$)).subscribe((urlSegments) => {
       const isPreviewRoute =
         urlSegments.length >= 2 &&
         urlSegments[0]?.path === 'forms' &&
         urlSegments[1]?.path === 'preview';
 
+      const isShortCodeRoute =
+        urlSegments.length >= 2 &&
+        urlSegments[0]?.path === 'public' &&
+        urlSegments[1]?.path === 'form';
+
       if (isPreviewRoute) {
         this.loadPreviewData();
+      } else if (isShortCodeRoute) {
+        this.loadFormByShortCode();
       } else {
         this.loadPublishedForm();
       }
@@ -228,6 +338,7 @@ export class FormRendererComponent implements OnInit, OnDestroy {
       this.schema = previewData.schema;
       this._formSchemaSignal.set(previewData.schema);
       this.settings = previewData.settings;
+      this._settingsSignal.set(previewData.settings);
       this.isPreview = previewData.isPreview || false;
 
       if (this.schema) {
@@ -236,6 +347,11 @@ export class FormRendererComponent implements OnInit, OnDestroy {
       }
 
       this.state = { ...this.state, loading: false };
+
+      // Apply theme CSS if available (Story 20.7)
+      // Note: Preview data may not include theme data
+      const themeIdFromSettings = previewData.settings?.themeId;
+      this.applyThemeIfAvailable(previewData.theme, themeIdFromSettings);
 
       // Record initial 'view' event for step forms (Story 19.5)
       if (this.isStepFormEnabled()) {
@@ -263,6 +379,51 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Loads a published form using short code from route parameter.
+   * Used for short link access (e.g., /public/form/abc123).
+   */
+  private loadFormByShortCode(): void {
+    // Get short code from route params
+    const shortCode = this.route.snapshot.paramMap.get('shortCode') || '';
+
+    if (!shortCode) {
+      this.handleError('No form short code provided', FormRenderErrorType.INVALID_TOKEN);
+      return;
+    }
+
+    // Load form schema by short code
+    this.formRendererService
+      .getFormByShortCode(shortCode)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (result) => {
+          this.schema = result.schema;
+          this._formSchemaSignal.set(result.schema);
+          this.settings = result.settings;
+          this._settingsSignal.set(result.settings);
+          this.formGroup = this.buildFormGroup(result.schema);
+          this.setupConditionalVisibility();
+          this.state = { ...this.state, loading: false };
+
+          // Set token to renderToken for form submission
+          this.token = result.renderToken;
+
+          // Apply theme CSS if available (Story 20.7)
+          const themeIdFromSettings = this.settings?.themeId;
+          this.applyThemeIfAvailable(result.theme, themeIdFromSettings);
+
+          // Record initial 'view' event for step forms (Story 19.5)
+          if (this.isStepFormEnabled()) {
+            this.recordStepEvent('view');
+          }
+        },
+        error: (error: FormRenderError) => {
+          this.handleError(error.message, error.type);
+        },
+      });
+  }
+
+  /**
    * Handles errors by updating state
    */
   private handleError(message: string, type: FormRenderErrorType): void {
@@ -274,9 +435,46 @@ export class FormRendererComponent implements OnInit, OnDestroy {
     };
   }
 
+  /**
+   * Applies theme CSS if theme is provided, otherwise clears theme CSS.
+   * Handles deleted/missing themes gracefully (AC: 5).
+   * Story 20.7: Public Form Rendering with Themes
+   * Story 24.9: Store theme in signal for container position class
+   * @param theme - Optional theme object to apply
+   * @param themeIdFromSettings - Optional theme ID from form settings (for deleted theme detection)
+   */
+  private applyThemeIfAvailable(
+    theme: FormTheme | null | undefined,
+    themeIdFromSettings?: string,
+  ): void {
+    // If theme is provided, apply it
+    if (theme) {
+      this._currentTheme.set(theme); // Store theme in signal (Story 24.9)
+      this.themePreviewService.applyThemeCss(theme);
+      this._themeLoaded.set(true);
+      console.log('[Theme] Applied theme:', theme.name);
+    } else {
+      // No theme available - clear any existing theme CSS
+      this._currentTheme.set(null); // Clear theme signal (Story 24.9)
+      this.themePreviewService.clearThemeCss();
+      this._themeLoaded.set(false);
+
+      // If theme ID was expected but theme is null, warn about deleted theme (AC: 5)
+      if (themeIdFromSettings) {
+        console.warn(
+          `[Theme] Theme ${themeIdFromSettings} not found for form, using default styles. The theme may have been deleted.`,
+        );
+      }
+    }
+  }
+
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+
+    // Clear theme CSS on component destruction (Story 20.7)
+    this.themePreviewService.clearThemeCss();
+    this._themeLoaded.set(false);
   }
 
   /**
@@ -458,9 +656,14 @@ export class FormRendererComponent implements OnInit, OnDestroy {
           this.schema = result.schema;
           this._formSchemaSignal.set(result.schema);
           this.settings = result.settings;
+          this._settingsSignal.set(result.settings);
           this.formGroup = this.buildFormGroup(result.schema);
           this.setupConditionalVisibility();
           this.state = { ...this.state, loading: false };
+
+          // Apply theme CSS if available (Story 20.7)
+          const themeIdFromSettings = result.settings?.themeId;
+          this.applyThemeIfAvailable(result.theme, themeIdFromSettings);
 
           // Record initial 'view' event for step forms (Story 19.5)
           if (this.isStepFormEnabled()) {
@@ -714,9 +917,11 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   /**
    * Get all fields in a specific row-column position, sorted by orderInColumn.
    * Supports multi-field columns (Story 14.1).
+   * EXCLUDES fields that belong to sub-columns (Story 27.6) - those render separately.
+   *
    * @param rowId - The row ID to filter by
    * @param columnIndex - The column index to filter by
-   * @returns Array of fields sorted by orderInColumn (ascending)
+   * @returns Array of fields sorted by orderInColumn (ascending), excluding sub-column fields
    */
   getFieldsInColumn(rowId: string, columnIndex: number): FormField[] {
     if (!this.schema?.fields) return [];
@@ -725,7 +930,10 @@ export class FormRendererComponent implements OnInit, OnDestroy {
 
     return fieldsForStep
       .filter(
-        (field) => field.position?.rowId === rowId && field.position?.columnIndex === columnIndex,
+        (field) =>
+          field.position?.rowId === rowId &&
+          field.position?.columnIndex === columnIndex &&
+          field.position?.subColumnIndex === undefined, // Exclude sub-column fields
       )
       .sort((a, b) => {
         const orderA = a.position?.orderInColumn ?? 0;
@@ -766,12 +974,37 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Get CSS Grid template columns for a row
-   * @param columnCount - Number of columns in the row
-   * @returns CSS Grid template columns value (e.g., 'repeat(2, 1fr)')
+   * Get CSS Grid template columns for a row.
+   * Uses custom columnWidths if defined, otherwise falls back to equal-width columns.
+   *
+   * @param row - Row configuration object or column count (for backward compatibility)
+   * @returns CSS Grid template columns value (e.g., '1fr 3fr' or 'repeat(2, 1fr)')
+   *
+   * @example
+   * // Row with custom widths
+   * getGridColumns({ columnCount: 2, columnWidths: ['1fr', '3fr'] })
+   * // Returns: "1fr 3fr"
+   *
+   * // Row without custom widths (equal width fallback)
+   * getGridColumns({ columnCount: 3 })
+   * // Returns: "repeat(3, 1fr)"
+   *
+   * // Backward compatibility: numeric column count
+   * getGridColumns(2)
+   * // Returns: "repeat(2, 1fr)"
    */
-  getGridColumns(columnCount: number): string {
-    return `repeat(${columnCount}, 1fr)`;
+  getGridColumns(row: RowLayoutConfig | number): string {
+    // Backward compatibility: accept numeric column count
+    if (typeof row === 'number') {
+      return `repeat(${row}, 1fr)`;
+    }
+
+    // Check for custom column widths
+    if (row.columnWidths && row.columnWidths.length === row.columnCount) {
+      return row.columnWidths.join(' '); // Custom widths: "1fr 3fr"
+    }
+
+    return `repeat(${row.columnCount}, 1fr)`; // Equal width fallback
   }
 
   /**
@@ -781,6 +1014,98 @@ export class FormRendererComponent implements OnInit, OnDestroy {
   getGlobalGridColumns(): string {
     const columnCount = this.settings?.layout?.columns || 1;
     return `repeat(${columnCount}, 1fr)`;
+  }
+
+  /**
+   * Check if a column has sub-columns defined (Story 27.6).
+   * Sub-columns enable nested column layouts within a parent column.
+   *
+   * @param rowId - Row identifier
+   * @param columnIndex - Parent column index (0-3)
+   * @returns True if sub-columns are configured for this column
+   */
+  hasSubColumns(rowId: string, columnIndex: number): boolean {
+    const rows = this.settings?.rowLayout?.rows || [];
+    const row = rows.find((r) => r.rowId === rowId);
+    return row?.subColumns?.some((sc) => sc.columnIndex === columnIndex) ?? false;
+  }
+
+  /**
+   * Get sub-column configuration for a specific column (Story 27.6).
+   * Returns sub-column count and optional fractional width units.
+   *
+   * @param rowId - Row identifier
+   * @param columnIndex - Parent column index (0-3)
+   * @returns Sub-column configuration or undefined if not configured
+   */
+  getSubColumnConfig(rowId: string, columnIndex: number): any {
+    const rows = this.settings?.rowLayout?.rows || [];
+    const row = rows.find((r) => r.rowId === rowId);
+    return row?.subColumns?.find((sc) => sc.columnIndex === columnIndex);
+  }
+
+  /**
+   * Get all fields positioned within a specific sub-column (Story 27.6).
+   * Fields are sorted by orderInColumn for vertical stacking.
+   *
+   * @param rowId - Row identifier
+   * @param columnIndex - Parent column index
+   * @param subColumnIndex - Sub-column index (0-3)
+   * @returns Array of fields sorted by orderInColumn
+   */
+  fieldsForSubColumn(rowId: string, columnIndex: number, subColumnIndex: number): FormField[] {
+    if (!this.schema?.fields) return [];
+
+    const fieldsForStep = this.filterFieldsForCurrentStep(this.schema.fields);
+
+    return fieldsForStep
+      .filter(
+        (field) =>
+          field.position?.rowId === rowId &&
+          field.position?.columnIndex === columnIndex &&
+          field.position?.subColumnIndex === subColumnIndex,
+      )
+      .sort((a, b) => {
+        const orderA = a.position?.orderInColumn ?? 0;
+        const orderB = b.position?.orderInColumn ?? 0;
+        return orderA - orderB;
+      });
+  }
+
+  /**
+   * Generate CSS Grid template columns for sub-columns (Story 27.6).
+   * Uses custom fractional widths if defined, otherwise equal-width fallback.
+   *
+   * @param rowId - Row identifier
+   * @param columnIndex - Parent column index
+   * @returns CSS Grid template string (e.g., "1fr 2fr" or "repeat(2, 1fr)")
+   */
+  subColumnGridTemplate(rowId: string, columnIndex: number): string {
+    const config = this.getSubColumnConfig(rowId, columnIndex);
+    if (!config) {
+      return '1fr'; // Default to single column if no config
+    }
+
+    // Check for custom sub-column widths
+    if (config.subColumnWidths && config.subColumnWidths.length === config.subColumnCount) {
+      return config.subColumnWidths.join(' '); // Custom widths: "1fr 2fr"
+    }
+
+    // Equal width fallback
+    return `repeat(${config.subColumnCount}, 1fr)`;
+  }
+
+  /**
+   * Get array of sub-column indexes for template iteration (Story 27.6).
+   *
+   * @param rowId - Row identifier
+   * @param columnIndex - Parent column index
+   * @returns Array of sub-column indexes [0, 1, 2, ...] or empty array if no sub-columns
+   */
+  subColumnIndexes(rowId: string, columnIndex: number): number[] {
+    const config = this.getSubColumnConfig(rowId, columnIndex);
+    if (!config) return [];
+    return Array.from({ length: config.subColumnCount }, (_, i) => i);
   }
 
   /**
@@ -1192,6 +1517,86 @@ export class FormRendererComponent implements OnInit, OnDestroy {
     });
 
     return styles;
+  }
+
+  /**
+   * Generate time slot options based on field metadata configuration
+   */
+  getTimeSlotOptions(field: FormField): { label: string; value: string }[] {
+    if (field.type !== FormFieldType.TIME_SLOT || !field.metadata) {
+      return [];
+    }
+
+    const metadata = field.metadata as TimeSlotMetadata;
+    const interval = metadata.interval || '30min';
+    const startTime = metadata.startTime || '09:00';
+    const endTime = metadata.endTime || '17:00';
+    const timeFormat = metadata.timeFormat || '12h';
+    const maxSlots = metadata.maxSlots || 20;
+
+    // Parse start and end times
+    const [startHour, startMinute] = startTime.split(':').map(Number);
+    const [endHour, endMinute] = endTime.split(':').map(Number);
+
+    // Calculate interval in minutes
+    const intervalMinutes = this.getIntervalMinutes(interval);
+
+    // Generate time slots
+    const slots: { label: string; value: string }[] = [];
+    let currentHour = startHour;
+    let currentMinute = startMinute;
+
+    while (slots.length < maxSlots) {
+      // Check if we've reached the end time
+      if (currentHour > endHour || (currentHour === endHour && currentMinute >= endMinute)) {
+        break;
+      }
+
+      // Format time slot
+      const timeValue = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
+      const timeLabel =
+        timeFormat === '12h' ? this.formatTime12Hour(currentHour, currentMinute) : timeValue;
+
+      slots.push({ label: timeLabel, value: timeValue });
+
+      // Add interval to current time
+      currentMinute += intervalMinutes;
+      if (currentMinute >= 60) {
+        currentHour += Math.floor(currentMinute / 60);
+        currentMinute = currentMinute % 60;
+      }
+    }
+
+    return slots;
+  }
+
+  /**
+   * Convert interval string to minutes
+   */
+  private getIntervalMinutes(interval: string): number {
+    switch (interval) {
+      case '10min':
+        return 10;
+      case '15min':
+        return 15;
+      case '30min':
+        return 30;
+      case '1hour':
+        return 60;
+      case '1day':
+        return 1440;
+      default:
+        return 30;
+    }
+  }
+
+  /**
+   * Format time in 12-hour format (e.g., "9:00 AM", "2:30 PM")
+   */
+  private formatTime12Hour(hour: number, minute: number): string {
+    const period = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+    return `${displayHour}:${String(minute).padStart(2, '0')} ${period}`;
   }
 
   /**

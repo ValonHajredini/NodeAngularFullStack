@@ -1,13 +1,20 @@
 import * as jwt from 'jsonwebtoken';
+import { customAlphabet } from 'nanoid';
 import {
   FormMetadata,
   FormSchema,
   FormField,
   FormStatus,
   FormBackgroundSettings,
+  TokenStatusResponse,
+  PublishFormResponse,
+  IframeEmbedOptions,
 } from '@nodeangularfullstack/shared';
 import { formsRepository } from '../repositories/forms.repository';
 import { formSchemasRepository } from '../repositories/form-schemas.repository';
+import { themesRepository } from '../repositories/themes.repository';
+import { formQrCodeService } from './form-qr-code.service';
+import { shortLinksRepository } from '../repositories/short-links.repository';
 
 /**
  * API Error class for form-related errors.
@@ -29,6 +36,18 @@ export class ApiError extends Error {
 }
 
 /**
+ * Custom alphabet for short codes excluding confusing characters.
+ * Excludes: 0, O, o, 1, l, I to prevent confusion.
+ */
+const SHORT_CODE_ALPHABET =
+  '23456789ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz';
+
+/**
+ * Custom nanoid generator for form short codes.
+ */
+const generateShortCode = customAlphabet(SHORT_CODE_ALPHABET, 7);
+
+/**
  * Schema validation result interface.
  */
 export interface SchemaValidationResult {
@@ -45,7 +64,8 @@ export interface SchemaValidationResult {
 export class FormsService {
   constructor(
     private readonly formsRepo = formsRepository,
-    private readonly formSchemasRepo = formSchemasRepository
+    private readonly formSchemasRepo = formSchemasRepository,
+    private readonly themesRepo = themesRepository
   ) {}
 
   /**
@@ -72,6 +92,11 @@ export class FormsService {
       // Validate required fields
       if (!formData.title) {
         throw new ApiError('Form title is required', 400, 'VALIDATION_ERROR');
+      }
+
+      // Validate theme ID if provided
+      if (formData.schema?.themeId) {
+        await this.validateThemeId(formData.schema.themeId);
       }
 
       // Prepare form data with user and tenant context
@@ -109,27 +134,27 @@ export class FormsService {
   }
 
   /**
-   * Publishes a form with generated render token.
+   * Publishes a form with generated render token and optional iframe embed configuration.
    * @param formId - Form ID to publish
    * @param userId - User ID requesting publish (must be owner)
-   * @param expiresInDays - Number of days until token expires
+   * @param expirationDate - Optional expiration date for token (null for permanent)
+   * @param iframeEmbedOptions - Optional iframe embed configuration
    * @returns Promise containing form, schema, and render URL
    * @throws {ApiError} 400 - When validation fails
    * @throws {ApiError} 404 - When form or schema not found
    * @throws {ApiError} 403 - When user is not the owner
    * @throws {ApiError} 500 - When publish fails
    * @example
-   * const result = await formsService.publishForm('form-uuid', 'user-uuid', 30);
+   * const result = await formsService.publishForm('form-uuid', 'user-uuid', new Date('2025-12-31'), iframeOptions);
+   * @example
+   * const result = await formsService.publishForm('form-uuid', 'user-uuid', null);
    */
   async publishForm(
     formId: string,
     userId: string,
-    expiresInDays: number
-  ): Promise<{
-    form: FormMetadata;
-    schema: FormSchema;
-    renderUrl: string;
-  }> {
+    expirationDate: Date | null,
+    iframeEmbedOptions?: IframeEmbedOptions
+  ): Promise<PublishFormResponse> {
     try {
       // Find the form
       const form = await this.formsRepo.findFormById(formId);
@@ -168,32 +193,137 @@ export class FormsService {
         );
       }
 
-      // Calculate expiration date
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+      // Use provided expiration date or null for no expiration
+      const expiresAt = expirationDate;
 
       // Generate render token
       const renderToken = this.generateRenderToken(latestSchema.id, expiresAt);
 
       // Publish the schema
-      const publishedSchema = await this.formSchemasRepo.publishSchema(
+      let publishedSchema = await this.formSchemasRepo.publishSchema(
         latestSchema.id,
         renderToken,
         expiresAt
       );
+
+      // Save iframe embed options if provided
+      if (iframeEmbedOptions) {
+        publishedSchema = await this.formSchemasRepo.updateSchemaIframeOptions(
+          latestSchema.id,
+          iframeEmbedOptions
+        );
+      }
 
       // Update form status to published
       const updatedForm = await this.formsRepo.update(formId, {
         status: FormStatus.PUBLISHED,
       });
 
-      // Generate render URL (base URL would come from config in production)
-      const renderUrl = `/forms/render/${renderToken}`;
+      // Generate full render URL (use frontend URL for public forms)
+      // Public forms are rendered by the Angular frontend, not the API backend
+      const baseUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
+      const renderUrl = `${baseUrl}/forms/render/${renderToken}`;
+
+      // Generate or reuse short link for easy sharing
+      let shortCode = '';
+      let shortUrl = renderUrl; // Fallback to JWT token URL
+      const maxAttempts = 10;
+      let attempts = 0;
+
+      try {
+        // Check if a short link already exists for this form schema
+        const existingShortLink = await shortLinksRepository.findByFormSchemaId(
+          latestSchema.id
+        );
+
+        if (existingShortLink) {
+          // Reuse existing short link code
+          shortCode = existingShortLink.code;
+          shortUrl = `${baseUrl}/public/form/${shortCode}`;
+          console.log(
+            `♻️ Reusing existing short link for form ${formId}: ${shortUrl}`
+          );
+        } else {
+          // Generate unique short code for new form
+          while (attempts < maxAttempts) {
+            shortCode = generateShortCode();
+            const exists = await shortLinksRepository.codeExists(shortCode);
+            if (!exists) {
+              break;
+            }
+            attempts++;
+          }
+
+          if (attempts >= maxAttempts) {
+            throw new Error(
+              'Unable to generate unique short code after maximum attempts'
+            );
+          }
+
+          // Create new short link in database
+          await shortLinksRepository.create({
+            code: shortCode,
+            originalUrl: renderUrl,
+            expiresAt,
+            createdBy: userId,
+            formSchemaId: latestSchema.id,
+          });
+
+          // Generate short URL
+          shortUrl = `${baseUrl}/public/form/${shortCode}`;
+          console.log(`✅ Short link created for form ${formId}: ${shortUrl}`);
+        }
+      } catch (shortLinkError) {
+        // Short link generation failure should not prevent successful publishing
+        console.error(
+          `⚠️ Short link generation failed for form ${formId}:`,
+          shortLinkError
+        );
+        // Fallback: Use renderUrl as shortUrl and empty shortCode
+        shortUrl = renderUrl;
+        shortCode = '';
+      }
+
+      // Story 26.3: Generate QR code asynchronously (non-blocking)
+      // Use short URL for QR code generation (preferred over JWT token URL)
+      let qrCodeUrl: string | undefined;
+      let qrCodeGenerated = false;
+
+      try {
+        // Generate and store QR code using short URL
+        qrCodeUrl = await formQrCodeService.generateAndStoreQRCode(
+          formId,
+          shortUrl
+        );
+
+        // Update form with QR code URL
+        const formWithQRCode = await this.formsRepo.updateQRCodeUrl(
+          formId,
+          qrCodeUrl
+        );
+        if (formWithQRCode) {
+          updatedForm.qrCodeUrl = qrCodeUrl;
+        }
+
+        qrCodeGenerated = true;
+        console.log(`✅ QR code generated for form ${formId}: ${qrCodeUrl}`);
+      } catch (qrError) {
+        // QR code generation failure should not prevent successful publishing
+        console.error(
+          `⚠️ QR code generation failed for form ${formId}:`,
+          qrError
+        );
+        qrCodeGenerated = false;
+      }
 
       return {
         form: updatedForm,
-        schema: publishedSchema,
+        formSchema: publishedSchema,
         renderUrl,
+        shortUrl,
+        shortCode,
+        qrCodeUrl,
+        qrCodeGenerated,
       };
     } catch (error: any) {
       if (error instanceof ApiError) {
@@ -323,17 +453,17 @@ export class FormsService {
     const stepFormConfig = schema.settings?.stepForm;
 
     // Should not reach here if stepForm is undefined (checked by isStepFormEnabled)
-    if (!stepFormConfig || !stepFormConfig.steps) {
+    if (!stepFormConfig?.steps) {
       errors.push('Step form configuration is missing or invalid');
       return;
     }
 
     const steps = stepFormConfig.steps;
 
-    // Validate step count (2-10 when enabled)
-    if (steps.length < 2 || steps.length > 10) {
+    // Validate minimum step count (at least 2 steps required)
+    if (steps.length < 2) {
       errors.push(
-        `Step form must have between 2 and 10 steps. Found: ${steps.length} steps`
+        `Step form must have at least 2 steps. Found: ${steps.length} step(s)`
       );
     }
 
@@ -389,15 +519,127 @@ export class FormsService {
   }
 
   /**
+   * Checks for existing valid tokens for a form.
+   * @param formId - Form ID to check tokens for
+   * @param userId - User ID requesting the check (must be owner)
+   * @returns Promise containing token status information
+   * @throws {ApiError} 404 - When form not found
+   * @throws {ApiError} 403 - When user is not the owner
+   * @throws {ApiError} 500 - When check fails
+   * @example
+   * const tokenStatus = await formsService.checkExistingTokens('form-uuid', 'user-uuid');
+   */
+  async checkExistingTokens(
+    formId: string,
+    userId: string
+  ): Promise<TokenStatusResponse> {
+    try {
+      // Find the form and verify ownership
+      const form = await this.formsRepo.findFormById(formId);
+      if (!form) {
+        throw new ApiError('Form not found', 404, 'FORM_NOT_FOUND');
+      }
+
+      // Verify ownership
+      if (form.userId !== userId) {
+        throw new ApiError(
+          'You do not have permission to check tokens for this form',
+          403,
+          'FORBIDDEN'
+        );
+      }
+
+      // Get form schemas for this form
+      const schemas = await this.formSchemasRepo.findByFormId(formId);
+      if (schemas.length === 0) {
+        // No schemas exist, no valid tokens
+        return {
+          hasValidToken: false,
+          tokenExpiration: null,
+          tokenCreatedAt: new Date(),
+          formUrl: '',
+        };
+      }
+
+      // Find the most recent published schema with valid token
+      const now = new Date();
+      const validSchema = schemas.find((schema) => {
+        return (
+          schema.isPublished &&
+          schema.renderToken &&
+          (schema.expiresAt === null ||
+            schema.expiresAt === undefined ||
+            schema.expiresAt > now)
+        );
+      });
+
+      if (!validSchema) {
+        // No valid tokens found
+        return {
+          hasValidToken: false,
+          tokenExpiration: null,
+          tokenCreatedAt: new Date(),
+          formUrl: '',
+        };
+      }
+
+      // Return valid token information
+      const baseUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
+      const formUrl = `${baseUrl}/forms/render/${validSchema.renderToken}`;
+
+      return {
+        hasValidToken: true,
+        tokenExpiration: validSchema.expiresAt || null,
+        tokenCreatedAt: validSchema.createdAt,
+        formUrl,
+      };
+    } catch (error: any) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError(
+        `Failed to check existing tokens: ${error.message}`,
+        500,
+        'CHECK_TOKENS_ERROR'
+      );
+    }
+  }
+
+  /**
+   * Validates a theme ID and ensures the theme exists and is active.
+   * @param themeId - Theme ID to validate
+   * @returns Promise containing validation result
+   * @throws {ApiError} 400 - When theme is invalid, not found, or inactive
+   * @example
+   * await formsService.validateThemeId('theme-uuid');
+   */
+  async validateThemeId(themeId: string): Promise<void> {
+    if (!themeId) {
+      return; // null/undefined themeId is allowed
+    }
+
+    const theme = await this.themesRepo.findById(themeId);
+    if (!theme) {
+      throw new ApiError('Theme not found or inactive', 400, 'INVALID_THEME');
+    }
+
+    if (!theme.isActive) {
+      throw new ApiError('Theme is not active', 400, 'INVALID_THEME');
+    }
+  }
+
+  /**
    * Generates a JWT render token for public form access.
    * @param formSchemaId - Form schema ID to embed in token
-   * @param expiresAt - Token expiration date
+   * @param expiresAt - Token expiration date (null for permanent token)
    * @returns JWT token string
    * @throws {ApiError} 500 - When token generation fails or secret not configured
    * @example
    * const token = formsService.generateRenderToken('schema-uuid', new Date('2025-12-31'));
+   * @example
+   * const token = formsService.generateRenderToken('schema-uuid', null);
    */
-  generateRenderToken(formSchemaId: string, expiresAt: Date): string {
+  generateRenderToken(formSchemaId: string, expiresAt: Date | null): string {
     try {
       const secret = process.env.FORM_RENDER_TOKEN_SECRET;
 
@@ -409,16 +651,22 @@ export class FormsService {
         );
       }
 
-      const payload = {
+      const payload: any = {
         formSchemaId,
-        expiresAt: expiresAt.toISOString(),
         iss: 'form-builder',
         iat: Math.floor(Date.now() / 1000),
       };
 
-      const token = jwt.sign(payload, secret, {
-        expiresIn: Math.floor((expiresAt.getTime() - Date.now()) / 1000),
-      });
+      // Add expiration to payload and JWT options only if date is provided
+      const jwtOptions: any = {};
+      if (expiresAt) {
+        payload.expiresAt = expiresAt.toISOString();
+        jwtOptions.expiresIn = Math.floor(
+          (expiresAt.getTime() - Date.now()) / 1000
+        );
+      }
+
+      const token = jwt.sign(payload, secret, jwtOptions);
 
       return token;
     } catch (error: any) {
@@ -470,9 +718,24 @@ export class FormsService {
         await this.formSchemasRepo.unpublishSchema(publishedSchema.id);
       }
 
-      // Update form status to draft
+      // Story 26.3: Clean up QR code when unpublishing
+      if (form.qrCodeUrl) {
+        try {
+          await formQrCodeService.deleteQRCode(form.qrCodeUrl);
+          console.log(`✅ QR code deleted for unpublished form ${formId}`);
+        } catch (qrError) {
+          // Log but don't fail unpublishing if QR code deletion fails
+          console.error(
+            `⚠️ Failed to delete QR code for form ${formId}:`,
+            qrError
+          );
+        }
+      }
+
+      // Update form status to draft and clear QR code URL
       const updatedForm = await this.formsRepo.update(formId, {
         status: FormStatus.DRAFT,
+        qrCodeUrl: undefined,
       });
 
       return updatedForm;
@@ -497,6 +760,11 @@ export class FormsService {
     schemaData?: Partial<FormSchema>
   ): Promise<FormMetadata> {
     try {
+      // Validate theme ID if provided in schema data
+      if (schemaData?.themeId !== undefined) {
+        await this.validateThemeId(schemaData.themeId);
+      }
+
       const hasMetadataChanges =
         updateData.title !== undefined ||
         updateData.description !== undefined ||
@@ -542,7 +810,7 @@ export class FormsService {
   }
 
   /**
-   * Retrieves a form with the latest schema attached.
+   * Retrieves a form with the latest schema attached and embedded theme data.
    */
   async getFormWithSchema(id: string): Promise<FormMetadata | null> {
     const form = await this.formsRepo.findFormById(id);
@@ -552,6 +820,17 @@ export class FormsService {
 
     const schemas = await this.formSchemasRepo.findByFormId(id);
     const latestSchema = schemas[0];
+
+    // If schema has themeId, fetch the schema with embedded theme
+    if (latestSchema?.themeId) {
+      const schemaWithTheme = await this.formSchemasRepo.findById(
+        latestSchema.id
+      );
+      return {
+        ...form,
+        schema: schemaWithTheme || undefined,
+      };
+    }
 
     return {
       ...form,
@@ -575,6 +854,7 @@ export class FormsService {
     );
 
     const fields = schemaData.fields ?? currentSchema?.fields ?? [];
+    const themeId = schemaData.themeId ?? currentSchema?.themeId;
 
     return this.formSchemasRepo.createSchema(formId, {
       formId,
@@ -584,6 +864,7 @@ export class FormsService {
       isPublished: false,
       renderToken: undefined,
       expiresAt: undefined,
+      themeId,
     });
   }
 

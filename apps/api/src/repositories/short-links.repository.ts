@@ -13,6 +13,7 @@ export interface ShortLinkEntity {
   qrCodeUrl?: string | null;
   expiresAt?: Date | null;
   createdBy?: string | null;
+  formSchemaId?: string | null;
   clickCount: number;
   lastAccessedAt?: Date | null;
   createdAt: Date;
@@ -55,27 +56,35 @@ export class ShortLinksRepository extends BaseRepository<ShortLinkEntity> {
     const client = await this.pool.connect();
 
     try {
-      const { code, originalUrl, expiresAt, createdBy } = shortLinkData;
+      const { code, originalUrl, expiresAt, createdBy, formSchemaId } =
+        shortLinkData;
 
       const query = `
         INSERT INTO short_links (
-          code, original_url, expires_at, created_by,
+          code, original_url, expires_at, created_by, form_schema_id,
           click_count, created_at, updated_at
         )
-        VALUES ($1, $2, $3, $4, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        VALUES ($1, $2, $3, $4, $5, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         RETURNING
           id,
           code,
           original_url as "originalUrl",
           expires_at as "expiresAt",
           created_by as "createdBy",
+          form_schema_id as "formSchemaId",
           click_count as "clickCount",
           last_accessed as "lastAccessedAt",
           created_at as "createdAt",
           updated_at as "updatedAt"
       `;
 
-      const values = [code, originalUrl, expiresAt, createdBy];
+      const values = [
+        code,
+        originalUrl,
+        expiresAt,
+        createdBy,
+        formSchemaId || null,
+      ];
 
       const result = await client.query(query, values);
       return result.rows[0];
@@ -404,4 +413,153 @@ export class ShortLinksRepository extends BaseRepository<ShortLinkEntity> {
       client.release();
     }
   }
+
+  /**
+   * Finds a short link by form schema ID.
+   * @param formSchemaId - Form schema ID to search for
+   * @returns Promise containing the short link or null if not found
+   * @throws {Error} When database query fails
+   * @example
+   * const shortLink = await shortLinksRepository.findByFormSchemaId('schema-id');
+   * if (shortLink) console.log(`Found existing link: ${shortLink.code}`);
+   */
+  async findByFormSchemaId(
+    formSchemaId: string
+  ): Promise<ShortLinkEntity | null> {
+    const client = await this.pool.connect();
+
+    try {
+      const query = `
+        SELECT
+          id,
+          code,
+          original_url as "originalUrl",
+          qr_code_url as "qrCodeUrl",
+          expires_at as "expiresAt",
+          created_by as "createdBy",
+          form_schema_id as "formSchemaId",
+          click_count as "clickCount",
+          last_accessed as "lastAccessedAt",
+          created_at as "createdAt",
+          updated_at as "updatedAt"
+        FROM short_links
+        WHERE form_schema_id = $1
+        ORDER BY created_at DESC
+        LIMIT 1
+      `;
+
+      const result = await client.query(query, [formSchemaId]);
+      return result.rows[0] || null;
+    } catch (error) {
+      console.error(
+        `Error finding short link by form schema ID ${formSchemaId}:`,
+        error
+      );
+      throw new Error(
+        'Failed to find short link by form schema ID in database'
+      );
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Finds a form schema by short code with embedded theme data.
+   * @param code - Short code to search for
+   * @returns Promise containing form schema with theme or null if not found
+   * @throws {Error} When database query fails
+   * @example
+   * const formData = await shortLinksRepository.findFormSchemaByCode('abc123');
+   * if (formData) console.log(`Found form: ${formData.schema.id}`);
+   */
+  async findFormSchemaByCode(code: string): Promise<{
+    schema: any;
+    settings: any;
+    theme: any | null;
+    shortCode: string;
+    renderToken: string;
+  } | null> {
+    const client = await this.pool.connect();
+
+    try {
+      const query = `
+        SELECT
+          short_links.code as "shortCode",
+          form_schemas.id as "schemaId",
+          form_schemas.schema_json,
+          form_schemas.theme_id as "themeId",
+          form_schemas.is_published as "isPublished",
+          form_schemas.expires_at as "expiresAt",
+          form_schemas.render_token as "renderToken",
+          form_themes.id as "theme.id",
+          form_themes.name as "theme.name",
+          form_themes.description as "theme.description",
+          form_themes.thumbnail_url as "theme.thumbnailUrl",
+          form_themes.theme_config as "theme.themeConfig",
+          form_themes.usage_count as "theme.usageCount",
+          form_themes.is_active as "theme.isActive",
+          form_themes.created_at as "theme.createdAt",
+          form_themes.updated_at as "theme.updatedAt"
+        FROM short_links
+        INNER JOIN form_schemas ON short_links.form_schema_id = form_schemas.id
+        LEFT JOIN form_themes ON form_schemas.theme_id = form_themes.id AND form_themes.is_active = true
+        WHERE short_links.code = $1
+          AND form_schemas.is_published = true
+          AND (short_links.expires_at IS NULL OR short_links.expires_at > CURRENT_TIMESTAMP)
+      `;
+
+      const result = await client.query(query, [code]);
+
+      if (result.rows.length === 0) {
+        return null;
+      }
+
+      const row = result.rows[0];
+      const parsedSchemaJson = row.schema_json;
+
+      // Extract settings and add themeId from separate column if present
+      const settings = parsedSchemaJson.settings || {};
+      if (row.themeId) {
+        settings.themeId = row.themeId;
+      }
+
+      const formData = {
+        schema: {
+          id: row.schemaId,
+          fields: parsedSchemaJson.fields || [],
+          isPublished: row.isPublished,
+          expiresAt: row.expiresAt,
+        },
+        settings,
+        theme: null as any,
+        shortCode: row.shortCode,
+        renderToken: row.renderToken,
+      };
+
+      // Add embedded theme object if theme exists
+      if (row['theme.id']) {
+        formData.theme = {
+          id: row['theme.id'],
+          name: row['theme.name'],
+          description: row['theme.description'],
+          thumbnailUrl: row['theme.thumbnailUrl'],
+          themeConfig: row['theme.themeConfig'],
+          usageCount: row['theme.usageCount'],
+          isActive: row['theme.isActive'],
+          createdAt: row['theme.createdAt'],
+          updatedAt: row['theme.updatedAt'],
+        };
+      }
+
+      return formData;
+    } catch (error) {
+      console.error(`Error finding form schema by short code ${code}:`, error);
+      throw new Error('Failed to find form schema by short code');
+    } finally {
+      client.release();
+    }
+  }
 }
+
+// Export singleton instance
+export const shortLinksRepository = new ShortLinksRepository();

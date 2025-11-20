@@ -184,6 +184,8 @@ export interface CreateShortLinkData {
   expiresAt?: Date | null;
   /** User who created the short link */
   createdBy?: string | null;
+  /** Optional form schema ID for form-specific short links */
+  formSchemaId?: string | null;
 }
 
 /**

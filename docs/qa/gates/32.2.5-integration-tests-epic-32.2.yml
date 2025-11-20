@@ -1,0 +1,176 @@
+# Quality Gate: Story 32.2.5 - Integration Tests for Epic 32.2
+schema: 1
+story: "32.2.5"
+story_title: "Integration Tests for Epic 32.2"
+gate: FAIL
+status_reason: "Critical blocker: All integration tests use Jest syntax in Jasmine/Karma project (100% non-functional). Type safety violations and ~55% of acceptance criteria incomplete."
+reviewer: "Quinn (Test Architect)"
+updated: "2025-10-26T00:00:00Z"
+
+waiver: { active: false }
+
+# Critical and high severity issues blocking gate approval
+top_issues:
+  - id: "TEST-001"
+    severity: high
+    finding: "All 4 integration test files use Jest syntax (jest.fn(), jest.Mocked) but Angular frontend uses Karma/Jasmine"
+    impact: "0% of integration tests can execute - complete blocker for story acceptance criteria"
+    suggested_action: "Convert all integration tests to Jasmine syntax using conversion guide in 32.2.5-test-implementation-summary.md"
+    suggested_owner: dev
+    refs:
+      - "apps/web/src/app/core/guards/tool-id.guard.integration.spec.ts"
+      - "apps/web/src/app/features/tools/pages/tool-detail/tool-detail.component.integration.spec.ts"
+      - "apps/web/src/app/features/tools/components/export-progress-modal/export-progress-modal.component.integration.spec.ts"
+      - "apps/web/src/app/features/tools/services/export-job.service.integration.spec.ts"
+
+  - id: "TEST-002"
+    severity: high
+    finding: "Type safety violations in mock fixtures - properties don't match actual ToolRegistryRecord type"
+    impact: "Runtime type errors when tests execute, invalid test data"
+    suggested_action: "Update tool-fixtures.ts to match ToolRegistryRecord from @nodeangularfullstack/shared (use tool_id not toolId, use ToolStatus enum values, remove invalid 'active' property)"
+    suggested_owner: dev
+    refs:
+      - "tests/e2e/fixtures/tool-fixtures.ts:23-46"
+      - "apps/web/src/app/core/guards/tool-id.guard.integration.spec.ts:23-36"
+
+  - id: "TEST-003"
+    severity: high
+    finding: "Missing E2E tests for export progress polling, cancellation, and completion flows (Tasks 9-12)"
+    impact: "Cannot validate critical export workflow acceptance criteria - 25% of E2E user flow testing incomplete"
+    suggested_action: "Implement export-progress-updates.spec.ts, export-cancellation.spec.ts, export-success.spec.ts, export-errors.spec.ts per story tasks"
+    suggested_owner: dev
+    refs:
+      - "Story 32.2.5 - Tasks 9, 10, 11, 12"
+
+  - id: "TEST-004"
+    severity: medium
+    finding: "Regression test suite for Epic 32.1 not created (Task 14)"
+    impact: "Cannot verify Epic 32.2 changes don't break Epic 32.1 functionality"
+    suggested_action: "Create tests/e2e/epic-32.2/regression-epic-32.1.spec.ts with 10 tests from Task 14 subtasks"
+    suggested_owner: dev
+    refs:
+      - "Story 32.2.5 - Task 14"
+
+  - id: "TEST-005"
+    severity: medium
+    finding: "Performance test suite not created (Task 15)"
+    impact: "Cannot validate page load times, memory leak prevention, or polling overhead"
+    suggested_action: "Create tests/performance/epic-32.2/performance.spec.ts to validate < 1s page load, < 50ms polling overhead, < 10MB memory increase"
+    suggested_owner: dev
+    refs:
+      - "Story 32.2.5 - Task 15"
+
+  - id: "TEST-006"
+    severity: low
+    finding: "Coverage analysis not performed (Task 16)"
+    impact: "Cannot verify ≥90% coverage requirement - primary story goal unvalidated"
+    suggested_action: "After Jest→Jasmine conversion, run 'npm --workspace=apps/web run test:coverage -- --include=\"**/tools/**\"' and verify ≥90% threshold"
+    suggested_owner: dev
+    refs:
+      - "Story 32.2.5 - Task 16"
+
+# Quality score calculation: 100 - (20 × 0 FAILs from NFRs) - (10 × 3 CONCERNS from NFRs) = 70
+# Additional penalty for 6 top issues: -6 × 5 = -30
+# Final score: 70 - 30 = 40
+quality_score: 40
+expires: "2025-11-09T00:00:00Z"  # 2 weeks from review
+
+evidence:
+  tests_reviewed: 125
+  tests_functional: 30  # Only E2E tests work
+  tests_blocked: 95  # Integration tests blocked by Jest syntax
+  risks_identified: 6
+  files_created: 11
+  files_functional: 7  # E2E tests + helpers + fixtures
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7, 8, 9]  # E2E user flows partially covered
+    ac_gaps: [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32]  # Most integration/regression/performance ACs incomplete
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Permission checks properly tested, auth helpers correctly implemented, no security vulnerabilities in test code"
+  performance:
+    status: CONCERNS
+    notes: "Performance test suite (Task 15) not implemented - cannot validate polling overhead, memory leaks, or page load times"
+  reliability:
+    status: CONCERNS
+    notes: "Integration tests non-functional due to Jest/Jasmine mismatch - 0% can execute, coverage requirements unvalidatable"
+  maintainability:
+    status: CONCERNS
+    notes: "Framework confusion (Jest in Jasmine project) creates technical debt, type safety issues will cause runtime errors, incomplete documentation for test execution"
+
+risk_summary:
+  totals:
+    critical: 0
+    high: 3  # TEST-001, TEST-002, TEST-003
+    medium: 2  # TEST-004, TEST-005
+    low: 1  # TEST-006
+  highest: high
+  recommendations:
+    must_fix:
+      - "Convert all 4 integration tests from Jest to Jasmine syntax"
+      - "Fix type safety violations in mock fixtures (tool-fixtures.ts, guard integration spec)"
+      - "Implement missing E2E tests for export workflows (Tasks 9-12)"
+    monitor:
+      - "Verify coverage ≥90% after Jest→Jasmine conversion"
+      - "Add regression tests before Epic 33.1 begins"
+      - "Performance benchmarks should be established before production"
+
+recommendations:
+  immediate:
+    - action: "Convert tool-id.guard.integration.spec.ts from Jest to Jasmine (use jasmine.createSpy instead of jest.fn, use spyOn instead of jest.spyOn, etc.)"
+      priority: 1
+      effort: "2 hours"
+      refs: ["apps/web/src/app/core/guards/tool-id.guard.integration.spec.ts"]
+
+    - action: "Convert export-job.service.integration.spec.ts from Jest to Jasmine (easiest - mostly HTTP testing with HttpClientTestingModule)"
+      priority: 1
+      effort: "1-2 hours"
+      refs: ["apps/web/src/app/features/tools/services/export-job.service.integration.spec.ts"]
+
+    - action: "Fix type safety in tool-fixtures.ts: use tool_id (not toolId), use ToolStatus.REGISTERED (not 'registered'), remove 'active' property"
+      priority: 1
+      effort: "30 minutes"
+      refs: ["tests/e2e/fixtures/tool-fixtures.ts:31-46"]
+
+    - action: "Convert tool-detail.component.integration.spec.ts from Jest to Jasmine (complex - signal testing, multiple service mocks)"
+      priority: 2
+      effort: "3-4 hours"
+      refs: ["apps/web/src/app/features/tools/pages/tool-detail/tool-detail.component.integration.spec.ts"]
+
+    - action: "Convert export-progress-modal.component.integration.spec.ts from Jest to Jasmine (most complex - timers + signals + polling logic)"
+      priority: 2
+      effort: "4-5 hours"
+      refs: ["apps/web/src/app/features/tools/components/export-progress-modal/export-progress-modal.component.integration.spec.ts"]
+
+  future:
+    - action: "Implement missing E2E tests: export-progress-updates.spec.ts, export-cancellation.spec.ts, export-success.spec.ts, export-errors.spec.ts"
+      priority: 3
+      effort: "14 hours total (3-4 hours each)"
+      refs: ["Story 32.2.5 - Tasks 9, 10, 11, 12"]
+
+    - action: "Create regression test suite for Epic 32.1: tests/e2e/epic-32.2/regression-epic-32.1.spec.ts"
+      priority: 4
+      effort: "3 hours"
+      refs: ["Story 32.2.5 - Task 14"]
+
+    - action: "Implement performance test suite: tests/performance/epic-32.2/performance.spec.ts"
+      priority: 5
+      effort: "3 hours"
+      refs: ["Story 32.2.5 - Task 15"]
+
+    - action: "Generate coverage report and verify ≥90% threshold after all tests functional"
+      priority: 6
+      effort: "2 hours"
+      refs: ["Story 32.2.5 - Task 16"]
+
+completion_estimate:
+  current: "45%"  # E2E tests work (~30 tests), integration blocked (~95 tests)
+  effort_to_pass: "18-22 hours"
+  breakdown:
+    jest_conversion: "10-13 hours"
+    type_fixes: "0.5 hours"
+    missing_e2e_tests: "4-6 hours"
+    coverage_validation: "2 hours"
+    documentation_updates: "1-2 hours"

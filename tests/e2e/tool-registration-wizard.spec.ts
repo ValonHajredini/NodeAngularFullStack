@@ -14,7 +14,7 @@ test.describe('Tool Registration Wizard - Cross Browser', () => {
     // Navigate to login page and authenticate as admin
     await page.goto('/auth/login');
     await page.getByLabel(/email/i).fill('admin@example.com');
-    await page.getByLabel(/password/i).fill('Admin123!@#');
+    await page.getByLabel(/password/i).fill('User123!@#');
     await page.getByRole('button', { name: /sign in|login/i }).click();
 
     // Wait for successful login and redirect
@@ -192,7 +192,7 @@ test.describe('Tool Registration Wizard - Visual Tests', () => {
     // Set up authentication and navigate to wizard
     await page.goto('/auth/login');
     await page.getByLabel(/email/i).fill('admin@example.com');
-    await page.getByLabel(/password/i).fill('Admin123!@#');
+    await page.getByLabel(/password/i).fill('User123!@#');
     await page.getByRole('button', { name: /sign in|login/i }).click();
     await page.waitForURL('**/dashboard');
     await page.goto('/admin/tools/create');

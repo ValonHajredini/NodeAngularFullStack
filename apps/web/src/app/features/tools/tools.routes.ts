@@ -1,10 +1,10 @@
 import { Routes } from '@angular/router';
-import { slugToolGuard } from '../../core/guards/tool.guard';
+import { slugToolGuard, toolIdGuard } from '../../core/guards/tool.guard';
 import { unsavedChangesGuard } from '../../core/guards/unsaved-changes.guard';
 
 /**
  * Tools routes configuration.
- * Provides dynamic routing for tools based on their slug.
+ * Provides dynamic routing for tools based on their slug or toolId.
  * Routes are protected by tool guard to ensure tool is enabled.
  */
 export const toolsRoutes: Routes = [
@@ -12,6 +12,15 @@ export const toolsRoutes: Routes = [
     path: '',
     loadComponent: () =>
       import('./components/tools-list/tools-list.component').then((m) => m.ToolsListComponent),
+  },
+  {
+    path: 'detail/:toolId',
+    loadComponent: () =>
+      import('./pages/tool-detail/tool-detail.component').then((m) => m.ToolDetailComponent),
+    canActivate: [toolIdGuard],
+    data: {
+      title: 'Tool Detail',
+    },
   },
   {
     path: 'form-builder/list',
@@ -44,6 +53,17 @@ export const toolsRoutes: Routes = [
     path: 'form-builder',
     redirectTo: 'form-builder/list',
     pathMatch: 'full',
+  },
+  {
+    path: 'export-history',
+    loadComponent: () =>
+      import('./pages/export-history/export-history.component').then(
+        (m) => m.ExportHistoryComponent,
+      ),
+    data: {
+      title: 'Export History',
+      description: 'View and manage export jobs',
+    },
   },
   {
     path: ':slug',

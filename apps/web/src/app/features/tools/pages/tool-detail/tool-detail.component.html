@@ -1,0 +1,231 @@
+<p-toast />
+
+<!-- Export Progress Modal -->
+@if (tool()) {
+  <app-export-progress-modal
+    [visible]="showExportModal()"
+    [toolId]="tool()!.tool_id"
+    [toolName]="tool()!.name"
+    (visibleChange)="showExportModal.set($event)"
+    (exportCompleted)="onExportCompleted($event)"
+    (exportFailed)="onExportFailed($event)"
+  />
+}
+
+<div class="tool-detail-container">
+  <!-- Loading State -->
+  @if (loading()) {
+    <p-card>
+      <ng-template pTemplate="header">
+        <p-skeleton height="3rem" styleClass="m-4"></p-skeleton>
+      </ng-template>
+      <p-skeleton height="2rem" styleClass="mb-4" width="60%"></p-skeleton>
+      <p-skeleton height="1.5rem" styleClass="mb-3"></p-skeleton>
+      <p-skeleton height="10rem"></p-skeleton>
+    </p-card>
+  }
+
+  <!-- Error State -->
+  @else if (error()) {
+    <p-message severity="error" [text]="error()!" [closable]="false"></p-message>
+    <div class="mt-4">
+      <p-button
+        label="Back to Tools"
+        icon="pi pi-arrow-left"
+        (click)="navigateToToolsList()"
+      ></p-button>
+    </div>
+  }
+
+  <!-- Tool Content -->
+  @else if (tool()) {
+    <!-- Tool Header -->
+    <div class="tool-header mb-6">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-4">
+          <p-button
+            icon="pi pi-arrow-left"
+            [text]="true"
+            [rounded]="true"
+            severity="secondary"
+            (click)="navigateToToolsList()"
+            pTooltip="Back to Tools List"
+            tooltipPosition="bottom"
+          ></p-button>
+          <div>
+            <h1 class="text-3xl font-bold text-gray-900 mb-1">{{ tool()!.name }}</h1>
+            <p class="text-gray-600 text-lg">{{ tool()!.description }}</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <p-tag [value]="tool()!.status" [severity]="statusSeverity()"></p-tag>
+          <p-button
+            label="Export Tool"
+            icon="pi pi-download"
+            severity="primary"
+            [disabled]="!canExport()"
+            [pTooltip]="exportButtonTooltip()"
+            tooltipPosition="bottom"
+            (click)="openExportModal()"
+          ></p-button>
+        </div>
+      </div>
+
+      <p-divider></p-divider>
+    </div>
+
+    <!-- Tabbed Interface -->
+    <p-tabs [(value)]="activeTabIndex" styleClass="tool-detail-tabs">
+      <!-- Overview Tab -->
+      <p-tablist>
+        <p-tab value="0">Overview</p-tab>
+        <p-tab value="1">Config</p-tab>
+        <p-tab value="2">Manifest</p-tab>
+        <p-tab value="3">Analytics</p-tab>
+      </p-tablist>
+
+      <p-tabpanels>
+        <!-- Overview Tab Panel -->
+        <p-tabpanel value="0">
+          <div class="overview-content">
+            <!-- Tool Metadata Card -->
+            <p-card header="Tool Information" styleClass="mb-4">
+              <div class="grid grid-cols-2 gap-6">
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-1">Tool ID</label>
+                  <div class="flex items-center gap-2">
+                    <code class="bg-gray-100 px-3 py-2 rounded text-sm flex-1">{{
+                      tool()!.tool_id
+                    }}</code>
+                    <p-button
+                      icon="pi pi-copy"
+                      [text]="true"
+                      [rounded]="true"
+                      size="small"
+                      severity="secondary"
+                      (click)="copyToolId()"
+                      pTooltip="Copy to clipboard"
+                      tooltipPosition="top"
+                    ></p-button>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-1">Version</label>
+                  <p class="text-gray-900">{{ tool()!.version }}</p>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-1">Status</label>
+                  <p-tag [value]="tool()!.status" [severity]="statusSeverity()"></p-tag>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-1">Exported</label>
+                  <p class="text-gray-900">{{ tool()!.is_exported ? 'Yes' : 'No' }}</p>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-1">Created At</label>
+                  <p class="text-gray-900">{{ tool()!.created_at | date: 'medium' }}</p>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-1">Updated At</label>
+                  <p class="text-gray-900">{{ tool()!.updated_at | date: 'medium' }}</p>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-1">Route Path</label>
+                  <code class="bg-gray-100 px-3 py-2 rounded text-sm block">{{
+                    tool()!.route
+                  }}</code>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-semibold text-gray-700 mb-1"
+                    >API Base Path</label
+                  >
+                  <code class="bg-gray-100 px-3 py-2 rounded text-sm block">{{
+                    tool()!.api_base
+                  }}</code>
+                </div>
+              </div>
+            </p-card>
+
+            <!-- Permissions Card -->
+            <p-card header="Permissions" styleClass="mb-4">
+              @if (permissionChips().length > 0) {
+                <div class="flex flex-wrap gap-2">
+                  @for (chip of permissionChips(); track chip.label) {
+                    <p-chip
+                      [label]="chip.label"
+                      [styleClass]="'permission-chip-' + chip.severity"
+                    />
+                  }
+                </div>
+              } @else {
+                <p class="text-gray-500 italic">No specific permissions required</p>
+              }
+            </p-card>
+
+            <!-- Description Card -->
+            @if (tool()!.description) {
+              <p-card header="Description">
+                <p class="text-gray-700 leading-relaxed">{{ tool()!.description }}</p>
+              </p-card>
+            }
+          </div>
+        </p-tabpanel>
+
+        <!-- Config Tab Panel -->
+        <p-tabpanel value="1">
+          <p-card header="Tool Configuration">
+            @if (tool()!.manifest_json?.config) {
+              <pre
+                class="bg-gray-50 p-4 rounded-lg overflow-x-auto text-sm"
+              ><code>{{ formatJson(tool()!.manifest_json!.config!) }}</code></pre>
+            } @else {
+              <p class="text-gray-500 italic">No configuration available</p>
+            }
+          </p-card>
+        </p-tabpanel>
+
+        <!-- Manifest Tab Panel -->
+        <p-tabpanel value="2">
+          <p-card header="Tool Manifest">
+            <div class="flex justify-end mb-3">
+              <p-button
+                label="Copy JSON"
+                icon="pi pi-copy"
+                size="small"
+                [text]="true"
+                (click)="copyToolId()"
+              ></p-button>
+            </div>
+            @if (tool()!.manifest_json) {
+              <pre
+                class="bg-gray-50 p-4 rounded-lg overflow-x-auto text-sm manifest-json"
+              ><code>{{ formatJson(tool()!.manifest_json) }}</code></pre>
+            } @else {
+              <p class="text-gray-500 italic">No manifest available</p>
+            }
+          </p-card>
+        </p-tabpanel>
+
+        <!-- Analytics Tab Panel -->
+        <p-tabpanel value="3">
+          <p-card header="Tool Analytics">
+            <div class="text-center py-12">
+              <i class="pi pi-chart-bar text-6xl text-gray-300 mb-4"></i>
+              <h3 class="text-xl font-semibold text-gray-700 mb-2">Analytics Coming Soon</h3>
+              <p class="text-gray-500 max-w-md mx-auto">
+                Analytics and usage metrics for this tool will be available in a future release.
+              </p>
+            </div>
+          </p-card>
+        </p-tabpanel>
+      </p-tabpanels>
+    </p-tabs>
+  }
+</div>

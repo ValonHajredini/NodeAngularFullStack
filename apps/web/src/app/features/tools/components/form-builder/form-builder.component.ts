@@ -3,8 +3,10 @@ import {
   ChangeDetectionStrategy,
   inject,
   signal,
+  computed,
   OnInit,
   OnDestroy,
+  ViewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -26,9 +28,19 @@ import { PublishDialogComponent } from './publish-dialog/publish-dialog.componen
 import { RowLayoutSidebarComponent } from './row-layout-sidebar/row-layout-sidebar.component';
 import { StepFormSidebarComponent } from './step-form-sidebar/step-form-sidebar.component';
 import { PreviewDialogComponent } from './preview-dialog/preview-dialog.component';
+import { ThemeDropdownComponent } from './theme-dropdown/theme-dropdown.component';
+import { ThemeDesignerModalComponent } from './theme-designer-modal/theme-designer-modal.component';
+import { TokenReuseConfirmationComponent } from './token-reuse-confirmation/token-reuse-confirmation.component';
+import {
+  AUTO_SAVE_INTERVAL_MS,
+  SIDEBAR_BREAKPOINT_PX,
+  FORMS_PAGE_SIZE,
+  PAGINATION_START_PAGE,
+} from './core/constants';
 import { Dialog } from 'primeng/dialog';
-import { FormSchema } from '@nodeangularfullstack/shared';
+import { FormSchema, FormTheme, TokenStatusResponse } from '@nodeangularfullstack/shared';
 import { trigger, transition, style, animate } from '@angular/animations';
+import { AuthService } from '@core/auth/auth.service';
 
 /**
  * Form Builder main component.
@@ -55,6 +67,9 @@ import { trigger, transition, style, animate } from '@angular/animations';
     RowLayoutSidebarComponent,
     StepFormSidebarComponent,
     PreviewDialogComponent,
+    ThemeDropdownComponent,
+    ThemeDesignerModalComponent,
+    TokenReuseConfirmationComponent,
     Dialog,
   ],
   providers: [MessageService, ConfirmationService],
@@ -82,15 +97,23 @@ import { trigger, transition, style, animate } from '@angular/animations';
           <a [routerLink]="['/app/tools']" class="hover:text-blue-600 transition-colors"> Tools </a>
           <i class="pi pi-angle-right mx-2 text-gray-400"></i>
           <a
-            (click)="navigateToFormsList()"
+            (click)="openFormsDialog()"
             class="hover:text-blue-600 transition-colors cursor-pointer"
           >
             Form Builder
           </a>
           <i class="pi pi-angle-right mx-2 text-gray-400"></i>
-          <span class="text-gray-900 font-medium">{{
-            formBuilderService.currentForm()?.title || 'New Form'
-          }}</span>
+          <span class="text-gray-900 font-medium">
+            {{ formBuilderService.currentForm()?.title || 'New Form' }}
+            @if (currentTheme()?.name) {
+              <span
+                class="ml-2 inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-purple-100 text-purple-700 border border-purple-200"
+              >
+                <i class="pi pi-palette mr-1 text-xs"></i>
+                {{ currentTheme()?.name }}
+              </span>
+            }
+          </span>
         </nav>
       </div>
 
@@ -111,18 +134,18 @@ import { trigger, transition, style, animate } from '@angular/animations';
           ></button>
           <i class="pi pi-file-edit text-2xl text-blue-600"></i>
           <h2 class="text-xl font-semibold text-gray-900">Form Builder</h2>
-          <button
-            pButton
-            label="My Forms"
-            icon="pi pi-list"
-            severity="secondary"
-            size="small"
-            (click)="openFormsDialog()"
-            class="ml-4"
-          ></button>
         </div>
 
         <div class="flex items-center gap-2">
+          <app-theme-dropdown
+            [currentThemeId]="formBuilderService.currentForm()?.schema?.settings?.themeId"
+            [currentUserId]="currentUserId()"
+            [currentUserRole]="currentUserRole()"
+            (themeSelected)="onThemeSelected($event)"
+            (openThemeDesigner)="openThemeDesigner()"
+            (editTheme)="onEditTheme($event)"
+          />
+
           @if (formBuilderService.isPublished()) {
             <span
               class="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full flex items-center gap-1"
@@ -325,13 +348,29 @@ import { trigger, transition, style, animate } from '@angular/animations';
       <!-- Publish Dialog -->
       <app-publish-dialog
         [visible]="publishDialogVisible()"
-        (visibleChange)="publishDialogVisible.set($event)"
+        (visibleChange)="onPublishDialogVisibleChange($event)"
         [loading]="isPublishing()"
         [validationErrors]="publishValidationErrors()"
         [renderUrl]="publishedRenderUrl()"
+        [shortUrl]="publishedShortUrl()"
+        [qrCodeUrl]="publishedQrCodeUrl()"
+        [qrCodeGenerated]="qrCodeGenerated()"
+        [qrCodeLoading]="qrCodeLoading()"
+        [formTitle]="formBuilderService.currentForm()?.title"
+        [shortCode]="getShortCodeFromRenderUrl()"
         (publish)="onPublish($event)"
         (copyUrl)="onCopyRenderUrl()"
+        (downloadQrCode)="onDownloadQrCode()"
       ></app-publish-dialog>
+
+      <!-- Token Reuse Confirmation Dialog (Story 26.2) -->
+      <app-token-reuse-confirmation
+        [visible]="tokenReuseDialogVisible()"
+        [tokenStatus]="currentTokenStatus()"
+        (visibleChange)="onTokenReuseDialogVisibleChange($event)"
+        (reuseToken)="onReuseExistingToken()"
+        (generateNewToken)="onGenerateNewToken()"
+      ></app-token-reuse-confirmation>
 
       <!-- Preview Dialog (Story 14.3) -->
       <app-preview-dialog
@@ -339,6 +378,12 @@ import { trigger, transition, style, animate } from '@angular/animations';
         [formSchema]="previewFormSchema()"
         (onClose)="closePreview()"
       ></app-preview-dialog>
+
+      <!-- Theme Designer Modal (Story 23.5) -->
+      <app-theme-designer-modal
+        [(visible)]="themeDesignerVisible"
+        (themeSaved)="onThemeSaved($event)"
+      ></app-theme-designer-modal>
 
       <!-- Toast for notifications -->
       <p-toast position="bottom-right"></p-toast>
@@ -494,16 +539,26 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
   private readonly messageService = inject(MessageService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly authService = inject(AuthService);
+
+  /** Reference to ThemeDropdownComponent for refreshing themes */
+  @ViewChild(ThemeDropdownComponent) themeDropdown?: ThemeDropdownComponent;
+
+  /** Reference to ThemeDesignerModalComponent for edit mode */
+  @ViewChild(ThemeDesignerModalComponent) themeDesignerModal?: ThemeDesignerModalComponent;
 
   readonly settingsDialogVisible = signal<boolean>(false);
   readonly publishDialogVisible = signal<boolean>(false);
   readonly fieldPropertiesModalVisible = signal<boolean>(false);
+  readonly tokenReuseDialogVisible = signal<boolean>(false);
+  readonly currentTokenStatus = signal<TokenStatusResponse | null>(null);
   readonly selectedFieldForModal = signal<FormField | null>(null);
   readonly formSettings = signal<FormSettings>({
     title: 'Untitled Form',
     description: '',
     columnLayout: 1,
     fieldSpacing: 'normal',
+    submitButtonText: 'Submit',
     successMessage: 'Thank you for your submission!',
     redirectUrl: '',
     allowMultipleSubmissions: true,
@@ -521,6 +576,10 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
   readonly isPublishing = signal<boolean>(false);
   readonly publishValidationErrors = signal<string[]>([]);
   readonly publishedRenderUrl = signal<string | undefined>(undefined);
+  readonly publishedShortUrl = signal<string | undefined>(undefined);
+  readonly publishedQrCodeUrl = signal<string | undefined>(undefined);
+  readonly qrCodeGenerated = signal<boolean>(false);
+  readonly qrCodeLoading = signal<boolean>(false);
   readonly formsListDialogVisible = signal<boolean>(false);
   readonly formsListLoading = signal<boolean>(false);
   readonly availableForms = signal<FormMetadata[]>([]);
@@ -531,12 +590,26 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
   readonly previewDialogVisible = signal<boolean>(false);
   readonly previewFormSchema = signal<FormSchema | null>(null);
 
+  // Theme Designer Modal state (Story 23.5)
+  readonly themeDesignerVisible = signal<boolean>(false);
+
   // Sidebar tab state (Story 19.2)
   readonly activeSidebarTab = signal<number>(0); // 0 = Row Layout, 1 = Step Form
 
   // Sidebar collapse state
   readonly sidebarCollapsed = signal<boolean>(false);
   private readonly SIDEBAR_STORAGE_KEY = 'formBuilder.sidebarCollapsed';
+
+  // Theme-related computed signals (delegate to FormBuilderService)
+  readonly isThemeLoading = computed(() => this.formBuilderService.isThemeLoading());
+  readonly availableThemes = computed(() => this.formBuilderService.availableThemes());
+  readonly currentTheme = computed(() => this.formBuilderService.currentTheme());
+
+  /** Current user ID for theme ownership checks */
+  readonly currentUserId = computed(() => this.authService.user()?.id);
+
+  /** Current user role for permission checks */
+  readonly currentUserRole = computed(() => this.authService.user()?.role);
 
   private fieldCounter = 0;
   private autoSaveInterval?: number;
@@ -575,18 +648,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
       if (this.formBuilderService.isDirty() && !this.isSaving()) {
         this.saveDraft(true); // true = auto-save mode
       }
-    }, 30000); // 30 seconds
-  }
-
-  /**
-   * Adds a default text input field to the first row, first column.
-   * Called when creating a new form.
-   */
-  private addDefaultTextField(): void {
-    this.fieldCounter++;
-    const newField = this.formBuilderService.addFieldFromType(FormFieldType.TEXT);
-    // Mark as dirty to show unsaved changes indicator
-    this.formBuilderService.markDirty();
+    }, AUTO_SAVE_INTERVAL_MS);
   }
 
   /**
@@ -613,6 +675,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
                 : form.schema.settings.layout.spacing === 'medium'
                   ? 'normal'
                   : 'relaxed',
+            submitButtonText: form.schema.settings.submission.submitButtonText || 'Submit',
             successMessage:
               form.schema.settings.submission.successMessage || 'Thank you for your submission!',
             redirectUrl: form.schema.settings.submission.redirectUrl || '',
@@ -634,6 +697,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
             description: form.description || '',
             columnLayout: 1,
             fieldSpacing: 'normal',
+            submitButtonText: 'Submit',
             successMessage: 'Thank you for your submission!',
             redirectUrl: '',
             allowMultipleSubmissions: true,
@@ -787,9 +851,6 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
     // Update local settings
     this.formSettings.set({ ...settings });
 
-    // Sync background settings to fields
-    this.syncBackgroundSettingsToFields(settings);
-
     if (!currentFormId) {
       // If no form is loaded, just mark as dirty
       this.formBuilderService.markDirty();
@@ -826,7 +887,12 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
           successMessage: settings.successMessage,
           redirectUrl: settings.redirectUrl || undefined,
           allowMultipleSubmissions: settings.allowMultipleSubmissions,
+          submitButtonText: settings.submitButtonText || 'Submit',
         },
+        // Preserve the currently applied theme when saving settings
+        themeId:
+          this.formBuilderService.currentForm()?.schema?.settings?.themeId ||
+          this.currentTheme()?.id,
         // Include background settings in schema
         background: {
           type: settings.backgroundType || 'none',
@@ -884,10 +950,21 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
         },
         error: (error) => {
           console.error('Error updating form settings:', error);
+
+          // Format error message with details
+          let errorDetail = error.error?.message || 'Failed to update form settings';
+          if (
+            error.error?.details &&
+            Array.isArray(error.error.details) &&
+            error.error.details.length > 0
+          ) {
+            errorDetail += '\n\nDetails:\n• ' + error.error.details.join('\n• ');
+          }
+
           this.messageService.add({
             severity: 'error',
             summary: 'Save Failed',
-            detail: error.error?.message || 'Failed to update form settings',
+            detail: errorDetail,
             life: 5000,
           });
         },
@@ -985,7 +1062,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
     this.formsListLoading.set(true);
     this.formsListError.set(null);
 
-    this.formsApiService.getForms(1, 50).subscribe({
+    this.formsApiService.getForms(PAGINATION_START_PAGE, FORMS_PAGE_SIZE).subscribe({
       next: (response) => {
         this.availableForms.set(response.data ?? []);
         this.formsListLoading.set(false);
@@ -1014,11 +1091,81 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
   }
 
   /**
+   * Handles theme selection from the theme dropdown.
+   * Applies the selected theme to the current form.
+   * @param theme - Selected theme
+   */
+  onThemeSelected(theme: FormTheme): void {
+    this.formBuilderService.applyTheme(theme);
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Theme Applied',
+      detail: `"${theme.name}" theme applied to form`,
+      life: 2000,
+    });
+  }
+
+  /**
+   * Opens the Theme Designer Modal for custom theme creation (Story 23.5).
+   * Triggered by the "Build Your Own Custom Color Theme" button in theme dropdown.
+   */
+  openThemeDesigner(): void {
+    this.themeDesignerVisible.set(true);
+  }
+
+  /**
+   * Handles edit theme button click from theme dropdown (Story 24.9).
+   * Opens theme designer modal in edit mode with the selected theme.
+   * @param theme - Theme to edit
+   */
+  onEditTheme(theme: FormTheme): void {
+    if (!this.themeDesignerModal) {
+      console.error('ThemeDesignerModalComponent not available');
+      return;
+    }
+
+    // Use the public method to open modal in edit mode
+    this.themeDesignerModal.openInEditMode(theme);
+  }
+
+  /**
+   * Handles successful theme creation/update from Theme Designer Modal (Story 23.5 + 24.9).
+   * Applies the newly created/updated theme to the current form and closes the modal.
+   * Refreshes the theme dropdown to show the latest themes.
+   * @param newThemeId - ID of the newly created/updated theme
+   */
+  onThemeSaved(newThemeId: string): void {
+    // Check if modal is in edit mode using public method
+    const isEditMode = this.themeDesignerModal?.isInEditMode() ?? false;
+
+    // Load and apply the newly created/updated theme
+    // This will fetch all themes, update the available themes list, and apply the selected theme
+    this.formBuilderService.loadTheme(newThemeId);
+
+    // Close the modal
+    this.themeDesignerVisible.set(false);
+
+    // Refresh the theme dropdown to show updated list
+    this.themeDropdown?.refreshThemes();
+
+    // Show success message
+    this.messageService.add({
+      severity: 'success',
+      summary: isEditMode ? 'Theme Updated' : 'Theme Created',
+      detail: isEditMode
+        ? 'Your custom theme has been updated and applied successfully!'
+        : 'Your custom theme has been created and applied successfully!',
+      life: 3000,
+    });
+  }
+
+  /**
    * Handles form preview (Story 14.3).
    * Opens preview dialog with current form schema (includes unsaved changes).
    */
   onPreview(): void {
     const settings = this.formSettings();
+    const activeTheme = this.formBuilderService.currentTheme?.() ?? null;
     const backgroundSettings = {
       type: settings.backgroundType || 'none',
       imageUrl: settings.backgroundImageUrl || '',
@@ -1052,6 +1199,10 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
           allowMultipleSubmissions: settings.allowMultipleSubmissions,
         },
         background: backgroundSettings,
+        // surface the currently selected theme for the renderer
+        themeId:
+          this.formBuilderService.currentForm()?.schema?.settings?.themeId ||
+          (activeTheme ? activeTheme.id : undefined),
         // Include row layout configuration if enabled
         rowLayout: this.formBuilderService.rowLayoutEnabled()
           ? {
@@ -1061,6 +1212,11 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
           : undefined,
       },
     };
+
+    // Attach full theme object so FormRenderer can apply CSS directly in preview mode
+    if (activeTheme) {
+      schema.theme = activeTheme;
+    }
 
     // Set preview schema and show dialog
     this.previewFormSchema.set(schema);
@@ -1169,11 +1325,22 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
       },
       error: (error) => {
         this.isSaving.set(false);
+
+        // Format error message with details
+        let errorDetail = error.error?.message || 'Failed to save form';
+        if (
+          error.error?.details &&
+          Array.isArray(error.error.details) &&
+          error.error.details.length > 0
+        ) {
+          errorDetail += '\n\nDetails:\n• ' + error.error.details.join('\n• ');
+        }
+
         this.messageService.add({
           severity: 'error',
           summary: 'Save Failed',
-          detail: error.error?.message || 'Failed to save form',
-          life: 3000,
+          detail: errorDetail,
+          life: 5000, // Extended to 5 seconds for longer error messages
         });
       },
     });
@@ -1237,7 +1404,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
 
   /**
    * Handles publish button click.
-   * Validates form schema before showing publish dialog.
+   * Checks for existing tokens first, then validates form schema.
    */
   onPublishClick(): void {
     const currentForm = this.formBuilderService.currentForm();
@@ -1272,21 +1439,56 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
       return;
     }
 
+    // Check for existing tokens (Story 26.2: Smart Token Management)
+    this.checkExistingTokensAndProceed(currentForm.id);
+  }
+
+  /**
+   * Checks for existing valid tokens and shows appropriate dialog.
+   * @param formId - Form ID to check tokens for
+   */
+  private checkExistingTokensAndProceed(formId: string): void {
+    this.formsApiService.checkTokenStatus(formId).subscribe({
+      next: (tokenStatus) => {
+        if (tokenStatus.hasValidToken) {
+          // Show token reuse confirmation dialog
+          this.currentTokenStatus.set(tokenStatus);
+          this.tokenReuseDialogVisible.set(true);
+        } else {
+          // No valid tokens, proceed with normal publishing
+          this.proceedWithPublishing();
+        }
+      },
+      error: (error) => {
+        console.warn('Token status check failed, proceeding with normal publish:', error);
+        // Fallback to normal publishing if token check fails
+        this.proceedWithPublishing();
+      },
+    });
+  }
+
+  /**
+   * Proceeds with normal publishing workflow (shows publish dialog).
+   */
+  private proceedWithPublishing(): void {
     // Clear validation errors and show publish dialog
     this.publishValidationErrors.set([]);
     this.publishedRenderUrl.set(undefined);
+    this.publishedShortUrl.set(undefined);
     this.publishDialogVisible.set(true);
   }
 
   /**
-   * Handles form publish with expiration date.
-   * @param expiresAt - Expiration date for the render token
+   * Handles form publish with optional expiration date.
+   * @param expiresAt - Expiration date for the render token (null for no expiration)
    */
-  onPublish(expiresAt: Date): void {
+  onPublish(expiresAt: Date | null): void {
     const currentForm = this.formBuilderService.currentForm();
     if (!currentForm?.id) return;
 
     this.isPublishing.set(true);
+    // Story 26.3: Set QR code loading state
+    this.qrCodeLoading.set(true);
 
     this.formsApiService.publishForm(currentForm.id, expiresAt).subscribe({
       next: (result) => {
@@ -1294,7 +1496,26 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
         this.formBuilderService.setCurrentForm(result.form);
 
         // Set the render URL for display
-        this.publishedRenderUrl.set(`${window.location.origin}${result.renderUrl}`);
+        // Check if renderUrl already contains the full URL (with protocol)
+        const renderUrl = result.renderUrl.startsWith('http')
+          ? result.renderUrl
+          : `${window.location.origin}${result.renderUrl}`;
+        this.publishedRenderUrl.set(renderUrl);
+
+        // Set the short URL for display (preferred over renderUrl)
+        if (result.shortUrl) {
+          const shortUrl = result.shortUrl.startsWith('http')
+            ? result.shortUrl
+            : `${window.location.origin}${result.shortUrl}`;
+          this.publishedShortUrl.set(shortUrl);
+        }
+
+        // Story 26.3: Handle QR code response
+        if (result.qrCodeUrl) {
+          this.publishedQrCodeUrl.set(result.qrCodeUrl);
+        }
+        this.qrCodeGenerated.set(result.qrCodeGenerated);
+        this.qrCodeLoading.set(false);
 
         this.isPublishing.set(false);
         this.messageService.add({
@@ -1306,6 +1527,8 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
       },
       error: (error) => {
         this.isPublishing.set(false);
+        // Story 26.3: Reset QR code loading state on error
+        this.qrCodeLoading.set(false);
         this.messageService.add({
           severity: 'error',
           summary: 'Publish Failed',
@@ -1349,29 +1572,82 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
   }
 
   /**
+   * Handles token reuse confirmation dialog visibility change.
+   */
+  onTokenReuseDialogVisibleChange(visible: boolean): void {
+    this.tokenReuseDialogVisible.set(visible);
+    if (!visible) {
+      this.currentTokenStatus.set(null);
+    }
+  }
+
+  /**
+   * Handles user choosing to reuse existing token.
+   */
+  onReuseExistingToken(): void {
+    const tokenStatus = this.currentTokenStatus();
+    if (!tokenStatus) return;
+
+    const currentForm = this.formBuilderService.currentForm();
+    if (!currentForm) return;
+
+    // Set the existing form URL as the render URL
+    this.publishedRenderUrl.set(tokenStatus.formUrl);
+
+    // Close token reuse dialog
+    this.tokenReuseDialogVisible.set(false);
+    this.currentTokenStatus.set(null);
+
+    // Show success message
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Using Existing Token',
+      detail: 'Form is already published with the existing token',
+      life: 3000,
+    });
+
+    // Optionally show the publish dialog to display the URL
+    this.publishDialogVisible.set(true);
+  }
+
+  /**
+   * Handles user choosing to generate new token.
+   */
+  onGenerateNewToken(): void {
+    // Close token reuse dialog
+    this.tokenReuseDialogVisible.set(false);
+    this.currentTokenStatus.set(null);
+
+    // Proceed with normal publishing workflow
+    this.proceedWithPublishing();
+  }
+
+  /**
    * Handles render URL copy to clipboard.
+   * Prefers short URL over JWT token URL for better user experience.
    */
   onCopyRenderUrl(): void {
-    const renderUrl = this.publishedRenderUrl();
-    if (!renderUrl) return;
+    // Prefer short URL, fallback to render URL
+    const urlToCopy = this.publishedShortUrl() || this.publishedRenderUrl();
+    if (!urlToCopy) return;
 
     // Use Clipboard API with fallback
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(renderUrl).then(
+      navigator.clipboard.writeText(urlToCopy).then(
         () => {
           this.messageService.add({
             severity: 'success',
             summary: 'URL Copied',
-            detail: 'Render URL copied to clipboard',
+            detail: 'Form URL copied to clipboard',
             life: 2000,
           });
         },
         (error) => {
-          this.fallbackCopyToClipboard(renderUrl);
+          this.fallbackCopyToClipboard(urlToCopy);
         },
       );
     } else {
-      this.fallbackCopyToClipboard(renderUrl);
+      this.fallbackCopyToClipboard(urlToCopy);
     }
   }
 
@@ -1404,6 +1680,79 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
       });
     } finally {
       document.body.removeChild(textArea);
+    }
+  }
+
+  /**
+   * Handles publish dialog visibility changes.
+   * Story 26.3: Reset QR code state when dialog is closed.
+   */
+  onPublishDialogVisibleChange(visible: boolean): void {
+    this.publishDialogVisible.set(visible);
+
+    // Reset QR code state when dialog is closed
+    if (!visible) {
+      this.publishedRenderUrl.set(undefined);
+      this.publishedShortUrl.set(undefined);
+      this.publishedQrCodeUrl.set(undefined);
+      this.qrCodeGenerated.set(false);
+      this.qrCodeLoading.set(false);
+      this.publishValidationErrors.set([]);
+    }
+  }
+
+  /**
+   * Extracts the short code from the published render URL.
+   * Story 26.4: Iframe Embed Code Generator
+   * @returns The short code extracted from the render URL, or undefined if not available
+   */
+  getShortCodeFromRenderUrl(): string | undefined {
+    const renderUrl = this.publishedRenderUrl();
+    if (!renderUrl) return undefined;
+
+    // Extract short code from URL pattern: /forms/render/{shortCode}
+    const match = renderUrl.match(/\/forms\/render\/([^\/\?]+)/);
+    return match ? match[1] : undefined;
+  }
+
+  /**
+   * Downloads the QR code image for the published form.
+   * Story 26.3: Integrated QR Code Generation and Display
+   */
+  onDownloadQrCode(): void {
+    const qrCodeUrl = this.publishedQrCodeUrl();
+    if (!qrCodeUrl) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Download Failed',
+        detail: 'QR code is not available for download',
+        life: 3000,
+      });
+      return;
+    }
+
+    try {
+      // Create a temporary anchor element to trigger download
+      const link = document.createElement('a');
+      link.href = qrCodeUrl;
+      link.download = `form-qr-code-${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      this.messageService.add({
+        severity: 'success',
+        summary: 'QR Code Downloaded',
+        detail: 'QR code image has been downloaded',
+        life: 2000,
+      });
+    } catch (error) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Download Failed',
+        detail: 'Failed to download QR code. Please try again.',
+        life: 3000,
+      });
     }
   }
 
@@ -1482,6 +1831,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
       [FormFieldType.IMAGE]: 'Image',
       [FormFieldType.TEXT_BLOCK]: 'Text Block',
       [FormFieldType.IMAGE_GALLERY]: 'Image Gallery',
+      [FormFieldType.TIME_SLOT]: 'Time Slot',
     };
     return labelMap[type] || 'Field';
   }
@@ -1503,36 +1853,6 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
   }
 
   /**
-   * Extracts background settings from schema settings (not from fields).
-   * Background settings are now stored in schema.settings.background, not as fields.
-   */
-  private extractBackgroundSettings(fields: FormField[]): Partial<FormSettings> {
-    // Background settings are now managed in schema.settings.background
-    // This method is kept for compatibility but returns default values
-    return {
-      backgroundType: 'none',
-      backgroundImageUrl: '',
-      backgroundImagePosition: 'cover',
-      backgroundImageOpacity: 100,
-      backgroundImageAlignment: 'center',
-      backgroundImageBlur: 0,
-      backgroundCustomHtml: '',
-      backgroundCustomCss: '',
-    };
-  }
-
-  /**
-   * Syncs background settings - NO-OP.
-   * Background settings are now stored directly in schema.settings.background
-   * and are not represented as fields in the form.
-   */
-  private syncBackgroundSettingsToFields(settings: FormSettings): void {
-    // Background settings are now managed in form-settings.component
-    // They are stored in schema.settings.background, not as fields
-    // This method is kept for compatibility but does nothing
-  }
-
-  /**
    * Toggles the sidebar collapse state and persists it to localStorage.
    */
   toggleSidebar(): void {
@@ -1542,7 +1862,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
 
   /**
    * Restores the sidebar collapse state from localStorage.
-   * Defaults to collapsed on small screens (<1024px).
+   * Defaults to collapsed on small screens.
    */
   private restoreSidebarCollapseState(): void {
     const savedState = localStorage.getItem(this.SIDEBAR_STORAGE_KEY);
@@ -1550,7 +1870,7 @@ export class FormBuilderComponent implements OnInit, OnDestroy, ComponentWithUns
       this.sidebarCollapsed.set(savedState === 'true');
     } else {
       // Default to collapsed on small screens
-      this.sidebarCollapsed.set(window.innerWidth < 1024);
+      this.sidebarCollapsed.set(window.innerWidth < SIDEBAR_BREAKPOINT_PX);
     }
   }
 }

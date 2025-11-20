@@ -19,6 +19,7 @@ import { databaseService, DatabaseService } from './services/database.service';
 import swaggerSpec from './config/swagger.config';
 import healthRoutes from './routes/health.routes';
 import authRoutes from './routes/auth.routes';
+import { testToolRoutes } from './routes/test-tool.routes';
 import { usersRoutes } from './routes/users.routes';
 import tokensRoutes from './routes/tokens.routes';
 import toolsRoutes from './routes/tools.routes';
@@ -27,6 +28,9 @@ import shortLinksRoutes from './routes/short-links.routes';
 import drawingProjectsRoutes from './routes/drawing-projects.routes';
 import { formsRoutes } from './routes/forms.routes';
 import { publicFormsRoutes } from './routes/public-forms.routes';
+import { themesRoutes } from './routes/themes.routes';
+import { toolRegistryRoutes } from './routes/tool-registry.routes';
+import { exportRoutes } from './routes/export.routes';
 import { shortLinksController } from './controllers/short-links.controller';
 import { resolveShortLinkValidator } from './validators/url.validators';
 
@@ -61,7 +65,13 @@ class Server {
             styleSrc: ["'self'", "'unsafe-inline'"],
             scriptSrc: ["'self'"],
             imgSrc: ["'self'", 'data:', 'https:'],
+            // Story 26.4: Allow iframe embedding for form publishing
+            frameAncestors: ["'self'", '*'],
           },
+        },
+        // Story 26.4: Configure X-Frame-Options to allow iframe embedding
+        frameguard: {
+          action: 'sameorigin', // Allow same-origin framing, can be configured per route
         },
       })
     );
@@ -163,6 +173,7 @@ class Server {
     this.app.use('/api/v1/users', usersRoutes);
     this.app.use('/api/v1/tokens', tokensRoutes);
     this.app.use('/api/v1/forms', formsRoutes);
+    this.app.use('/api/v1/themes', themesRoutes);
     this.app.use('/api/v1/public', publicFormsRoutes);
     this.app.use('/api/v1/tools/short-links', shortLinksRoutes);
     console.log(
@@ -177,6 +188,9 @@ class Server {
     this.app.use('/api/v1/drawing-projects', drawingProjectsRoutes);
     this.app.use('/api/v1/admin/tools', toolsRoutes);
     this.app.use('/api/v1/tools', publicToolsRoutes);
+    this.app.use('/api/tools/test-tool', testToolRoutes);
+    this.app.use('/api/v1/tools/registry', toolRegistryRoutes); // Tool Registry API (Epic 30)
+    this.app.use('/api/v1/tool-registry', exportRoutes); // Export Job API (Epic 33.1)
     this.app.use('/api/v1', healthRoutes);
 
     // API root endpoint

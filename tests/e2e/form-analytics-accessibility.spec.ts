@@ -15,7 +15,7 @@ test.describe('Form Analytics Charts - WCAG AA Compliance', () => {
     // Navigate to login page and authenticate as admin
     await page.goto('/auth/login');
     await page.getByLabel(/email/i).fill('admin@example.com');
-    await page.getByLabel(/password/i).fill('Admin123!@#');
+    await page.getByLabel(/password/i).fill('User123!@#');
     await page.getByRole('button', { name: /sign in|login/i }).click();
 
     // Wait for successful login and redirect
@@ -309,7 +309,7 @@ test.describe('Form Analytics Charts - Screen Reader Support', () => {
     // Authenticate
     await page.goto('/auth/login');
     await page.getByLabel(/email/i).fill('admin@example.com');
-    await page.getByLabel(/password/i).fill('Admin123!@#');
+    await page.getByLabel(/password/i).fill('User123!@#');
     await page.getByRole('button', { name: /sign in|login/i }).click();
     await page.waitForURL('**/dashboard');
 

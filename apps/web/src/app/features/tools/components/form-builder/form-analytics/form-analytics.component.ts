@@ -23,9 +23,12 @@ import {
   FieldStatistics,
   ChartType,
   ChartTypeOption,
+  CategoryMetrics,
+  TemplateCategory,
 } from '@nodeangularfullstack/shared';
 import { FormsApiService } from '../forms-api.service';
 import { ToolConfigService } from '@core/services/tool-config.service';
+import { CategoryAnalyticsService } from '@core/services/category-analytics.service';
 import { StatisticsEngineService } from './statistics-engine.service';
 import { ChartPreferenceService } from './chart-preference.service';
 import { BarChartComponent } from './charts/bar-chart.component';
@@ -38,6 +41,8 @@ import { AreaChartComponent } from './charts/area-chart.component';
 import { DoughnutChartComponent } from './charts/doughnut-chart.component';
 import { HorizontalBarChartComponent } from './charts/horizontal-bar-chart.component';
 import { ExportDialogComponent } from './export-dialog.component';
+import { PollAnalyticsComponent } from './poll-analytics.component';
+import { QuizAnalyticsComponent } from './quiz-analytics.component';
 
 /**
  * Chart type compatibility matrix defining which chart types work with which data types.
@@ -105,6 +110,8 @@ const ALL_CHART_TYPE_OPTIONS: ChartTypeOption[] = [
     DoughnutChartComponent,
     HorizontalBarChartComponent,
     ExportDialogComponent,
+    PollAnalyticsComponent,
+    QuizAnalyticsComponent,
   ],
   providers: [MessageService],
   template: `
@@ -203,6 +210,63 @@ const ALL_CHART_TYPE_OPTIONS: ChartTypeOption[] = [
             severity="secondary"
             (click)="navigateBack()"
           ></button>
+        </div>
+      }
+
+      <!-- Category-Specific Analytics Section (Epic 30, Story 30.6) -->
+      @if (!isLoading() && !error() && hasCategoryMetrics()) {
+        <div
+          class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-sm p-6 mb-8 border border-blue-200"
+        >
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <i class="pi pi-chart-line text-3xl text-blue-600"></i>
+              <div>
+                <h2 class="text-2xl font-bold text-gray-900">Category Analytics</h2>
+                <p class="text-sm text-gray-600 mt-1">
+                  Specialized metrics for
+                  <span class="font-semibold text-blue-700">{{ category() }}</span>
+                  templates
+                </p>
+              </div>
+            </div>
+            @if (categoryLoading()) {
+              <i class="pi pi-spin pi-spinner text-2xl text-blue-600"></i>
+            }
+          </div>
+
+          <!-- Category Metrics Display -->
+          <div class="bg-white rounded-lg p-6 shadow-sm">
+            @if (categoryMetrics(); as metrics) {
+              <!-- Poll Analytics Component (Story 30.7) -->
+              @if (metrics.category === 'polls') {
+                <app-poll-analytics [metrics]="$any(metrics)"></app-poll-analytics>
+              }
+
+              <!-- Quiz Analytics Component (Story 30.7) -->
+              @if (metrics.category === 'quiz') {
+                <app-quiz-analytics [metrics]="$any(metrics)"></app-quiz-analytics>
+              }
+
+              <!-- Placeholder for other categories (ecommerce, services, data_collection, events) -->
+              @if (metrics.category !== 'polls' && metrics.category !== 'quiz') {
+                <div class="text-center py-8">
+                  <i class="pi pi-chart-bar text-4xl text-gray-400 mb-3"></i>
+                  <p class="text-gray-600">
+                    Analytics for <strong>{{ metrics.category }}</strong> category coming soon
+                  </p>
+                </div>
+              }
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Category Loading State -->
+      @if (!isLoading() && !error() && categoryLoading() && !hasCategoryMetrics()) {
+        <div class="bg-white rounded-lg shadow-sm p-8 mb-8 text-center">
+          <i class="pi pi-spin pi-spinner text-4xl text-blue-600 mb-3"></i>
+          <p class="text-gray-600">Loading category analytics...</p>
         </div>
       }
 
@@ -476,12 +540,15 @@ export class FormAnalyticsComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly formsApiService = inject(FormsApiService);
   private readonly toolConfigService = inject(ToolConfigService);
+  private readonly categoryAnalyticsService = inject(CategoryAnalyticsService);
   private readonly messageService = inject(MessageService);
   private readonly statisticsEngine = inject(StatisticsEngineService);
   private readonly chartPreferenceService = inject(ChartPreferenceService);
 
   // Expose FormFieldType enum to template
   protected readonly FormFieldType = FormFieldType;
+  // Expose Object to template for Object.keys() usage
+  protected readonly Object = Object;
 
   readonly formId = signal<string>('');
   readonly formTitle = signal<string>('');
@@ -494,6 +561,40 @@ export class FormAnalyticsComponent implements OnInit {
   readonly pageSize = signal<number>(this.DEFAULT_PAGE_SIZE);
   readonly totalRecords = signal<number>(0);
   readonly currentPage = signal<number>(0);
+
+  // Category Analytics Signals (Epic 30, Story 30.6)
+  readonly category = signal<TemplateCategory | null>(null);
+
+  /**
+   * Category-specific analytics metrics (discriminated union: PollMetrics | QuizMetrics | etc.).
+   *
+   * **Template Type Casting Note (Story 30.7, QA Review DOC-001)**:
+   * When passing this signal to specialized components (PollAnalyticsComponent, QuizAnalyticsComponent),
+   * the template uses `$any(metrics)` to bypass TypeScript's discriminated union checking.
+   * This is necessary because Angular's template type system cannot automatically narrow union types
+   * even when the category is checked with @if conditions (e.g., `@if (metrics.category === 'polls')`).
+   *
+   * The type safety is preserved at runtime by:
+   * 1. Conditional rendering ensures only the correct component receives metrics
+   * 2. Each component validates the category property matches expected value
+   * 3. Backend AnalyticsService guarantees metrics match declared category
+   *
+   * @see PollAnalyticsComponent - Expects PollMetrics with category='polls'
+   * @see QuizAnalyticsComponent - Expects QuizMetrics with category='quiz'
+   */
+  readonly categoryMetrics = signal<CategoryMetrics | null>(null);
+  readonly categoryLoading = signal<boolean>(false);
+  readonly categoryError = signal<string | null>(null);
+
+  // Computed: Check if category-specific analytics are available
+  readonly hasCategoryMetrics = computed<boolean>(() => {
+    return this.categoryMetrics() !== null && this.category() !== null;
+  });
+
+  // Computed: Check if form has category detected
+  readonly hasCategory = computed<boolean>(() => {
+    return this.category() !== null;
+  });
 
   // Tool configuration
   readonly toolConfig = signal<{ displayMode?: string } | null>(null);
@@ -708,6 +809,19 @@ export class FormAnalyticsComponent implements OnInit {
         this.formFields.set(form.schema?.fields || []);
         this.isLoading.set(false);
 
+        // Detect template category from schema
+        if (form.schema) {
+          const detectedCategory = this.categoryAnalyticsService.detectTemplateCategory(
+            form.schema,
+          );
+          this.category.set(detectedCategory);
+
+          // Load category-specific analytics if category detected
+          if (detectedCategory) {
+            this.loadCategoryAnalytics();
+          }
+        }
+
         // Load submissions after form details
         this.loadSubmissions({ first: 0, rows: this.pageSize() });
       },
@@ -721,6 +835,35 @@ export class FormAnalyticsComponent implements OnInit {
           detail: errorMessage,
           life: 3000,
         });
+      },
+    });
+  }
+
+  /**
+   * Loads category-specific analytics metrics for the form.
+   * Called automatically when a template category is detected.
+   *
+   * Epic 30, Story 30.6: Frontend Category Detection and Analytics Service
+   */
+  private loadCategoryAnalytics(): void {
+    this.categoryLoading.set(true);
+    this.categoryError.set(null);
+
+    this.categoryAnalyticsService.getCategoryMetrics(this.formId()).subscribe({
+      next: (metrics: CategoryMetrics) => {
+        this.categoryMetrics.set(metrics);
+        this.categoryLoading.set(false);
+      },
+      error: (error) => {
+        this.categoryLoading.set(false);
+        const errorMessage = error.message || 'Failed to load category analytics';
+        this.categoryError.set(errorMessage);
+
+        // Don't show error toast - fallback to generic analytics silently
+        console.warn(
+          'Category analytics not available, falling back to generic charts:',
+          errorMessage,
+        );
       },
     });
   }

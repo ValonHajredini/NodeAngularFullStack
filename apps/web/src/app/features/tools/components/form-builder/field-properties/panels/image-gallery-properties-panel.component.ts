@@ -329,7 +329,7 @@ export class ImageGalleryPropertiesPanelComponent implements OnInit {
   /**
    * Handle image description change from preview-gallery component
    */
-  protected onDescriptionChanged(event: { key: string; description: string }): void {
+  public onDescriptionChanged(event: { key: string; description: string }): void {
     const updated = this.images().map((img) =>
       img.key === event.key ? { ...img, alt: event.description } : img,
     );
@@ -340,7 +340,7 @@ export class ImageGalleryPropertiesPanelComponent implements OnInit {
   /**
    * Handle image deletion from preview-gallery component
    */
-  protected onImageDeleted(key: string): void {
+  public onImageDeleted(key: string): void {
     const updated = this.images().filter((img) => img.key !== key);
     this.images.set(updated);
 

@@ -1,0 +1,338 @@
+{
+  "formName": "Story 24.8 - Complete Field Type Test Form",
+  "description": "Test form containing all 16 field types for comprehensive theme testing",
+  "fields": [
+    {
+      "order": 1,
+      "type": "HEADING",
+      "label": "Story 24.8: Comprehensive Theme Testing Form",
+      "config": {
+        "headingLevel": 1,
+        "text": "Story 24.8: Comprehensive Theme Testing Form"
+      },
+      "validation": {}
+    },
+    {
+      "order": 2,
+      "type": "TEXT_BLOCK",
+      "label": "Instructions",
+      "config": {
+        "text": "This form contains all 16 field types. Use this form to test theme application across every field type. Test with Light Theme, Dark Theme, and Custom Theme."
+      },
+      "validation": {}
+    },
+    {
+      "order": 3,
+      "type": "DIVIDER",
+      "label": "Section 1: Text Input Fields",
+      "config": {},
+      "validation": {}
+    },
+    {
+      "order": 4,
+      "type": "HEADING",
+      "label": "Section 1: Text Input Fields",
+      "config": {
+        "headingLevel": 2,
+        "text": "Section 1: Text Input Fields"
+      },
+      "validation": {}
+    },
+    {
+      "order": 5,
+      "type": "TEXT",
+      "label": "Full Name",
+      "config": {
+        "placeholder": "Enter your full legal name",
+        "helpText": "First and last name as it appears on ID"
+      },
+      "validation": {
+        "required": true
+      }
+    },
+    {
+      "order": 6,
+      "type": "EMAIL",
+      "label": "Email Address",
+      "config": {
+        "placeholder": "you@example.com",
+        "helpText": "We'll never share your email"
+      },
+      "validation": {
+        "required": true
+      }
+    },
+    {
+      "order": 7,
+      "type": "NUMBER",
+      "label": "Age",
+      "config": {
+        "placeholder": "Enter your age",
+        "helpText": "Must be 18 or older",
+        "min": 18,
+        "max": 120
+      },
+      "validation": {
+        "required": true
+      }
+    },
+    {
+      "order": 8,
+      "type": "TEXTAREA",
+      "label": "Comments or Feedback",
+      "config": {
+        "placeholder": "Share your thoughts...",
+        "helpText": "Maximum 500 characters",
+        "rows": 4
+      },
+      "validation": {
+        "required": false
+      }
+    },
+    {
+      "order": 9,
+      "type": "DIVIDER",
+      "label": "Section 2: Selection Fields",
+      "config": {},
+      "validation": {}
+    },
+    {
+      "order": 10,
+      "type": "HEADING",
+      "label": "Section 2: Selection Fields",
+      "config": {
+        "headingLevel": 2,
+        "text": "Section 2: Selection Fields"
+      },
+      "validation": {}
+    },
+    {
+      "order": 11,
+      "type": "SELECT",
+      "label": "Country",
+      "config": {
+        "placeholder": "Select your country",
+        "helpText": "Choose from the list",
+        "options": ["United States", "Canada", "Mexico", "United Kingdom", "Other"]
+      },
+      "validation": {
+        "required": true
+      }
+    },
+    {
+      "order": 12,
+      "type": "RADIO",
+      "label": "Preferred Contact Method",
+      "config": {
+        "helpText": "How should we reach you?",
+        "options": ["Email", "Phone", "Text Message", "Mail"]
+      },
+      "validation": {
+        "required": true
+      }
+    },
+    {
+      "order": 13,
+      "type": "CHECKBOX",
+      "label": "Interests",
+      "config": {
+        "helpText": "Select all that apply",
+        "options": ["Technology", "Sports", "Arts & Culture", "Travel", "Food & Dining"]
+      },
+      "validation": {
+        "required": false
+      }
+    },
+    {
+      "order": 14,
+      "type": "DIVIDER",
+      "label": "Section 3: Date/Time Fields",
+      "config": {},
+      "validation": {}
+    },
+    {
+      "order": 15,
+      "type": "HEADING",
+      "label": "Section 3: Date/Time Fields",
+      "config": {
+        "headingLevel": 2,
+        "text": "Section 3: Date/Time Fields"
+      },
+      "validation": {}
+    },
+    {
+      "order": 16,
+      "type": "DATE",
+      "label": "Birth Date",
+      "config": {
+        "helpText": "Select your date of birth"
+      },
+      "validation": {
+        "required": true
+      }
+    },
+    {
+      "order": 17,
+      "type": "DATETIME",
+      "label": "Appointment Date & Time",
+      "config": {
+        "helpText": "Choose your preferred appointment slot"
+      },
+      "validation": {
+        "required": false
+      }
+    },
+    {
+      "order": 18,
+      "type": "DIVIDER",
+      "label": "Section 4: Toggle & File Upload",
+      "config": {},
+      "validation": {}
+    },
+    {
+      "order": 19,
+      "type": "HEADING",
+      "label": "Section 4: Toggle & File Upload",
+      "config": {
+        "headingLevel": 2,
+        "text": "Section 4: Toggle & File Upload"
+      },
+      "validation": {}
+    },
+    {
+      "order": 20,
+      "type": "TOGGLE",
+      "label": "Email Notifications",
+      "config": {
+        "helpText": "Receive updates via email"
+      },
+      "validation": {
+        "required": false
+      }
+    },
+    {
+      "order": 21,
+      "type": "FILE",
+      "label": "Resume Upload",
+      "config": {
+        "helpText": "Upload your resume (PDF or DOCX)",
+        "acceptedFileTypes": [".pdf", ".docx", ".doc"]
+      },
+      "validation": {
+        "required": false
+      }
+    },
+    {
+      "order": 22,
+      "type": "IMAGE_GALLERY",
+      "label": "Photo Gallery",
+      "config": {
+        "helpText": "Upload up to 5 photos",
+        "maxImages": 5
+      },
+      "validation": {
+        "required": false
+      }
+    },
+    {
+      "order": 23,
+      "type": "DIVIDER",
+      "label": "Section 5: Display Elements",
+      "config": {},
+      "validation": {}
+    },
+    {
+      "order": 24,
+      "type": "HEADING",
+      "label": "Section 5: Display Elements",
+      "config": {
+        "headingLevel": 2,
+        "text": "Section 5: Display Elements"
+      },
+      "validation": {}
+    },
+    {
+      "order": 25,
+      "type": "IMAGE",
+      "label": "Product Image",
+      "config": {
+        "imageUrl": "https://via.placeholder.com/600x400",
+        "altText": "Placeholder product image",
+        "caption": "This is a sample image caption for theme testing"
+      },
+      "validation": {}
+    },
+    {
+      "order": 26,
+      "type": "TEXT_BLOCK",
+      "label": "Additional Information",
+      "config": {
+        "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. This text block tests theme typography and paragraph spacing."
+      },
+      "validation": {}
+    },
+    {
+      "order": 27,
+      "type": "HEADING",
+      "label": "Heading Level 3 Test",
+      "config": {
+        "headingLevel": 3,
+        "text": "This is a Level 3 Heading"
+      },
+      "validation": {}
+    },
+    {
+      "order": 28,
+      "type": "HEADING",
+      "label": "Heading Level 4 Test",
+      "config": {
+        "headingLevel": 4,
+        "text": "This is a Level 4 Heading"
+      },
+      "validation": {}
+    },
+    {
+      "order": 29,
+      "type": "DIVIDER",
+      "label": "End of Form",
+      "config": {},
+      "validation": {}
+    }
+  ],
+  "settings": {
+    "columnLayout": 1,
+    "showProgressBar": false,
+    "allowMultipleSubmissions": true,
+    "requireAuthentication": false
+  },
+  "submitButtonText": "Submit Test Form",
+  "successMessage": "Thank you! Your test form submission was successful.",
+  "testingInstructions": {
+    "step1": "Apply Light Theme and verify all 16 field types render correctly",
+    "step2": "Apply Dark Theme and verify all fields update immediately",
+    "step3": "Apply Custom Theme and verify unusual fonts/colors work",
+    "step4": "Test in Preview mode to ensure consistency",
+    "step5": "Publish and test on public form to verify theme loads via API",
+    "step6": "Test on mobile (<768px) to verify responsive theme overrides"
+  },
+  "fieldTypesIncluded": [
+    "TEXT",
+    "EMAIL",
+    "NUMBER",
+    "TEXTAREA",
+    "SELECT",
+    "RADIO",
+    "CHECKBOX",
+    "DATE",
+    "DATETIME",
+    "TOGGLE",
+    "FILE",
+    "IMAGE_GALLERY",
+    "HEADING",
+    "IMAGE",
+    "TEXT_BLOCK",
+    "DIVIDER"
+  ],
+  "fieldCount": 29,
+  "uniqueFieldTypes": 16
+}

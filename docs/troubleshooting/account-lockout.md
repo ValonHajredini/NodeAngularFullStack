@@ -103,9 +103,9 @@ In production environments, you have these options:
 curl http://localhost:3000/api/v1/auth/test-credentials
 
 # Default test accounts
-admin@example.com / Admin123!@#
+admin@example.com / User123!@#
 user@example.com / User123!@#
-readonly@example.com / Read123!@#
+readonly@example.com / User123!@#
 ```
 
 ## Implementation Details

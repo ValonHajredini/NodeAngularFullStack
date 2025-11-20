@@ -1,0 +1,1483 @@
+<p-dialog
+  [visible]="visibleSignal()"
+  (visibleChange)="onVisibilityChange($event)"
+  (onHide)="handleDialogClose()"
+  [modal]="true"
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '1000px', maxHeight: '90vh' }"
+  [breakpoints]="{ '1024px': '900px', '768px': '100vw' }"
+  [contentStyle]="{ maxHeight: 'calc(90vh - 240px)', overflow: 'hidden' }"
+  [header]="dialogHeader()"
+  styleClass="template-editor-dialog"
+>
+  <p-toast position="bottom-right" />
+  <p-confirmDialog />
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="flex items-center justify-center py-12">
+      <p-progressSpinner />
+      <p class="ml-4">Loading template...</p>
+    </div>
+  } @else if (error()) {
+    <!-- Error State -->
+    <div class="bg-red-50 border border-red-200 rounded p-4 mb-4">
+      <div class="flex items-start gap-3">
+        <i class="pi pi-exclamation-circle text-red-500 text-xl mt-1"></i>
+        <div class="flex-1">
+          <h4 class="text-red-800 font-semibold mb-1">Error Loading Template</h4>
+          <p class="text-red-700 text-sm">{{ error() }}</p>
+        </div>
+      </div>
+      <button
+        pButton
+        label="Retry"
+        icon="pi pi-refresh"
+        class="p-button-sm mt-3"
+        type="button"
+        aria-label="Retry loading template"
+        (click)="loadTemplateData()"
+      >
+        Retry
+      </button>
+    </div>
+  } @else {
+    <!-- Wizard Stepper -->
+    <p-stepper [(value)]="currentStep" [linear]="false">
+      <p-step-list>
+        <p-step [value]="0">Category</p-step>
+        <p-step [value]="1">Basic Info</p-step>
+        <p-step [value]="2">Schema & Fields</p-step>
+        <p-step [value]="3">Business Logic</p-step>
+        <p-step [value]="4">Overview</p-step>
+      </p-step-list>
+
+      <p-step-panels>
+        <!-- Step 0: Category Selection -->
+        <p-step-panel [value]="0">
+          <ng-template #content>
+            <div class="overflow-y-auto" style="max-height: calc(90vh - 300px)">
+              <form [formGroup]="templateForm" class="space-y-6 py-4">
+                <!-- Category Selection -->
+                <div class="field">
+                  <label class="block font-medium text-gray-700 mb-4">
+                    Select Template Category <span class="text-red-500">*</span>
+                  </label>
+                  <p class="text-sm text-gray-600 mb-4">
+                    Choose the category that best fits your template. This determines which business
+                    logic features are available.
+                  </p>
+
+                  <!-- Category Cards Grid -->
+                  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                    <!-- E-commerce Card -->
+                    <div
+                      class="category-card border-2 rounded-lg p-4 cursor-pointer transition-all hover:shadow-md"
+                      [class.border-blue-500]="categoryControl?.value === 'ecommerce'"
+                      [class.bg-blue-50]="categoryControl?.value === 'ecommerce'"
+                      [class.border-gray-300]="categoryControl?.value !== 'ecommerce'"
+                      (click)="templateForm.patchValue({ category: 'ecommerce' })"
+                    >
+                      <div class="flex flex-col items-center text-center space-y-2">
+                        <i class="pi pi-shopping-cart text-3xl text-blue-600"></i>
+                        <h4 class="font-semibold text-gray-900">E-commerce</h4>
+                        <p class="text-xs text-gray-600">
+                          Product forms with inventory tracking and stock management
+                        </p>
+                      </div>
+                    </div>
+
+                    <!-- Services Card -->
+                    <div
+                      class="category-card border-2 rounded-lg p-4 cursor-pointer transition-all hover:shadow-md"
+                      [class.border-purple-500]="categoryControl?.value === 'services'"
+                      [class.bg-purple-50]="categoryControl?.value === 'services'"
+                      [class.border-gray-300]="categoryControl?.value !== 'services'"
+                      (click)="templateForm.patchValue({ category: 'services' })"
+                    >
+                      <div class="flex flex-col items-center text-center space-y-2">
+                        <i class="pi pi-calendar text-3xl text-purple-600"></i>
+                        <h4 class="font-semibold text-gray-900">Services</h4>
+                        <p class="text-xs text-gray-600">
+                          Appointment booking with time slots and availability tracking
+                        </p>
+                      </div>
+                    </div>
+
+                    <!-- Data Collection Card -->
+                    <div
+                      class="category-card border-2 rounded-lg p-4 cursor-pointer transition-all hover:shadow-md"
+                      [class.border-green-500]="categoryControl?.value === 'data_collection'"
+                      [class.bg-green-50]="categoryControl?.value === 'data_collection'"
+                      [class.border-gray-300]="categoryControl?.value !== 'data_collection'"
+                      (click)="templateForm.patchValue({ category: 'data_collection' })"
+                    >
+                      <div class="flex flex-col items-center text-center space-y-2">
+                        <i class="pi pi-database text-3xl text-green-600"></i>
+                        <h4 class="font-semibold text-gray-900">Data Collection</h4>
+                        <p class="text-xs text-gray-600">
+                          General forms for collecting user data and information
+                        </p>
+                      </div>
+                    </div>
+
+                    <!-- Events Card -->
+                    <div
+                      class="category-card border-2 rounded-lg p-4 cursor-pointer transition-all hover:shadow-md"
+                      [class.border-orange-500]="categoryControl?.value === 'events'"
+                      [class.bg-orange-50]="categoryControl?.value === 'events'"
+                      [class.border-gray-300]="categoryControl?.value !== 'events'"
+                      (click)="templateForm.patchValue({ category: 'events' })"
+                    >
+                      <div class="flex flex-col items-center text-center space-y-2">
+                        <i class="pi pi-star text-3xl text-orange-600"></i>
+                        <h4 class="font-semibold text-gray-900">Events</h4>
+                        <p class="text-xs text-gray-600">
+                          Event registration forms with attendee management
+                        </p>
+                      </div>
+                    </div>
+
+                    <!-- Quiz Card -->
+                    <div
+                      class="category-card border-2 rounded-lg p-4 cursor-pointer transition-all hover:shadow-md"
+                      [class.border-teal-500]="categoryControl?.value === 'quiz'"
+                      [class.bg-teal-50]="categoryControl?.value === 'quiz'"
+                      [class.border-gray-300]="categoryControl?.value !== 'quiz'"
+                      (click)="templateForm.patchValue({ category: 'quiz' })"
+                    >
+                      <div class="flex flex-col items-center text-center space-y-2">
+                        <i class="pi pi-check-square text-3xl text-teal-600"></i>
+                        <h4 class="font-semibold text-gray-900">Quiz</h4>
+                        <p class="text-xs text-gray-600">
+                          Interactive quizzes with scoring rules and results display
+                        </p>
+                      </div>
+                    </div>
+
+                    <!-- Polls Card -->
+                    <div
+                      class="category-card border-2 rounded-lg p-4 cursor-pointer transition-all hover:shadow-md"
+                      [class.border-pink-500]="categoryControl?.value === 'polls'"
+                      [class.bg-pink-50]="categoryControl?.value === 'polls'"
+                      [class.border-gray-300]="categoryControl?.value !== 'polls'"
+                      (click)="templateForm.patchValue({ category: 'polls' })"
+                    >
+                      <div class="flex flex-col items-center text-center space-y-2">
+                        <i class="pi pi-chart-bar text-3xl text-pink-600"></i>
+                        <h4 class="font-semibold text-gray-900">Polls</h4>
+                        <p class="text-xs text-gray-600">
+                          Voting polls with duplicate prevention and result visualization
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  @if (
+                    categoryControl?.invalid && (categoryControl?.dirty || categoryControl?.touched)
+                  ) {
+                    <small class="text-red-500 block mt-1"> Please select a category </small>
+                  }
+                </div>
+              </form>
+            </div>
+          </ng-template>
+        </p-step-panel>
+
+        <!-- Step 1: Basic Info (Template Name & Description) -->
+        <p-step-panel [value]="1">
+          <ng-template #content>
+            <div class="overflow-y-auto" style="max-height: calc(90vh - 300px)">
+              <form [formGroup]="templateForm" class="space-y-6 py-4">
+                <div class="space-y-4">
+                  <!-- Name Field -->
+                  <div class="field">
+                    <label for="name" class="block font-medium text-gray-700 mb-2">
+                      Template Name <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      pInputText
+                      id="name"
+                      formControlName="name"
+                      class="w-full"
+                      placeholder="Enter template name"
+                      [class.ng-invalid]="
+                        nameControl?.invalid && (nameControl?.dirty || nameControl?.touched)
+                      "
+                    />
+                    @if (nameControl?.invalid && (nameControl?.dirty || nameControl?.touched)) {
+                      <small class="text-red-500 block mt-1">
+                        @if (nameControl?.errors?.['required']) {
+                          Name is required
+                        }
+                        @if (nameControl?.errors?.['maxlength']) {
+                          Name must not exceed 255 characters
+                        }
+                      </small>
+                    }
+                  </div>
+
+                  <!-- Description Field -->
+                  <div class="field">
+                    <label for="description" class="block font-medium text-gray-700 mb-2">
+                      Description <span class="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      pTextarea
+                      id="description"
+                      formControlName="description"
+                      class="w-full"
+                      rows="5"
+                      placeholder="Enter template description"
+                      [class.ng-invalid]="
+                        descriptionControl?.invalid &&
+                        (descriptionControl?.dirty || descriptionControl?.touched)
+                      "
+                    ></textarea>
+                    @if (
+                      descriptionControl?.invalid &&
+                      (descriptionControl?.dirty || descriptionControl?.touched)
+                    ) {
+                      <small class="text-red-500 block mt-1">
+                        @if (descriptionControl?.errors?.['required']) {
+                          Description is required
+                        }
+                        @if (descriptionControl?.errors?.['maxlength']) {
+                          Description must not exceed 500 characters
+                        }
+                      </small>
+                    }
+                  </div>
+                </div>
+              </form>
+            </div>
+          </ng-template>
+        </p-step-panel>
+
+        <!-- Step 2: Schema JSON / Field Editor -->
+        <p-step-panel [value]="2">
+          <ng-template #content>
+            <div class="overflow-y-auto" style="max-height: calc(90vh - 300px)">
+              <form [formGroup]="templateForm">
+                <div class="space-y-4 pt-4 pb-12">
+                  <!-- Validation Requirements Panel (Epic 29, Story 29.4) -->
+                  @if (categoryControl?.value) {
+                    <div class="mb-4">
+                      <app-validation-requirements
+                        [category]="categoryControl!.value"
+                        [currentSchema]="parsedSchemaForValidation()"
+                        (addField)="handleAddFieldFromValidation($event)"
+                        (fixFieldType)="handleFixFieldTypeFromValidation($event)"
+                      />
+                    </div>
+                  }
+
+                  <!-- View Mode Toggle & Add Field Button -->
+                  <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800">Template Schema</h3>
+                    <div class="flex gap-2">
+                      <!-- Add Field Button -->
+                      <button
+                        pButton
+                        label="Add Field"
+                        icon="pi pi-plus"
+                        class="p-button-sm p-button-success"
+                        (click)="openAddFieldDialog()"
+                        type="button"
+                        pTooltip="Quick add a field to the schema"
+                      ></button>
+                      <!-- Show Fields/JSON Toggle -->
+                      <button
+                        pButton
+                        [label]="viewMode() === 'json' ? 'Show Fields' : 'Show JSON'"
+                        [icon]="viewMode() === 'json' ? 'pi pi-list' : 'pi pi-code'"
+                        class="p-button-sm p-button-outlined"
+                        (click)="toggleViewMode()"
+                        [disabled]="schemaErrors().length > 0"
+                        type="button"
+                      ></button>
+                    </div>
+                  </div>
+
+                  <!-- JSON View -->
+                  @if (viewMode() === 'json') {
+                    <div class="space-y-4">
+                      <!-- Schema Errors Panel -->
+                      @if (schemaErrors().length > 0) {
+                        <div class="bg-red-50 border border-red-200 rounded p-4">
+                          <div class="flex items-start gap-2">
+                            <i class="pi pi-exclamation-circle text-red-500 mt-1"></i>
+                            <div class="flex-1">
+                              <h4 class="text-red-800 font-semibold mb-2">
+                                Schema Validation Errors
+                              </h4>
+                              <ul class="list-disc list-inside space-y-1">
+                                @for (error of schemaErrors(); track error) {
+                                  <li class="text-red-700 text-sm">{{ error }}</li>
+                                }
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      }
+
+                      <!-- JSON Textarea -->
+                      <div class="field">
+                        <label class="block font-medium text-gray-700 mb-2">
+                          Paste JSON Schema <span class="text-red-500">*</span>
+                        </label>
+                        <textarea
+                          pTextarea
+                          formControlName="schema"
+                          (blur)="validateSchema()"
+                          class="w-full font-mono text-sm"
+                          rows="25"
+                          placeholder='Paste your JSON schema here, e.g., {"fields": [], "settings": {}}'
+                          style="resize: vertical; min-height: 500px"
+                        ></textarea>
+                      </div>
+
+                      <div class="flex items-center justify-between">
+                        <p class="text-sm text-gray-500 italic">
+                          <i class="pi pi-info-circle mr-1"></i>
+                          Schema must have a "fields" array with each field containing: id, type,
+                          fieldName, label. Max size: 100KB.
+                        </p>
+                        <button
+                          pButton
+                          label="Validate Schema"
+                          icon="pi pi-check-circle"
+                          class="p-button-sm p-button-secondary"
+                          (click)="validateSchema()"
+                          type="button"
+                        ></button>
+                      </div>
+                    </div>
+                  }
+
+                  <!-- Field Editor View (Stepper Format) -->
+                  @if (viewMode() === 'fields') {
+                    <div class="space-y-4">
+                      @if (parsedFields().length === 0) {
+                        <div class="text-center py-8 text-gray-500">
+                          <i class="pi pi-inbox text-4xl mb-3 block"></i>
+                          <p>No fields found in schema</p>
+                        </div>
+                      } @else {
+                        <!-- Field Progress Indicator -->
+                        <div class="bg-blue-50 border border-blue-200 rounded p-3">
+                          <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-semibold text-gray-700">
+                              Editing Field {{ currentFieldIndex() + 1 }} of {{ totalFields() }}
+                            </span>
+                            <span class="text-xs text-gray-500">
+                              {{ currentField().label || 'Unnamed Field' }}
+                            </span>
+                          </div>
+                          <!-- Progress Bar -->
+                          <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              class="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                              [style.width.%]="((currentFieldIndex() + 1) / totalFields()) * 100"
+                            ></div>
+                          </div>
+                        </div>
+
+                        <!-- Field Editor Form (Current Field Only) -->
+                        <div class="bg-gray-50 border border-gray-200 rounded p-6">
+                          <div class="space-y-4">
+                            <h4 class="text-lg font-semibold text-gray-800 mb-4">
+                              Field Configuration
+                            </h4>
+
+                            <div class="space-y-4">
+                              <!-- Row 1: Field Name and Label -->
+                              <div class="grid grid-cols-2 gap-4">
+                                <!-- Field Name -->
+                                <div class="field">
+                                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Field Name <span class="text-red-500">*</span>
+                                  </label>
+                                  <input
+                                    pInputText
+                                    [value]="currentField().fieldName"
+                                    (input)="
+                                      updateFieldProperty(
+                                        currentFieldIndex(),
+                                        'fieldName',
+                                        $any($event.target).value
+                                      )
+                                    "
+                                    class="w-full"
+                                    placeholder="e.g., participant_name"
+                                  />
+                                </div>
+
+                                <!-- Label -->
+                                <div class="field">
+                                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Label <span class="text-red-500">*</span>
+                                  </label>
+                                  <input
+                                    pInputText
+                                    [value]="currentField().label"
+                                    (input)="
+                                      updateFieldProperty(
+                                        currentFieldIndex(),
+                                        'label',
+                                        $any($event.target).value
+                                      )
+                                    "
+                                    class="w-full"
+                                    placeholder="e.g., Your Name"
+                                  />
+                                </div>
+                              </div>
+
+                              <!-- Row 2: Field Type and Required Checkbox (inline) -->
+                              <div class="grid grid-cols-2 gap-4">
+                                <!-- Type (readonly) -->
+                                <div class="field">
+                                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Field Type
+                                  </label>
+                                  <input
+                                    pInputText
+                                    [value]="currentField().type"
+                                    class="w-full bg-gray-100"
+                                    readonly
+                                  />
+                                  <small class="text-gray-500 block mt-1">
+                                    Field type cannot be changed
+                                  </small>
+                                </div>
+
+                                <!-- Required Checkbox -->
+                                <div class="field">
+                                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Required
+                                  </label>
+                                  <div class="flex items-center h-10">
+                                    <p-checkbox
+                                      [binary]="true"
+                                      [(ngModel)]="currentField().required"
+                                      [ngModelOptions]="{ standalone: true }"
+                                      (ngModelChange)="
+                                        updateFieldProperty(currentFieldIndex(), 'required', $event)
+                                      "
+                                      [inputId]="'required-field'"
+                                    />
+                                    <label
+                                      for="required-field"
+                                      class="ml-2 text-sm text-gray-600 cursor-pointer"
+                                    >
+                                      Mark this field as required
+                                    </label>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <!-- Options Section (for radio, select, dropdown, checkbox fields) -->
+                            @if (currentField() && fieldHasOptions(currentField()!.type)) {
+                              <div class="mt-6 pt-4 border-t border-gray-300">
+                                <div class="flex items-center justify-between mb-4">
+                                  <label class="block text-base font-semibold text-gray-800">
+                                    Field Options
+                                    <span class="text-sm text-gray-500 ml-2 font-normal">
+                                      ({{ currentField().options?.length || 0 }} options)
+                                    </span>
+                                  </label>
+                                  <button
+                                    pButton
+                                    label="Add Option"
+                                    icon="pi pi-plus"
+                                    class="p-button-sm p-button-outlined"
+                                    type="button"
+                                    (click)="addFieldOption(currentFieldIndex())"
+                                  ></button>
+                                </div>
+
+                                @if (
+                                  currentField().options && currentField()!.options!.length > 0
+                                ) {
+                                  <div class="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                                    @for (
+                                      option of currentField().options;
+                                      track option.value;
+                                      let optIdx = $index
+                                    ) {
+                                      <div class="bg-white border border-gray-200 rounded p-4">
+                                        <div class="grid grid-cols-2 gap-4">
+                                          <div class="field">
+                                            <label
+                                              class="block text-xs font-medium text-gray-600 mb-1"
+                                            >
+                                              Option Label
+                                            </label>
+                                            <input
+                                              pInputText
+                                              [value]="option.label"
+                                              (input)="
+                                                updateFieldOptionProperty(
+                                                  currentFieldIndex(),
+                                                  optIdx,
+                                                  'label',
+                                                  $any($event.target).value
+                                                )
+                                              "
+                                              class="w-full"
+                                              placeholder="e.g., Option 1"
+                                            />
+                                          </div>
+                                          <div class="field">
+                                            <label
+                                              class="block text-xs font-medium text-gray-600 mb-1"
+                                            >
+                                              Option Value
+                                            </label>
+                                            <div class="flex gap-2">
+                                              <input
+                                                pInputText
+                                                [value]="option.value"
+                                                (input)="
+                                                  updateFieldOptionProperty(
+                                                    currentFieldIndex(),
+                                                    optIdx,
+                                                    'value',
+                                                    $any($event.target).value
+                                                  )
+                                                "
+                                                class="w-full"
+                                                placeholder="e.g., option_1"
+                                              />
+                                              <button
+                                                pButton
+                                                icon="pi pi-trash"
+                                                class="p-button-sm p-button-danger p-button-text"
+                                                type="button"
+                                                (click)="
+                                                  removeFieldOption(currentFieldIndex(), optIdx)
+                                                "
+                                                [attr.aria-label]="'Remove option ' + (optIdx + 1)"
+                                              ></button>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    }
+                                  </div>
+                                } @else {
+                                  <div
+                                    class="text-center py-6 bg-gray-100 border border-dashed border-gray-300 rounded"
+                                  >
+                                    <i
+                                      class="pi pi-info-circle text-gray-400 text-2xl mb-2 block"
+                                    ></i>
+                                    <p class="text-sm text-gray-500">
+                                      No options defined. Click "Add Option" to create choices.
+                                    </p>
+                                  </div>
+                                }
+                              </div>
+                            }
+
+                            <!-- Time Slot Metadata Section (for TIME_SLOT fields) -->
+                            @if (currentField() && currentField().type === 'time_slot') {
+                              <div class="mt-6 pt-4 border-t border-gray-300">
+                                <div class="flex items-center justify-between mb-4">
+                                  <label class="block text-base font-semibold text-gray-800">
+                                    Time Slot Configuration
+                                  </label>
+                                </div>
+
+                                <!-- Use Global Defaults Toggle -->
+                                <div class="field mb-4">
+                                  <div class="flex items-center">
+                                    <p-checkbox
+                                      [binary]="true"
+                                      [ngModel]="usesGlobalDefaults()"
+                                      [ngModelOptions]="{ standalone: true }"
+                                      (ngModelChange)="
+                                        updateTimeSlotMetadata('useGlobalDefaults', $event)
+                                      "
+                                      [inputId]="'use-global-defaults'"
+                                    />
+                                    <label
+                                      for="use-global-defaults"
+                                      class="ml-2 text-sm font-medium text-gray-700 cursor-pointer"
+                                    >
+                                      Use global time slot defaults from Business Logic (Step 3)
+                                    </label>
+                                  </div>
+                                  <small class="text-gray-500 block mt-1 ml-6">
+                                    When enabled, this field will use the global defaults configured
+                                    in Step 3
+                                  </small>
+                                </div>
+
+                                <!-- Override Settings (shown when NOT using global defaults) -->
+                                @if (!usesGlobalDefaults()) {
+                                  <div class="bg-purple-50 border border-purple-200 rounded p-4">
+                                    <h5 class="text-sm font-semibold text-purple-900 mb-3">
+                                      <i class="pi pi-clock mr-2"></i>Field-Specific Time Slot
+                                      Settings
+                                    </h5>
+
+                                    <div class="grid grid-cols-2 gap-4">
+                                      <!-- Interval Dropdown -->
+                                      <div class="field">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                                          Slot Duration
+                                        </label>
+                                        <select
+                                          [ngModel]="
+                                            getTimeSlotMetadataProperty('interval', '30min')
+                                          "
+                                          [ngModelOptions]="{ standalone: true }"
+                                          (ngModelChange)="
+                                            updateTimeSlotMetadata('interval', $event)
+                                          "
+                                          class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                                        >
+                                          <option value="5min">5 minutes</option>
+                                          <option value="10min">10 minutes</option>
+                                          <option value="15min">15 minutes</option>
+                                          <option value="30min">30 minutes</option>
+                                          <option value="1h">1 hour</option>
+                                          <option value="3h">3 hours</option>
+                                          <option value="6h">6 hours</option>
+                                          <option value="all-day">All day</option>
+                                        </select>
+                                      </div>
+
+                                      <!-- Time Format Radio Buttons -->
+                                      <div class="field">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                                          Time Format
+                                        </label>
+                                        <div class="flex gap-4 mt-2">
+                                          <div class="flex items-center">
+                                            <input
+                                              type="radio"
+                                              [id]="'field-format12h-' + currentFieldIndex()"
+                                              name="fieldTimeFormat"
+                                              value="12h"
+                                              [ngModel]="
+                                                getTimeSlotMetadataProperty('timeFormat', '12h')
+                                              "
+                                              [ngModelOptions]="{ standalone: true }"
+                                              (ngModelChange)="
+                                                updateTimeSlotMetadata('timeFormat', $event)
+                                              "
+                                              class="mr-2"
+                                            />
+                                            <label
+                                              [for]="'field-format12h-' + currentFieldIndex()"
+                                              class="text-sm"
+                                            >
+                                              12-hour (AM/PM)
+                                            </label>
+                                          </div>
+                                          <div class="flex items-center">
+                                            <input
+                                              type="radio"
+                                              [id]="'field-format24h-' + currentFieldIndex()"
+                                              name="fieldTimeFormat"
+                                              value="24h"
+                                              [ngModel]="
+                                                getTimeSlotMetadataProperty('timeFormat', '12h')
+                                              "
+                                              [ngModelOptions]="{ standalone: true }"
+                                              (ngModelChange)="
+                                                updateTimeSlotMetadata('timeFormat', $event)
+                                              "
+                                              class="mr-2"
+                                            />
+                                            <label
+                                              [for]="'field-format24h-' + currentFieldIndex()"
+                                              class="text-sm"
+                                            >
+                                              24-hour
+                                            </label>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      <!-- Start Time Input -->
+                                      <div class="field">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                                          Start Time
+                                        </label>
+                                        <input
+                                          pInputText
+                                          type="time"
+                                          [ngModel]="
+                                            getTimeSlotMetadataProperty('startTime', '09:00')
+                                          "
+                                          [ngModelOptions]="{ standalone: true }"
+                                          (ngModelChange)="
+                                            updateTimeSlotMetadata('startTime', $event)
+                                          "
+                                          class="w-full"
+                                        />
+                                      </div>
+
+                                      <!-- End Time Input -->
+                                      <div class="field">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                                          End Time
+                                        </label>
+                                        <input
+                                          pInputText
+                                          type="time"
+                                          [ngModel]="
+                                            getTimeSlotMetadataProperty('endTime', '17:00')
+                                          "
+                                          [ngModelOptions]="{ standalone: true }"
+                                          (ngModelChange)="
+                                            updateTimeSlotMetadata('endTime', $event)
+                                          "
+                                          class="w-full"
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                }
+                              </div>
+                            }
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              </form>
+            </div>
+          </ng-template>
+        </p-step-panel>
+
+        <!-- Step 3: Business Logic Configuration -->
+        <p-step-panel [value]="3">
+          <ng-template #content>
+            <div class="overflow-y-auto" style="max-height: calc(90vh - 300px)">
+              <form [formGroup]="templateForm" class="space-y-6 py-4">
+                <!-- Business Logic Configuration Section -->
+                <div class="space-y-4">
+                  <h3 class="text-lg font-semibold text-gray-800 border-b pb-2">
+                    Analytics & Business Logic
+                  </h3>
+
+                  @if (categoryControl?.value === 'ecommerce') {
+                    <!-- Inventory Config -->
+                    <div class="space-y-4 bg-blue-50 border border-blue-200 rounded p-4">
+                      <h4 class="font-semibold text-blue-900 mb-3">
+                        <i class="pi pi-box mr-2"></i>Inventory Tracking
+                      </h4>
+                      @if (availableFields().length === 0) {
+                        <p class="text-sm text-gray-600 italic py-2">
+                          <i class="pi pi-info-circle mr-2"></i>
+                          Please add fields in Step 2 to configure inventory tracking
+                        </p>
+                      } @else {
+                        <div class="grid grid-cols-2 gap-4">
+                          <div class="field">
+                            <label
+                              for="stockField"
+                              class="block text-sm font-medium text-gray-700 mb-2"
+                              >Stock/Product Field</label
+                            >
+                            <select
+                              id="stockField"
+                              [(ngModel)]="inventoryConfig().stockField"
+                              [ngModelOptions]="{ standalone: true }"
+                              class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                            >
+                              <option value="">Select a field</option>
+                              @for (field of availableFields(); track field.value) {
+                                <option [value]="field.fieldName">{{ field.label }}</option>
+                              }
+                            </select>
+                            <small class="text-gray-500 block mt-1"
+                              >Field that identifies the product/item</small
+                            >
+                          </div>
+                          <div class="field flex items-center pt-6">
+                            <p-checkbox
+                              [(ngModel)]="inventoryConfig().decrementOnSubmit"
+                              [ngModelOptions]="{ standalone: true }"
+                              [binary]="true"
+                              label="Decrement stock on submission"
+                              inputId="decrementOnSubmit"
+                            />
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  }
+
+                  @if (categoryControl?.value === 'services') {
+                    <!-- Appointment Config -->
+                    <div class="space-y-4 bg-purple-50 border border-purple-200 rounded p-4">
+                      <h4 class="font-semibold text-purple-900 mb-3">
+                        <i class="pi pi-calendar mr-2"></i>Appointment Booking
+                      </h4>
+                      @if (availableFields().length === 0) {
+                        <p class="text-sm text-gray-600 italic py-2">
+                          <i class="pi pi-info-circle mr-2"></i>
+                          Please add fields in Step 2 to configure appointment booking
+                        </p>
+                      } @else {
+                        <div class="grid grid-cols-2 gap-4">
+                          <div class="field">
+                            <label
+                              for="timeSlotField"
+                              class="block text-sm font-medium text-gray-700 mb-2"
+                              >Time Slot Field</label
+                            >
+                            <select
+                              id="timeSlotField"
+                              [(ngModel)]="appointmentConfig().timeSlotField"
+                              [ngModelOptions]="{ standalone: true }"
+                              class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                            >
+                              <option value="">Select a field</option>
+                              @for (field of availableFields(); track field.value) {
+                                <option [value]="field.fieldName">{{ field.label }}</option>
+                              }
+                            </select>
+                            <small class="text-gray-500 block mt-1"
+                              >Field for appointment time slots</small
+                            >
+                          </div>
+                          <div class="field">
+                            <label
+                              for="dateField"
+                              class="block text-sm font-medium text-gray-700 mb-2"
+                              >Date Field</label
+                            >
+                            <select
+                              id="dateField"
+                              [(ngModel)]="appointmentConfig().dateField"
+                              [ngModelOptions]="{ standalone: true }"
+                              class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                            >
+                              <option value="">Select a field</option>
+                              @for (field of availableFields(); track field.value) {
+                                <option [value]="field.fieldName">{{ field.label }}</option>
+                              }
+                            </select>
+                            <small class="text-gray-500 block mt-1"
+                              >Field for appointment date</small
+                            >
+                          </div>
+                        </div>
+                        <div class="field">
+                          <label
+                            for="maxBookingsPerSlot"
+                            class="block text-sm font-medium text-gray-700 mb-2"
+                            >Max Bookings Per Slot</label
+                          >
+                          <input
+                            pInputText
+                            id="maxBookingsPerSlot"
+                            type="number"
+                            [(ngModel)]="appointmentConfig().maxBookingsPerSlot"
+                            [ngModelOptions]="{ standalone: true }"
+                            min="1"
+                            class="w-full"
+                          />
+                        </div>
+
+                        <!-- Global Time Slot Defaults -->
+                        <div class="mt-6 pt-4 border-t border-purple-200">
+                          <h5 class="text-sm font-semibold text-purple-900 mb-3">
+                            <i class="pi pi-clock mr-2"></i>Global Time Slot Defaults
+                          </h5>
+                          <small class="text-gray-600 block mb-4"
+                            >Configure default time slot settings that will be applied to all time
+                            slot fields in this template</small
+                          >
+
+                          <div class="grid grid-cols-2 gap-4">
+                            <!-- Interval Dropdown -->
+                            <div class="field">
+                              <label
+                                for="timeSlotInterval"
+                                class="block text-sm font-medium text-gray-700 mb-2"
+                                >Slot Duration</label
+                              >
+                              <select
+                                id="timeSlotInterval"
+                                [(ngModel)]="appointmentConfig().globalTimeSlotDefaults.interval"
+                                [ngModelOptions]="{ standalone: true }"
+                                class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                              >
+                                <option value="5min">5 minutes</option>
+                                <option value="10min">10 minutes</option>
+                                <option value="15min">15 minutes</option>
+                                <option value="30min">30 minutes</option>
+                                <option value="1h">1 hour</option>
+                                <option value="3h">3 hours</option>
+                                <option value="6h">6 hours</option>
+                                <option value="all-day">All day</option>
+                              </select>
+                              <small class="text-gray-500 block mt-1"
+                                >Duration of each time slot</small
+                              >
+                            </div>
+
+                            <!-- Time Format Radio Buttons -->
+                            <div class="field">
+                              <label class="block text-sm font-medium text-gray-700 mb-2"
+                                >Time Format</label
+                              >
+                              <div class="flex gap-4 mt-2">
+                                <div class="flex items-center">
+                                  <input
+                                    type="radio"
+                                    id="format12h"
+                                    name="timeFormat"
+                                    value="12h"
+                                    [(ngModel)]="
+                                      appointmentConfig().globalTimeSlotDefaults.timeFormat
+                                    "
+                                    [ngModelOptions]="{ standalone: true }"
+                                    class="mr-2"
+                                  />
+                                  <label for="format12h" class="text-sm">12-hour (AM/PM)</label>
+                                </div>
+                                <div class="flex items-center">
+                                  <input
+                                    type="radio"
+                                    id="format24h"
+                                    name="timeFormat"
+                                    value="24h"
+                                    [(ngModel)]="
+                                      appointmentConfig().globalTimeSlotDefaults.timeFormat
+                                    "
+                                    [ngModelOptions]="{ standalone: true }"
+                                    class="mr-2"
+                                  />
+                                  <label for="format24h" class="text-sm">24-hour</label>
+                                </div>
+                              </div>
+                              <small class="text-gray-500 block mt-1"
+                                >Display format for time slots</small
+                              >
+                            </div>
+
+                            <!-- Start Time Input -->
+                            <div class="field">
+                              <label
+                                for="startTime"
+                                class="block text-sm font-medium text-gray-700 mb-2"
+                                >Start Time</label
+                              >
+                              <input
+                                pInputText
+                                id="startTime"
+                                type="time"
+                                [(ngModel)]="appointmentConfig().globalTimeSlotDefaults.startTime"
+                                [ngModelOptions]="{ standalone: true }"
+                                class="w-full"
+                              />
+                              <small class="text-gray-500 block mt-1"
+                                >Earliest available time slot</small
+                              >
+                            </div>
+
+                            <!-- End Time Input -->
+                            <div class="field">
+                              <label
+                                for="endTime"
+                                class="block text-sm font-medium text-gray-700 mb-2"
+                                >End Time</label
+                              >
+                              <input
+                                pInputText
+                                id="endTime"
+                                type="time"
+                                [(ngModel)]="appointmentConfig().globalTimeSlotDefaults.endTime"
+                                [ngModelOptions]="{ standalone: true }"
+                                class="w-full"
+                              />
+                              <small class="text-gray-500 block mt-1"
+                                >Latest available time slot</small
+                              >
+                            </div>
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  }
+
+                  @if (categoryControl?.value === 'quiz') {
+                    <!-- Quiz Config -->
+                    <div class="space-y-4 bg-teal-50 border border-teal-200 rounded p-4">
+                      <h4 class="font-semibold text-teal-900 mb-3">
+                        <i class="pi pi-check-square mr-2"></i>Quiz Settings
+                      </h4>
+
+                      <!-- Quiz Questions Configuration -->
+                      @if (quizQuestions().length === 0) {
+                        <p class="text-sm text-gray-600 italic py-2">
+                          <i class="pi pi-info-circle mr-2"></i>
+                          Please add quiz questions (radio, select, dropdown, or checkbox fields) in
+                          Step 2
+                        </p>
+                      } @else {
+                        <div class="space-y-3">
+                          <div class="flex items-center justify-between">
+                            <label class="block text-sm font-medium text-gray-700">
+                              Quiz Questions
+                              <span class="text-xs text-gray-500 ml-2"
+                                >({{ quizQuestions().length }} questions)</span
+                              >
+                            </label>
+                          </div>
+
+                          <!-- Questions List -->
+                          <div class="space-y-3 max-h-[400px] overflow-y-auto">
+                            @for (question of quizQuestions(); track question.id) {
+                              <div class="bg-white border border-gray-300 rounded p-4">
+                                <div class="mb-3">
+                                  <label class="block text-sm font-semibold text-gray-800 mb-2">
+                                    {{ question.label }}
+                                  </label>
+                                  <span class="text-xs text-gray-500"
+                                    >Field: {{ question.fieldName }}</span
+                                  >
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-4">
+                                  <!-- Points Input -->
+                                  <div class="field">
+                                    <label
+                                      [for]="'points-' + question.id"
+                                      class="block text-xs font-medium text-gray-600 mb-1"
+                                    >
+                                      Points
+                                    </label>
+                                    <input
+                                      pInputText
+                                      [id]="'points-' + question.id"
+                                      type="number"
+                                      [ngModel]="getScoringRuleForQuestion(question.id).points || 1"
+                                      (ngModelChange)="
+                                        updateQuizQuestionPoints(question.id, $event)
+                                      "
+                                      [ngModelOptions]="{ standalone: true }"
+                                      min="1"
+                                      class="w-full"
+                                      placeholder="1"
+                                    />
+                                  </div>
+
+                                  <!-- Correct Answer Dropdown -->
+                                  <div class="field">
+                                    <label
+                                      [for]="'correctAnswer-' + question.id"
+                                      class="block text-xs font-medium text-gray-600 mb-1"
+                                    >
+                                      Correct Answer
+                                    </label>
+                                    <select
+                                      [id]="'correctAnswer-' + question.id"
+                                      [ngModel]="
+                                        getScoringRuleForQuestion(question.id).correctAnswer
+                                      "
+                                      (ngModelChange)="
+                                        updateQuizQuestionCorrectAnswer(question.id, $event)
+                                      "
+                                      [ngModelOptions]="{ standalone: true }"
+                                      class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
+                                    >
+                                      <option value="">Select correct answer</option>
+                                      @for (option of question.options; track option.value) {
+                                        <option [value]="option.value">{{ option.label }}</option>
+                                      }
+                                    </select>
+                                  </div>
+                                </div>
+                              </div>
+                            }
+                          </div>
+                        </div>
+                      }
+
+                      <!-- General Quiz Settings -->
+                      <div class="pt-4 border-t border-teal-300">
+                        <h5 class="text-sm font-semibold text-gray-800 mb-3">General Settings</h5>
+                        <div class="grid grid-cols-2 gap-4">
+                          <div class="field">
+                            <label
+                              for="passingScore"
+                              class="block text-sm font-medium text-gray-700 mb-2"
+                              >Passing Score (%)</label
+                            >
+                            <input
+                              pInputText
+                              id="passingScore"
+                              type="number"
+                              [(ngModel)]="quizConfig().passingScore"
+                              [ngModelOptions]="{ standalone: true }"
+                              min="0"
+                              max="100"
+                              class="w-full"
+                            />
+                          </div>
+                          <div class="field">
+                            <label class="block text-sm font-medium text-gray-700 mb-2"
+                              >Display Options</label
+                            >
+                            <div class="flex items-center">
+                              <p-checkbox
+                                [(ngModel)]="quizConfig().showResults"
+                                [ngModelOptions]="{ standalone: true }"
+                                [binary]="true"
+                                inputId="showResults"
+                              />
+                              <label
+                                for="showResults"
+                                class="ml-2 text-sm text-gray-700 cursor-pointer"
+                                >Show results after submission</label
+                              >
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  }
+
+                  @if (categoryControl?.value === 'polls') {
+                    <!-- Poll Config -->
+                    <div class="space-y-4 bg-pink-50 border border-pink-200 rounded p-4">
+                      <h4 class="font-semibold text-pink-900 mb-3">
+                        <i class="pi pi-chart-bar mr-2"></i>Poll Settings
+                      </h4>
+                      @if (availableFields().length === 0) {
+                        <p class="text-sm text-gray-600 italic py-2">
+                          <i class="pi pi-info-circle mr-2"></i>
+                          Please add fields in Step 2 to configure poll analytics
+                        </p>
+                      } @else {
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                          <div class="field">
+                            <label
+                              for="pollQuestionField"
+                              class="block text-sm font-medium text-gray-700 mb-2"
+                              >Poll Question Field</label
+                            >
+                            <select
+                              id="pollQuestionField"
+                              [(ngModel)]="pollConfig().pollQuestionField"
+                              [ngModelOptions]="{ standalone: true }"
+                              class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-500 bg-white"
+                            >
+                              <option value="">Select a field</option>
+                              @for (field of availableFields(); track field.value) {
+                                <option [value]="field.fieldName">{{ field.label }}</option>
+                              }
+                            </select>
+                            <small class="text-gray-500 block mt-1"
+                              >Field containing poll question</small
+                            >
+                          </div>
+                          <div class="field">
+                            <label
+                              for="optionsField"
+                              class="block text-sm font-medium text-gray-700 mb-2"
+                              >Options Field</label
+                            >
+                            <select
+                              id="optionsField"
+                              [(ngModel)]="pollConfig().optionsField"
+                              [ngModelOptions]="{ standalone: true }"
+                              class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pink-500 bg-white"
+                            >
+                              <option value="">Select a field</option>
+                              @for (field of availableFields(); track field.value) {
+                                <option [value]="field.fieldName">{{ field.label }}</option>
+                              }
+                            </select>
+                            <small class="text-gray-500 block mt-1"
+                              >Field containing voting options</small
+                            >
+                          </div>
+                        </div>
+                      }
+                      <div class="flex flex-col gap-3">
+                        <div class="field flex items-center">
+                          <p-checkbox
+                            [(ngModel)]="pollConfig().preventDuplicates"
+                            [ngModelOptions]="{ standalone: true }"
+                            [binary]="true"
+                            label="Prevent duplicate votes"
+                            inputId="preventDuplicates"
+                          />
+                        </div>
+                        <div class="field flex items-center">
+                          <p-checkbox
+                            [(ngModel)]="pollConfig().showResultsAfterVote"
+                            [ngModelOptions]="{ standalone: true }"
+                            [binary]="true"
+                            label="Show results after vote"
+                            inputId="showResultsAfterVote"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  }
+
+                  @if (
+                    categoryControl?.value === 'data_collection' ||
+                    categoryControl?.value === 'events'
+                  ) {
+                    <p class="text-gray-500 italic py-4 text-center">
+                      <i class="pi pi-info-circle mr-2"></i>
+                      No business logic configuration for this category
+                    </p>
+                  }
+                </div>
+              </form>
+            </div>
+          </ng-template>
+        </p-step-panel>
+
+        <!-- Step 4: Overview & Screenshot -->
+        <p-step-panel [value]="4">
+          <ng-template #content>
+            <div class="overflow-y-auto" style="max-height: calc(90vh - 300px)">
+              <div class="space-y-6 py-4">
+                <!-- Template Overview -->
+                <div class="space-y-4">
+                  <h3 class="text-lg font-semibold text-gray-800 border-b pb-2">
+                    Template Overview
+                  </h3>
+
+                  <!-- Summary Cards -->
+                  <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-gray-50 border border-gray-200 rounded p-4">
+                      <p class="text-sm text-gray-600 mb-1">Template Name</p>
+                      <p class="font-semibold text-gray-900">{{ nameControl?.value || 'N/A' }}</p>
+                    </div>
+                    <div class="bg-gray-50 border border-gray-200 rounded p-4">
+                      <p class="text-sm text-gray-600 mb-1">Category</p>
+                      <p class="font-semibold text-gray-900">
+                        {{ getCategoryLabel(categoryControl?.value) }}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="bg-gray-50 border border-gray-200 rounded p-4">
+                    <p class="text-sm text-gray-600 mb-1">Description</p>
+                    <p class="text-gray-900">{{ descriptionControl?.value || 'N/A' }}</p>
+                  </div>
+
+                  <div class="bg-gray-50 border border-gray-200 rounded p-4">
+                    <p class="text-sm text-gray-600 mb-2">Schema Summary</p>
+                    <div class="flex items-center gap-4 text-sm">
+                      <div class="flex items-center gap-2">
+                        <i class="pi pi-list text-blue-500"></i>
+                        <span
+                          ><strong>{{ parsedFields().length }}</strong> fields</span
+                        >
+                      </div>
+                      @if (schemaErrors().length === 0) {
+                        <div class="flex items-center gap-2 text-green-600">
+                          <i class="pi pi-check-circle"></i>
+                          <span>Valid schema</span>
+                        </div>
+                      } @else {
+                        <div class="flex items-center gap-2 text-red-600">
+                          <i class="pi pi-exclamation-circle"></i>
+                          <span>{{ schemaErrors().length }} errors</span>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Screenshot Upload -->
+                <div class="space-y-4">
+                  <h3 class="text-lg font-semibold text-gray-800 border-b pb-2">
+                    Template Thumbnail
+                  </h3>
+                  <div class="field">
+                    <label class="block font-medium text-gray-700 mb-2">
+                      Upload Screenshot
+                      <span class="text-gray-500 text-sm">(Optional, max 5MB)</span>
+                    </label>
+                    @if (!screenshotFile()) {
+                      <p-fileUpload
+                        mode="basic"
+                        chooseLabel="Choose Screenshot"
+                        accept="image/jpeg,image/png,image/webp"
+                        [maxFileSize]="5242880"
+                        (onSelect)="onScreenshotSelect($event)"
+                        [auto]="false"
+                      />
+                    } @else {
+                      <div class="flex items-center gap-3 bg-gray-50 border rounded p-3">
+                        <i class="pi pi-image text-3xl text-gray-400"></i>
+                        <div class="flex-1">
+                          <p class="font-medium text-sm text-gray-800">
+                            {{ screenshotFile()?.name }}
+                          </p>
+                          <p class="text-xs text-gray-500">
+                            {{ (screenshotFile()!.size / 1024).toFixed(1) }} KB
+                          </p>
+                        </div>
+                        <button
+                          pButton
+                          icon="pi pi-times"
+                          class="p-button-rounded p-button-text p-button-danger"
+                          (click)="removeScreenshot()"
+                          aria-label="Remove screenshot"
+                        ></button>
+                      </div>
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ng-template>
+        </p-step-panel>
+      </p-step-panels>
+    </p-stepper>
+  }
+
+  <!-- Dialog Footer -->
+  <ng-template pTemplate="footer">
+    @if (!loading() && !error()) {
+      <!-- Field Navigation (only when in field editing mode on Step 2) -->
+      @if (currentStep() === 2 && viewMode() === 'fields' && parsedFields().length > 0) {
+        <div class="flex items-center justify-between w-full">
+          @if (currentFieldIndex() === 0) {
+            <!-- On first field, show "Previous" to go to previous step -->
+            <button
+              pButton
+              label="Previous"
+              icon="pi pi-arrow-left"
+              class="p-button-outlined"
+              (click)="previousStep()"
+              type="button"
+            ></button>
+          } @else {
+            <!-- Not on first field, show "Previous Field" -->
+            <button
+              pButton
+              label="Previous Field"
+              icon="pi pi-arrow-left"
+              class="p-button-outlined"
+              (click)="previousField()"
+              type="button"
+            ></button>
+          }
+
+          <!-- Field Indicator Dots -->
+          <div class="flex items-center gap-2">
+            @for (field of parsedFields(); track field.id; let i = $index) {
+              <button
+                type="button"
+                class="w-2 h-2 rounded-full transition-all duration-200"
+                [class.bg-blue-500]="i === currentFieldIndex()"
+                [class.w-3]="i === currentFieldIndex()"
+                [class.h-3]="i === currentFieldIndex()"
+                [class.bg-gray-300]="i !== currentFieldIndex()"
+                (click)="goToField(i)"
+                [attr.aria-label]="'Go to field ' + (i + 1)"
+              ></button>
+            }
+          </div>
+
+          @if (!hasNextField()) {
+            <!-- On last field, show "Next" to go to next step -->
+            <button
+              pButton
+              label="Next"
+              icon="pi pi-arrow-right"
+              iconPos="right"
+              class="p-button-success"
+              [disabled]="!canProceedFromStep2()"
+              (click)="nextStep()"
+              type="button"
+            ></button>
+          } @else {
+            <!-- Not on last field, show "Next Field" -->
+            <button
+              pButton
+              label="Next Field"
+              icon="pi pi-arrow-right"
+              iconPos="right"
+              class="p-button-outlined"
+              (click)="nextField()"
+              type="button"
+            ></button>
+          }
+        </div>
+      } @else {
+        <!-- Step Navigation (for all other cases) -->
+        <div class="flex justify-between w-full">
+          @if (currentStep() === 0) {
+            <button
+              pButton
+              label="Cancel"
+              class="p-button-text"
+              [disabled]="saving()"
+              (click)="handleCancel()"
+              type="button"
+            ></button>
+          } @else {
+            <button
+              pButton
+              label="Previous"
+              icon="pi pi-arrow-left"
+              class="p-button-secondary"
+              (click)="previousStep()"
+              type="button"
+            ></button>
+          }
+
+          @if (currentStep() === 4) {
+            <button
+              pButton
+              [label]="saveButtonLabel()"
+              icon="pi pi-check"
+              class="p-button-success"
+              [disabled]="!canSave() || loading()"
+              [loading]="saving()"
+              (click)="handleSave()"
+              type="button"
+            ></button>
+          } @else {
+            <button
+              pButton
+              label="Next"
+              icon="pi pi-arrow-right"
+              iconPos="right"
+              [disabled]="
+                (currentStep() === 0 && !canProceedFromStep0()) ||
+                (currentStep() === 1 && !canProceedFromStep1()) ||
+                (currentStep() === 2 && !canProceedFromStep2()) ||
+                (currentStep() === 3 && !canProceedFromStep3())
+              "
+              (click)="nextStep()"
+              type="button"
+            ></button>
+          }
+        </div>
+      }
+    }
+  </ng-template>
+</p-dialog>
+
+<!-- Add Field Dialog -->
+<app-add-field-dialog
+  [visible]="showAddFieldDialog()"
+  (visibleChange)="showAddFieldDialog.set($event)"
+  (fieldsAdded)="handleFieldsAdded($event)"
+/>

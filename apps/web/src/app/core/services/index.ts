@@ -15,3 +15,6 @@ export {
 } from './token.service';
 export { ToolsService, type ToolsApiResponse, type ToolsServiceConfig } from './tools.service';
 export { ToolConfigService } from './tool-config.service';
+export { ToolRegistryService } from './tool-registry.service';
+export { TenantContextService } from './tenant-context.service';
+export { CategoryAnalyticsService } from './category-analytics.service';

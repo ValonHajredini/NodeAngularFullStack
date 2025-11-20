@@ -6,7 +6,7 @@ PGWEB_PORT ?= 8080
 API_PORT ?= 3000
 FRONTEND_PORT ?= 4200
 
-.PHONY: dev start stop restart db-start db-stop backend frontend pgweb logs
+.PHONY: dev start stop restart db-start db-stop backend frontend pgweb logs dev-setup
 
 dev: db-start start
 
@@ -55,5 +55,8 @@ pgweb:
 logs:
 	@echo "=> Tailing backend and frontend logs (Ctrl+C to exit)"
 	@tail -f logs/backend.log logs/frontend.log
+
+dev-setup:
+	@./scripts/dev-setup-tmux.sh
 
 

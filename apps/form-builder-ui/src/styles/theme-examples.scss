@@ -1,0 +1,340 @@
+/* ==========================================================================
+   Theme System Usage Examples
+   ========================================================================== */
+
+/* Example 1: Basic Component Theming */
+.example-card {
+  background-color: var(--color-surface);
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-component-lg);
+  box-shadow: var(--shadow-base);
+  transition: var(--transition-colors);
+
+  &:hover {
+    border-color: var(--color-primary-300);
+    box-shadow: var(--shadow-md);
+  }
+
+  .title {
+    color: var(--color-text-primary);
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--spacing-2);
+  }
+
+  .description {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    line-height: var(--line-height-relaxed);
+  }
+}
+
+/* Example 2: Form Component with Theme Variables */
+.example-form {
+  .form-group {
+    margin-bottom: var(--spacing-component-md);
+  }
+
+  .form-label {
+    display: block;
+    color: var(--color-text-primary);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    margin-bottom: var(--spacing-1);
+  }
+
+  .form-input {
+    width: 100%;
+    height: var(--form-input-height);
+    padding: var(--form-input-padding-y) var(--form-input-padding-x);
+    font-size: var(--form-input-font-size);
+    font-family: var(--font-family-sans);
+    background-color: var(--color-surface);
+    border: var(--form-input-border-width) solid var(--color-border);
+    border-radius: var(--form-input-border-radius);
+    color: var(--color-text-primary);
+    transition: var(--transition-colors);
+
+    &::placeholder {
+      color: var(--color-text-muted);
+    }
+
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary-500);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    &:invalid {
+      border-color: var(--color-error-500);
+    }
+  }
+
+  .form-error {
+    color: var(--color-error-600);
+    font-size: var(--font-size-xs);
+    margin-top: var(--spacing-1);
+  }
+}
+
+/* Example 3: Button Variants */
+.example-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--button-height);
+  padding: var(--button-padding-y) var(--button-padding-x);
+  font-size: var(--button-font-size);
+  font-weight: var(--button-font-weight);
+  font-family: var(--font-family-sans);
+  border-radius: var(--button-border-radius);
+  border: var(--border-width-1) solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  transition: var(--transition-colors);
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Primary variant */
+  &.primary {
+    background-color: var(--color-primary-600);
+    color: var(--color-text-inverse);
+
+    &:hover:not(:disabled) {
+      background-color: var(--color-primary-700);
+    }
+
+    &:focus {
+      outline: 2px solid var(--color-focus-ring);
+      outline-offset: 2px;
+    }
+  }
+
+  /* Secondary variant */
+  &.secondary {
+    background-color: transparent;
+    color: var(--color-primary-600);
+    border-color: var(--color-primary-600);
+
+    &:hover:not(:disabled) {
+      background-color: var(--color-primary-50);
+    }
+  }
+
+  /* Danger variant */
+  &.danger {
+    background-color: var(--color-error-600);
+    color: var(--color-text-inverse);
+
+    &:hover:not(:disabled) {
+      background-color: var(--color-error-700);
+    }
+  }
+}
+
+/* Example 4: Navigation Component */
+.example-nav {
+  background-color: var(--color-surface);
+  border-bottom: var(--border-width-1) solid var(--color-border);
+  height: var(--nav-height);
+  padding: 0 var(--nav-padding-x);
+
+  .nav-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .nav-brand {
+    display: flex;
+    align-items: center;
+    color: var(--color-text-primary);
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-bold);
+    text-decoration: none;
+
+    .nav-logo {
+      width: var(--spacing-8);
+      height: var(--spacing-8);
+      background-color: var(--color-primary-600);
+      border-radius: var(--border-radius-lg);
+      margin-right: var(--spacing-3);
+    }
+  }
+
+  .nav-menu {
+    display: flex;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+
+    .nav-item {
+      margin-left: var(--spacing-6);
+
+      .nav-link {
+        display: block;
+        padding: var(--nav-item-padding-y) var(--nav-item-padding-x);
+        color: var(--color-text-secondary);
+        text-decoration: none;
+        font-size: var(--font-size-sm);
+        font-weight: var(--font-weight-medium);
+        border-radius: var(--border-radius-base);
+        transition: var(--transition-colors);
+
+        &:hover {
+          color: var(--color-text-primary);
+          background-color: var(--color-gray-100);
+        }
+
+        &.active {
+          color: var(--color-primary-600);
+          background-color: var(--color-primary-50);
+        }
+      }
+    }
+  }
+}
+
+/* Example 5: Status Indicators */
+.example-status {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--spacing-1) var(--spacing-3);
+  border-radius: var(--border-radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+
+  &.status-success {
+    background-color: var(--color-success-100);
+    color: var(--color-success-800);
+  }
+
+  &.status-warning {
+    background-color: var(--color-warning-100);
+    color: var(--color-warning-800);
+  }
+
+  &.status-error {
+    background-color: var(--color-error-100);
+    color: var(--color-error-800);
+  }
+
+  &.status-info {
+    background-color: var(--color-info-100);
+    color: var(--color-info-800);
+  }
+}
+
+/* Example 6: Modal/Dialog */
+.example-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-index-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-4);
+
+  .modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+  }
+
+  .modal-content {
+    position: relative;
+    background-color: var(--color-surface);
+    border-radius: var(--border-radius-xl);
+    box-shadow: var(--shadow-2xl);
+    padding: var(--spacing-section-md);
+    max-width: 500px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--spacing-component-lg);
+
+      .modal-title {
+        color: var(--color-text-primary);
+        font-size: var(--font-size-xl);
+        font-weight: var(--font-weight-semibold);
+        margin: 0;
+      }
+
+      .modal-close {
+        background: none;
+        border: none;
+        color: var(--color-text-muted);
+        cursor: pointer;
+        padding: var(--spacing-2);
+        border-radius: var(--border-radius-base);
+        transition: var(--transition-colors);
+
+        &:hover {
+          color: var(--color-text-primary);
+          background-color: var(--color-gray-100);
+        }
+      }
+    }
+
+    .modal-body {
+      color: var(--color-text-secondary);
+      line-height: var(--line-height-relaxed);
+      margin-bottom: var(--spacing-component-lg);
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--spacing-3);
+    }
+  }
+}
+
+/* Example 7: Dark Mode Specific Styles */
+@media (prefers-color-scheme: dark) {
+  .example-card {
+    /* Override specific properties for dark mode if needed */
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+[data-theme='dark'] {
+  .example-nav {
+    /* Dark theme specific navigation styles */
+    box-shadow: 0 1px 0 0 var(--color-gray-700);
+  }
+}
+
+/* Example 8: Responsive Theme Scaling */
+.example-responsive {
+  font-size: calc(var(--font-size-base) * var(--text-scale, 1));
+  padding: calc(var(--spacing-4) * var(--spacing-scale, 1));
+
+  @media (max-width: 639px) {
+    --text-scale: 0.9;
+    --spacing-scale: 0.75;
+  }
+
+  @media (min-width: 1024px) {
+    --text-scale: 1.1;
+    --spacing-scale: 1.1;
+  }
+}

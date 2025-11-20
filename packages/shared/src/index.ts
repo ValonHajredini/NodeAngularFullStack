@@ -9,4 +9,19 @@ export * from './types/token-usage.interface';
 export * from './types/storage.interface';
 export * from './types/tools.interface';
 export * from './types/forms.types';
+export * from './types/theme.types';
+export * from './types/tool-registry.types';
+export * from './types/test-tool.types';
+export * from './types/export.types';
+export * from './types/validation.types';
+export * from './types/tenant.types';
+export * from './types/templates.types';
+export * from './types/inventory.types';
+export * from './types/analytics.types';
 export * from './utils/validation';
+export * from './utils/templates';
+export * from './utils/category-detection.util';
+export * from './utils/quiz-score.util';
+// NOTE: SharedAuthService is NOT exported here because it's backend-only (uses pg Pool)
+// Backend services should import it directly:
+// import { SharedAuthService } from '@nodeangularfullstack/shared/services/shared-auth.service';

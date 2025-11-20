@@ -267,7 +267,7 @@ import { environment } from '@env/environment';
 
               <div class="mt-3 text-xs p-2 rounded demo-note">
                 <i class="pi pi-info-circle mr-1"></i>
-                All demo accounts use the same password format based on role + "123!@#"
+                All demo accounts use the shared password <code>User123!@#</code>
               </div>
             </div>
           }
@@ -467,9 +467,9 @@ export class LoginComponent implements OnInit {
    */
   fillTestCredentials(role: 'admin' | 'user' | 'readonly'): void {
     const credentials = {
-      admin: { email: 'admin@example.com', password: 'Admin123!@#' },
+      admin: { email: 'admin@example.com', password: 'User123!@#' },
       user: { email: 'user@example.com', password: 'User123!@#' },
-      readonly: { email: 'readonly@example.com', password: 'Read123!@#' },
+      readonly: { email: 'readonly@example.com', password: 'User123!@#' },
     };
 
     this.loginForm.patchValue(credentials[role]);

@@ -21,24 +21,64 @@
       [formGroup]="publishForm"
       class="space-y-4"
     >
-      <!-- Expiration Date/Time Picker -->
-      <div class="flex flex-col gap-2">
-        <label for="expirationDate" class="font-semibold">Expiration Date</label>
-        <p-datepicker
-          id="expirationDate"
-          formControlName="expirationDate"
-          [showTime]="true"
-          [showIcon]="true"
-          [minDate]="minDate"
-          [maxDate]="maxDate"
-          dateFormat="yy-mm-dd"
-          placeholder="Select expiration date and time"
-          [disabled]="loading"
-          class="w-full"
-        />
-        <small class="text-gray-600">
-          Form will be accessible via public URL until this date
-        </small>
+      <!-- Publishing Mode Info -->
+      <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <div class="flex items-center gap-2 text-blue-700">
+          <i class="pi pi-info-circle"></i>
+          <span class="font-medium">Publishing Mode</span>
+        </div>
+        <p class="text-sm text-blue-600 mt-1">
+          By default, forms are published permanently with no expiration. You can optionally set a
+          custom expiration date if needed.
+        </p>
+      </div>
+
+      <!-- Custom Expiration Toggle -->
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center gap-2">
+          <p-checkbox
+            formControlName="useCustomExpiration"
+            [binary]="true"
+            inputId="useCustomExpiration"
+            [disabled]="loading"
+          ></p-checkbox>
+          <label for="useCustomExpiration" class="font-semibold cursor-pointer">
+            Set custom expiration date
+          </label>
+        </div>
+
+        <!-- Expiration Date/Time Picker (conditional) -->
+        <div *ngIf="isCustomExpirationEnabled" class="flex flex-col gap-2 ml-6">
+          <label for="expirationDate" class="font-medium text-gray-700">Expiration Date</label>
+          <p-datepicker
+            id="expirationDate"
+            formControlName="expirationDate"
+            [showTime]="true"
+            [showIcon]="true"
+            [minDate]="minDate"
+            [maxDate]="maxDate"
+            dateFormat="yy-mm-dd"
+            placeholder="Select expiration date and time"
+            [disabled]="loading"
+            class="w-full"
+          />
+          <small class="text-gray-600">
+            Form will be accessible via public URL until this date
+          </small>
+        </div>
+
+        <!-- No Expiration Info -->
+        <div
+          *ngIf="!isCustomExpirationEnabled"
+          class="ml-6 p-2 bg-green-50 border border-green-200 rounded"
+        >
+          <div class="flex items-center gap-2 text-green-700">
+            <i class="pi pi-check-circle"></i>
+            <span class="text-sm font-medium"
+              >No expiration - form will be permanently accessible</span
+            >
+          </div>
+        </div>
       </div>
 
       <!-- Form Validation Error Message -->
@@ -56,7 +96,7 @@
       <div class="flex flex-col gap-2">
         <label class="font-semibold">Public Form URL</label>
         <div class="flex gap-2">
-          <input type="text" pInputText [value]="renderUrl" readonly class="flex-1" />
+          <input type="text" pInputText [value]="shortUrl || renderUrl" readonly class="flex-1" />
           <p-button
             icon="pi pi-copy"
             label="Copy"
@@ -67,6 +107,87 @@
         <small class="text-gray-600">
           Share this URL with respondents to collect form submissions
         </small>
+      </div>
+
+      <!-- QR Code and Embed Code Sections (Stories 26.3 & 26.4) -->
+      <div class="mt-4">
+        <p-accordion [multiple]="false">
+          <!-- QR Code Panel -->
+          <p-accordionpanel>
+            <ng-template pTemplate="header">
+              <div class="flex items-center gap-2">
+                <i class="pi pi-qrcode text-blue-600"></i>
+                <span>QR Code</span>
+              </div>
+            </ng-template>
+
+            <!-- QR Code Loading State -->
+            <div
+              *ngIf="qrCodeLoading"
+              class="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg"
+            >
+              <i class="pi pi-spin pi-spinner text-blue-600"></i>
+              <span class="text-blue-700 font-medium">Generating QR code...</span>
+            </div>
+
+            <!-- QR Code Display -->
+            <app-qr-code-display
+              *ngIf="qrCodeUrl && qrCodeGenerated && !qrCodeLoading"
+              [qrCodeUrl]="qrCodeUrl"
+              [label]="'Form QR Code'"
+              [helperText]="'Scan to access form on mobile devices'"
+              [downloadTooltip]="'Download QR code image'"
+              (download)="onDownloadQrCode()"
+            />
+
+            <!-- QR Code Error State -->
+            <div
+              *ngIf="!qrCodeLoading && !qrCodeGenerated && renderUrl"
+              class="p-3 bg-orange-50 border border-orange-200 rounded-lg"
+            >
+              <div class="flex items-center gap-2 text-orange-700">
+                <i class="pi pi-exclamation-triangle"></i>
+                <span class="font-medium">QR code generation failed</span>
+              </div>
+              <p class="text-sm text-orange-600 mt-1">
+                Form is published successfully, but QR code could not be generated. You can still
+                share the URL above.
+              </p>
+            </div>
+          </p-accordionpanel>
+
+          <!-- Embed Code Panel (Story 26.4) -->
+          <p-accordionpanel>
+            <ng-template pTemplate="header">
+              <div class="flex items-center gap-2">
+                <i class="pi pi-code text-purple-600"></i>
+                <span>Embed Code</span>
+              </div>
+            </ng-template>
+
+            <!-- Iframe Embed Generator Component -->
+            <app-iframe-embed-generator
+              *ngIf="renderUrl && formTitle && shortCode"
+              [formUrl]="shortUrl || renderUrl"
+              [formTitle]="formTitle"
+              [shortCode]="shortCode"
+            ></app-iframe-embed-generator>
+
+            <!-- Error State for Missing Data -->
+            <div
+              *ngIf="renderUrl && (!formTitle || !shortCode)"
+              class="p-3 bg-orange-50 border border-orange-200 rounded-lg"
+            >
+              <div class="flex items-center gap-2 text-orange-700">
+                <i class="pi pi-exclamation-triangle"></i>
+                <span class="font-medium">Embed code unavailable</span>
+              </div>
+              <p class="text-sm text-orange-600 mt-1">
+                Form title or short code missing. You can still use the URL above to share the form.
+              </p>
+            </div>
+          </p-accordionpanel>
+        </p-accordion>
       </div>
     </div>
   </div>

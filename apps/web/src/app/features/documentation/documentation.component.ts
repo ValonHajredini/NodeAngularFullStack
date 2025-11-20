@@ -259,7 +259,7 @@ npm install
                     <tr>
                       <td><span class="doc-badge admin">Admin</span></td>
                       <td>admin@example.com</td>
-                      <td><code>Admin123!@#</code></td>
+                      <td><code>User123!@#</code></td>
                     </tr>
                     <tr>
                       <td><span class="doc-badge user">User</span></td>
@@ -269,7 +269,7 @@ npm install
                     <tr>
                       <td><span class="doc-badge readonly">ReadOnly</span></td>
                       <td>readonly@example.com</td>
-                      <td><code>Read123!@#</code></td>
+                      <td><code>User123!@#</code></td>
                     </tr>
                   </tbody>
                 </table>
@@ -608,10 +608,14 @@ git commit --no-verify -m "message"</code></pre>
       }
 
       .nav-icon {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         color: var(--color-text-muted);
         font-size: var(--font-size-base);
         width: 1.25rem;
-        text-align: center;
+        flex-shrink: 0;
       }
 
       .nav-section-button.active .nav-icon {

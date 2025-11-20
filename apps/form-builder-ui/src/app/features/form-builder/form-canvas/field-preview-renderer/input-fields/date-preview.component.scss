@@ -1,0 +1,64 @@
+// DATE preview component theme styling (Story 24.7)
+.field-preview-container {
+  margin-bottom: var(--theme-field-spacing, 1rem);
+}
+
+.preview-label {
+  color: var(--theme-label-color, #374151);
+  font-family: var(--theme-body-font, system-ui);
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  display: block;
+  font-size: 0.875rem;
+}
+
+.required-indicator {
+  color: #ef4444;
+  margin-left: 0.125rem;
+}
+
+.preview-date-input {
+  background-color: var(--theme-input-background, #ffffff);
+  border: 1px solid var(--theme-input-border-color, #d1d5db);
+  color: var(--theme-input-text-color, #1f2937);
+  font-family: var(--theme-body-font, system-ui);
+  border-radius: var(--theme-border-radius, 0.375rem);
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:focus {
+    outline: none;
+    border-color: var(--theme-primary-color, #3b82f6);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  &:disabled {
+    background-color: #f3f4f6;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  // Custom calendar icon styling (browser-dependent)
+  &::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    filter: opacity(0.6);
+    transition: filter 0.2s ease;
+
+    &:hover {
+      filter: opacity(1);
+    }
+  }
+}
+
+.preview-help-text {
+  color: var(--theme-help-text-color, #6b7280);
+  font-family: var(--theme-body-font, system-ui);
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  display: block;
+}

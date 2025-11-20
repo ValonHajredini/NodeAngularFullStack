@@ -92,6 +92,7 @@ export class FormsRepository extends BaseRepository<FormMetadata> {
           title,
           description,
           status,
+          qr_code_url as "qrCodeUrl",
           created_at as "createdAt",
           updated_at as "updatedAt"
       `;
@@ -134,6 +135,7 @@ export class FormsRepository extends BaseRepository<FormMetadata> {
           title,
           description,
           status,
+          qr_code_url as "qrCodeUrl",
           created_at as "createdAt",
           updated_at as "updatedAt"
         FROM forms
@@ -174,16 +176,26 @@ export class FormsRepository extends BaseRepository<FormMetadata> {
     try {
       let query = `
         SELECT
-          id,
-          user_id as "userId",
-          tenant_id as "tenantId",
-          title,
-          description,
-          status,
-          created_at as "createdAt",
-          updated_at as "updatedAt"
-        FROM forms
-        WHERE user_id = $1
+          f.id,
+          f.user_id as "userId",
+          f.tenant_id as "tenantId",
+          f.title,
+          f.description,
+          f.status,
+          f.qr_code_url as "qrCodeUrl",
+          f.created_at as "createdAt",
+          f.updated_at as "updatedAt",
+          sl.code as "shortCode"
+        FROM forms f
+        LEFT JOIN form_schemas fs ON f.id = fs.form_id AND fs.is_published = true
+        LEFT JOIN LATERAL (
+          SELECT code
+          FROM short_links
+          WHERE form_schema_id = fs.id
+          ORDER BY created_at DESC
+          LIMIT 1
+        ) sl ON true
+        WHERE f.user_id = $1
       `;
       const params: any[] = [userId];
 
@@ -193,7 +205,7 @@ export class FormsRepository extends BaseRepository<FormMetadata> {
         params.push(tenantId);
       }
 
-      query += ' ORDER BY created_at DESC';
+      query += ' ORDER BY f.created_at DESC';
 
       const result = await client.query(query, params);
       return result.rows as FormMetadata[];
@@ -259,6 +271,7 @@ export class FormsRepository extends BaseRepository<FormMetadata> {
           title,
           description,
           status,
+          qr_code_url as "qrCodeUrl",
           created_at as "createdAt",
           updated_at as "updatedAt"
       `;
@@ -305,6 +318,7 @@ export class FormsRepository extends BaseRepository<FormMetadata> {
           f.title,
           f.description,
           f.status,
+          f.qr_code_url as "qrCodeUrl",
           f.created_at as "createdAt",
           f.updated_at as "updatedAt",
           fs.id as "schema.id",
@@ -314,7 +328,8 @@ export class FormsRepository extends BaseRepository<FormMetadata> {
           fs.render_token as "schema.renderToken",
           fs.expires_at as "schema.expiresAt",
           fs.created_at as "schema.createdAt",
-          fs.updated_at as "schema.updatedAt"
+          fs.updated_at as "schema.updatedAt",
+          sl.code as "shortCode"
         FROM forms f
         LEFT JOIN LATERAL (
           SELECT *
@@ -323,6 +338,13 @@ export class FormsRepository extends BaseRepository<FormMetadata> {
           ORDER BY schema_version DESC
           LIMIT 1
         ) fs ON true
+        LEFT JOIN LATERAL (
+          SELECT code
+          FROM short_links
+          WHERE form_schema_id = fs.id
+          ORDER BY created_at DESC
+          LIMIT 1
+        ) sl ON true
         WHERE 1=1
       `;
       const params: any[] = [];
@@ -356,6 +378,8 @@ export class FormsRepository extends BaseRepository<FormMetadata> {
           title: row.title,
           description: row.description,
           status: row.status,
+          qrCodeUrl: row.qrCodeUrl,
+          shortCode: row.shortCode,
           createdAt: row.createdAt,
           updatedAt: row.updatedAt,
         };
@@ -435,6 +459,48 @@ export class FormsRepository extends BaseRepository<FormMetadata> {
       return result.rowCount !== null && result.rowCount > 0;
     } catch (error: any) {
       throw new Error(`Failed to delete form: ${error.message}`);
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Updates the QR code URL for a specific form.
+   * Story 26.3: Integrated QR Code Generation and Display
+   * @param formId - Form ID to update
+   * @param qrCodeUrl - QR code storage URL from DigitalOcean Spaces
+   * @returns Promise containing updated form metadata
+   * @throws {Error} When update fails or form not found
+   * @example
+   * const updated = await formsRepository.updateQRCodeUrl('form-uuid', 'https://storage.url/qr.png');
+   */
+  async updateQRCodeUrl(
+    formId: string,
+    qrCodeUrl: string
+  ): Promise<FormMetadata | null> {
+    const client = await this.pool.connect();
+
+    try {
+      const query = `
+        UPDATE forms
+        SET qr_code_url = $1, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+        RETURNING
+          id,
+          user_id as "userId",
+          tenant_id as "tenantId",
+          title,
+          description,
+          status,
+          qr_code_url as "qrCodeUrl",
+          created_at as "createdAt",
+          updated_at as "updatedAt"
+      `;
+
+      const result = await client.query(query, [qrCodeUrl, formId]);
+      return result.rows.length > 0 ? (result.rows[0] as FormMetadata) : null;
+    } catch (error: any) {
+      throw new Error(`Failed to update QR code URL: ${error.message}`);
     } finally {
       client.release();
     }

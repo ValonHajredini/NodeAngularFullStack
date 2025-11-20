@@ -1,0 +1,103 @@
+# Quality Gate Decision
+# Story 24.3: Apply Theme Variables to Selection Fields
+
+schema: 1
+story: "24.3"
+story_title: "Apply Theme Variables to Selection Fields (SELECT, RADIO, CHECKBOX)"
+gate: CONCERNS
+status_reason: "Implementation complete with good CSS architecture, but lacks critical test coverage (zero unit tests, no E2E tests) and documentation. Functional verification only via manual testing."
+reviewer: "Quinn (Test Architect)"
+updated: "2025-10-18T00:10:00Z"
+
+waiver: { active: false }
+
+top_issues:
+  - id: "TEST-001"
+    severity: high
+    finding: "Zero unit tests for 3 modified preview components (select, radio, checkbox)"
+    suggested_action: "Add unit tests for SelectPreviewComponent, RadioPreviewComponent, CheckboxPreviewComponent testing theme variable application"
+    suggested_owner: dev
+
+  - id: "TEST-002"
+    severity: high
+    finding: "No E2E tests covering Story 24.3 selection field theme application"
+    suggested_action: "Add E2E test to complete-theme-system.spec.ts or create story-24.3-selection-fields-theme.spec.ts covering AC 9-10"
+    suggested_owner: dev
+
+  - id: "DOC-001"
+    severity: medium
+    finding: "Missing JSDoc comments on modified TypeScript components (violates coding standards)"
+    suggested_action: "Add comprehensive JSDoc to public methods and class-level documentation explaining theme integration"
+    suggested_owner: dev
+
+  - id: "TRACE-001"
+    severity: medium
+    finding: "No automated validation for AC 9 (builder preview) and AC 10 (public form rendering)"
+    suggested_action: "Create Given-When-Then test scenarios for preview and public rendering verification"
+    suggested_owner: dev
+
+risk_summary:
+  totals:
+    critical: 0
+    high: 2  # TEST-001, TEST-002
+    medium: 2  # DOC-001, TRACE-001
+    low: 0
+  highest: high
+  recommendations:
+    must_fix:
+      - "Add unit tests for preview components before production deployment"
+      - "Add E2E tests validating theme application to selection fields"
+    monitor:
+      - "Track manual testing results for theme consistency"
+      - "Monitor for regression in theme variable inheritance"
+
+quality_score: 60  # 100 - (20×0 critical) - (10×2 high) - (5×2 medium) = 70, reduced to 60 for test debt
+
+evidence:
+  tests_reviewed: 0  # No tests exist for this story
+  risks_identified: 4
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7, 8]  # Implementation complete via code review
+    ac_gaps: [9, 10]  # No automated tests validating builder preview and public rendering
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "CSS-only changes with proper theme variable fallbacks. No XSS risk. Uses existing sanitization."
+
+  performance:
+    status: PASS
+    notes: "CSS transitions properly configured (<200ms). No performance regressions expected. Theme variable inheritance efficient."
+
+  reliability:
+    status: CONCERNS
+    notes: "Lack of automated tests creates risk of regressions during future theme system changes. Manual testing only."
+
+  maintainability:
+    status: CONCERNS
+    notes: "Code quality good (DRY, consistent patterns), but missing JSDoc documentation violates project coding standards. Test debt hinders future refactoring."
+
+recommendations:
+  immediate:  # Must address before marking story Done
+    - action: "Create unit tests for SelectPreviewComponent with theme mocking"
+      refs: ["apps/web/src/app/features/tools/components/form-builder/form-canvas/field-preview-renderer/select-preview.component.spec.ts"]
+    - action: "Create unit tests for RadioPreviewComponent with theme mocking"
+      refs: ["apps/web/src/app/features/tools/components/form-builder/form-canvas/field-preview-renderer/radio-preview.component.spec.ts"]
+    - action: "Create unit tests for CheckboxPreviewComponent with theme mocking"
+      refs: ["apps/web/src/app/features/tools/components/form-builder/form-canvas/field-preview-renderer/checkbox-preview.component.spec.ts"]
+    - action: "Add E2E test scenario: 'Theme applies to SELECT/RADIO/CHECKBOX fields in builder and public form'"
+      refs: ["tests/e2e/complete-theme-system.spec.ts:960-1050"]
+
+  future:  # Can be addressed in follow-up stories
+    - action: "Add JSDoc comments to all modified TypeScript components per coding standards"
+      refs:
+        - "apps/web/src/app/features/tools/components/form-builder/form-canvas/field-preview-renderer/select-preview.component.ts"
+        - "apps/web/src/app/features/tools/components/form-builder/form-canvas/field-preview-renderer/radio-preview.component.ts"
+        - "apps/web/src/app/features/tools/components/form-builder/form-canvas/field-preview-renderer/checkbox-preview.component.ts"
+    - action: "Consider visual regression tests for custom radio/checkbox styling across themes"
+      refs: ["tests/e2e/theme-visual-regression.spec.ts"]
+
+history:
+  - at: "2025-10-18T00:10:00Z"
+    gate: CONCERNS
+    note: "Initial review - Implementation complete but lacks test coverage and documentation"

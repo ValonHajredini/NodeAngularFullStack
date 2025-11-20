@@ -3,8 +3,9 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterOutlet, RouterLink, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { AuthService, User } from '../../core/auth/auth.service';
-import { ThemeToggleComponent } from '../../shared/components';
 import { UserDropdownMenuComponent } from '../../shared/components/user-dropdown-menu/user-dropdown-menu.component';
+// import { TenantSelectorComponent } from '../../shared/components/tenant-selector/tenant-selector.component';
+import { SsoNavigationService } from '../../core/services/sso-navigation.service';
 
 /**
  * Interface for navigation menu items.
@@ -15,6 +16,7 @@ export interface NavigationItem {
   icon: string;
   roles?: string[];
   external?: boolean;
+  onClick?: () => void;
   children?: NavigationItem[];
 }
 
@@ -30,8 +32,8 @@ export interface NavigationItem {
     CommonModule,
     RouterOutlet,
     RouterLink,
-    ThemeToggleComponent,
     UserDropdownMenuComponent,
+    // TenantSelectorComponent,
   ],
   template: `
     <div class="min-h-screen main-container">
@@ -56,27 +58,39 @@ export interface NavigationItem {
               <!-- Primary Navigation (Desktop) -->
               <div class="hidden md:ml-6 md:flex md:space-x-8">
                 @for (item of getVisibleNavigationItems(); track item.route) {
-                  <a
-                    [routerLink]="item.route"
-                    class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200"
-                    [class.border-primary-500]="isActiveRoute(item.route)"
-                    [class.nav-text-active]="isActiveRoute(item.route)"
-                    [class.border-transparent]="!isActiveRoute(item.route)"
-                    [class.nav-text-inactive]="!isActiveRoute(item.route)"
-                    [class.nav-text-hover]="!isActiveRoute(item.route)"
-                    [class.nav-border-hover]="!isActiveRoute(item.route)"
-                  >
-                    <i [class]="item.icon" class="mr-2"></i>
-                    {{ item.label }}
-                  </a>
+                  @if (item.external) {
+                    <button
+                      type="button"
+                      (click)="handleNavItemClick(item)"
+                      class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200 border-transparent nav-text-inactive nav-text-hover nav-border-hover cursor-pointer"
+                    >
+                      <i [class]="item.icon" class="mr-2"></i>
+                      {{ item.label }}
+                      <i class="pi pi-external-link ml-1 text-xs"></i>
+                    </button>
+                  } @else {
+                    <a
+                      [routerLink]="item.route"
+                      class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200"
+                      [class.border-primary-500]="isActiveRoute(item.route)"
+                      [class.nav-text-active]="isActiveRoute(item.route)"
+                      [class.border-transparent]="!isActiveRoute(item.route)"
+                      [class.nav-text-inactive]="!isActiveRoute(item.route)"
+                      [class.nav-text-hover]="!isActiveRoute(item.route)"
+                      [class.nav-border-hover]="!isActiveRoute(item.route)"
+                    >
+                      <i [class]="item.icon" class="mr-2"></i>
+                      {{ item.label }}
+                    </a>
+                  }
                 }
               </div>
             </div>
 
             <!-- Secondary Navigation (Desktop) -->
             <div class="hidden md:ml-6 md:flex md:items-center md:space-x-4">
-              <!-- Theme Toggle -->
-              <app-theme-toggle />
+              <!-- Tenant Selector -->
+              <!-- <app-tenant-selector /> -->
 
               <!-- Notifications (placeholder for future) -->
               <button type="button" class="nav-button rounded-full p-1 transition-colors">
@@ -112,26 +126,38 @@ export interface NavigationItem {
           <div class="md:hidden mobile-menu-panel animate-slide-down">
             <div class="pt-2 pb-3 space-y-1">
               @for (item of getVisibleNavigationItems(); track item.route) {
-                <a
-                  [routerLink]="item.route"
-                  (click)="closeMobileMenu()"
-                  class="mobile-menu-item"
-                  [class.mobile-menu-item-active]="isActiveRoute(item.route)"
-                  [class.mobile-menu-item-inactive]="!isActiveRoute(item.route)"
-                >
-                  <i [class]="item.icon" class="mr-3"></i>
-                  {{ item.label }}
-                </a>
+                @if (item.external) {
+                  <button
+                    type="button"
+                    (click)="handleNavItemClick(item); closeMobileMenu()"
+                    class="mobile-menu-item mobile-menu-item-inactive w-full text-left"
+                  >
+                    <i [class]="item.icon" class="mr-3"></i>
+                    {{ item.label }}
+                    <i class="pi pi-external-link ml-1 text-xs"></i>
+                  </button>
+                } @else {
+                  <a
+                    [routerLink]="item.route"
+                    (click)="closeMobileMenu()"
+                    class="mobile-menu-item"
+                    [class.mobile-menu-item-active]="isActiveRoute(item.route)"
+                    [class.mobile-menu-item-inactive]="!isActiveRoute(item.route)"
+                  >
+                    <i [class]="item.icon" class="mr-3"></i>
+                    {{ item.label }}
+                  </a>
+                }
               }
             </div>
 
             <!-- Mobile User Section -->
             @if (user()) {
               <div class="pt-4 pb-3 mobile-user-section">
-                <!-- Theme Toggle for Mobile -->
-                <div class="px-4 py-2">
-                  <app-theme-toggle [showAllOptions]="true" />
-                </div>
+                <!-- Tenant Selector for Mobile -->
+                <!-- <div class="px-4 py-2 mb-2">
+                  <app-tenant-selector />
+                </div> -->
 
                 <!-- User Dropdown for Mobile -->
                 <div class="px-4 py-2">
@@ -363,9 +389,11 @@ export interface NavigationItem {
 export class MainLayoutComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
+  private readonly ssoNavigationService = inject(SsoNavigationService);
 
   protected readonly user = this.authService.user;
   protected readonly mobileMenuOpen = signal(false);
+  protected readonly userMenuOpen = signal(false);
   protected readonly currentRoute = signal('');
 
   /**
@@ -378,31 +406,49 @@ export class MainLayoutComponent implements OnInit {
       route: '/app/dashboard',
       icon: 'pi pi-home',
     },
-    {
-      label: 'Projects',
-      route: '/app/projects',
-      icon: 'pi pi-folder',
-    },
-    {
-      label: 'Tasks',
-      route: '/app/tasks',
-      icon: 'pi pi-check-square',
-    },
+    // {
+    //   label: 'Form Builder',
+    //   route: 'http://localhost:4201/dashboard',
+    //   icon: 'pi pi-pencil',
+    //   external: true,
+    //   onClick: () => this.openFormBuilder(),
+    // },
+    // {
+    //   label: 'Projects',
+    //   route: '/app/projects',
+    //   icon: 'pi pi-folder',
+    // },
+    // {
+    //   label: 'Tasks',
+    //   route: '/app/tasks',
+    //   icon: 'pi pi-check-square',
+    // },
     {
       label: 'Team',
       route: '/app/team',
       icon: 'pi pi-users',
     },
-    {
-      label: 'Reports',
-      route: '/app/reports',
-      icon: 'pi pi-chart-bar',
-      roles: ['admin', 'user'],
-    },
+    // {
+    //   label: 'Reports',
+    //   route: '/app/reports',
+    //   icon: 'pi pi-chart-bar',
+    //   roles: ['admin', 'user'],
+    // },
     {
       label: 'Documentation',
       route: '/app/documentation',
       icon: 'pi pi-book',
+    },
+    // {
+    //   label: 'Tools',
+    //   route: '/app/tools',
+    //   icon: 'pi pi-folder',
+    // },
+    {
+      label: 'Admin Tools',
+      route: '/app/admin/tools',
+      icon: 'pi pi-folder',
+      roles: ['admin'],
     },
   ];
 
@@ -443,9 +489,13 @@ export class MainLayoutComponent implements OnInit {
 
   /**
    * Toggles the mobile menu visibility.
+   * Closes user menu if open.
    */
   public toggleMobileMenu(): void {
     this.mobileMenuOpen.update((open) => !open);
+    if (this.mobileMenuOpen()) {
+      this.userMenuOpen.set(false);
+    }
   }
 
   /**
@@ -453,5 +503,97 @@ export class MainLayoutComponent implements OnInit {
    */
   public closeMobileMenu(): void {
     this.mobileMenuOpen.set(false);
+  }
+
+  /**
+   * Toggles the user menu visibility.
+   * Closes mobile menu if open.
+   */
+  public toggleUserMenu(): void {
+    this.userMenuOpen.update((open) => !open);
+    if (this.userMenuOpen()) {
+      this.mobileMenuOpen.set(false);
+    }
+  }
+
+  /**
+   * Handles user menu item clicks.
+   * Closes both menus after action.
+   * @param item - Menu item with optional action and route
+   */
+  public handleUserMenuClick(item: { action?: string; route?: string; label?: string }): void {
+    if (item.action === 'logout') {
+      this.authService.logout().subscribe({
+        next: () => {
+          this.userMenuOpen.set(false);
+          this.mobileMenuOpen.set(false);
+        },
+        error: (error) => {
+          console.error('Logout failed:', error);
+        },
+      });
+    } else {
+      // Close menus for regular navigation
+      this.userMenuOpen.set(false);
+      this.mobileMenuOpen.set(false);
+    }
+  }
+
+  /**
+   * Returns display name for user role.
+   * @param role - User role identifier
+   * @returns Human-readable role name
+   */
+  public getRoleDisplayName(role: string): string {
+    const roleMap: Record<string, string> = {
+      admin: 'Administrator',
+      user: 'User',
+      readonly: 'Read Only',
+    };
+    return roleMap[role] || role;
+  }
+
+  /**
+   * Gets user initials from current user's name or email.
+   * @returns User initials (2 characters)
+   */
+  public getUserInitials(): string {
+    const currentUser = this.user();
+    if (!currentUser) return '??';
+
+    if (currentUser.firstName && currentUser.lastName) {
+      return `${currentUser.firstName[0]}${currentUser.lastName[0]}`.toUpperCase();
+    }
+
+    if (currentUser.email) {
+      const emailParts = currentUser.email.split('@')[0].split('.');
+      if (emailParts.length >= 2) {
+        return `${emailParts[0][0]}${emailParts[1][0]}`.toUpperCase();
+      }
+      return currentUser.email.substring(0, 2).toUpperCase();
+    }
+
+    return '??';
+  }
+
+  /**
+   * Handles navigation item click (for external links).
+   * @param item - Navigation item that was clicked
+   */
+  public handleNavItemClick(item: NavigationItem): void {
+    if (item.onClick) {
+      item.onClick();
+    }
+  }
+
+  /**
+   * Opens Form Builder application with SSO authentication.
+   * Uses SsoNavigationService to pass JWT token in URL.
+   */
+  private openFormBuilder(): void {
+    this.ssoNavigationService.openFormBuilder().catch((error) => {
+      console.error('Failed to open Form Builder:', error);
+      // Optionally show error message to user
+    });
   }
 }

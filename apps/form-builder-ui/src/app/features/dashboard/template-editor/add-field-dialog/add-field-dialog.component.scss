@@ -1,0 +1,317 @@
+/**
+ * Add Field Dialog Component Styles
+ *
+ * Responsive, accessible styles for the Add Field dialog with categorized field types.
+ * Features:
+ * - Green accent for Input Fields category
+ * - Purple accent for Preview Elements category
+ * - Card hover effects and transitions
+ * - Responsive grid layout (3 cols desktop → 1 col mobile)
+ * - Search input styling
+ * - WCAG AA accessibility standards
+ */
+
+// ========== Dialog Footer Styling ==========
+::ng-deep .add-field-dialog {
+  .p-dialog-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e5e7eb;
+    background-color: #f9fafb;
+    margin-top: 0 !important;
+  }
+}
+
+.add-field-dialog-content {
+  padding: 0.5rem;
+
+  // ========== Search Container ==========
+  .search-container {
+    position: relative;
+
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #6b7280;
+      font-size: 1rem;
+      pointer-events: none;
+    }
+  }
+
+  // ========== Empty State ==========
+  .empty-state {
+    i {
+      display: block;
+      color: #9ca3af;
+    }
+
+    h3 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      font-size: 0.9375rem;
+      color: #6b7280;
+    }
+  }
+
+  // ========== Category Section ==========
+  .field-category {
+    .category-header {
+      border-bottom: 2px solid #e5e7eb;
+      padding-bottom: 0.75rem;
+
+      .category-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #111827;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        i {
+          font-size: 1rem;
+        }
+
+        .category-count {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 24px;
+          height: 24px;
+          padding: 0 8px;
+          border-radius: 12px;
+          background-color: #e5e7eb;
+          color: #374151;
+          font-size: 0.75rem;
+          font-weight: 600;
+          margin-left: 0.5rem;
+        }
+      }
+
+      .category-description {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-top: 0.25rem;
+        margin-left: 1.75rem;
+      }
+    }
+
+    // ========== Field Type Grid ==========
+    .field-type-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-top: 1rem;
+
+      // Responsive: 2 columns on tablets
+      @media (max-width: 1024px) and (min-width: 768px) {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      // Responsive: 1 column on mobile
+      @media (max-width: 767px) {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    // ========== Field Type Card ==========
+    .field-type-card {
+      display: flex;
+      align-items: start;
+      gap: 1rem;
+      padding: 1rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background-color: #ffffff;
+      cursor: pointer;
+      transition: all 0.2s ease-in-out;
+      position: relative;
+
+      // Hover Effects
+      &:hover {
+        border-color: #3b82f6;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        transform: translateY(-2px);
+
+        .card-icon {
+          background-color: #3b82f6;
+          color: #ffffff;
+        }
+
+        .card-action i {
+          color: #3b82f6;
+          transform: scale(1.1);
+        }
+      }
+
+      // Focus State (Keyboard Navigation)
+      &:focus {
+        outline: 2px solid #3b82f6;
+        outline-offset: 2px;
+      }
+
+      // Active State (Click)
+      &:active {
+        transform: translateY(0);
+      }
+
+      // Selected State
+      &.selected {
+        border-color: #3b82f6;
+        background-color: #eff6ff;
+        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+
+        .card-icon {
+          background-color: #3b82f6;
+          color: #ffffff;
+        }
+
+        .card-action i {
+          color: #3b82f6;
+          font-size: 1.75rem;
+        }
+      }
+
+      // ===== Card Icon =====
+      .card-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        background-color: #f3f4f6;
+        color: #6b7280;
+        font-size: 1.25rem;
+        flex-shrink: 0;
+        transition: all 0.2s ease-in-out;
+
+        i {
+          font-size: 1.25rem;
+        }
+      }
+
+      // ===== Card Content =====
+      .card-content {
+        flex: 1;
+        min-width: 0; // Allow text truncation
+
+        .card-title {
+          font-size: 0.9375rem;
+          font-weight: 600;
+          color: #111827;
+          margin-bottom: 0.25rem;
+        }
+
+        .card-description {
+          font-size: 0.8125rem;
+          color: #6b7280;
+          line-height: 1.4;
+          margin: 0;
+        }
+      }
+
+      // ===== Card Action Icon =====
+      .card-action {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+
+        i {
+          font-size: 1.5rem;
+          color: #d1d5db;
+          transition: all 0.2s ease-in-out;
+        }
+      }
+    }
+
+    // ========== Input Field Card (Green Accent) ==========
+    .input-field-card {
+      border-left: 4px solid #10b981;
+
+      &:hover {
+        border-left-color: #10b981;
+        box-shadow:
+          0 4px 12px rgba(16, 185, 129, 0.15),
+          inset 4px 0 0 #10b981;
+
+        .card-icon {
+          background-color: #10b981;
+        }
+
+        .card-action i {
+          color: #10b981;
+        }
+      }
+
+      &:focus {
+        outline-color: #10b981;
+      }
+    }
+
+    // ========== Preview Element Card (Purple Accent) ==========
+    .preview-element-card {
+      border-left: 4px solid #8b5cf6;
+
+      &:hover {
+        border-left-color: #8b5cf6;
+        box-shadow:
+          0 4px 12px rgba(139, 92, 246, 0.15),
+          inset 4px 0 0 #8b5cf6;
+
+        .card-icon {
+          background-color: #8b5cf6;
+        }
+
+        .card-action i {
+          color: #8b5cf6;
+        }
+      }
+
+      &:focus {
+        outline-color: #8b5cf6;
+      }
+    }
+  }
+}
+
+// ========== Accessibility - Reduced Motion ==========
+@media (prefers-reduced-motion: reduce) {
+  .field-type-card {
+    transition: none;
+
+    &:hover {
+      transform: none;
+    }
+
+    .card-icon,
+    .card-action i {
+      transition: none;
+    }
+  }
+}
+
+// ========== Accessibility - High Contrast Mode ==========
+@media (prefers-contrast: high) {
+  .field-type-card {
+    border-width: 2px;
+
+    &:hover {
+      border-width: 2px;
+    }
+
+    &.input-field-card {
+      border-left-width: 6px;
+    }
+
+    &.preview-element-card {
+      border-left-width: 6px;
+    }
+  }
+}

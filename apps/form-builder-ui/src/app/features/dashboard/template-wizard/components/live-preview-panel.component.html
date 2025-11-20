@@ -1,0 +1,182 @@
+<div class="live-preview-panel" role="region" aria-label="Live template preview">
+  <!-- Preview Header with Statistics -->
+  <div class="preview-header">
+    <h4 class="preview-title">
+      <i class="pi pi-eye" aria-hidden="true"></i>
+      Live Preview
+    </h4>
+
+    @if (hasPreview()) {
+      <div class="preview-stats">
+        <span class="stat-badge" role="status">
+          <i class="pi pi-list" aria-hidden="true"></i>
+          {{ fieldCount() }} Fields
+        </span>
+        <span class="stat-badge" role="status">
+          <i class="pi pi-check-circle" aria-hidden="true"></i>
+          {{ previewStats().requiredFields }} Required
+        </span>
+        <span class="stat-badge" role="status">
+          <i class="pi pi-circle" aria-hidden="true"></i>
+          {{ previewStats().optionalFields }} Optional
+        </span>
+        @if (previewStats().hasBusinessLogic) {
+          <span class="stat-badge stat-badge-success" role="status">
+            <i class="pi pi-bolt" aria-hidden="true"></i>
+            Business Logic
+          </span>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Preview Tabs: JSON View + UI Snapshot -->
+  <p-tabs styleClass="preview-tabs">
+    <p-tablist>
+      <p-tab value="json">
+        <span class="tab-label">
+          <i class="pi pi-code" aria-hidden="true"></i>
+          JSON Schema
+        </span>
+      </p-tab>
+      <p-tab value="ui">
+        <span class="tab-label">
+          <i class="pi pi-desktop" aria-hidden="true"></i>
+          UI Snapshot
+        </span>
+      </p-tab>
+      <p-tab value="summary">
+        <span class="tab-label">
+          <i class="pi pi-list" aria-hidden="true"></i>
+          Summary
+        </span>
+      </p-tab>
+    </p-tablist>
+
+    <p-tabpanels>
+      <!-- JSON View Tab -->
+      <p-tabpanel value="json">
+        <div class="json-preview-container">
+          @if (!hasPreview()) {
+            <div class="empty-preview" role="status" aria-live="polite">
+              <i class="pi pi-info-circle" aria-hidden="true"></i>
+              <p class="empty-message">
+                Complete the required wizard steps to generate a schema preview.
+              </p>
+            </div>
+          } @else {
+            <pre
+              class="json-preview"
+              role="textbox"
+              aria-label="Generated schema JSON"
+              aria-readonly="true"
+            ><code>{{ previewJson() }}</code></pre>
+          }
+        </div>
+      </p-tabpanel>
+
+      <!-- UI Snapshot Tab -->
+      <p-tabpanel value="ui">
+        <div class="ui-snapshot-container">
+          @if (!hasPreview()) {
+            <div class="empty-preview" role="status" aria-live="polite">
+              <i class="pi pi-info-circle" aria-hidden="true"></i>
+              <p class="empty-message">
+                Complete the required wizard steps to generate a UI preview.
+              </p>
+            </div>
+          } @else {
+            <p-card styleClass="schema-snapshot-card">
+              <ng-template pTemplate="header">
+                <div class="snapshot-header">
+                  <h5>{{ wizardSummary().templateName || 'Untitled Form' }}</h5>
+                  @if (wizardSummary().templateDescription) {
+                    <p class="snapshot-description">{{ wizardSummary().templateDescription }}</p>
+                  }
+                </div>
+              </ng-template>
+
+              <ng-template pTemplate="content">
+                <div class="field-list">
+                  @for (field of previewSchema()?.fields || []; track field.id) {
+                    <div class="field-item" role="listitem">
+                      <div class="field-info">
+                        <span class="field-label">
+                          {{ field.label }}
+                          @if (field.required) {
+                            <span class="required-indicator" aria-label="required">*</span>
+                          }
+                        </span>
+                        <span class="field-type">{{ field.type }}</span>
+                      </div>
+                      @if (field.placeholder) {
+                        <span class="field-placeholder">{{ field.placeholder }}</span>
+                      }
+                    </div>
+                  }
+                </div>
+
+                @if (fieldCount() === 0) {
+                  <div class="no-fields-message" role="status">
+                    <i class="pi pi-inbox" aria-hidden="true"></i>
+                    <p>No fields defined yet</p>
+                  </div>
+                }
+              </ng-template>
+
+              <ng-template pTemplate="footer">
+                <div class="snapshot-footer">
+                  <small class="text-muted">
+                    Category: <strong>{{ wizardSummary().category }}</strong>
+                  </small>
+                </div>
+              </ng-template>
+            </p-card>
+          }
+        </div>
+      </p-tabpanel>
+
+      <!-- Summary Tab -->
+      <p-tabpanel value="summary">
+        <div class="summary-container">
+          @if (!hasPreview()) {
+            <div class="empty-preview" role="status" aria-live="polite">
+              <i class="pi pi-info-circle" aria-hidden="true"></i>
+              <p class="empty-message">
+                Complete the required wizard steps to view configuration summary.
+              </p>
+            </div>
+          } @else {
+            <div class="summary-section">
+              <h6 class="summary-heading">Template Information</h6>
+              <dl class="summary-list">
+                <dt>Name:</dt>
+                <dd>{{ wizardSummary().templateName || 'Not set' }}</dd>
+
+                <dt>Description:</dt>
+                <dd>{{ wizardSummary().templateDescription || 'None' }}</dd>
+
+                <dt>Category:</dt>
+                <dd>{{ wizardSummary().category }}</dd>
+
+                <dt>Total Steps:</dt>
+                <dd>{{ wizardSummary().stepCount }}</dd>
+              </dl>
+            </div>
+
+            @if (wizardSummary().configSummary.length > 0) {
+              <div class="summary-section">
+                <h6 class="summary-heading">Configuration Details</h6>
+                <ul class="config-summary-list">
+                  @for (item of wizardSummary().configSummary; track item) {
+                    <li>{{ item }}</li>
+                  }
+                </ul>
+              </div>
+            }
+          }
+        </div>
+      </p-tabpanel>
+    </p-tabpanels>
+  </p-tabs>
+</div>

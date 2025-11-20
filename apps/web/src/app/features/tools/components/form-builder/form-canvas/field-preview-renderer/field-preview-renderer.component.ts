@@ -169,6 +169,9 @@ import { FormBuilderService } from '../../form-builder.service';
           @case (FormFieldType.IMAGE_GALLERY) {
             <app-image-gallery-preview [field]="field" />
           }
+          @case (FormFieldType.TIME_SLOT) {
+            <app-select-preview [field]="field" />
+          }
           @default {
             <div class="p-4 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
               Unknown field type: {{ field.type }}
@@ -186,7 +189,7 @@ import { FormBuilderService } from '../../form-builder.service';
         field.type !== FormFieldType.IMAGE &&
         field.type !== FormFieldType.TEXT_BLOCK
       ) {
-        <small class="block mt-1 text-gray-500">{{ field.helpText }}</small>
+        <small class="block mt-1 theme-help-text">{{ field.helpText }}</small>
       }
 
       <!-- Validation Chips -->
@@ -565,6 +568,7 @@ export class FieldPreviewRendererComponent {
       [FormFieldType.IMAGE]: 'image',
       [FormFieldType.TEXT_BLOCK]: 'text block',
       [FormFieldType.IMAGE_GALLERY]: 'gallery',
+      [FormFieldType.TIME_SLOT]: 'time slot',
     };
     return typeLabels[this.field.type] || this.field.type.toLowerCase();
   }

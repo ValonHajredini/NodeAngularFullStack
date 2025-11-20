@@ -1,0 +1,23 @@
+{
+  "/api/v1": {
+    "target": "http://localhost:3001",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  },
+  "/api/analytics": {
+    "target": "http://localhost:3001",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug",
+    "pathRewrite": {
+      "^/api/analytics": "/api/v1/analytics"
+    }
+  },
+  "/api": {
+    "target": "http://localhost:3000",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  }
+}

@@ -12,6 +12,12 @@ export interface EnvironmentConfig {
   /** Base URL used when constructing public short links */
   shortLinkBaseUrl: string;
 
+  /** Base URL for Form Builder UI application (for SSO navigation) */
+  formBuilderUrl: string;
+
+  /** Base URL for Forms API service (forms, themes, templates) */
+  formsApiUrl: string;
+
   /** Application name for display */
   appName: string;
 

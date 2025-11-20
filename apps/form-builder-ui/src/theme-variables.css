@@ -1,0 +1,134 @@
+/**
+ * Theme utility classes that consume CSS variables injected by ThemePreviewService.
+ * These classes enable dynamic theme application to form fields.
+ */
+
+/* Input fields (text, email, number, date) */
+.theme-input {
+  border: 2px solid var(--theme-primary-color, #3b82f6);
+  border-radius: var(--theme-field-radius, 4px);
+  font-family: var(--theme-font-body, inherit);
+  color: var(--theme-text-primary, #111827);
+  transition: border-color 0.2s ease;
+}
+
+.theme-input:focus {
+  outline: none;
+  border-color: var(--theme-secondary-color, #1e40af);
+  box-shadow: 0 0 0 3px rgba(var(--theme-primary-color-rgb, 59, 130, 246), 0.1);
+}
+
+/* Textarea fields */
+.theme-textarea {
+  border: 2px solid var(--theme-primary-color, #3b82f6);
+  border-radius: var(--theme-field-radius, 4px);
+  font-family: var(--theme-font-body, inherit);
+  color: var(--theme-text-primary, #111827);
+  transition: border-color 0.2s ease;
+}
+
+.theme-textarea:focus {
+  outline: none;
+  border-color: var(--theme-secondary-color, #1e40af);
+  box-shadow: 0 0 0 3px rgba(var(--theme-primary-color-rgb, 59, 130, 246), 0.1);
+}
+
+/* Select dropdowns */
+.theme-select .p-select {
+  border: 2px solid var(--theme-primary-color, #3b82f6) !important;
+  border-radius: var(--theme-field-radius, 4px) !important;
+  font-family: var(--theme-font-body, inherit);
+  color: var(--theme-text-primary, #111827);
+}
+
+.theme-select .p-select:focus {
+  border-color: var(--theme-secondary-color, #1e40af) !important;
+  box-shadow: 0 0 0 3px rgba(var(--theme-primary-color-rgb, 59, 130, 246), 0.1) !important;
+}
+
+/* Checkboxes */
+.theme-checkbox .p-checkbox-box {
+  border-color: var(--theme-primary-color, #3b82f6) !important;
+  border-radius: var(--theme-field-radius, 4px) !important;
+}
+
+.theme-checkbox .p-checkbox-box.p-highlight {
+  background: var(--theme-primary-color, #3b82f6) !important;
+  border-color: var(--theme-primary-color, #3b82f6) !important;
+}
+
+.theme-checkbox .p-checkbox-box:focus {
+  box-shadow: 0 0 0 3px rgba(var(--theme-primary-color-rgb, 59, 130, 246), 0.1) !important;
+}
+
+/* Radio buttons */
+.theme-radio .p-radiobutton-box {
+  border-color: var(--theme-primary-color, #3b82f6) !important;
+}
+
+.theme-radio .p-radiobutton-box.p-highlight {
+  background: var(--theme-primary-color, #3b82f6) !important;
+  border-color: var(--theme-primary-color, #3b82f6) !important;
+}
+
+.theme-radio .p-radiobutton-box:focus {
+  box-shadow: 0 0 0 3px rgba(var(--theme-primary-color-rgb, 59, 130, 246), 0.1) !important;
+}
+
+/* Labels */
+.theme-label {
+  color: var(--theme-text-primary, #111827);
+  font-family: var(--theme-font-heading, inherit);
+  font-weight: 500;
+}
+
+/* Help text */
+.theme-help-text {
+  color: var(--theme-text-secondary, #6b7280);
+  font-family: var(--theme-font-body, inherit);
+  font-size: 0.875rem;
+}
+
+/* Primary button */
+.theme-button-primary {
+  background: var(--theme-primary-color, #3b82f6);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--theme-field-radius, 4px);
+  font-family: var(--theme-font-body, inherit);
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.theme-button-primary:hover {
+  background: var(--theme-secondary-color, #1e40af);
+}
+
+/* Secondary button */
+.theme-button-secondary {
+  background: var(--theme-secondary-color, #6b7280);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--theme-field-radius, 4px);
+  font-family: var(--theme-font-body, inherit);
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+/* Form container */
+.theme-container {
+  background: var(--theme-container-bg, transparent);
+  opacity: var(--theme-container-opacity, 1);
+  border-radius: var(--theme-field-radius, 4px);
+  padding: var(--theme-field-spacing, 16px);
+}
+
+/* Theme transition for smooth color changes */
+.theme-transition {
+  transition:
+    color 0.3s ease,
+    background-color 0.3s ease,
+    border-color 0.3s ease;
+}

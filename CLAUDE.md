@@ -9,19 +9,59 @@ This is a modern full-stack TypeScript monorepo with Angular 20+ frontend and Ex
 The project uses npm workspaces for monorepo management and includes shared types, local PostgreSQL
 setup, and comprehensive testing.
 
-**Key Feature**: Visual form builder with drag-and-drop interface, row-based multi-column layouts,
-real-time analytics, data visualization (bar/line/pie charts), and WCAG AA accessibility. Forms are
-shareable via short links with QR codes.
+**Architecture**: Monolith-first with export capabilities for gradual service extraction. The core
+system remains monolithic while providing infrastructure to export tools as standalone deployable
+packages (see Epics 30-33 for details).
+
+**Key Features**:
+
+- **Visual Form Builder**: Drag-and-drop interface, row-based multi-column layouts, real-time
+  analytics, data visualization (bar/line/pie charts), WCAG AA accessibility, shareable via short
+  links with QR codes
+- **Tool Registry & Export System**: Export registered tools (forms, workflows, themes) as
+  standalone microservice packages with Docker configs, migrations, and boilerplate code
+
+## Application Routing Guide
+
+**CRITICAL**: This monorepo contains multiple frontend and backend applications. Choose the correct
+app based on the task:
+
+| Task                                                     | Frontend App           | Backend API          |
+| -------------------------------------------------------- | ---------------------- | -------------------- |
+| Form builder features (drag-drop, canvas, field palette) | `apps/form-builder-ui` | `apps/forms-api`     |
+| Theme designer (create/edit themes)                      | `apps/form-builder-ui` | `apps/forms-api`     |
+| Form analytics & visualizations                          | `apps/form-builder-ui` | `apps/forms-api`     |
+| Public form rendering                                    | `apps/form-builder-ui` | `apps/forms-api`     |
+| User authentication & login                              | `apps/web`             | `apps/dashboard-api` |
+| Admin dashboard & settings                               | `apps/web`             | `apps/dashboard-api` |
+| Tool registry UI                                         | `apps/web`             | `apps/forms-api`     |
+| Export history & job monitoring                          | `apps/web`             | `apps/forms-api`     |
+
+**Common Mistakes to Avoid:**
+
+- ❌ Don't edit `apps/web` when asked to work on form builder features
+- ❌ Don't edit `apps/api` (legacy) - use domain-specific APIs instead
+- ❌ Don't assume all frontend code is in `apps/web`
+- ✅ Always verify which app the user is referring to before making changes
 
 ## Development Commands
 
 ### Essential Development Commands
 
-- `npm start` or `./start-dev.sh` - Start entire development environment (API + Frontend + pgWeb
-  against local PostgreSQL)
+- `npm start` or `./start-dev.sh` - Start entire development environment (All APIs + All Frontends +
+  pgWeb)
 - `npm stop` or `./stop-dev.sh` - Stop all local services
-- `npm --workspace=apps/api run dev` - Start backend API only (port 3000)
-- `npm --workspace=apps/web run dev` - Start frontend only (port 4200)
+
+**Backend Services:**
+
+- `npm --workspace=apps/api run dev` - Legacy monolithic API (port 3002)
+- `npm --workspace=apps/dashboard-api run dev` - Dashboard/Auth API (port 3000)
+- `npm --workspace=apps/forms-api run dev` - Forms/Themes/Export API (port 3001)
+
+**Frontend Applications:**
+
+- `npm --workspace=apps/web run dev` - Main Angular frontend (port 4200)
+- `npm --workspace=apps/form-builder-ui run dev` - Form Builder UI (port 4201)
 
 ### Testing Commands
 
@@ -30,6 +70,8 @@ shareable via short links with QR codes.
 - `npm run test:web` - Frontend tests only
 - `npm run test:e2e` - Run Playwright E2E tests
 - `npm run test:e2e:ui` - Playwright E2E with UI mode
+- `npm run test:e2e:themes` - Run theme system E2E tests (headed mode)
+- `npm run test:e2e:themes:ui` - Theme E2E tests with Playwright UI
 
 **Backend-Specific Test Commands:**
 
@@ -40,8 +82,15 @@ shareable via short links with QR codes.
 
 **Running Single Tests:**
 
-- Backend: `npm --workspace=apps/api run test -- --testPathPattern="filename.test.ts"`
-- Frontend: `npm --workspace=apps/web run test -- --include="**/component-name.spec.ts"`
+- **Backend APIs**:
+  - Dashboard API:
+    `npm --workspace=apps/dashboard-api run test -- --testPathPattern="filename.test.ts"`
+  - Forms API: `npm --workspace=apps/forms-api run test -- --testPathPattern="filename.test.ts"`
+  - Legacy API: `npm --workspace=apps/api run test -- --testPathPattern="filename.test.ts"`
+- **Frontend Apps**:
+  - Main UI: `npm --workspace=apps/web run test -- --include="**/component-name.spec.ts"`
+  - Form Builder UI:
+    `npm --workspace=apps/form-builder-ui run test -- --include="**/component-name.spec.ts"`
 - Add `--watch=false`, `--passWithNoTests`, or `--silent` flags as needed
 - Use `--maxWorkers=1` flag for tests that require sequential execution or have resource constraints
 
@@ -56,16 +105,35 @@ shareable via short links with QR codes.
 
 **Workspace-Specific:**
 
-- `npm --workspace=apps/api run lint` - Lint backend only
-- `npm --workspace=apps/web run lint` - Lint frontend only
-- `npm --workspace=apps/api run typecheck` - TypeScript check backend
-- `npm --workspace=apps/web run typecheck` - TypeScript check frontend
+- **Backend APIs**:
+  - `npm --workspace=apps/dashboard-api run lint` - Lint dashboard API
+  - `npm --workspace=apps/forms-api run lint` - Lint forms API
+  - `npm --workspace=apps/dashboard-api run typecheck` - TypeScript check dashboard API
+  - `npm --workspace=apps/forms-api run typecheck` - TypeScript check forms API
+- **Frontend Apps**:
+  - `npm --workspace=apps/web run lint` - Lint main UI
+  - `npm --workspace=apps/form-builder-ui run lint` - Lint form builder UI
+  - `npm --workspace=apps/web run typecheck` - TypeScript check main UI
+  - `npm --workspace=apps/form-builder-ui run typecheck` - TypeScript check form builder UI
 
-### Database Commands (run from root or in apps/api/)
+### Database Commands
 
-- `npm --workspace=apps/api run db:migrate` - Run database migrations
-- `npm --workspace=apps/api run db:seed` - Seed database with test data
-- `npm --workspace=apps/api run db:reset` - Clear and re-seed database
+**Note**: All services share the same PostgreSQL database.
+
+**Migration and Seeding:**
+
+- `npm --workspace=apps/dashboard-api run db:migrate` - Run auth/user migrations
+- `npm --workspace=apps/forms-api run db:migrate` - Run forms/themes/export migrations
+- `npm --workspace=apps/dashboard-api run db:seed` - Seed user and auth data
+- `npm --workspace=apps/forms-api run db:seed` - Seed forms, themes, and tools data
+- `npm --workspace=apps/forms-api run db:reset` - Clear and re-seed all data
+
+**Database Scripts:**
+
+- `./scripts/db/create-separated-databases.sh` - Create databases for separated services
+- `./scripts/db/run-separated-migrations.sh` - Run migrations for all services
+- `./scripts/db/migrate-to-separated-databases.sh` - Migrate data from monolith to separated
+  services
 
 ### Environment Configuration Commands
 
@@ -85,12 +153,25 @@ shareable via short links with QR codes.
 
 ```
 apps/
-├── api/          # Express.js backend (TypeScript)
-├── web/          # Angular 20+ frontend (standalone components)
+├── api/                    # Legacy monolithic Express.js backend (TypeScript)
+├── web/                    # Main Angular 20+ frontend (port 4200)
+├── dashboard-api/          # Dashboard/Auth API service (port 3000)
+├── forms-api/              # Forms/Themes/Export API service (port 3001)
+├── form-builder-ui/        # Form Builder Angular UI (port 4201)
 packages/
-├── shared/       # Shared types and utilities (@nodeangularfullstack/shared)
-├── config/       # Shared configuration
+├── shared/                 # Shared types and utilities (@nodeangularfullstack/shared)
+├── config/                 # Shared configuration
+├── create-tool/            # CLI scaffolding tool
 ```
+
+**Architecture Evolution:**
+
+- Original: Monolithic `apps/api` + `apps/web`
+- Current: Transitioning to domain-specific services
+  - `dashboard-api`: Authentication, users, dashboard
+  - `forms-api`: Forms, themes, tool registry, exports
+  - `form-builder-ui`: Dedicated form builder interface (separate from main UI)
+- Strategy: Gradual service extraction while maintaining monolith compatibility
 
 ### Key Architectural Patterns
 
@@ -133,11 +214,56 @@ packages/
 
 ### Service Architecture
 
-- **Local development ports**: Frontend (4200), Backend (3000), PostgreSQL (5432), pgWeb (8080)
-- Health checks at `/health` endpoint
-- Rate limiting and security middleware
-- CORS configured for cross-origin requests
-- All services run locally with process management via start/stop scripts
+**Port Allocation:**
+
+- **Frontend Apps**:
+  - Main UI (`apps/web`): 4200
+  - Form Builder UI (`apps/form-builder-ui`): 4201
+- **Backend APIs**:
+  - Dashboard API (`apps/dashboard-api`): 3000
+  - Forms API (`apps/forms-api`): 3001
+  - Legacy API (`apps/api`): 3002 (if running)
+- **Infrastructure**:
+  - PostgreSQL: 5432
+  - pgWeb Database UI: 8080
+
+**Service Responsibilities:**
+
+1. **dashboard-api (port 3000)**:
+   - User authentication and authorization
+   - JWT token management
+   - User profile and settings
+   - Main dashboard functionality
+   - Role-based access control
+
+2. **forms-api (port 3001)**:
+   - Form schemas and submissions
+   - Theme management (creation, editing, application)
+   - Tool registry (tracking registered tools)
+   - Export orchestration (generating standalone packages)
+   - Public form rendering and submission
+   - Short link management and QR codes
+
+3. **form-builder-ui (port 4201)**:
+   - Visual drag-and-drop form builder
+   - Row-based layout configuration
+   - Field palette and canvas
+   - Theme designer modal (5-step wizard)
+   - Form analytics and data visualization
+   - Preview mode for forms
+
+4. **web (port 4200)**:
+   - Main application dashboard
+   - Admin tools and settings
+   - Export history management
+   - User profile pages
+
+**Inter-Service Communication:**
+
+- Frontend apps use proxy configurations to route API calls
+- APIs share PostgreSQL database (single database architecture)
+- Shared types via `@nodeangularfullstack/shared` package
+- All services managed by `start-dev.sh` script for local development
 
 ## Testing Strategy
 
@@ -200,6 +326,9 @@ packages/
 - Always import shared types from `@nodeangularfullstack/shared`
 - Run `npm run build:shared` after modifying shared types
 - Both frontend and backend must use the same type definitions
+- **Critical shared types**: `FormTheme`, `ThemeProperties`, `ResponsiveThemeConfig` (theme system),
+  `FormSchema`, `FormField`, `FieldPosition` (form builder)
+- Shared types located in `packages/shared/src/types/` (theme.types.ts, forms.types.ts, etc.)
 
 ### Database Development
 
@@ -226,22 +355,86 @@ packages/
 
 ### Frontend Development
 
-- Use standalone Angular components (no NgModules)
-- PrimeNG components with Tailwind for styling
+**Both Frontend Apps (`apps/web` and `apps/form-builder-ui`):**
+
+- Angular 20+ with standalone components (no NgModules)
+- PrimeNG 17+ components with Tailwind CSS
 - Reactive forms with custom validators
-- State management with NgRx Signals
-- Proxy configuration automatically routes API calls to backend
+- Proxy configuration routes API calls to appropriate backend services
+
+**Specific to `apps/form-builder-ui`:**
+
+- Signal-based reactive state management
+- Angular CDK Drag-Drop for form builder
+- Chart.js for data visualization
+- Monaco Editor for code editing
+- DOMPurify for HTML sanitization
+- QRCode.js for QR code generation
+
+**Specific to `apps/web`:**
+
+- NgRx Signals for global state management
+- Main authentication flow
+- Admin panels and tools registry UI
+- Export history and job monitoring
 
 ### Form Builder Development
 
+**Database Schema:**
+
 - Form schemas stored in `forms`, `form_schemas`, `form_submissions` tables
 - Short links with QR codes stored in `short_links` table
-- Frontend form builder components in `apps/web/src/app/features/tools/components/form-builder/`
-- Backend form APIs in `apps/api/src/controllers/forms.controller.ts` and
-  `apps/api/src/services/forms.service.ts`
-- Public form rendering at `/public/form/:shortCode` route
+- Themes stored in `form_themes` table with JSONB configuration
+
+**Frontend (`apps/form-builder-ui`):**
+
+- Form builder components in `apps/form-builder-ui/src/app/features/dashboard/`
+- Main components:
+  - `field-palette/` - Drag-and-drop field palette
+  - `form-canvas/` - Form design canvas with row/column layout
+  - `theme-designer-modal/` - 5-step theme creation wizard
+  - `publish-dialog/` - Form publishing and short link generation
+  - `form-analytics/` - Analytics dashboard with Chart.js visualizations
+  - `iframe-embed-generator/` - Iframe embed code generation
+  - `row-layout-sidebar/` - Row and column configuration UI
+  - `step-form-sidebar/` - Multi-step form configuration
+
+**Backend (`apps/forms-api`):**
+
+- Form APIs in `apps/forms-api/src/controllers/forms.controller.ts`
+- Form services in `apps/forms-api/src/services/forms.service.ts`
+- Theme APIs in `apps/forms-api/src/controllers/themes.controller.ts`
+- Public form rendering at `/api/public/forms/:shortCode` endpoint
 - HTML sanitization middleware applied to all form submissions (uses DOMPurify)
-- Custom CSS validation for background styles
+- Custom CSS validation for background styles and theme properties
+
+### Theme System Development
+
+- **Theme Designer Modal**: 5-step wizard for creating custom themes (Colors → Typography → Styling
+  → Background → Preview)
+- **Predefined Themes**: 9 pre-built themes (Ocean Blue, Sunset Orange, Forest Green, etc.) stored
+  in `form_themes` table
+- **Custom Themes**: User-created themes with full customization (colors, fonts, backgrounds,
+  container styling)
+- **Signal-Based Architecture**: Theme designer uses Angular 20+ signals for reactive state
+  management
+- **Service Pattern**: `ThemeDesignerModalService` manages theme state with computed signals for
+  live preview
+- **CSS Variables**: Themes rendered via CSS custom properties (`--theme-form-*` prefix) for instant
+  switching
+- **Responsive Themes**: Desktop and mobile property overrides stored in `ResponsiveThemeConfig`
+  (JSONB column)
+- **Theme Persistence**: Theme configs stored as JSONB in PostgreSQL with 50KB size limit
+- **Image Uploads**: Background images converted to base64 data URIs, validated for size (5MB max)
+  and type (JPEG/PNG/WebP)
+- **Container Styling**: Border, shadow, alignment, opacity, and backdrop blur controls (Epic 25)
+- **Google Fonts Integration**: 1000+ fonts available via Google Fonts API
+- **Backend Validation**: Theme configs validated for CSS safety and size limits before storage
+- **Theme Application**: Forms reference themes via `formSchema.themeId` foreign key
+- **Location**: Frontend components in
+  `apps/form-builder-ui/src/app/features/dashboard/theme-designer-modal/`
+- **Location**: Backend APIs in `apps/forms-api/src/controllers/themes.controller.ts` and
+  `apps/forms-api/src/services/themes.service.ts`
 - **Row-based layout system**: Enable/disable row layout mode, configure 1-4 columns per row,
   flexible multi-column forms
   - Row layout configuration stored in `FormSettings.rowLayout` (optional property)
@@ -317,6 +510,109 @@ packages/
     - **Location**: FormBuilderComponent toolbar (between Settings and Save buttons)
       - Form submission logic unchanged (POST to `/api/public/forms/:shortCode/submit`)
       - HTML sanitization middleware still applied server-side (DOMPurify)
+  - **Step Form Sub-Column Support (Story 27.9)**:
+    - **Sub-column configuration UI** available in StepFormSidebarComponent for step form rows
+    - **Column width ratio configuration** for rows within steps (Equal, Narrow-Wide, Custom, etc.)
+    - **Sub-column management** for each column in step form rows (enable/disable, count 2-4, width
+      ratios)
+    - **Service integration**: Uses existing FormBuilderService sub-column methods with stepId
+      parameter
+    - **UI pattern**: Follows RowLayoutSidebarComponent sub-column UI exactly (accordion, toggles,
+      dropdowns)
+    - **Location**: StepFormSidebarComponent in
+      `apps/web/src/app/features/tools/components/form-builder/step-form-sidebar/`
+    - **Features**:
+      - Width ratio dropdowns for row columns (2-4 columns)
+      - Custom width input with fractional unit validation (e.g., '1fr, 2fr')
+      - Accordion panels for each column with sub-column configuration
+      - Enable/disable sub-columns per column via toggle button
+      - Sub-column count selection (2-4 sub-columns)
+      - Sub-column width ratio presets and custom input
+      - Real-time validation errors for custom width inputs
+    - **Backward compatibility**: Existing step form functionality unchanged, no service method
+      changes required
+
+### Tool Registry & Export System Development (Epics 30-33)
+
+**Architecture Note**: The project is currently a **monolith with export capabilities**, NOT a
+microservices architecture. The export system generates standalone service packages that can be
+deployed separately, but the core system remains monolithic.
+
+**Tool Registry System (Epic 30)**:
+
+- **Database schema**: `tool_registry` table tracks all registered tools (forms, workflows, themes)
+- **Status tracking**: Tools can be registered, draft, archived, or exported
+- **Repository pattern**: `ToolRegistryRepository` in
+  `apps/forms-api/src/repositories/tool-registry.repository.ts`
+- **REST API**: CRUD endpoints in `apps/forms-api/src/controllers/tool-registry.controller.ts`
+- **Validation**: Input validation with express-validator middleware
+- **Frontend UI**: `ToolCard` component in `apps/web/src/app/features/admin/components/tool-card/`
+- **Shared types**: `ToolRegistryRecord` in `packages/shared/src/types/tool-registry.types.ts`
+
+**Export Infrastructure (Epic 33)**:
+
+- **Export orchestrator**: `ExportOrchestratorService` coordinates multi-step export process
+- **Strategy Pattern**: `IExportStrategy` interface with 3 implementations:
+  - `FormsExportStrategy` (8 steps) - exports form builder tools
+  - `WorkflowsExportStrategy` (7 steps) - exports workflow tools
+  - `ThemesExportStrategy` (6 steps) - exports theme tools
+- **Location**: `apps/forms-api/src/services/export-orchestrator.service.ts` and
+  `apps/forms-api/src/services/export-strategies/`
+- **Export Jobs schema**: `export_jobs` table tracks export lifecycle (pending → in_progress →
+  completed/failed)
+- **Progress tracking**: Real-time progress updates with step completion percentage
+- **Package generation**: Creates .tar.gz archives containing:
+  - Express.js/Node.js service boilerplate
+  - Docker configuration (Dockerfile, docker-compose.yml)
+  - Database migrations and schemas
+  - Environment configuration (.env.example)
+  - Tool-specific data (form schemas, theme configs, etc.)
+  - README with deployment instructions
+- **Download API**: `GET /api/tool-registry/export-jobs/:jobId/download` endpoint
+- **Security**: SHA-256 checksums for package integrity, download tracking, 30-day retention
+- **Rollback support**: Automatic cleanup on export failure with step-by-step rollback
+- **Repository**: `ExportJobRepository` in
+  `apps/forms-api/src/repositories/export-job.repository.ts`
+- **Shared types**: `ExportJob`, `ExportJobStatus` in `packages/shared/src/types/export.types.ts`
+
+**CLI Scaffolding Tool (Epic 31)**:
+
+- **Package**: `@nodeangularfullstack/create-tool` in `packages/create-tool/`
+- **Usage**: `npx @nodeangularfullstack/create-tool` to generate new service boilerplate
+- **Commander.js**: CLI framework for command parsing
+- **Inquirer.js**: Interactive prompts for configuration
+- **EJS templates**: Template generation system for boilerplate
+
+**Export History UI (Epic 32)**:
+
+- **Export progress modal**: `ExportProgressModalComponent` shows real-time export progress
+- **Export history page**: View past exports, re-download packages, monitor status
+- **Location**: `apps/web/src/app/features/admin/pages/export-history/`
+- **Service**: `ExportJobService` in
+  `apps/web/src/app/features/tools/services/export-job.service.ts`
+
+**Testing**:
+
+- Integration tests: `apps/api/tests/integration/export-download.test.ts`,
+  `export-history-list.test.ts`, `package-verification.test.ts`
+- Unit tests: `apps/api/tests/unit/utils/checksum.utils.test.ts`
+- E2E tests: `tests/e2e/export-history-complete-workflow.spec.ts`
+- Quality gates: `docs/qa/gates/33.2.1-export-package-download.yml`,
+  `33.2.2-package-verification-security.yml`
+
+**Story Documentation**:
+
+- `docs/stories/30/` - Tool Registry System stories
+- `docs/stories/31/` - CLI Scaffolding Tool stories
+- `docs/stories/32/` - Tool Registry UI stories
+- `docs/stories/33/` - Export Core Infrastructure stories
+
+**Migration Planning**:
+
+- `MicroserviceDock/` - Contains comprehensive microservices migration plans
+- `MicroserviceDock/microservices_implementation_plan.md` - 11-week migration roadmap
+- `MicroserviceDock/convert_to_microservices_doc.md` - Architecture proposal
+- Git branch: `features/multi_service_architecture`
 
 ### Prerequisites
 
@@ -329,17 +625,44 @@ packages/
 
 **Local Development:**
 
-- Frontend: http://localhost:4200
-- Backend API: http://localhost:3000
-- API Documentation: http://localhost:3000/api-docs
-- pgWeb Database UI: http://localhost:8080
-- Health Check: http://localhost:3000/health
+- **Main Frontend (web)**: http://localhost:4200
+- **Form Builder UI**: http://localhost:4201
+- **Dashboard API**: http://localhost:3000
+- **Forms API**: http://localhost:3001
+- **Legacy API**: http://localhost:3002 (if running)
+- **API Documentation**: http://localhost:3000/api-docs
+- **pgWeb Database UI**: http://localhost:8080
+- **Health Checks**:
+  - Dashboard API: http://localhost:3000/health
+  - Forms API: http://localhost:3001/health
 
 **Test User Credentials:**
 
-- Admin: admin@example.com / Admin123!@#
+- Admin: admin@example.com / User123!@#
 - User: user@example.com / User123!@#
-- ReadOnly: readonly@example.com / Read123!@#
+- ReadOnly: readonly@example.com / User123!@#
+
+## Documentation Structure
+
+The `docs/` directory contains comprehensive project documentation:
+
+**Story Documentation:**
+
+- `docs/stories/` - User stories organized by epic number (e.g.,
+  `docs/stories/25/25.1.container-styling-ui.md`)
+- Stories include acceptance criteria, tasks, dev notes, QA results, and gate status
+- Each story has corresponding gate file in `docs/qa/gates/` for quality validation
+
+**Architecture Documentation:**
+
+- `docs/architecture/` - System architecture, patterns, and technical design decisions
+- `docs/user-guide/` - End-user documentation for features (form analytics, theme creation)
+
+**Development Workflow:**
+
+- Stories progress through states: Draft → Ready for Review → In Progress → Done
+- QA gate files track quality scores, test coverage, and compliance checks
+- Always check story documentation before implementing new features
 
 ## Utility Scripts
 
@@ -367,9 +690,20 @@ The `scripts/` directory contains utility scripts accessible via npm commands:
 - `npm run onboarding:setup` - Initialize metrics, feedback, and validation
 - `npm run onboarding:help` - Display onboarding instructions
 
-# important-instruction-reminders
+# Important Instruction Reminders
 
 Do what has been asked; nothing more, nothing less. NEVER create files unless they're absolutely
 necessary for achieving your goal. ALWAYS prefer editing an existing file to creating a new one.
 NEVER proactively create documentation files (\*.md) or README files. Only create documentation
 files if explicitly requested by the User.
+
+## Multi-App Context Awareness
+
+**CRITICAL**: This repository contains multiple frontend and backend applications:
+
+- When working on **form builder features**, use `apps/form-builder-ui` (NOT `apps/web`)
+- When working on **main dashboard/auth**, use `apps/web` and `apps/dashboard-api`
+- When working on **forms/themes/export**, use `apps/forms-api`
+- Always verify which app the user is referring to before making changes
+- The `apps/web` and `apps/form-builder-ui` are separate Angular applications with different
+  purposes

@@ -1,0 +1,71 @@
+// Shared components barrel exports
+export {
+  ErrorFeedbackComponent,
+  type ErrorInfo,
+  type ErrorSeverity,
+} from './error-feedback.component';
+export { ThemeToggleComponent } from './theme-toggle';
+export { UserDropdownMenuComponent } from './user-dropdown-menu/user-dropdown-menu.component';
+export { NavigationBarComponent } from './navigation-bar/navigation-bar.component';
+export {
+  ActionCardComponent,
+  type ActionCardData,
+  type ActionCardColorVariant,
+  type ActionCardSize,
+} from './action-card';
+export {
+  StatsCardComponent,
+  type StatsCardConfig,
+  type StatsCardData,
+  type StatsCardColorVariant,
+  type StatsCardSize,
+} from './stats-card';
+export {
+  SectionContainerComponent,
+  type SectionContainerConfig,
+  type SectionContainerVariant,
+  type SectionContainerSize,
+} from './section-container';
+export { ApiTokenGeneratorComponent } from './api-token-generator';
+export { SettingsSidebarComponent } from './settings-sidebar';
+export {
+  AvatarUploadComponent,
+  type AvatarUploadState,
+} from './avatar-upload/avatar-upload.component';
+export { ToolLoadingComponent } from './tool-loading/tool-loading.component';
+export { ToolCardComponent } from './tool-card';
+export { ToolManagementCardComponent } from './tool-management-card';
+export {
+  SearchFilterComponent,
+  type StatusFilterValue,
+  type BulkAction,
+} from './search-filter/search-filter.component';
+export {
+  ImageGallerySelectorComponent,
+  type GalleryImage,
+} from './image-gallery-selector/image-gallery-selector.component';
+export { FormSettingsModalComponent, type FormSettings } from './form-settings-modal';
+export { CategoryBadgeComponent } from './category-badge/category-badge.component';
+export { FieldQuizSettingsModalComponent } from './field-quiz-settings-modal';
+
+// Welcome Page Components
+export {
+  WelcomePageComponent,
+  WelcomeHeroComponent,
+  WelcomeFeaturesComponent,
+  WelcomeApiDocsComponent,
+  FeatureShowcaseCardComponent,
+  WelcomeCTAButtonComponent,
+  type WelcomePageConfig,
+  type WelcomePageProps,
+  type WelcomeHeroConfig,
+  type WelcomeFeaturesConfig,
+  type WelcomeApiDocsConfig,
+  type WelcomeFeature,
+  type WelcomeCTAButton,
+  type WelcomeColorVariant,
+  type WelcomeButtonSize,
+  type WelcomeThemeConfig,
+  type WelcomeFooterConfig,
+  type WelcomeNavConfig,
+} from './welcome-page';

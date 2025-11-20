@@ -1,0 +1,424 @@
+<div class="quiz-wizard-panel">
+  <!-- Step Indicator -->
+  <div class="wizard-steps mb-4">
+    <div class="flex justify-content-between align-items-center">
+      <div class="flex-1" *ngFor="let step of steps; let i = index">
+        <div
+          class="step-item"
+          [class.active]="currentStep() === i"
+          [class.completed]="currentStep() > i"
+        >
+          <div class="step-icon">
+            <i [class]="step.icon"></i>
+          </div>
+          <div class="step-label text-sm mt-2">{{ step.label }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Help Text Message -->
+  <p-message severity="info" [text]="getStepHelpText()" [styleClass]="'mb-4 w-full'"></p-message>
+
+  <!-- Validation Errors -->
+  <div *ngIf="validationErrors().length > 0" class="mb-4">
+    <p-message
+      *ngFor="let error of validationErrors()"
+      severity="error"
+      [text]="error"
+      [styleClass]="'mb-2 w-full'"
+      [attr.role]="'alert'"
+      [attr.aria-live]="'assertive'"
+    ></p-message>
+  </div>
+
+  <!-- Quiz Configuration Form -->
+  <form [formGroup]="quizForm" class="quiz-form">
+    <!-- Step 1: Basic Configuration -->
+    <div *ngIf="currentStep() === 0" class="wizard-step-content">
+      <div class="field">
+        <label for="quiz-title" class="block font-semibold mb-2">
+          Quiz Title
+          <i
+            class="pi pi-info-circle ml-2 text-primary cursor-pointer"
+            pTooltip="Enter a clear, descriptive title for your quiz."
+            tooltipPosition="right"
+            [attr.aria-label]="'Help: Quiz title guidance'"
+            tabindex="0"
+          ></i>
+        </label>
+        <input
+          id="quiz-title"
+          type="text"
+          formControlName="title"
+          pInputText
+          placeholder="e.g., JavaScript Fundamentals Quiz"
+          class="w-full"
+          [attr.aria-describedby]="'quiz-title-help'"
+          [attr.aria-invalid]="quizForm.get('title')?.invalid && quizForm.get('title')?.touched"
+        />
+        <small id="quiz-title-help" class="block mt-2 text-color-secondary">
+          Minimum 5 characters, maximum 255 characters
+        </small>
+      </div>
+
+      <div class="field mt-4">
+        <label for="quiz-description" class="block font-semibold mb-2">
+          Description (Optional)
+          <i
+            class="pi pi-info-circle ml-2 text-primary cursor-pointer"
+            pTooltip="Provide additional context about what the quiz covers."
+            tooltipPosition="right"
+            [attr.aria-label]="'Help: Quiz description guidance'"
+            tabindex="0"
+          ></i>
+        </label>
+        <textarea
+          id="quiz-description"
+          formControlName="description"
+          pTextarea
+          rows="4"
+          placeholder="Describe what topics this quiz covers..."
+          class="w-full"
+          [attr.aria-describedby]="'quiz-description-help'"
+        ></textarea>
+        <small id="quiz-description-help" class="block mt-2 text-color-secondary">
+          Maximum 1000 characters
+        </small>
+      </div>
+    </div>
+
+    <!-- Step 2: Question Bank -->
+    <div *ngIf="currentStep() === 1" class="wizard-step-content">
+      <!-- Add Question Form -->
+      <div class="add-question-form p-4 surface-50 border-round mb-4">
+        <h4 class="font-semibold mb-3">Add Question</h4>
+        <div class="field">
+          <label for="new-question" class="block font-medium mb-2">Question Text</label>
+          <input
+            #questionInput
+            id="new-question"
+            type="text"
+            pInputText
+            placeholder="Enter your question..."
+            class="w-full"
+          />
+        </div>
+        <div class="field mt-3">
+          <label for="correct-answer" class="block font-medium mb-2">Correct Answer</label>
+          <input
+            #answerInput
+            id="correct-answer"
+            type="text"
+            pInputText
+            placeholder="Enter the correct answer..."
+            class="w-full"
+          />
+        </div>
+        <button
+          pButton
+          type="button"
+          label="Add Question"
+          icon="pi pi-plus"
+          class="mt-3"
+          (click)="
+            addQuestion(questionInput.value, answerInput.value);
+            questionInput.value = '';
+            answerInput.value = ''
+          "
+        ></button>
+      </div>
+
+      <!-- Question Bank Table -->
+      <div *ngIf="questionBank().length > 0">
+        <h4 class="font-semibold mb-3">Question Bank ({{ questionBank().length }} questions)</h4>
+        <p-table
+          [value]="questionBank()"
+          [tableStyle]="{ 'min-width': '50rem' }"
+          styleClass="p-datatable-sm"
+        >
+          <ng-template pTemplate="header">
+            <tr>
+              <th style="width: 5%">#</th>
+              <th style="width: 45%">Question</th>
+              <th style="width: 35%">Correct Answer</th>
+              <th style="width: 10%">Points</th>
+              <th style="width: 5%">Actions</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-question let-rowIndex="rowIndex">
+            <tr>
+              <td>{{ rowIndex + 1 }}</td>
+              <td>{{ question.question }}</td>
+              <td>{{ question.correctAnswer }}</td>
+              <td>{{ question.points }}</td>
+              <td>
+                <button
+                  pButton
+                  type="button"
+                  icon="pi pi-trash"
+                  class="p-button-text p-button-danger p-button-sm"
+                  (click)="removeQuestion(rowIndex)"
+                  [attr.aria-label]="'Remove question ' + (rowIndex + 1)"
+                ></button>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    </div>
+
+    <!-- Step 3: Scoring Weights -->
+    <div *ngIf="currentStep() === 2" class="wizard-step-content">
+      <div class="field">
+        <label for="scoring-mode" class="block font-semibold mb-2">
+          Scoring Mode
+          <i
+            class="pi pi-info-circle ml-2 text-primary cursor-pointer"
+            pTooltip="Equal points: All questions worth same value. Custom: Set individual weights."
+            tooltipPosition="right"
+            [attr.aria-label]="'Help: Scoring mode explanation'"
+            tabindex="0"
+          ></i>
+        </label>
+        <div class="flex flex-column gap-3">
+          <div *ngFor="let mode of scoringModeOptions" class="field-radiobutton">
+            <p-radioButton
+              [inputId]="mode.value"
+              name="scoringMode"
+              [value]="mode.value"
+              formControlName="scoringMode"
+              (click)="mode.value === 'equal' ? applyEqualPoints() : null"
+            ></p-radioButton>
+            <label [for]="mode.value" class="ml-2">{{ mode.label }}</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Custom Points Editor -->
+      <div
+        *ngIf="quizForm.get('scoringMode')?.value === 'custom' && questionBank().length > 0"
+        class="mt-4"
+      >
+        <h4 class="font-semibold mb-3">Assign Points to Questions</h4>
+        <div class="grid">
+          <div *ngFor="let question of questionBank(); let i = index" class="col-12 md:col-6">
+            <div class="p-3 surface-50 border-round">
+              <label [for]="'question-points-' + i" class="block font-medium mb-2">
+                Q{{ i + 1 }}: {{ question.question }}
+              </label>
+              <p-inputNumber
+                [inputId]="'question-points-' + i"
+                [ngModel]="question.points"
+                [ngModelOptions]="{ standalone: true }"
+                [min]="1"
+                [max]="100"
+                [showButtons]="true"
+                [step]="1"
+                (ngModelChange)="updateQuestionPoints(i, $event)"
+                class="w-full"
+                [attr.aria-label]="'Points for question ' + (i + 1)"
+              ></p-inputNumber>
+            </div>
+          </div>
+        </div>
+        <div class="mt-3 p-3 surface-100 border-round">
+          <strong>Total Points: {{ totalPoints() }}</strong>
+        </div>
+      </div>
+
+      <!-- Equal Points Summary -->
+      <div
+        *ngIf="quizForm.get('scoringMode')?.value === 'equal' && questionBank().length > 0"
+        class="mt-4"
+      >
+        <p-message
+          severity="success"
+          [text]="
+            'All ' +
+            questionBank().length +
+            ' questions worth 1 point each. Total points: ' +
+            totalPoints()
+          "
+          [styleClass]="'w-full'"
+        ></p-message>
+      </div>
+    </div>
+
+    <!-- Step 4: Pass Criteria -->
+    <div *ngIf="currentStep() === 3" class="wizard-step-content">
+      <div class="field">
+        <label for="passing-score" class="block font-semibold mb-2">
+          Passing Score (%)
+          <i
+            class="pi pi-info-circle ml-2 text-primary cursor-pointer"
+            pTooltip="Users must score at or above this percentage to pass the quiz."
+            tooltipPosition="right"
+            [attr.aria-label]="'Help: Passing score threshold'"
+            tabindex="0"
+          ></i>
+        </label>
+        <p-inputNumber
+          inputId="passing-score"
+          formControlName="passingScore"
+          [min]="0"
+          [max]="100"
+          [showButtons]="true"
+          [step]="5"
+          suffix="%"
+          class="w-full"
+          [attr.aria-describedby]="'passing-score-help'"
+        ></p-inputNumber>
+        <small id="passing-score-help" class="block mt-2 text-color-secondary">
+          Users scoring {{ quizForm.get('passingScore')?.value }}% or higher will pass
+        </small>
+      </div>
+
+      <div class="field mt-4">
+        <div class="flex align-items-center">
+          <p-checkbox
+            inputId="show-results"
+            formControlName="showResults"
+            [binary]="true"
+            [attr.aria-describedby]="'show-results-help'"
+          ></p-checkbox>
+          <label for="show-results" class="ml-2 font-semibold">
+            Show Results After Submission
+            <i
+              class="pi pi-info-circle ml-2 text-primary cursor-pointer"
+              pTooltip="Display score and pass/fail status immediately after quiz submission."
+              tooltipPosition="right"
+              tabindex="0"
+            ></i>
+          </label>
+        </div>
+        <small id="show-results-help" class="block mt-2 ml-7 text-color-secondary">
+          Recommended: Users see their score and pass/fail status immediately
+        </small>
+      </div>
+
+      <div class="field mt-4">
+        <div class="flex align-items-center">
+          <p-checkbox
+            inputId="allow-retakes"
+            formControlName="allowRetakes"
+            [binary]="true"
+            [attr.aria-describedby]="'allow-retakes-help'"
+          ></p-checkbox>
+          <label for="allow-retakes" class="ml-2 font-semibold">
+            Allow Retakes
+            <i
+              class="pi pi-info-circle ml-2 text-primary cursor-pointer"
+              pTooltip="Let users retake the quiz if they don't pass on first attempt."
+              tooltipPosition="right"
+              tabindex="0"
+            ></i>
+          </label>
+        </div>
+        <small id="allow-retakes-help" class="block mt-2 ml-7 text-color-secondary">
+          Users can retry the quiz multiple times
+        </small>
+      </div>
+    </div>
+
+    <!-- Step 5: Feedback Messages -->
+    <div *ngIf="currentStep() === 4" class="wizard-step-content">
+      <div class="field">
+        <label for="pass-message" class="block font-semibold mb-2">
+          Pass Message
+          <i
+            class="pi pi-info-circle ml-2 text-primary cursor-pointer"
+            pTooltip="Message shown to users when they pass the quiz."
+            tooltipPosition="right"
+            [attr.aria-label]="'Help: Pass message guidance'"
+            tabindex="0"
+          ></i>
+        </label>
+        <textarea
+          id="pass-message"
+          formControlName="passMessage"
+          pTextarea
+          rows="3"
+          placeholder="e.g., Congratulations! You passed the quiz."
+          class="w-full"
+          [attr.aria-describedby]="'pass-message-help'"
+          [attr.aria-invalid]="
+            quizForm.get('passMessage')?.invalid && quizForm.get('passMessage')?.touched
+          "
+        ></textarea>
+        <small id="pass-message-help" class="block mt-2 text-color-secondary">
+          Minimum 10 characters
+        </small>
+      </div>
+
+      <div class="field mt-4">
+        <label for="fail-message" class="block font-semibold mb-2">
+          Fail Message
+          <i
+            class="pi pi-info-circle ml-2 text-primary cursor-pointer"
+            pTooltip="Message shown to users when they do not pass the quiz."
+            tooltipPosition="right"
+            [attr.aria-label]="'Help: Fail message guidance'"
+            tabindex="0"
+          ></i>
+        </label>
+        <textarea
+          id="fail-message"
+          formControlName="failMessage"
+          pTextarea
+          rows="3"
+          placeholder="e.g., Sorry, you did not pass. Please try again."
+          class="w-full"
+          [attr.aria-describedby]="'fail-message-help'"
+          [attr.aria-invalid]="
+            quizForm.get('failMessage')?.invalid && quizForm.get('failMessage')?.touched
+          "
+        ></textarea>
+        <small id="fail-message-help" class="block mt-2 text-color-secondary">
+          Minimum 10 characters
+        </small>
+      </div>
+
+      <!-- Message Preview -->
+      <div class="mt-5 p-4 surface-50 border-round">
+        <h4 class="font-semibold mb-3 text-color-secondary">
+          <i class="pi pi-eye mr-2"></i>
+          Message Preview
+        </h4>
+        <div class="mb-3 p-3 surface-100 border-round border-1 border-success">
+          <strong class="text-success">✓ Pass:</strong>
+          <p class="mt-2 mb-0">{{ quizForm.get('passMessage')?.value }}</p>
+        </div>
+        <div class="p-3 surface-100 border-round border-1 border-danger">
+          <strong class="text-danger">✗ Fail:</strong>
+          <p class="mt-2 mb-0">{{ quizForm.get('failMessage')?.value }}</p>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <!-- Navigation Buttons -->
+  <div class="wizard-navigation flex justify-content-between mt-5 pt-4 border-top-1 surface-border">
+    <button
+      pButton
+      type="button"
+      label="Previous"
+      icon="pi pi-arrow-left"
+      class="p-button-outlined"
+      [disabled]="currentStep() === 0"
+      (click)="previousStep()"
+      [attr.aria-label]="'Go to previous step'"
+    ></button>
+
+    <button
+      pButton
+      type="button"
+      [label]="currentStep() === 4 ? 'Complete' : 'Next'"
+      [icon]="currentStep() === 4 ? 'pi pi-check' : 'pi pi-arrow-right'"
+      iconPos="right"
+      [disabled]="!isStepValid()"
+      (click)="nextStep()"
+      [attr.aria-label]="currentStep() === 4 ? 'Complete quiz configuration' : 'Go to next step'"
+    ></button>
+  </div>
+</div>

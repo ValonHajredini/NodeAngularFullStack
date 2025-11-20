@@ -1,0 +1,167 @@
+/**
+ * Template Editor Dialog Component Styles
+ */
+
+:host {
+  ::ng-deep {
+    .template-editor-dialog {
+      .p-dialog-header {
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+      }
+
+      .p-dialog-content {
+        padding: 1.5rem;
+      }
+
+      .p-dialog-footer {
+        padding: 1rem 1.5rem;
+        border-top: 1px solid #e5e7eb;
+      }
+
+      // File upload styling
+      .p-fileupload-choose {
+        width: 100%;
+      }
+
+      // Checkbox label spacing
+      .p-checkbox-label {
+        margin-left: 0.5rem;
+      }
+
+      // Checkbox styling - ensure proper display when unchecked
+      .p-checkbox {
+        display: inline-flex !important;
+        align-items: center;
+        vertical-align: middle;
+
+        .p-checkbox-box {
+          width: 1.25rem !important;
+          height: 1.25rem !important;
+          min-width: 1.25rem !important;
+          min-height: 1.25rem !important;
+          border: 2px solid #d1d5db !important;
+          border-radius: 0.25rem !important;
+          background-color: #ffffff !important;
+          transition: all 0.2s;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+
+          &:hover {
+            border-color: #3b82f6 !important;
+          }
+
+          &.p-focus {
+            outline: 0 none;
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+          }
+
+          .p-checkbox-icon {
+            width: 0.875rem !important;
+            height: 0.875rem !important;
+            transition: all 0.2s;
+
+            &.pi-check {
+              font-size: 0.75rem !important;
+            }
+          }
+        }
+
+        // Checked state - when parent has p-highlight class
+        &.p-highlight .p-checkbox-box {
+          background-color: #3b82f6 !important;
+          border-color: #3b82f6 !important;
+
+          .p-checkbox-icon {
+            color: #ffffff !important;
+            font-size: 0.875rem !important;
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+          }
+        }
+
+        // Ensure unchecked state shows empty box
+        &:not(.p-checkbox-checked) .p-checkbox-box {
+          background-color: #ffffff !important;
+          border: 2px solid #d1d5db !important;
+        }
+      }
+
+      // Select dropdown full width
+      .p-select {
+        width: 100%;
+      }
+
+      // Hide step numbers - show only labels (p-stepper component)
+      // Using ::ng-deep to penetrate Angular's view encapsulation
+      .p-step-number {
+        display: none !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        opacity: 0 !important;
+      }
+
+      // Adjust spacing since numbers are hidden
+      .p-step-title {
+        margin-left: 0 !important;
+      }
+
+      // Active step styling
+      .p-step-active {
+        .p-step-title {
+          font-weight: 600;
+          color: var(--text-color);
+        }
+      }
+
+      // Compact stepper header (40% less vertical space)
+      .p-stepper {
+        .p-step-list {
+          padding: 0.5rem 0 !important;
+          margin-bottom: 0.5rem !important;
+        }
+
+        .p-step {
+          padding: 0.3rem 0.5rem !important;
+          min-height: auto !important;
+        }
+
+        .p-step-title {
+          font-size: 0.875rem !important;
+          padding: 0.2rem 0 !important;
+          line-height: 1.2 !important;
+        }
+
+        .p-step-separator {
+          margin: 0 0.5rem !important;
+        }
+      }
+    }
+  }
+
+  // Field spacing
+  .field {
+    margin-bottom: 0;
+  }
+
+  // Responsive adjustments
+  @media (max-width: 768px) {
+    ::ng-deep {
+      .template-editor-dialog {
+        .p-dialog-content {
+          padding: 1rem;
+        }
+
+        .grid-cols-2 {
+          grid-template-columns: 1fr;
+        }
+      }
+    }
+  }
+}

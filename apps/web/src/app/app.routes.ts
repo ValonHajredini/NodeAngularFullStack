@@ -37,6 +37,15 @@ export const routes: Routes = [
       ),
   },
 
+  // Public form renderer via short code (no authentication required)
+  {
+    path: 'public/form/:shortCode',
+    loadComponent: () =>
+      import('./features/public/form-renderer/form-renderer.component').then(
+        (m) => m.FormRendererComponent,
+      ),
+  },
+
   // Authentication routes (no layout)
   {
     path: 'auth/login',
@@ -92,8 +101,7 @@ export const routes: Routes = [
       },
       {
         path: 'team',
-        loadComponent: () =>
-          import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent), // Placeholder
+        loadComponent: () => import('./features/team/team.component').then((m) => m.TeamComponent),
       },
       {
         path: 'reports',

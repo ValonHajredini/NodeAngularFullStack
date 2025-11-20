@@ -1,0 +1,280 @@
+<div class="poll-wizard-panel">
+  <!-- Step Indicator -->
+  <div class="wizard-steps mb-4">
+    <div class="flex justify-content-between align-items-center">
+      <div class="flex-1" *ngFor="let step of steps; let i = index">
+        <div
+          class="step-item"
+          [class.active]="currentStep() === i"
+          [class.completed]="currentStep() > i"
+        >
+          <div class="step-icon">
+            <i [class]="step.icon"></i>
+          </div>
+          <div class="step-label text-sm mt-2">{{ step.label }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Help Text Message -->
+  <p-message severity="info" [text]="getStepHelpText()" [styleClass]="'mb-4 w-full'"></p-message>
+
+  <!-- Validation Errors -->
+  <div *ngIf="validationErrors().length > 0" class="mb-4">
+    <p-message
+      *ngFor="let error of validationErrors()"
+      severity="error"
+      [text]="error"
+      [styleClass]="'mb-2 w-full'"
+      [attr.role]="'alert'"
+      [attr.aria-live]="'assertive'"
+    ></p-message>
+  </div>
+
+  <!-- Poll Configuration Form -->
+  <form [formGroup]="pollForm" class="poll-form">
+    <!-- Step 1: Question Setup -->
+    <div *ngIf="currentStep() === 0" class="wizard-step-content">
+      <div class="field">
+        <label for="poll-question" class="block font-semibold mb-2">
+          Poll Question
+          <i
+            class="pi pi-info-circle ml-2 text-primary cursor-pointer"
+            pTooltip="Enter the main question voters will answer. Keep it clear and concise."
+            tooltipPosition="right"
+            [attr.aria-label]="'Help: Poll question guidance'"
+          ></i>
+        </label>
+        <textarea
+          id="poll-question"
+          formControlName="question"
+          pTextarea
+          rows="3"
+          placeholder="e.g., What is your favorite programming language?"
+          class="w-full"
+          [attr.aria-describedby]="'poll-question-help'"
+          [attr.aria-invalid]="
+            pollForm.get('question')?.invalid && pollForm.get('question')?.touched
+          "
+        ></textarea>
+        <small id="poll-question-help" class="block mt-2 text-color-secondary">
+          Minimum 10 characters, maximum 500 characters
+        </small>
+      </div>
+    </div>
+
+    <!-- Step 2: Choice Management -->
+    <div *ngIf="currentStep() === 1" class="wizard-step-content">
+      <div class="field">
+        <label for="poll-options" class="block font-semibold mb-2">
+          Poll Options
+          <i
+            class="pi pi-info-circle ml-2 text-primary cursor-pointer"
+            pTooltip="Add 2-10 options for voters to choose from. Press Enter after typing each option."
+            tooltipPosition="right"
+            [attr.aria-label]="'Help: Poll options guidance'"
+          ></i>
+        </label>
+        <p-autocomplete
+          id="poll-options"
+          [(ngModel)]="pollOptions"
+          [ngModelOptions]="{ standalone: true }"
+          [multiple]="true"
+          [typeahead]="false"
+          placeholder="Type an option and press Enter"
+          class="w-full"
+          [attr.aria-describedby]="'poll-options-help'"
+          [attr.aria-label]="'Poll options list'"
+        ></p-autocomplete>
+        <small id="poll-options-help" class="block mt-2 text-color-secondary">
+          Added {{ pollOptions().length }} of 2-10 required options
+        </small>
+      </div>
+
+      <!-- Option Preview List -->
+      <div *ngIf="pollOptions().length > 0" class="mt-4">
+        <h4 class="font-semibold mb-3">Options Preview</h4>
+        <ul class="list-none p-0 m-0" role="list">
+          <li
+            *ngFor="let option of pollOptions(); let i = index"
+            class="flex align-items-center justify-content-between p-3 mb-2 surface-100 border-round"
+          >
+            <span class="flex-1">{{ i + 1 }}. {{ option }}</span>
+            <button
+              pButton
+              type="button"
+              icon="pi pi-trash"
+              class="p-button-text p-button-danger p-button-sm"
+              (click)="removePollOption(i)"
+              [attr.aria-label]="'Remove option: ' + option"
+            ></button>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Step 3: Duplicate-Vote Settings -->
+    <div *ngIf="currentStep() === 2" class="wizard-step-content">
+      <div class="field">
+        <label for="tracking-method" class="block font-semibold mb-2">
+          Vote Tracking Method
+          <i
+            class="pi pi-info-circle ml-2 text-primary cursor-pointer"
+            pTooltip="Session tracking is recommended. It prevents duplicate votes while respecting privacy."
+            tooltipPosition="right"
+            [attr.aria-label]="'Help: Vote tracking method guidance'"
+          ></i>
+        </label>
+        <p-select
+          id="tracking-method"
+          formControlName="trackingMethod"
+          [options]="trackingMethodOptions"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Select tracking method"
+          class="w-full"
+          [attr.aria-describedby]="'tracking-method-help'"
+        ></p-select>
+        <small id="tracking-method-help" class="block mt-2 text-color-secondary">
+          Choose how duplicate votes are prevented
+        </small>
+      </div>
+
+      <div class="field mt-4">
+        <div class="flex align-items-center">
+          <p-checkbox
+            inputId="prevent-duplicates"
+            formControlName="preventDuplicates"
+            [binary]="true"
+            [attr.aria-describedby]="'prevent-duplicates-help'"
+          ></p-checkbox>
+          <label for="prevent-duplicates" class="ml-2">
+            Prevent Duplicate Votes
+            <i
+              class="pi pi-info-circle ml-2 text-primary cursor-pointer"
+              pTooltip="Recommended: Prevents users from voting multiple times using the selected tracking method."
+              tooltipPosition="right"
+            ></i>
+          </label>
+        </div>
+        <small id="prevent-duplicates-help" class="block mt-2 ml-7 text-color-secondary">
+          Uses the selected tracking method to block duplicate submissions
+        </small>
+      </div>
+
+      <div class="field mt-4">
+        <div class="flex align-items-center">
+          <p-checkbox
+            inputId="allow-change-vote"
+            formControlName="allowChangeVote"
+            [binary]="true"
+            [attr.aria-describedby]="'allow-change-vote-help'"
+          ></p-checkbox>
+          <label for="allow-change-vote" class="ml-2">
+            Allow Vote Changes
+            <i
+              class="pi pi-info-circle ml-2 text-primary cursor-pointer"
+              pTooltip="If enabled, users can change their vote after submitting."
+              tooltipPosition="right"
+            ></i>
+          </label>
+        </div>
+        <small id="allow-change-vote-help" class="block mt-2 ml-7 text-color-secondary">
+          Allows users to update their selection after voting
+        </small>
+      </div>
+    </div>
+
+    <!-- Step 4: Result Visibility -->
+    <div *ngIf="currentStep() === 3" class="wizard-step-content">
+      <div class="field">
+        <div class="flex align-items-center">
+          <p-checkbox
+            inputId="show-results-after-vote"
+            formControlName="showResultsAfterVote"
+            [binary]="true"
+            [attr.aria-describedby]="'show-results-help'"
+          ></p-checkbox>
+          <label for="show-results-after-vote" class="ml-2 font-semibold">
+            Show Results After Voting
+            <i
+              class="pi pi-info-circle ml-2 text-primary cursor-pointer"
+              pTooltip="Display real-time poll results to users immediately after they vote."
+              tooltipPosition="right"
+              [attr.aria-label]="'Help: Result visibility guidance'"
+            ></i>
+          </label>
+        </div>
+        <small id="show-results-help" class="block mt-2 ml-7 text-color-secondary">
+          Recommended: Voters see live results immediately after submitting their vote
+        </small>
+      </div>
+
+      <!-- Results Preview Example -->
+      <div class="mt-5 p-4 surface-50 border-round">
+        <h4 class="font-semibold mb-3 text-color-secondary">
+          <i class="pi pi-eye mr-2"></i>
+          Results Display Preview
+        </h4>
+        <p class="text-sm mb-3 text-color-secondary">
+          When enabled, voters will see results like this after voting:
+        </p>
+        <div class="results-preview">
+          <div class="mb-3">
+            <div class="flex justify-content-between align-items-center mb-1">
+              <span class="text-sm font-medium">Option A</span>
+              <span class="text-sm font-semibold text-primary">45%</span>
+            </div>
+            <div class="progress-bar surface-300 border-round overflow-hidden" style="height: 8px">
+              <div class="bg-primary" style="width: 45%; height: 100%"></div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <div class="flex justify-content-between align-items-center mb-1">
+              <span class="text-sm font-medium">Option B</span>
+              <span class="text-sm font-semibold text-primary">30%</span>
+            </div>
+            <div class="progress-bar surface-300 border-round overflow-hidden" style="height: 8px">
+              <div class="bg-primary" style="width: 30%; height: 100%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-content-between align-items-center mb-1">
+              <span class="text-sm font-medium">Option C</span>
+              <span class="text-sm font-semibold text-primary">25%</span>
+            </div>
+            <div class="progress-bar surface-300 border-round overflow-hidden" style="height: 8px">
+              <div class="bg-primary" style="width: 25%; height: 100%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <!-- Navigation Buttons -->
+  <div class="wizard-navigation flex justify-content-between mt-5 pt-4 border-top-1 surface-border">
+    <button
+      pButton
+      type="button"
+      label="Previous"
+      icon="pi pi-arrow-left"
+      class="p-button-outlined"
+      [disabled]="currentStep() === 0"
+      (click)="previousStep()"
+      [attr.aria-label]="'Go to previous step'"
+    ></button>
+
+    <button
+      pButton
+      type="button"
+      [label]="currentStep() === 3 ? 'Complete' : 'Next'"
+      [icon]="currentStep() === 3 ? 'pi pi-check' : 'pi pi-arrow-right'"
+      iconPos="right"
+      [disabled]="!isStepValid()"
+      (click)="nextStep()"
+      [attr.aria-label]="currentStep() === 3 ? 'Complete poll configuration' : 'Go to next step'"
+    ></button>
+  </div>
+</div>

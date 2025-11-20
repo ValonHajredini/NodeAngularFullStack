@@ -21,7 +21,7 @@ test.describe('Form Analytics Charts - Functionality', () => {
     // Navigate to login page and authenticate as admin
     await page.goto('/auth/login');
     await page.getByLabel(/email/i).fill('admin@example.com');
-    await page.getByLabel(/password/i).fill('Admin123!@#');
+    await page.getByLabel(/password/i).fill('User123!@#');
     await page.getByRole('button', { name: /sign in|login/i }).click();
 
     // Wait for successful login and redirect
@@ -243,7 +243,7 @@ test.describe('Form Analytics Charts - Accessibility', () => {
     // Authenticate and navigate
     await page.goto('/auth/login');
     await page.getByLabel(/email/i).fill('admin@example.com');
-    await page.getByLabel(/password/i).fill('Admin123!@#');
+    await page.getByLabel(/password/i).fill('User123!@#');
     await page.getByRole('button', { name: /sign in|login/i }).click();
     await page.waitForURL('**/dashboard');
   });
@@ -290,7 +290,7 @@ test.describe('Form Analytics Charts - Visual Tests', () => {
     // Set up authentication
     await page.goto('/auth/login');
     await page.getByLabel(/email/i).fill('admin@example.com');
-    await page.getByLabel(/password/i).fill('Admin123!@#');
+    await page.getByLabel(/password/i).fill('User123!@#');
     await page.getByRole('button', { name: /sign in|login/i }).click();
     await page.waitForURL('**/dashboard');
   });
