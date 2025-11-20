@@ -664,6 +664,47 @@ The `docs/` directory contains comprehensive project documentation:
 - QA gate files track quality scores, test coverage, and compliance checks
 - Always check story documentation before implementing new features
 
+## Deployment and CI/CD
+
+### Production Deployment
+
+**Automated CI/CD (Recommended):**
+- GitHub Actions workflow at `.github/workflows/deploy-production.yml`
+- Triggers automatically on push to `main` branch
+- Setup guide: `.github/CICD-SETUP.md`
+- Setup helper: `./.github/setup-cicd.sh`
+
+**Manual Deployment:**
+- Production deployment script: `./deploy.sh`
+- Deployment guide: `DEPLOYMENT.md`
+- Nginx configuration: `nginx/` directory with configs for 4 subdomains
+
+**Production Environment Configuration:**
+- `apps/web/src/environments/environment.prod.ts` - Main UI production config
+  - API: `https://api.legopdf.com/api/v1` (Dashboard/Auth API)
+  - Forms API: `https://forms-api.legopdf.com` (Short links)
+- `apps/form-builder-ui/src/environments/environment.prod.ts` - Form Builder production config
+  - Auth API: `https://api.legopdf.com/api/v1`
+  - Forms API: `https://forms-api.legopdf.com` (Primary API)
+
+**Production Domains:**
+- Main UI: `https://legopdf.com` (apps/web)
+- Form Builder: `https://form-builder.legopdf.com` (apps/form-builder-ui)
+- Dashboard API: `https://api.legopdf.com` (port 3000)
+- Forms API: `https://forms-api.legopdf.com` (port 3001)
+
+**PM2 Process Management:**
+- Ecosystem config: `ecosystem.config.js`
+- Start services: `pm2 start ecosystem.config.js`
+- Manages dashboard-api (port 3000) and forms-api (port 3001)
+- Auto-restart on failure, memory limits, centralized logging
+
+**Build Commands for Production:**
+- Frontend builds use explicit `--configuration=production` flag
+- Ensures production environment files are used
+- Apps/web: `npm --workspace=apps/web run build -- --configuration=production`
+- Apps/form-builder-ui: `npm --workspace=apps/form-builder-ui run build -- --configuration=production`
+
 ## Utility Scripts
 
 The `scripts/` directory contains utility scripts accessible via npm commands:
