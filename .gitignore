@@ -151,3 +151,4 @@ reports/security
 docker-compose.override.yml
 docker-compose.prod.yml
 .playwright-mcp
+.env.production

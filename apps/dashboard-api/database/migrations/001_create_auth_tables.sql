@@ -177,8 +177,8 @@ VALUES (
 -- ) ON CONFLICT (email, tenant_id) DO NOTHING;
 
 -- Grant appropriate permissions
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO dbuser;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO dbuser;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO legopdf_user;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO legopdf_user;
 
 -- Add comments for documentation
 COMMENT ON TABLE users IS 'User accounts with authentication and profile information';
