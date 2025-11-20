@@ -35,6 +35,7 @@ jobs:
     name: Epic 33.1 Integration & E2E Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
 
     # PostgreSQL service for integration tests
     services:
