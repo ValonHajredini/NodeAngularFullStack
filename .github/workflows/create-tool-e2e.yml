@@ -94,7 +94,7 @@ jobs:
         run: |
           echo "Waiting for API server..."
           npx wait-on http://localhost:3000/health --timeout 60000
-          echo " API server ready"
+          echo "API server ready"
 
       - name: Run E2E tests - Full Workflow
         run: npm --workspace=packages/create-tool run test:e2e -- full-workflow.e2e.test.ts
@@ -161,7 +161,7 @@ jobs:
         if: always()
         run: |
           rm -rf /tmp/create-tool-e2e || true
-          echo " Test workspace cleaned"
+          echo "Test workspace cleaned"
 
   e2e-test-results-summary:
     name: E2E Test Results Summary
@@ -181,11 +181,11 @@ jobs:
           echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## Test Suites" >> $GITHUB_STEP_SUMMARY
-          echo "-  Full Workflow Tests (6+ tests)" >> $GITHUB_STEP_SUMMARY
-          echo "-  API Registration Tests (5+ tests)" >> $GITHUB_STEP_SUMMARY
-          echo "-  Conflict Handling Tests (6+ tests)" >> $GITHUB_STEP_SUMMARY
-          echo "-  Smoke Tests (6+ tests)" >> $GITHUB_STEP_SUMMARY
-          echo "-  Error Scenario Tests (11+ tests)" >> $GITHUB_STEP_SUMMARY
+          echo "- Full Workflow Tests (6+ tests)" >> $GITHUB_STEP_SUMMARY
+          echo "- API Registration Tests (5+ tests)" >> $GITHUB_STEP_SUMMARY
+          echo "- Conflict Handling Tests (6+ tests)" >> $GITHUB_STEP_SUMMARY
+          echo "- Smoke Tests (6+ tests)" >> $GITHUB_STEP_SUMMARY
+          echo "- Error Scenario Tests (11+ tests)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## Test Coverage" >> $GITHUB_STEP_SUMMARY
           echo "- **Total Tests**: 34+ test cases" >> $GITHUB_STEP_SUMMARY
@@ -193,14 +193,14 @@ jobs:
           echo "- **Utility Coverage**: TestWorkspace (70+ unit tests)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## Artifacts" >> $GITHUB_STEP_SUMMARY
-          echo "- = Test Results: Available in workflow artifacts" >> $GITHUB_STEP_SUMMARY
-          echo "- = Generated Files: Available if tests failed" >> $GITHUB_STEP_SUMMARY
-          echo "- = Test Logs: Available if tests failed" >> $GITHUB_STEP_SUMMARY
+          echo "- Test Results: Available in workflow artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- Generated Files: Available if tests failed" >> $GITHUB_STEP_SUMMARY
+          echo "- Test Logs: Available if tests failed" >> $GITHUB_STEP_SUMMARY
 
       - name: Check E2E test results
         run: |
           if [ "${{ needs.e2e-cli-tests.result }}" != "success" ]; then
-            echo "L E2E CLI tests failed"
+            echo "E2E CLI tests failed"
             exit 1
           fi
-          echo " All E2E CLI tests passed!"
+          echo "All E2E CLI tests passed!"
