@@ -4,7 +4,20 @@ Complete guide for deploying NodeAngularFullStack to production server.
 
 ## 🚀 Quick Start
 
-### One-Command Deployment
+### Automated CI/CD Deployment (Recommended)
+
+Set up automated deployment with GitHub Actions:
+
+```bash
+# Run the CI/CD setup helper
+./.github/setup-cicd.sh
+```
+
+After setup, deployments trigger automatically on push to `main` branch.
+
+See [CI/CD Setup Guide](.github/CICD-SETUP.md) for detailed instructions.
+
+### Manual Deployment
 
 ```bash
 # On the server
