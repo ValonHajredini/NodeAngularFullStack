@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction, RequestHandler } from 'express';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import slowDown from 'express-slow-down';
@@ -13,7 +13,11 @@ import { config } from '../utils/config.utils';
  * Rate limiting configuration for API endpoints.
  * Implements different limits for different endpoint types.
  */
-export const createRateLimiters = () => {
+export const createRateLimiters = (): {
+  apiLimiter: RequestHandler;
+  authLimiter: RequestHandler;
+  uploadSpeedLimiter: RequestHandler;
+} => {
   // General API rate limiter - 100 requests per minute
   const apiLimiter = rateLimit({
     windowMs: parseInt(config.RATE_LIMIT_WINDOW_MS) || 60000, // 1 minute

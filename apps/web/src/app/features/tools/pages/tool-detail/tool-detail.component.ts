@@ -109,7 +109,7 @@ export class ToolDetailComponent implements OnInit {
       case 'active':
         return 'success';
       case 'beta':
-        return 'warning';
+        return 'warn';
       case 'deprecated':
         return 'secondary';
       default:

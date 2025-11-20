@@ -10,7 +10,7 @@ import { ExportJobWithTool } from '@features/tools/services/export-job.service';
  * Status severity mapping for PrimeNG Tag component.
  * Maps export job statuses to visual severity levels.
  */
-type TagSeverity = 'success' | 'info' | 'warning' | 'danger' | 'secondary';
+type TagSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast';
 
 /**
  * Export History Table Component (Epic 33.2.3, Task 5)
@@ -164,7 +164,7 @@ export class ExportHistoryTableComponent {
       case 'in_progress':
         return 'info';
       case 'pending':
-        return 'warning';
+        return 'warn';
       case 'failed':
         return 'danger';
       case 'cancelled':

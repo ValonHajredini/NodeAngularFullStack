@@ -742,7 +742,7 @@ export class ShortLinkComponent implements OnInit, OnDestroy {
   /**
    * Gets the PrimeNG severity for expiration status.
    */
-  getExpirationSeverity(expiresAt: string | Date): 'success' | 'warning' | 'danger' {
+  getExpirationSeverity(expiresAt: string | Date): 'success' | 'warn' | 'danger' {
     const expiry = new Date(expiresAt);
     const now = new Date();
     const isExpired = expiry < now;
@@ -754,7 +754,7 @@ export class ShortLinkComponent implements OnInit, OnDestroy {
     const diffHours = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60));
 
     if (diffHours <= 24) {
-      return 'warning';
+      return 'warn';
     }
 
     return 'success';

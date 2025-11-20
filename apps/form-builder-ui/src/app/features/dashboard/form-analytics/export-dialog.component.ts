@@ -131,7 +131,7 @@ import { FormsApiService } from '../forms-api.service';
             </p>
           </div>
           @if (estimatedRowCount() > 10000) {
-            <p-tag severity="warning" value="Large Export"></p-tag>
+            <p-tag severity="warn" value="Large Export"></p-tag>
           }
         </div>
       </div>
