@@ -1,13 +1,13 @@
 /**
  * Production environment configuration - Main Web App
- * Domain: demopdf.com
+ * Domain: legopdf.com
  * Used when building the application for production deployment.
  */
 export const environment = {
   production: true,
   apiUrl: 'https://api.legopdf.com/api/v1', // Dashboard/Auth API
   shortLinkBaseUrl: 'https://forms-api.legopdf.com', // Forms API for short links
-  formBuilderUrl: 'https://form-ui.legopdf.com', // Form Builder UI
+  formBuilderUrl: 'https://form-builder.legopdf.com', // Form Builder UI
   appName: 'LegoPDF',
   enableMultiTenancy: true,
   showTestCredentials: false,

@@ -1,6 +1,6 @@
 /**
  * Production environment configuration - Form Builder UI
- * Domain: form-ui.legopdf.com
+ * Domain: form-builder.legopdf.com
  * Used when building the application for production deployment.
  */
 export const environment = {
@@ -8,7 +8,7 @@ export const environment = {
   apiUrl: 'https://api.legopdf.com/api/v1', // Dashboard/Auth API
   formsApiUrl: 'https://forms-api.legopdf.com', // Forms API for analytics and form operations
   shortLinkBaseUrl: 'https://forms-api.legopdf.com',
-  mainAppUrl: 'https://demopdf.com', // Main application URL
+  mainAppUrl: 'https://legopdf.com', // Main application URL
   appName: 'LegoPDF Form Builder',
   enableMultiTenancy: true,
   showTestCredentials: false,
