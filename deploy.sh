@@ -220,25 +220,27 @@ build_frontend() {
 
   cd "$PROJECT_DIR"
 
-  # Build main web app
-  log_info "Building apps/web..."
-  npm --workspace=apps/web run build || error_exit "Web build failed"
+  # Build main web app with production configuration
+  log_info "Building apps/web (production mode)..."
+  npm --workspace=apps/web run build -- --configuration=production || error_exit "Web build failed"
   log_success "apps/web built successfully"
 
   # Verify build output
   if [ ! -d "$PROJECT_DIR/apps/web/dist/web/browser" ]; then
     error_exit "Web build output not found at apps/web/dist/web/browser"
   fi
+  log_info "API URL: https://api.legopdf.com/api/v1"
 
-  # Build form-builder-ui
-  log_info "Building apps/form-builder-ui..."
-  npm --workspace=apps/form-builder-ui run build || error_exit "Form builder UI build failed"
+  # Build form-builder-ui with production configuration
+  log_info "Building apps/form-builder-ui (production mode)..."
+  npm --workspace=apps/form-builder-ui run build -- --configuration=production || error_exit "Form builder UI build failed"
   log_success "apps/form-builder-ui built successfully"
 
   # Verify build output
   if [ ! -d "$PROJECT_DIR/apps/form-builder-ui/dist/form-builder-ui/browser" ]; then
     error_exit "Form builder UI build output not found at apps/form-builder-ui/dist/form-builder-ui/browser"
   fi
+  log_info "Forms API URL: https://forms-api.legopdf.com"
 }
 
 # Build backend applications
