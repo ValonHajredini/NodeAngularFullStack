@@ -296,29 +296,51 @@ restart_services() {
 
   cd "$PROJECT_DIR"
 
-  # Check if services are already running
-  if pm2 list | grep -q "dashboard-api"; then
-    log_info "Restarting dashboard-api..."
-    pm2 restart dashboard-api || log_warning "Failed to restart dashboard-api"
-  else
-    log_info "Starting dashboard-api..."
-    cd "$PROJECT_DIR/apps/dashboard-api"
-    pm2 start npm --name "dashboard-api" -- start || log_warning "Failed to start dashboard-api"
-    cd "$PROJECT_DIR"
-  fi
+  # Check if ecosystem.config.js exists
+  if [ -f "ecosystem.config.js" ]; then
+    log_info "Using PM2 ecosystem configuration..."
 
-  if pm2 list | grep -q "forms-api"; then
-    log_info "Restarting forms-api..."
-    pm2 restart forms-api || log_warning "Failed to restart forms-api"
+    # Check if services are already managed by PM2
+    if pm2 list | grep -qE "dashboard-api|forms-api"; then
+      log_info "Restarting all services via ecosystem..."
+      pm2 restart ecosystem.config.js || log_warning "Failed to restart services via ecosystem"
+    else
+      log_info "Starting all services via ecosystem..."
+      pm2 start ecosystem.config.js || log_warning "Failed to start services via ecosystem"
+    fi
   else
-    log_info "Starting forms-api..."
-    cd "$PROJECT_DIR/apps/forms-api"
-    pm2 start npm --name "forms-api" -- start || log_warning "Failed to start forms-api"
-    cd "$PROJECT_DIR"
+    # Fallback to individual service management
+    log_warning "ecosystem.config.js not found, managing services individually..."
+
+    # Dashboard API (port 3000)
+    if pm2 list | grep -q "dashboard-api"; then
+      log_info "Restarting dashboard-api..."
+      pm2 restart dashboard-api || log_warning "Failed to restart dashboard-api"
+    else
+      log_info "Starting dashboard-api..."
+      cd "$PROJECT_DIR/apps/dashboard-api"
+      pm2 start npm --name "dashboard-api" --cwd "$PROJECT_DIR/apps/dashboard-api" -- start || log_warning "Failed to start dashboard-api"
+      cd "$PROJECT_DIR"
+    fi
+
+    # Forms API (port 3001)
+    if pm2 list | grep -q "forms-api"; then
+      log_info "Restarting forms-api..."
+      pm2 restart forms-api || log_warning "Failed to restart forms-api"
+    else
+      log_info "Starting forms-api..."
+      cd "$PROJECT_DIR/apps/forms-api"
+      pm2 start npm --name "forms-api" --cwd "$PROJECT_DIR/apps/forms-api" -- start || log_warning "Failed to start forms-api"
+      cd "$PROJECT_DIR"
+    fi
   fi
 
   # Save PM2 process list
   pm2 save || log_warning "Failed to save PM2 process list"
+
+  # Display PM2 status
+  log_info "Current PM2 status:"
+  pm2 list
 
   log_success "Services restarted successfully"
 }

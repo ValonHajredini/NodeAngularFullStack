@@ -163,11 +163,31 @@ rsync -avz --delete packages/ user@your-server:/var/apps/NodeAngularFullStack/pa
 
 ## 🔄 Process Management with PM2
 
+### Using Ecosystem Configuration (Recommended)
+
+The project includes `ecosystem.config.js` for centralized PM2 management:
+
 ```bash
 # Install PM2 globally on server
 npm install -g pm2
 
-# Start backend services
+# Start all backend services using ecosystem file
+cd /var/apps/NodeAngularFullStack
+pm2 start ecosystem.config.js
+
+# Save PM2 process list
+pm2 save
+
+# Setup PM2 to start on boot
+pm2 startup
+```
+
+### Manual Service Management
+
+If you prefer to manage services individually:
+
+```bash
+# Start backend services manually
 cd /var/apps/NodeAngularFullStack/apps/dashboard-api
 pm2 start npm --name "dashboard-api" -- start
 
@@ -176,10 +196,9 @@ pm2 start npm --name "forms-api" -- start
 
 # Save PM2 process list
 pm2 save
-
-# Setup PM2 to start on boot
-pm2 startup
 ```
+
+See [DEPLOYMENT.md](../DEPLOYMENT.md#-pm2-process-management) for complete PM2 documentation.
 
 ## 🔒 Security Checklist
 
