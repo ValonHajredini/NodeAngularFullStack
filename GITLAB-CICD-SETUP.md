@@ -95,9 +95,9 @@ Go to your GitLab project: **Settings → CI/CD → Variables** and add:
 | `PROD_SSH_HOST`           | Variable | ✅        | ❌     | Server IP or hostname (e.g., `123.45.67.89`) |
 | `PROD_DEPLOY_PATH`        | Variable | ✅        | ❌     | Deployment directory (e.g., `/var/www/...`)  |
 | `PROD_DEPLOY_FRONT_BUILD` | Variable | ✅        | ❌     | Frontend build config (e.g., `production`)   |
-| `PROD_SSH_PRIVATE_KEY`    | File     | ✅        | ✅     | Base64-encoded SSH private key               |
+| `PROD_SSH_PRIVATE_KEY`    | File     | ✅        | ✅     | Raw SSH private key (NOT base64-encoded)     |
 
-### Generating SSH Private Key (Base64)
+### Setting Up SSH Private Key for GitLab CI/CD
 
 **Step 1: Generate SSH key pair on your local machine**
 
@@ -111,22 +111,24 @@ ssh-keygen -t ed25519 -C "gitlab-ci-deploy" -f ~/.ssh/gitlab-ci-deploy
 ssh-copy-id -i ~/.ssh/gitlab-ci-deploy.pub your_user@your_server
 ```
 
-**Step 3: Base64 encode the private key**
-
-```bash
-base64 -i ~/.ssh/gitlab-ci-deploy | pbcopy  # macOS
-base64 -w 0 ~/.ssh/gitlab-ci-deploy         # Linux
-```
-
-**Step 4: Add to GitLab CI/CD Variables**
+**Step 3: Add private key to GitLab CI/CD Variables**
 
 - Go to **Settings → CI/CD → Variables**
 - Click **Add variable**
 - Key: `PROD_SSH_PRIVATE_KEY`
-- Type: **File**
-- Value: Paste the base64-encoded private key
+- Type: **File** (IMPORTANT: Use File type, not Variable)
+- Value: Paste the **raw private key content** from `~/.ssh/gitlab-ci-deploy`
+  ```bash
+  cat ~/.ssh/gitlab-ci-deploy  # Copy this entire output
+  ```
 - Check **Protected** and **Masked**
 - Click **Add variable**
+
+**IMPORTANT**:
+
+- Do NOT base64 encode the private key for File type variables
+- GitLab File type variables store the raw content and provide it as a file path
+- The pipeline reads the key directly from this file
 
 ### Example Variable Values
 
@@ -135,7 +137,7 @@ PROD_SSH_USER=deploy
 PROD_SSH_HOST=123.45.67.89
 PROD_DEPLOY_PATH=/var/www/NodeAngularFullStack
 PROD_DEPLOY_FRONT_BUILD=production
-PROD_SSH_PRIVATE_KEY=<base64-encoded-ssh-key>
+PROD_SSH_PRIVATE_KEY=<file-path-to-ssh-key>  # GitLab manages this as a file
 ```
 
 ## Server Setup Instructions
