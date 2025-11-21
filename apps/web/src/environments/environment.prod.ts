@@ -8,6 +8,7 @@ export const environment = {
   apiUrl: 'https://api.legopdf.com/api/v1', // Dashboard/Auth API
   shortLinkBaseUrl: 'https://forms-api.legopdf.com', // Forms API for short links
   formBuilderUrl: 'https://form-builder.legopdf.com', // Form Builder UI
+  formsApiUrl: 'https://forms-api.legopdf.com', // Forms API base URL
   appName: 'LegoPDF',
   enableMultiTenancy: true,
   showTestCredentials: false,
