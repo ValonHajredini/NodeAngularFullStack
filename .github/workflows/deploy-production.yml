@@ -21,39 +21,6 @@ jobs:
         with:
           fetch-depth: 0 # Full git history for proper deployment
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: |
-          echo "Node version: $(node --version)"
-          echo "npm version: $(npm --version)"
-          npm ci
-
-      - name: Run TypeScript type checking
-        run: npm run typecheck || true
-        continue-on-error: true
-
-      - name: Run linting
-        run: npm run lint || true
-        continue-on-error: true
-
-      - name: Build shared packages
-        run: npm run build:shared
-
-      - name: Build frontend applications
-        run: |
-          npm --workspace=apps/web run build -- --configuration=production
-          npm --workspace=apps/form-builder-ui run build -- --configuration=production
-
-      - name: Build backend applications
-        run: |
-          npm --workspace=apps/dashboard-api run build
-          npm --workspace=apps/forms-api run build
-
       - name: Configure SSH
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
