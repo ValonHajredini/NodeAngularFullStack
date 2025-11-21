@@ -60,7 +60,7 @@ deploy_backend_apis:
     - echo "Deploying backend APIs to production..."
 
     # Create deployment directory structure on server
-    - ssh $PROD_SSH_USER@$PROD_SSH_HOST "mkdir -p $PROD_DEPLOY_PATH/{apps/{dashboard-api,forms-api},packages/shared}"
+    - ssh $PROD_SSH_USER@$PROD_SSH_HOST "mkdir -p $PROD_DEPLOY_PATH/{apps/{dashboard-api,forms-api},packages/shared,scripts}"
 
     # Copy shared package dist
     - rsync -avz --delete packages/shared/dist/ $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/packages/shared/dist/
@@ -75,6 +75,9 @@ deploy_backend_apis:
 
     # Copy PM2 ecosystem config
     - rsync -avz ecosystem.config.js $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/
+
+    # Copy deployment scripts
+    - rsync -avz scripts/ $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/scripts/
 
     # Execute deployment script on server
     - ssh $PROD_SSH_USER@$PROD_SSH_HOST "bash $PROD_DEPLOY_PATH/scripts/deploy-backend.sh $PROD_DEPLOY_PATH"
