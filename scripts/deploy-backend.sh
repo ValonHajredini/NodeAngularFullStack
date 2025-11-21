@@ -43,7 +43,7 @@ npm ci --omit=dev --prefer-offline --no-audit --ignore-scripts
 echo ""
 echo "[2/6] Building shared package..."
 cd "$DEPLOY_PATH/packages/shared"
-npm ci --prefer-offline --no-audit --ignore-scripts
+npm ci --prefer-offline --no-audit
 npm run build
 
 # ============================================
