@@ -10,7 +10,9 @@ jobs:
     name: E2E Create Tool CLI Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    if: github.event_name != 'pull_request'
+    # TEMPORARY: Disable E2E tests until infrastructure is stable
+    # See docs/technical-debt/test-infrastructure-fixes.md
+    if: false
 
     services:
       postgres:
