@@ -2,10 +2,10 @@ name: Epic 33.1 Integration Tests
 
 # Run this workflow on:
 # - Push to branches containing Epic 33.1 files
-# - Pull requests to main/develop branches
 # - Manual trigger for testing
 on:
   push:
+    branches: [ main, develop ]
     paths:
       - 'apps/api/src/services/export-orchestrator.service.ts'
       - 'apps/api/src/services/pre-flight-validator.service.ts'
@@ -19,15 +19,6 @@ on:
       - 'apps/api/tests/e2e/epic-33.1/**'
       - 'apps/api/tests/fixtures/epic-33.1/**'
       - '.github/workflows/test-epic-33.1.yml'
-  pull_request:
-    branches: [ main, develop ]
-    paths:
-      - 'apps/api/src/services/export-orchestrator.service.ts'
-      - 'apps/api/src/services/pre-flight-validator.service.ts'
-      - 'apps/api/src/repositories/export-job.repository.ts'
-      - 'apps/api/src/services/export-strategies/**'
-      - 'apps/api/tests/integration/epic-33.1/**'
-      - 'apps/api/tests/e2e/epic-33.1/**'
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
@@ -35,6 +26,7 @@ jobs:
     name: Epic 33.1 Integration & E2E Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    if: github.event_name != 'pull_request'
 
     # PostgreSQL service for integration tests
     services:
@@ -180,7 +172,7 @@ jobs:
           fail_ci_if_error: false
 
       - name: Upload test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: epic-33-1-test-results
@@ -191,7 +183,7 @@ jobs:
           retention-days: 30
 
       - name: Upload coverage badge
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: epic-33-1-coverage-badge

@@ -88,7 +88,7 @@ jobs:
           npm audit --format=json --audit-level=moderate --production > ../../audit-web.json || true
 
       - name: Upload audit results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: security-audit-results
           path: |
@@ -150,7 +150,7 @@ jobs:
           npx prettier --check "apps/**/*.{ts,js,json,html,scss,css,md}"
 
       - name: Upload code quality results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: code-quality-results
           path: |
@@ -237,7 +237,7 @@ jobs:
           name: codecov-umbrella
 
       - name: Upload test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-results
@@ -326,7 +326,7 @@ jobs:
           npx bundlesize
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-artifacts
           path: |
@@ -346,7 +346,7 @@ jobs:
           node-version: '20'
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: build-artifacts
 
@@ -381,7 +381,7 @@ jobs:
     if: always()
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
 
       - name: Quality Gate Check
         run: |

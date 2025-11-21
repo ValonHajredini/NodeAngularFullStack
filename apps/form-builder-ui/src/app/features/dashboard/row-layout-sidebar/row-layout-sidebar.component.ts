@@ -280,7 +280,7 @@ interface WidthRatioOption {
                                   onToggleSubColumns(
                                     row.rowId,
                                     columnIndex,
-                                    $event.checked
+                                    $event.checked ?? false
                                   )
                                 "
                                 onLabel="Enabled"
