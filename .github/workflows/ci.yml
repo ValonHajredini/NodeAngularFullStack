@@ -390,27 +390,27 @@ jobs:
           # Check if all jobs passed
           if [ "${{ needs.security-audit.result }}" != "success" ]; then
             echo "❌ Security audit failed"
-            exit 1
+            exit 1;
           fi
 
           if [ "${{ needs.code-quality.result }}" != "success" ]; then
             echo "❌ Code quality checks failed"
-            exit 1
+            exit 1;
           fi
 
           if [ "${{ needs.test.result }}" != "success" ]; then
             echo "❌ Tests failed"
-            exit 1
+            exit 1;
           fi
 
           if [ "${{ needs.sast-scanning.result }}" != "success" ]; then
             echo "❌ SAST scanning failed"
-            exit 1
+            exit 1;
           fi
 
           if [ "${{ needs.security-headers-test.result }}" != "success" ]; then
             echo "❌ Security headers test failed"
-            exit 1
+            exit 1;
           fi
 
           echo "✅ All quality gates passed!"
