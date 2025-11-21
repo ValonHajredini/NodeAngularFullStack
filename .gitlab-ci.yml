@@ -52,10 +52,10 @@ deploy_backend_apis:
     - ssh-keyscan $PROD_SSH_HOST >> ~/.ssh/known_hosts
     # Debug SSH connection
     - echo "=== SSH Connection Debug Info ==="
-    - echo "User: $PROD_SSH_USER"
-    - echo "Host: $PROD_SSH_HOST"
+    - echo "User - $PROD_SSH_USER"
+    - echo "Host - $PROD_SSH_HOST"
     - echo "Testing SSH connection with verbose output..."
-    - ssh -vvv -o StrictHostKeyChecking=no $PROD_SSH_USER@$PROD_SSH_HOST "echo 'SSH connection successful!'" || echo "SSH connection failed!"
+    - ssh -vvv -o StrictHostKeyChecking=no $PROD_SSH_USER@$PROD_SSH_HOST "echo SSH connection successful"
   script:
     - echo "Deploying backend APIs to production..."
 
