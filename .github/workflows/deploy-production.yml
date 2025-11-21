@@ -29,14 +29,15 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+        continue-on-error: false
 
       - name: Run TypeScript type checking
-        run: |
-          npm run typecheck || echo "Type check completed with warnings"
+        run: npm run typecheck || true
+        continue-on-error: true
 
       - name: Run linting
-        run: |
-          npm run lint || echo "Linting completed with warnings"
+        run: npm run lint || true
+        continue-on-error: true
 
       - name: Build shared packages
         run: npm run build:shared
