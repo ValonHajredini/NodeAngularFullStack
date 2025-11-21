@@ -1,12 +1,6 @@
 workflow:
   rules:
     - if: $CI_COMMIT_BRANCH == "production"
-      variables:
-        SSH_USER: '${PROD_SSH_USER}'
-        SSH_HOST: '${PROD_SSH_HOST}'
-        DEPLOY_PATH: '${PROD_DEPLOY_PATH}'
-        DEPLOY_FRONT_BUILD: '${PROD_DEPLOY_FRONT_BUILD}'
-        SSH_PRIVATE_KEY: '${PROD_SSH_PRIVATE_KEY}'
 
 stages:
   - build-shared
@@ -54,29 +48,29 @@ deploy_backend_apis:
     - ssh-add "$PROD_SSH_PRIVATE_KEY"
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
-    - ssh-keyscan $SSH_HOST >> ~/.ssh/known_hosts
+    - ssh-keyscan $PROD_SSH_HOST >> ~/.ssh/known_hosts
   script:
     - echo "Deploying backend APIs to production..."
 
     # Create deployment directory structure on server
-    - ssh $SSH_USER@$SSH_HOST "mkdir -p $DEPLOY_PATH/{apps/{dashboard-api,forms-api},packages/shared}"
+    - ssh $PROD_SSH_USER@$PROD_SSH_HOST "mkdir -p $PROD_DEPLOY_PATH/{apps/{dashboard-api,forms-api},packages/shared}"
 
     # Copy shared package dist
-    - rsync -avz --delete packages/shared/dist/ $SSH_USER@$SSH_HOST:$DEPLOY_PATH/packages/shared/dist/
-    - rsync -avz packages/shared/package.json $SSH_USER@$SSH_HOST:$DEPLOY_PATH/packages/shared/
+    - rsync -avz --delete packages/shared/dist/ $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/packages/shared/dist/
+    - rsync -avz packages/shared/package.json $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/packages/shared/
 
     # Copy backend API source files
-    - rsync -avz --delete --exclude 'node_modules' --exclude 'dist' --exclude 'coverage' --exclude 'logs' --exclude 'uploads' apps/dashboard-api/ $SSH_USER@$SSH_HOST:$DEPLOY_PATH/apps/dashboard-api/
-    - rsync -avz --delete --exclude 'node_modules' --exclude 'dist' --exclude 'coverage' --exclude 'logs' --exclude 'uploads' --exclude 'exports' apps/forms-api/ $SSH_USER@$SSH_HOST:$DEPLOY_PATH/apps/forms-api/
+    - rsync -avz --delete --exclude 'node_modules' --exclude 'dist' --exclude 'coverage' --exclude 'logs' --exclude 'uploads' apps/dashboard-api/ $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/apps/dashboard-api/
+    - rsync -avz --delete --exclude 'node_modules' --exclude 'dist' --exclude 'coverage' --exclude 'logs' --exclude 'uploads' --exclude 'exports' apps/forms-api/ $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/apps/forms-api/
 
     # Copy root package files
-    - rsync -avz package.json package-lock.json $SSH_USER@$SSH_HOST:$DEPLOY_PATH/
+    - rsync -avz package.json package-lock.json $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/
 
     # Copy PM2 ecosystem config
-    - rsync -avz ecosystem.config.js $SSH_USER@$SSH_HOST:$DEPLOY_PATH/
+    - rsync -avz ecosystem.config.js $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/
 
     # Execute deployment script on server
-    - ssh $SSH_USER@$SSH_HOST "bash $DEPLOY_PATH/scripts/deploy-backend.sh $DEPLOY_PATH"
+    - ssh $PROD_SSH_USER@$PROD_SSH_HOST "bash $PROD_DEPLOY_PATH/scripts/deploy-backend.sh $PROD_DEPLOY_PATH"
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
 
@@ -97,7 +91,7 @@ deploy_frontend_main_ui:
     - ssh-add "$PROD_SSH_PRIVATE_KEY"
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
-    - ssh-keyscan $SSH_HOST >> ~/.ssh/known_hosts
+    - ssh-keyscan $PROD_SSH_HOST >> ~/.ssh/known_hosts
   script:
     - echo "Building and deploying main UI (apps/web)..."
 
@@ -108,15 +102,15 @@ deploy_frontend_main_ui:
     - npm --workspace=apps/web run build -- --configuration=production
 
     # Create frontend deployment directory on server
-    - ssh $SSH_USER@$SSH_HOST "mkdir -p $DEPLOY_PATH/frontend/web"
+    - ssh $PROD_SSH_USER@$PROD_SSH_HOST "mkdir -p $PROD_DEPLOY_PATH/frontend/web"
 
     # Clear old frontend files
-    - ssh $SSH_USER@$SSH_HOST "rm -rf $DEPLOY_PATH/frontend/web/*"
+    - ssh $PROD_SSH_USER@$PROD_SSH_HOST "rm -rf $PROD_DEPLOY_PATH/frontend/web/*"
 
     # Deploy built files
-    - rsync -avz --delete apps/web/dist/web/browser/ $SSH_USER@$SSH_HOST:$DEPLOY_PATH/frontend/web/
+    - rsync -avz --delete apps/web/dist/web/browser/ $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/frontend/web/
 
-    - echo "Main UI deployed successfully to $DEPLOY_PATH/frontend/web"
+    - echo "Main UI deployed successfully to $PROD_DEPLOY_PATH/frontend/web"
   artifacts:
     paths:
       - apps/web/dist/
@@ -138,7 +132,7 @@ deploy_frontend_form_builder:
     - ssh-add "$PROD_SSH_PRIVATE_KEY"
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
-    - ssh-keyscan $SSH_HOST >> ~/.ssh/known_hosts
+    - ssh-keyscan $PROD_SSH_HOST >> ~/.ssh/known_hosts
   script:
     - echo "Building and deploying Form Builder UI (apps/form-builder-ui)..."
 
@@ -149,15 +143,15 @@ deploy_frontend_form_builder:
     - npm --workspace=apps/form-builder-ui run build -- --configuration=production
 
     # Create frontend deployment directory on server
-    - ssh $SSH_USER@$SSH_HOST "mkdir -p $DEPLOY_PATH/frontend/form-builder"
+    - ssh $PROD_SSH_USER@$PROD_SSH_HOST "mkdir -p $PROD_DEPLOY_PATH/frontend/form-builder"
 
     # Clear old frontend files
-    - ssh $SSH_USER@$SSH_HOST "rm -rf $DEPLOY_PATH/frontend/form-builder/*"
+    - ssh $PROD_SSH_USER@$PROD_SSH_HOST "rm -rf $PROD_DEPLOY_PATH/frontend/form-builder/*"
 
     # Deploy built files
-    - rsync -avz --delete apps/form-builder-ui/dist/form-builder-ui/browser/ $SSH_USER@$SSH_HOST:$DEPLOY_PATH/frontend/form-builder/
+    - rsync -avz --delete apps/form-builder-ui/dist/form-builder-ui/browser/ $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/frontend/form-builder/
 
-    - echo "Form Builder UI deployed successfully to $DEPLOY_PATH/frontend/form-builder"
+    - echo "Form Builder UI deployed successfully to $PROD_DEPLOY_PATH/frontend/form-builder"
   artifacts:
     paths:
       - apps/form-builder-ui/dist/
