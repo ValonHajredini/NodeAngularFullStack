@@ -35,7 +35,7 @@ cd "$DEPLOY_PATH"
 # ============================================
 echo ""
 echo "[1/6] Installing dependencies..."
-npm ci --omit=dev --prefer-offline --no-audit
+npm ci --omit=dev --prefer-offline --no-audit --ignore-scripts
 
 # ============================================
 # Step 2: Build Shared Package
@@ -43,7 +43,7 @@ npm ci --omit=dev --prefer-offline --no-audit
 echo ""
 echo "[2/6] Building shared package..."
 cd "$DEPLOY_PATH/packages/shared"
-npm ci --prefer-offline --no-audit
+npm ci --prefer-offline --no-audit --ignore-scripts
 npm run build
 
 # ============================================
@@ -52,7 +52,7 @@ npm run build
 echo ""
 echo "[3/6] Building dashboard-api..."
 cd "$DEPLOY_PATH/apps/dashboard-api"
-npm ci --omit=dev --prefer-offline --no-audit
+npm ci --omit=dev --prefer-offline --no-audit --ignore-scripts
 npm run build
 
 # ============================================
@@ -61,7 +61,7 @@ npm run build
 echo ""
 echo "[4/6] Building forms-api..."
 cd "$DEPLOY_PATH/apps/forms-api"
-npm ci --omit=dev --prefer-offline --no-audit
+npm ci --omit=dev --prefer-offline --no-audit --ignore-scripts
 npm run build
 
 # ============================================
