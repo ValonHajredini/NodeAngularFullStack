@@ -1,339 +1,372 @@
-# CI/CD Setup Guide for DigitalOcean Deployment
+# CI/CD Setup Guide
 
-This guide walks you through setting up automated deployments to your DigitalOcean Droplet using GitHub Actions.
+This guide explains how to set up the CI/CD pipeline for automated Docker builds and deployment to
+Digital Ocean.
 
-## 📋 Prerequisites
+## Overview
 
-- ✅ DigitalOcean Droplet running Ubuntu 20.04+
-- ✅ SSH access to your server
-- ✅ Node.js 18+ installed on server
-- ✅ PM2 installed globally on server
-- ✅ PostgreSQL running on server
-- ✅ Project cloned at `/var/apps/NodeAngularFullStack` on server
-- ✅ Nginx configured and running
+The CI/CD pipeline automatically:
 
-## 🔐 Step 1: Generate SSH Key for GitHub Actions
+1. ✅ Builds Docker images for `apps/web` and `apps/form-builder-ui`
+2. ✅ Pushes images to GitHub Container Registry (ghcr.io)
+3. ✅ Deploys to Digital Ocean droplet on push to `main` branch
+4. ✅ Validates builds on pull requests
 
-On your **local machine**, generate a dedicated SSH key for deployments:
+## Prerequisites
 
-```bash
-# Generate SSH key (no passphrase for automation)
-ssh-keygen -t ed25519 -C "github-actions-deploy" -f ~/.ssh/github_actions_deploy
+- GitHub repository with Actions enabled
+- Digital Ocean droplet with Docker and Docker Compose installed
+- SSH access to the droplet
+- Repository cloned at `/var/apps/NodeAngularFullStack` on the droplet
 
-# This creates:
-# - ~/.ssh/github_actions_deploy (private key - for GitHub Secrets)
-# - ~/.ssh/github_actions_deploy.pub (public key - for server)
-```
+## Required GitHub Secrets
 
-## 🖥️ Step 2: Add Public Key to Server
-
-Copy the public key to your DigitalOcean server:
-
-```bash
-# Option 1: Using ssh-copy-id (easiest)
-ssh-copy-id -i ~/.ssh/github_actions_deploy.pub your_user@your_server_ip
-
-# Option 2: Manual copy
-cat ~/.ssh/github_actions_deploy.pub
-# Copy the output and paste it into ~/.ssh/authorized_keys on your server
-```
-
-On your **server**, verify the key is added:
-
-```bash
-cat ~/.ssh/authorized_keys
-# You should see the github-actions-deploy key
-```
-
-## 🔑 Step 3: Configure GitHub Secrets
-
-Go to your GitHub repository:
-**Settings** → **Secrets and variables** → **Actions** → **New repository secret**
+Navigate to your repository → **Settings** → **Secrets and variables** → **Actions** → **New
+repository secret**
 
 Add the following secrets:
 
-### Required Secrets:
+### 1. `DO_HOST`
 
-1. **SSH_PRIVATE_KEY**
-   ```bash
-   # On your local machine, copy the private key:
-   cat ~/.ssh/github_actions_deploy
-   ```
-   - Copy the entire output (including `-----BEGIN OPENSSH PRIVATE KEY-----` and `-----END OPENSSH PRIVATE KEY-----`)
-   - Paste into GitHub secret value
+**Description**: Your Digital Ocean droplet IP address or hostname **Value**: `165.232.100.56`
+**Required**: Yes
 
-2. **SSH_HOST**
-   - Your DigitalOcean Droplet IP address
-   - Example: `167.99.123.45`
+### 2. `DO_USERNAME`
 
-3. **SSH_USER**
-   - Your server username (usually `root` or custom user)
-   - Example: `root` or `deploy`
+**Description**: SSH username for the droplet (usually `root` or your user) **Value**: Your SSH
+username (e.g., `root` or `deployer`) **Required**: Yes
 
-4. **SSH_PORT** (Optional)
-   - SSH port (default is 22)
-   - Only add if you've changed the default SSH port
-   - Example: `2222`
+### 3. `DO_SSH_KEY`
 
-### Adding Secrets in GitHub:
+**Description**: Private SSH key for authentication **Required**: Yes
 
-```
-Repository → Settings → Secrets and variables → Actions → New repository secret
-
-Name: SSH_PRIVATE_KEY
-Value: [Paste entire private key content]
-
-Name: SSH_HOST
-Value: 167.99.123.45
-
-Name: SSH_USER
-Value: root
-
-Name: SSH_PORT (optional)
-Value: 22
-```
-
-## 🚀 Step 4: Prepare Server for Deployment
-
-SSH into your server and set up the project directory:
+**How to get this value:**
 
 ```bash
-# SSH to your server
-ssh your_user@your_server_ip
+# On your local machine, generate SSH key if you don't have one
+ssh-keygen -t ed25519 -C "github-actions-deploy" -f ~/.ssh/do_deploy_key
 
-# Create project directory
-sudo mkdir -p /var/apps/NodeAngularFullStack
-sudo chown -R $USER:$USER /var/apps/NodeAngularFullStack
+# Copy the PRIVATE key content (entire file including BEGIN/END lines)
+cat ~/.ssh/do_deploy_key
+
+# Copy the PUBLIC key to your Digital Ocean droplet
+ssh-copy-id -i ~/.ssh/do_deploy_key.pub your-username@165.232.100.56
+
+# Or manually add to ~/.ssh/authorized_keys on the droplet
+```
+
+**Paste the entire private key content** into the GitHub secret, including:
+
+```
+-----BEGIN OPENSSH PRIVATE KEY-----
+...key content...
+-----END OPENSSH PRIVATE KEY-----
+```
+
+### 4. `DO_PORT` (Optional)
+
+**Description**: SSH port (defaults to 22 if not set) **Value**: `22` or your custom SSH port
+**Required**: No (defaults to 22)
+
+### 5. `GITHUB_TOKEN`
+
+**Description**: Automatically provided by GitHub Actions **Required**: No (already available in
+workflows)
+
+## Digital Ocean Droplet Setup
+
+### 1. Install Docker and Docker Compose
+
+```bash
+# SSH into your droplet
+ssh root@165.232.100.56
+
+# Install Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sh get-docker.sh
+
+# Install Docker Compose (v2)
+mkdir -p /usr/local/lib/docker/cli-plugins
+curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 \
+  -o /usr/local/lib/docker/cli-plugins/docker-compose
+chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+
+# Verify installations
+docker --version
+docker compose version
+```
+
+### 2. Clone Repository
+
+```bash
+# Create deployment directory
+mkdir -p /var/apps
+cd /var/apps
 
 # Clone repository
-cd /var/apps
-git clone git@github.com:ValonHajredini/NodeAngularFullStack.git
+git clone https://github.com/ValonHajredini/NodeAngularFullStack.git
+cd NodeAngularFullStack
 
-# Or if already cloned, ensure it's on main branch
+# Set up environment
+echo "GITHUB_REPOSITORY=ValonHajredini/NodeAngularFullStack" > .env.production
+```
+
+### 3. Configure Firewall
+
+```bash
+# Allow SSH, HTTP, HTTPS, and app ports
+ufw allow 22/tcp
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw allow 4200/tcp  # Web app
+ufw allow 4201/tcp  # Form builder
+
+# Enable firewall
+ufw enable
+```
+
+### 4. Set Up Nginx Reverse Proxy (Optional but Recommended)
+
+```bash
+# Install Nginx
+apt update && apt install nginx -y
+
+# Create configuration for web app
+cat > /etc/nginx/sites-available/nodeangularfullstack << 'EOF'
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    location / {
+        proxy_pass http://localhost:4200;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+server {
+    listen 80;
+    server_name form-builder.your-domain.com;
+
+    location / {
+        proxy_pass http://localhost:4201;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+EOF
+
+# Enable site
+ln -s /etc/nginx/sites-available/nodeangularfullstack /etc/nginx/sites-enabled/
+nginx -t
+systemctl reload nginx
+```
+
+## Testing the Pipeline
+
+### 1. Test Docker Builds Locally
+
+```bash
+# Build web app
+docker build -f apps/web/Dockerfile -t test-web .
+
+# Build form-builder-ui
+docker build -f apps/form-builder-ui/Dockerfile -t test-form-builder .
+
+# Verify images
+docker images | grep test-
+```
+
+### 2. Test Deployment Script
+
+```bash
+# On Digital Ocean droplet
 cd /var/apps/NodeAngularFullStack
-git checkout main
+
+# Pull latest code
 git pull origin main
 
-# Install global dependencies
-npm install -g pm2
+# Start services
+GITHUB_REPOSITORY=ValonHajredini/NodeAngularFullStack docker compose -f docker-compose.prod.yml up -d
 
-# Setup PM2 to start on boot
-pm2 startup
-# Follow the command output instructions
+# Check status
+docker compose -f docker-compose.prod.yml ps
 
-# Install project dependencies
-npm ci --production
-
-# Make deploy script executable
-chmod +x deploy.sh
-
-# Set up environment variables
-cp .env.example .env.production
-# Edit .env.production with production values
-nano .env.production
+# View logs
+docker compose -f docker-compose.prod.yml logs -f
 ```
 
-## 📝 Step 5: Configure Server Environment
-
-Create `.env.production` on your server with production values:
+### 3. Trigger GitHub Actions
 
 ```bash
-# /var/apps/NodeAngularFullStack/.env.production
-NODE_ENV=production
+# Make a change and push to main
+git add .
+git commit -m "test: Trigger CI/CD pipeline"
+git push origin main
 
-# Database
-DATABASE_HOST=localhost
-DATABASE_PORT=5432
-DATABASE_NAME=nodeangularfullstack
-DATABASE_USER=your_db_user
-DATABASE_PASSWORD=your_db_password
-
-# JWT
-JWT_SECRET=your_super_secret_jwt_key_min_32_chars
-JWT_REFRESH_SECRET=your_refresh_secret_key_min_32_chars
-
-# API URLs
-DASHBOARD_API_URL=https://api.legopdf.com
-FORMS_API_URL=https://forms-api.legopdf.com
+# Or create a pull request to test builds without deployment
 ```
 
-## 🧪 Step 6: Test SSH Connection
+## Workflow Triggers
 
-Test that GitHub Actions can SSH to your server:
+### Automatic Triggers
 
-```bash
-# On your local machine
-ssh -i ~/.ssh/github_actions_deploy your_user@your_server_ip
+- **Push to `main`**: Full build, push, and deploy
+- **Push to `develop`**: Build and push only (no deployment)
+- **Pull Requests**: Build validation only
 
-# If successful, you should be logged into your server
-# Exit the SSH session
-exit
-```
+### Manual Trigger
 
-## ✅ Step 7: Verify GitHub Actions Workflow
+Navigate to **Actions** tab → Select **CI/CD - Docker Build & Deploy** → **Run workflow**
 
-The workflow is located at `.github/workflows/deploy-production.yml`
+## Monitoring
 
-### What it does:
-1. ✅ Triggers on push to `main` branch
-2. ✅ Runs type checking and linting
-3. ✅ Builds all applications (frontend + backend)
-4. ✅ SSHs to your DigitalOcean server
-5. ✅ Pulls latest code
-6. ✅ Runs `./deploy.sh` script
-7. ✅ Runs health checks
-8. ✅ Verifies PM2 services are running
+### View GitHub Actions Logs
 
-### Manual trigger:
-You can also manually trigger deployment from GitHub:
-**Actions** → **Deploy to Production** → **Run workflow**
-
-## 🔄 Deployment Flow
-
-```
-Push to main
-    ↓
-GitHub Actions starts
-    ↓
-Build all apps locally (CI environment)
-    ↓
-SSH to DigitalOcean server
-    ↓
-Pull latest code
-    ↓
-Run ./deploy.sh
-    ├── Install dependencies
-    ├── Build applications
-    ├── Run migrations
-    ├── Restart PM2 services
-    └── Reload nginx
-    ↓
-Health checks
-    ↓
-✅ Deployment complete
-```
-
-## 🏥 Health Checks
-
-The workflow automatically checks:
-- Dashboard API: `http://localhost:3000/health`
-- Forms API: `http://localhost:3001/health`
-- PM2 process status
-
-## 📊 Monitoring Deployment
-
-### View logs in GitHub:
-1. Go to **Actions** tab in your repository
+1. Go to repository → **Actions** tab
 2. Click on the latest workflow run
-3. View detailed logs for each step
+3. Expand job steps to see detailed logs
 
-### View logs on server:
+### View Container Logs on Droplet
+
 ```bash
-# SSH to server
-ssh your_user@your_server_ip
+# SSH into droplet
+ssh root@165.232.100.56
 
-# View PM2 logs
-pm2 logs
+# View all containers
+docker ps
 
-# View deployment logs
-tail -f /var/log/nginx/*.log
-```
+# View web app logs
+docker logs nodeangularfullstack-web -f
 
-## 🐛 Troubleshooting
+# View form-builder logs
+docker logs nodeangularfullstack-form-builder -f
 
-### SSH Connection Fails
-
-**Problem:** `Permission denied (publickey)`
-
-**Solution:**
-```bash
-# Verify public key is in authorized_keys on server
-ssh your_user@your_server_ip
-cat ~/.ssh/authorized_keys | grep github-actions
-
-# Verify private key is correct in GitHub secrets
-# It should include BEGIN and END lines
-```
-
-### Deployment Script Fails
-
-**Problem:** `deploy.sh: command not found`
-
-**Solution:**
-```bash
-# SSH to server
+# View docker-compose logs
 cd /var/apps/NodeAngularFullStack
-chmod +x deploy.sh
+docker compose -f docker-compose.prod.yml logs -f
 ```
 
-### PM2 Services Not Starting
+### Health Checks
 
-**Problem:** Services fail to start after deployment
-
-**Solution:**
 ```bash
-# SSH to server
-pm2 logs
-pm2 restart ecosystem.config.js
-pm2 save
+# Check container health
+docker ps --format "table {{.Names}}\t{{.Status}}"
+
+# Test web app
+curl http://localhost:4200
+
+# Test form-builder
+curl http://localhost:4201
 ```
 
-### Database Migrations Fail
+## Troubleshooting
 
-**Problem:** Migration errors during deployment
+### Build Failures
 
-**Solution:**
+**Issue**: Docker build fails with "ENOENT" or missing files
+
+**Solution**: Ensure all files are committed and pushed to GitHub
+
 ```bash
-# SSH to server
+git status
+git add .
+git commit -m "fix: Add missing files"
+git push origin main
+```
+
+### Deployment Failures
+
+**Issue**: SSH connection fails
+
+**Solutions**:
+
+1. Verify `DO_HOST` and `DO_USERNAME` secrets are correct
+2. Check SSH key is properly formatted (including BEGIN/END lines)
+3. Ensure public key is in `~/.ssh/authorized_keys` on droplet
+
+**Issue**: Docker login fails on droplet
+
+**Solution**: Ensure `GITHUB_TOKEN` has package read permissions
+
+**Issue**: Containers fail to start
+
+**Solutions**:
+
+1. Check logs: `docker compose -f docker-compose.prod.yml logs`
+2. Verify ports are not in use: `lsof -i :4200` and `lsof -i :4201`
+3. Check disk space: `df -h`
+
+### Image Pull Failures
+
+**Issue**: Cannot pull images from ghcr.io
+
+**Solution**: Make repository packages public or add GitHub token
+
+```bash
+# On droplet, login to GHCR
+echo YOUR_GITHUB_TOKEN | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
+```
+
+## Security Best Practices
+
+1. ✅ **Use SSH Keys**: Never use passwords for SSH authentication
+2. ✅ **Rotate Keys**: Regularly rotate SSH keys and update secrets
+3. ✅ **Restrict SSH**: Use firewall rules to limit SSH access
+4. ✅ **HTTPS Only**: Set up SSL certificates (use Certbot)
+5. ✅ **Least Privilege**: Create dedicated deploy user instead of using root
+6. ✅ **Secrets**: Never commit secrets to repository
+
+## Automatic Updates (Optional)
+
+Enable Watchtower for automatic container updates:
+
+```bash
+cd /var/apps/NodeAngularFullStack
+docker compose -f docker-compose.prod.yml --profile watchtower up -d
+```
+
+Watchtower will automatically pull and deploy new images every 5 minutes.
+
+## Rollback
+
+If deployment fails, rollback to previous version:
+
+```bash
+# SSH into droplet
+ssh root@165.232.100.56
 cd /var/apps/NodeAngularFullStack
 
-# Run migrations manually
-npm --workspace=apps/dashboard-api run db:migrate
-npm --workspace=apps/forms-api run db:migrate
+# Checkout previous commit
+git log --oneline -10
+git checkout <previous-commit-hash>
+
+# Restart containers
+docker compose -f docker-compose.prod.yml down
+docker compose -f docker-compose.prod.yml up -d
 ```
 
-### Health Checks Fail
+## Support
 
-**Problem:** Health endpoints return errors
+For issues or questions:
 
-**Solution:**
-```bash
-# Check if services are running
-pm2 status
+- Check workflow logs in GitHub Actions
+- Review container logs on droplet
+- Open an issue in the repository
 
-# Check service logs
-pm2 logs dashboard-api
-pm2 logs forms-api
+## Next Steps
 
-# Test health endpoints manually
-curl http://localhost:3000/health
-curl http://localhost:3001/health
-```
-
-## 🔒 Security Best Practices
-
-1. **Never commit secrets** - Use GitHub Secrets for all sensitive data
-2. **Use dedicated SSH key** - Don't reuse your personal SSH key
-3. **Limit SSH key permissions** - Deploy key should only have deployment access
-4. **Rotate keys regularly** - Generate new SSH keys every 6-12 months
-5. **Monitor deployments** - Review GitHub Actions logs regularly
-6. **Enable 2FA** - Use two-factor authentication on GitHub and DigitalOcean
-
-## 📚 Additional Resources
-
-- [GitHub Actions Documentation](https://docs.github.com/en/actions)
-- [DigitalOcean Deployment Guide](https://docs.digitalocean.com/)
-- [PM2 Documentation](https://pm2.keymetrics.io/)
-- [Nginx Documentation](https://nginx.org/en/docs/)
-
-## ✨ Next Steps
-
-After setup is complete:
-1. Make a test commit to `main` branch
-2. Watch GitHub Actions run automatically
-3. Verify deployment on your server
-4. Check that your application is accessible at https://legopdf.com
+- [ ] Set up SSL certificates with Certbot
+- [ ] Configure domain names
+- [ ] Set up monitoring (Prometheus, Grafana)
+- [ ] Configure log aggregation
+- [ ] Set up automated backups
+- [ ] Add staging environment
 
 ---
 
-**Need help?** Check the [DEPLOYMENT.md](../DEPLOYMENT.md) for manual deployment instructions.
+**Last Updated**: 2025-11-21 **Pipeline Status**: ✅ Ready for deployment

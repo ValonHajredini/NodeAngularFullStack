@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  web:
+    image: ghcr.io/${GITHUB_REPOSITORY}/web:latest
+    container_name: nodeangularfullstack-web
+    restart: unless-stopped
+    ports:
+      - "4200:80"
+    networks:
+      - app-network
+    environment:
+      - NODE_ENV=production
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  form-builder-ui:
+    image: ghcr.io/${GITHUB_REPOSITORY}/form-builder-ui:latest
+    container_name: nodeangularfullstack-form-builder
+    restart: unless-stopped
+    ports:
+      - "4201:80"
+    networks:
+      - app-network
+    environment:
+      - NODE_ENV=production
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Watchtower for automatic updates (optional)
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_INCLUDE_STOPPED=false
+      - WATCHTOWER_POLL_INTERVAL=300
+    networks:
+      - app-network
+    profiles:
+      - watchtower
+
+networks:
+  app-network:
+    driver: bridge

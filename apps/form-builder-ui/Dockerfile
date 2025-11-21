@@ -24,7 +24,7 @@ COPY apps/form-builder-ui ./apps/form-builder-ui
 
 # Build the Angular app for production
 WORKDIR /app/apps/form-builder-ui
-RUN npm run build
+RUN npm run build:prod
 
 # Production stage with nginx
 FROM nginx:alpine

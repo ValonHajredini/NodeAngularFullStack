@@ -24,7 +24,7 @@ COPY apps/web ./apps/web
 
 # Build the Angular app for production
 WORKDIR /app/apps/web
-RUN npm run build
+RUN npm run build:prod
 
 # Production stage with nginx
 FROM nginx:alpine
