@@ -1,0 +1,160 @@
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "production"
+      variables:
+        SSH_USER: '${PROD_SSH_USER}'
+        SSH_HOST: '${PROD_SSH_HOST}'
+        DEPLOY_PATH: '${PROD_DEPLOY_PATH}'
+        DEPLOY_FRONT_BUILD: '${PROD_DEPLOY_FRONT_BUILD}'
+        SSH_PRIVATE_KEY: '${PROD_SSH_PRIVATE_KEY}'
+
+stages:
+  - build-shared
+  - deploy-backend
+  - deploy-frontend
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - node_modules/
+    - packages/shared/node_modules/
+    - packages/shared/dist/
+
+# ============================================
+# STAGE 1: Build Shared Package
+# ============================================
+build_shared_package:
+  stage: build-shared
+  image: node:20-alpine
+  script:
+    - echo "Building shared package..."
+    - npm ci
+    - npm --workspace=packages/shared run build
+  artifacts:
+    paths:
+      - packages/shared/dist/
+    expire_in: 1 hour
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+
+# ============================================
+# STAGE 2: Deploy Backend APIs with PM2
+# ============================================
+deploy_backend_apis:
+  stage: deploy-backend
+  image: node:20-alpine
+  dependencies:
+    - build_shared_package
+  before_script:
+    # Install SSH client
+    - apk add --no-cache openssh-client rsync
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | base64 -d | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan $SSH_HOST >> ~/.ssh/known_hosts
+  script:
+    - echo "Deploying backend APIs to production..."
+
+    # Create deployment directory structure on server
+    - ssh $SSH_USER@$SSH_HOST "mkdir -p $DEPLOY_PATH/{apps/{dashboard-api,forms-api},packages/shared}"
+
+    # Copy shared package dist
+    - rsync -avz --delete packages/shared/dist/ $SSH_USER@$SSH_HOST:$DEPLOY_PATH/packages/shared/dist/
+    - rsync -avz packages/shared/package.json $SSH_USER@$SSH_HOST:$DEPLOY_PATH/packages/shared/
+
+    # Copy backend API source files
+    - rsync -avz --delete --exclude 'node_modules' --exclude 'dist' --exclude 'coverage' --exclude 'logs' --exclude 'uploads' apps/dashboard-api/ $SSH_USER@$SSH_HOST:$DEPLOY_PATH/apps/dashboard-api/
+    - rsync -avz --delete --exclude 'node_modules' --exclude 'dist' --exclude 'coverage' --exclude 'logs' --exclude 'uploads' --exclude 'exports' apps/forms-api/ $SSH_USER@$SSH_HOST:$DEPLOY_PATH/apps/forms-api/
+
+    # Copy root package files
+    - rsync -avz package.json package-lock.json $SSH_USER@$SSH_HOST:$DEPLOY_PATH/
+
+    # Copy PM2 ecosystem config
+    - rsync -avz ecosystem.config.js $SSH_USER@$SSH_HOST:$DEPLOY_PATH/
+
+    # Execute deployment script on server
+    - ssh $SSH_USER@$SSH_HOST "bash $DEPLOY_PATH/scripts/deploy-backend.sh $DEPLOY_PATH"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+
+# ============================================
+# STAGE 3: Deploy Frontend Applications
+# ============================================
+deploy_frontend_main_ui:
+  stage: deploy-frontend
+  image: node:20-alpine
+  dependencies:
+    - build_shared_package
+    - deploy_backend_apis
+  before_script:
+    - apk add --no-cache openssh-client rsync
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | base64 -d | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan $SSH_HOST >> ~/.ssh/known_hosts
+  script:
+    - echo "Building and deploying main UI (apps/web)..."
+
+    # Install dependencies
+    - npm ci
+
+    # Build main UI with production configuration
+    - npm --workspace=apps/web run build -- --configuration=production
+
+    # Create frontend deployment directory on server
+    - ssh $SSH_USER@$SSH_HOST "mkdir -p $DEPLOY_PATH/frontend/web"
+
+    # Clear old frontend files
+    - ssh $SSH_USER@$SSH_HOST "rm -rf $DEPLOY_PATH/frontend/web/*"
+
+    # Deploy built files
+    - rsync -avz --delete apps/web/dist/web/browser/ $SSH_USER@$SSH_HOST:$DEPLOY_PATH/frontend/web/
+
+    - echo "Main UI deployed successfully to $DEPLOY_PATH/frontend/web"
+  artifacts:
+    paths:
+      - apps/web/dist/
+    expire_in: 1 week
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+
+deploy_frontend_form_builder:
+  stage: deploy-frontend
+  image: node:20-alpine
+  dependencies:
+    - build_shared_package
+    - deploy_backend_apis
+  before_script:
+    - apk add --no-cache openssh-client rsync
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | base64 -d | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan $SSH_HOST >> ~/.ssh/known_hosts
+  script:
+    - echo "Building and deploying Form Builder UI (apps/form-builder-ui)..."
+
+    # Install dependencies
+    - npm ci
+
+    # Build form builder UI with production configuration
+    - npm --workspace=apps/form-builder-ui run build -- --configuration=production
+
+    # Create frontend deployment directory on server
+    - ssh $SSH_USER@$SSH_HOST "mkdir -p $DEPLOY_PATH/frontend/form-builder"
+
+    # Clear old frontend files
+    - ssh $SSH_USER@$SSH_HOST "rm -rf $DEPLOY_PATH/frontend/form-builder/*"
+
+    # Deploy built files
+    - rsync -avz --delete apps/form-builder-ui/dist/form-builder-ui/browser/ $SSH_USER@$SSH_HOST:$DEPLOY_PATH/frontend/form-builder/
+
+    - echo "Form Builder UI deployed successfully to $DEPLOY_PATH/frontend/form-builder"
+  artifacts:
+    paths:
+      - apps/form-builder-ui/dist/
+    expire_in: 1 week
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
