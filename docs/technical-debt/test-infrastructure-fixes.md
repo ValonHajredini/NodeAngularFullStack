@@ -223,6 +223,63 @@ if: github.event_name != 'pull_request'
 
 ---
 
+### 5. CI/CD SAST Scanning Issues
+
+**Severity:** MEDIUM
+**Impact:** Security scanning temporarily disabled in CI/CD pipeline
+
+**Root Cause:**
+
+```
+CodeQL GitHub Action v2 is deprecated (EOL announced).
+Semgrep SARIF upload fails with "Resource not accessible by integration" errors.
+```
+
+**Example Failures:**
+
+```
+sast-scanning: Resource not accessible by integration
+CodeQL Action major versions v1 and v2 have been deprecated
+Process completed with exit code 127
+```
+
+**Why It Happens:**
+
+- CodeQL v2 actions reached end-of-life and need migration to v3
+- Semgrep SARIF upload requires specific GitHub permissions not configured
+- Integration permissions may need `security-events: write` scope
+
+**Solution Required:**
+
+- [ ] Upgrade CodeQL actions from v2 to v3
+- [ ] Configure proper GitHub token permissions for SARIF uploads
+- [ ] Add `security-events: write` permission to workflow
+- [ ] Test Semgrep SARIF upload with proper permissions
+- [ ] Re-enable sast-scanning job in ci.yml workflow
+
+**Files Affected:**
+
+- `.github/workflows/ci.yml` (sast-scanning job)
+- Workflow permissions configuration
+
+**Workaround Applied:**
+
+```yaml
+# ci.yml
+sast-scanning:
+  if: false  # Temporarily disabled
+```
+
+**Job Dependencies Updated:**
+
+```yaml
+# Removed sast-scanning from quality-gate dependencies
+quality-gate:
+  needs: [security-audit, code-quality, test, security-headers-test]
+```
+
+---
+
 ## Incremental Fix Roadmap
 
 ### Phase 1: Quick Wins (1-2 days)
