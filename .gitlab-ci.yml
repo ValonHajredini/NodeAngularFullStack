@@ -22,7 +22,7 @@ build_shared_package:
   image: node:20-alpine
   script:
     - echo "Building shared package..."
-    - npm ci
+    - npm ci --ignore-scripts
     - npm --workspace=packages/shared run build
   artifacts:
     paths:
@@ -107,7 +107,7 @@ deploy_frontend_main_ui:
     - echo "Building and deploying main UI (apps/web)..."
 
     # Install dependencies
-    - npm ci
+    - npm ci --ignore-scripts
 
     # Build main UI with production configuration
     - npm --workspace=apps/web run build -- --configuration=production
@@ -149,7 +149,7 @@ deploy_frontend_form_builder:
     - echo "Building and deploying Form Builder UI (apps/form-builder-ui)..."
 
     # Install dependencies
-    - npm ci
+    - npm ci --ignore-scripts
 
     # Build form builder UI with production configuration
     - npm --workspace=apps/form-builder-ui run build -- --configuration=production
