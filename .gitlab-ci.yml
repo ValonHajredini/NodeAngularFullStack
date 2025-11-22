@@ -22,7 +22,7 @@ build_shared_package:
   image: node:20-alpine
   script:
     - echo "Building shared package..."
-    - npm ci --ignore-scripts
+    - npm ci --ignore-scripts --include=dev
     - npm --workspace=packages/shared run build
   artifacts:
     paths:
