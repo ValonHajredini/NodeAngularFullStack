@@ -3,36 +3,88 @@ workflow:
     - if: $CI_COMMIT_BRANCH == "production"
 
 stages:
+  - install-deps
   - build-shared
+  - build-backend
   - deploy-backend
+  - build-frontend-web
+  - build-frontend-form-builder
   - deploy-frontend
 
+# Global cache - using v2 to invalidate old cache
 cache:
-  key: ${CI_COMMIT_REF_SLUG}
+  key: ${CI_COMMIT_REF_SLUG}-v2
   paths:
     - node_modules/
-    - packages/shared/node_modules/
-    - packages/shared/dist/
+    - apps/*/node_modules/
+    - packages/*/node_modules/
 
 # ============================================
-# STAGE 1: Build Shared Package
+# STAGE 1: Install All Dependencies
+# ============================================
+install_dependencies:
+  stage: install-deps
+  image: node:20-alpine
+  timeout: 30m
+  script:
+    - echo "=========================================="
+    - echo "Installing All Dependencies"
+    - echo "=========================================="
+    - echo "Node version:" && node --version
+    - echo "NPM version:" && npm --version
+    - echo ""
+
+    - echo "📦 Cleaning any corrupted cache..."
+    - rm -rf node_modules/.cache || true
+
+    - echo ""
+    - echo "📦 Installing root and workspace dependencies..."
+    - npm install --no-audit
+
+    - echo ""
+    - echo "🔍 Verifying installations..."
+    - echo "Root node_modules count:" && ls node_modules | wc -l
+    - echo "TypeScript installed:" && ls -la node_modules/.bin/tsc || echo "❌ TypeScript NOT found"
+    - echo "Shared package node_modules:" && ls packages/shared/node_modules 2>&1 || echo "No separate shared node_modules (hoisted to root)"
+
+    - echo ""
+    - echo "✅ Dependencies installed successfully"
+  artifacts:
+    paths:
+      - node_modules/
+      - apps/*/node_modules/
+      - packages/*/node_modules/
+    expire_in: 1 hour
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+
+# ============================================
+# STAGE 2: Build Shared Package
 # ============================================
 build_shared_package:
   stage: build-shared
   image: node:20-alpine
-  timeout: 30m
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}
-    paths:
-      - node_modules/
-      - packages/shared/node_modules/
+  timeout: 15m
+  dependencies:
+    - install_dependencies
   script:
-    - echo "Building shared package..."
-    - echo "Installing dependencies..."
-    - npm install --prefer-offline --no-audit
-    - echo "Building TypeScript package..."
-    - npm --workspace=packages/shared run build
+    - echo "=========================================="
+    - echo "Building Shared Package"
+    - echo "=========================================="
+
+    - echo "🔍 Verifying TypeScript availability..."
+    - which tsc || echo "⚠️  tsc not in PATH, checking node_modules..."
+    - ls -la node_modules/.bin/tsc || echo "❌ TypeScript NOT found in node_modules"
+
+    - echo ""
+    - echo "📦 Building shared package..."
+    - cd packages/shared
+    - npx tsc --version
+    - npm run build
+
+    - echo ""
     - echo "✅ Shared package built successfully"
+    - ls -la dist/
   artifacts:
     paths:
       - packages/shared/dist/
@@ -41,153 +93,257 @@ build_shared_package:
     - if: $CI_PIPELINE_SOURCE == "push"
 
 # ============================================
-# STAGE 2: Deploy Backend APIs with PM2
+# STAGE 3: Build Backend APIs
 # ============================================
-deploy_backend_apis:
-  stage: deploy-backend
+build_backend_apis:
+  stage: build-backend
   image: node:20-alpine
+  timeout: 15m
   dependencies:
+    - install_dependencies
     - build_shared_package
-  before_script:
-    # Install SSH client
-    - apk add --no-cache openssh-client rsync
-    - eval $(ssh-agent -s)
-    # Create SSH key file from base64-encoded variable
-    - echo "$PROD_SSH_PRIVATE_KEY" | base64 -d > /tmp/ssh_key
-    - chmod 600 /tmp/ssh_key
-    - ssh-add /tmp/ssh_key
-    - mkdir -p ~/.ssh
-    - chmod 700 ~/.ssh
-    - ssh-keyscan $PROD_SSH_HOST >> ~/.ssh/known_hosts
-    # Debug SSH connection
-    - echo "=== SSH Connection Debug Info ==="
-    - echo "User - $PROD_SSH_USER"
-    - echo "Host - $PROD_SSH_HOST"
-    - echo "Testing SSH connection with verbose output..."
-    - ssh -vvv -o StrictHostKeyChecking=no $PROD_SSH_USER@$PROD_SSH_HOST "echo SSH connection successful"
   script:
-    - echo "Deploying backend APIs to production..."
+    - echo "=========================================="
+    - echo "Building Backend APIs"
+    - echo "=========================================="
 
-    # Create deployment directory structure on server
-    - ssh $PROD_SSH_USER@$PROD_SSH_HOST "mkdir -p $PROD_DEPLOY_PATH/{apps/{dashboard-api,forms-api},packages/shared,scripts}"
+    - echo "📦 Building dashboard-api..."
+    - cd apps/dashboard-api
+    - npm run build
+    - cd ../..
 
-    # Copy shared package dist
-    - rsync -avz --delete packages/shared/dist/ $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/packages/shared/dist/
-    - rsync -avz packages/shared/package.json $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/packages/shared/
+    - echo ""
+    - echo "📦 Building forms-api..."
+    - cd apps/forms-api
+    - npm run build
+    - cd ../..
 
-    # Copy backend API source files
-    - rsync -avz --delete --exclude 'node_modules' --exclude 'dist' --exclude 'coverage' --exclude 'logs' --exclude 'uploads' apps/dashboard-api/ $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/apps/dashboard-api/
-    - rsync -avz --delete --exclude 'node_modules' --exclude 'dist' --exclude 'coverage' --exclude 'logs' --exclude 'uploads' --exclude 'exports' apps/forms-api/ $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/apps/forms-api/
-
-    # Copy root package files
-    - rsync -avz package.json package-lock.json $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/
-
-    # Copy PM2 ecosystem config
-    - rsync -avz ecosystem.config.js $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/
-
-    # Copy deployment scripts
-    - rsync -avz scripts/ $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/scripts/
-
-    # Execute deployment script on server
-    - ssh $PROD_SSH_USER@$PROD_SSH_HOST "bash $PROD_DEPLOY_PATH/scripts/deploy-backend.sh $PROD_DEPLOY_PATH"
+    - echo ""
+    - echo "✅ Backend APIs built successfully"
+  artifacts:
+    paths:
+      - apps/dashboard-api/dist/
+      - apps/forms-api/dist/
+    expire_in: 1 hour
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
 
 # ============================================
-# STAGE 3: Deploy Frontend Applications
+# STAGE 4: Deploy Backend APIs with PM2
 # ============================================
-deploy_frontend_main_ui:
-  stage: deploy-frontend
+deploy_backend_apis:
+  stage: deploy-backend
   image: node:20-alpine
-  timeout: 30m
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}-web
-    paths:
-      - node_modules/
-      - apps/web/node_modules/
+  timeout: 15m
   dependencies:
     - build_shared_package
-    - deploy_backend_apis
+    - build_backend_apis
   before_script:
+    - echo "=========================================="
+    - echo "Preparing Backend Deployment"
+    - echo "=========================================="
+
+    # Install SSH client
     - apk add --no-cache openssh-client rsync
+
+    # Setup SSH
     - eval $(ssh-agent -s)
-    # Create SSH key file from base64-encoded variable
     - echo "$PROD_SSH_PRIVATE_KEY" | base64 -d > /tmp/ssh_key
     - chmod 600 /tmp/ssh_key
     - ssh-add /tmp/ssh_key
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
     - ssh-keyscan $PROD_SSH_HOST >> ~/.ssh/known_hosts
+
+    - echo "✅ SSH configured for $PROD_SSH_USER@$PROD_SSH_HOST"
   script:
-    - echo "Building and deploying main UI (apps/web)..."
+    - echo "=========================================="
+    - echo "Deploying Backend to Production"
+    - echo "=========================================="
 
-    # Install dependencies
-    - npm install
+    # Create deployment directory structure on server
+    - echo "📁 Creating directory structure..."
+    - ssh $PROD_SSH_USER@$PROD_SSH_HOST "mkdir -p $PROD_DEPLOY_PATH/{apps/{dashboard-api,forms-api},packages/shared,scripts}"
 
-    # Build main UI with production configuration
+    # Copy shared package dist
+    - echo ""
+    - echo "📦 Copying shared package..."
+    - rsync -avz --delete packages/shared/dist/ $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/packages/shared/dist/
+    - rsync -avz packages/shared/package.json $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/packages/shared/
+
+    # Copy backend API source files
+    - echo ""
+    - echo "📦 Copying dashboard-api..."
+    - rsync -avz --delete --exclude 'node_modules' --exclude 'coverage' --exclude 'logs' --exclude 'uploads' apps/dashboard-api/ $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/apps/dashboard-api/
+
+    - echo ""
+    - echo "📦 Copying forms-api..."
+    - rsync -avz --delete --exclude 'node_modules' --exclude 'coverage' --exclude 'logs' --exclude 'uploads' --exclude 'exports' apps/forms-api/ $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/apps/forms-api/
+
+    # Copy root package files
+    - echo ""
+    - echo "📦 Copying root configuration..."
+    - rsync -avz package.json package-lock.json $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/
+    - rsync -avz ecosystem.config.js $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/
+    - rsync -avz scripts/ $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/scripts/
+
+    # Execute deployment script on server
+    - echo ""
+    - echo "🚀 Running deployment script on server..."
+    - ssh $PROD_SSH_USER@$PROD_SSH_HOST "bash $PROD_DEPLOY_PATH/scripts/deploy-backend.sh $PROD_DEPLOY_PATH"
+
+    - echo ""
+    - echo "✅ Backend deployment completed"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+
+# ============================================
+# STAGE 5: Build Frontend - Main UI (apps/web)
+# ============================================
+build_frontend_web:
+  stage: build-frontend-web
+  image: node:20-alpine
+  timeout: 20m
+  dependencies:
+    - install_dependencies
+    - build_shared_package
+  script:
+    - echo "=========================================="
+    - echo "Building Main UI (apps/web)"
+    - echo "=========================================="
+
+    - echo "🔍 Verifying Angular CLI..."
+    - npx ng version || echo "Angular CLI will be used via npx"
+
+    - echo ""
+    - echo "📦 Building main UI with production configuration..."
     - npm --workspace=apps/web run build -- --configuration=production
 
-    # Create frontend deployment directory on server
-    - ssh $PROD_SSH_USER@$PROD_SSH_HOST "mkdir -p $PROD_DEPLOY_PATH/frontend/web"
-
-    # Clear old frontend files
-    - ssh $PROD_SSH_USER@$PROD_SSH_HOST "rm -rf $PROD_DEPLOY_PATH/frontend/web/*"
-
-    # Deploy built files
-    - rsync -avz --delete apps/web/dist/web/browser/ $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/frontend/web/
-
-    - echo "Main UI deployed successfully to $PROD_DEPLOY_PATH/frontend/web"
+    - echo ""
+    - echo "✅ Main UI built successfully"
+    - ls -la apps/web/dist/web/browser/
   artifacts:
     paths:
       - apps/web/dist/
-    expire_in: 1 week
+    expire_in: 1 hour
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+
+# ============================================
+# STAGE 6: Build Frontend - Form Builder (apps/form-builder-ui)
+# ============================================
+build_frontend_form_builder:
+  stage: build-frontend-form-builder
+  image: node:20-alpine
+  timeout: 20m
+  dependencies:
+    - install_dependencies
+    - build_shared_package
+  script:
+    - echo "=========================================="
+    - echo "Building Form Builder UI"
+    - echo "=========================================="
+
+    - echo "🔍 Verifying Angular CLI..."
+    - npx ng version || echo "Angular CLI will be used via npx"
+
+    - echo ""
+    - echo "📦 Building form builder UI with production configuration..."
+    - npm --workspace=apps/form-builder-ui run build -- --configuration=production
+
+    - echo ""
+    - echo "✅ Form Builder UI built successfully"
+    - ls -la apps/form-builder-ui/dist/form-builder-ui/browser/
+  artifacts:
+    paths:
+      - apps/form-builder-ui/dist/
+    expire_in: 1 hour
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+
+# ============================================
+# STAGE 7: Deploy Frontend Applications
+# ============================================
+deploy_frontend_web:
+  stage: deploy-frontend
+  image: node:20-alpine
+  timeout: 10m
+  dependencies:
+    - build_frontend_web
+  before_script:
+    - echo "=========================================="
+    - echo "Preparing Main UI Deployment"
+    - echo "=========================================="
+
+    - apk add --no-cache openssh-client rsync
+    - eval $(ssh-agent -s)
+    - echo "$PROD_SSH_PRIVATE_KEY" | base64 -d > /tmp/ssh_key
+    - chmod 600 /tmp/ssh_key
+    - ssh-add /tmp/ssh_key
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan $PROD_SSH_HOST >> ~/.ssh/known_hosts
+
+    - echo "✅ SSH configured"
+  script:
+    - echo "=========================================="
+    - echo "Deploying Main UI to Production"
+    - echo "=========================================="
+
+    - echo "📁 Creating deployment directory..."
+    - ssh $PROD_SSH_USER@$PROD_SSH_HOST "mkdir -p $PROD_DEPLOY_PATH/frontend/web"
+
+    - echo ""
+    - echo "🗑️  Clearing old files..."
+    - ssh $PROD_SSH_USER@$PROD_SSH_HOST "rm -rf $PROD_DEPLOY_PATH/frontend/web/*"
+
+    - echo ""
+    - echo "📦 Deploying built files..."
+    - rsync -avz --delete apps/web/dist/web/browser/ $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/frontend/web/
+
+    - echo ""
+    - echo "✅ Main UI deployed to $PROD_DEPLOY_PATH/frontend/web"
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
 
 deploy_frontend_form_builder:
   stage: deploy-frontend
   image: node:20-alpine
-  timeout: 30m
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}-form-builder
-    paths:
-      - node_modules/
-      - apps/form-builder-ui/node_modules/
+  timeout: 10m
   dependencies:
-    - build_shared_package
-    - deploy_backend_apis
+    - build_frontend_form_builder
   before_script:
+    - echo "=========================================="
+    - echo "Preparing Form Builder Deployment"
+    - echo "=========================================="
+
     - apk add --no-cache openssh-client rsync
     - eval $(ssh-agent -s)
-    # Create SSH key file from base64-encoded variable
     - echo "$PROD_SSH_PRIVATE_KEY" | base64 -d > /tmp/ssh_key
     - chmod 600 /tmp/ssh_key
     - ssh-add /tmp/ssh_key
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
     - ssh-keyscan $PROD_SSH_HOST >> ~/.ssh/known_hosts
+
+    - echo "✅ SSH configured"
   script:
-    - echo "Building and deploying Form Builder UI (apps/form-builder-ui)..."
+    - echo "=========================================="
+    - echo "Deploying Form Builder to Production"
+    - echo "=========================================="
 
-    # Install dependencies
-    - npm install
-
-    # Build form builder UI with production configuration
-    - npm --workspace=apps/form-builder-ui run build -- --configuration=production
-
-    # Create frontend deployment directory on server
+    - echo "📁 Creating deployment directory..."
     - ssh $PROD_SSH_USER@$PROD_SSH_HOST "mkdir -p $PROD_DEPLOY_PATH/frontend/form-builder"
 
-    # Clear old frontend files
+    - echo ""
+    - echo "🗑️  Clearing old files..."
     - ssh $PROD_SSH_USER@$PROD_SSH_HOST "rm -rf $PROD_DEPLOY_PATH/frontend/form-builder/*"
 
-    # Deploy built files
+    - echo ""
+    - echo "📦 Deploying built files..."
     - rsync -avz --delete apps/form-builder-ui/dist/form-builder-ui/browser/ $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/frontend/form-builder/
 
-    - echo "Form Builder UI deployed successfully to $PROD_DEPLOY_PATH/frontend/form-builder"
-  artifacts:
-    paths:
-      - apps/form-builder-ui/dist/
-    expire_in: 1 week
+    - echo ""
+    - echo "✅ Form Builder deployed to $PROD_DEPLOY_PATH/frontend/form-builder"
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
