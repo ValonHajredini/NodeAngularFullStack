@@ -17,15 +17,11 @@ import { createRouteList } from '../utils/route-list';
 // Load environment variables
 dotenv.config();
 
-// Import routes
+// Import routes (dashboard-api routes only)
 import healthRoutes from '../routes/health.routes';
 import authRoutes from '../routes/auth.routes';
 import { usersRoutes } from '../routes/users.routes';
 import tokensRoutes from '../routes/tokens.routes';
-import shortLinksRoutes from '../routes/short-links.routes';
-import { formsRoutes } from '../routes/forms.routes';
-import { publicFormsRoutes } from '../routes/public-forms.routes';
-import drawingProjectsRoutes from '../routes/drawing-projects.routes';
 import toolsRoutes from '../routes/tools.routes';
 import publicToolsRoutes from '../routes/public-tools.routes';
 
@@ -42,15 +38,11 @@ async function main() {
     // Create minimal Express app with routes (no middleware)
     const app = express();
 
-    // Register routes (matching server.ts route registration)
+    // Register routes (dashboard-api routes only)
     app.use('/api', healthRoutes);
     app.use('/api/v1/auth', authRoutes);
     app.use('/api/v1/users', usersRoutes);
     app.use('/api/v1/tokens', tokensRoutes);
-    app.use('/api/v1/tools/short-links', shortLinksRoutes);
-    app.use('/api/v1/forms', formsRoutes);
-    app.use('/api/v1/public/forms', publicFormsRoutes);
-    app.use('/api/v1/drawing-projects', drawingProjectsRoutes);
     app.use('/api/v1/admin/tools', toolsRoutes);
     app.use('/api/v1/tools', publicToolsRoutes);
 

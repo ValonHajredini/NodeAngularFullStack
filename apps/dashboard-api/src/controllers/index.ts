@@ -3,7 +3,8 @@
  * Centralized export point for all controller modules
  */
 
-export { ToolRegistryController } from './tool-registry.controller';
-export { FormsController } from './forms.controller';
 export { AuthController } from './auth.controller';
-export { TestToolController } from './test-tool.controller';
+export { HealthController } from './health.controller';
+export { TokenController } from './token.controller';
+export { ToolsController } from './tools.controller';
+export { UsersController } from './users.controller';

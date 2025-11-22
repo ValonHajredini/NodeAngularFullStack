@@ -3,8 +3,8 @@ import {
   FormTheme,
   CreateThemeRequest,
   UpdateThemeRequest,
-  SharedAuthService,
 } from '@nodeangularfullstack/shared';
+import { SharedAuthService } from '@nodeangularfullstack/shared/dist/services/shared-auth.service';
 import { authPool } from '../config/multi-database.config';
 
 /**

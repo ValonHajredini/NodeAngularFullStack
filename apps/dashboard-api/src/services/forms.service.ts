@@ -8,8 +8,8 @@ import {
   FormBackgroundSettings,
   TokenStatusResponse,
   PublishFormResponse,
-  SharedAuthService,
 } from '@nodeangularfullstack/shared';
+import { SharedAuthService } from '@nodeangularfullstack/shared/dist/services/shared-auth.service';
 import { formsRepository } from '../repositories/forms.repository';
 import { formSchemasRepository } from '../repositories/form-schemas.repository';
 import { themesRepository } from '../repositories/themes.repository';
