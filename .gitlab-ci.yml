@@ -1,6 +1,22 @@
 workflow:
   rules:
+    # Run specific pipeline based on PIPELINE variable
+    - if: $CI_COMMIT_BRANCH == "production" && $PIPELINE == "shared"
+      variables:
+        PIPELINE_NAME: "Shared Package"
+    - if: $CI_COMMIT_BRANCH == "production" && $PIPELINE == "backend"
+      variables:
+        PIPELINE_NAME: "Backend APIs"
+    - if: $CI_COMMIT_BRANCH == "production" && $PIPELINE == "frontend-web"
+      variables:
+        PIPELINE_NAME: "Frontend - Main UI"
+    - if: $CI_COMMIT_BRANCH == "production" && $PIPELINE == "frontend-form-builder"
+      variables:
+        PIPELINE_NAME: "Frontend - Form Builder"
+    # Run all pipelines if no PIPELINE variable specified
     - if: $CI_COMMIT_BRANCH == "production"
+      variables:
+        PIPELINE_NAME: "Full Deployment"
 
 stages:
   - install-deps
@@ -73,7 +89,8 @@ install_dependencies:
       - package-lock.json
     expire_in: 1 hour
   rules:
-    - if: $CI_PIPELINE_SOURCE == "push"
+    # Always run for all pipelines (dependencies needed by all)
+    - if: $CI_COMMIT_BRANCH == "production"
 
 # ============================================
 # STAGE 2: Build Shared Package
@@ -123,7 +140,8 @@ build_shared_package:
       - packages/shared/dist/
     expire_in: 1 hour
   rules:
-    - if: $CI_PIPELINE_SOURCE == "push"
+    # Run for shared pipeline or full deployment
+    - if: $CI_COMMIT_BRANCH == "production" && ($PIPELINE == "shared" || $PIPELINE == null)
 
 # ============================================
 # STAGE 3A: Build Dashboard API
@@ -163,7 +181,8 @@ build_dashboard_api:
       - apps/dashboard-api/dist/
     expire_in: 1 hour
   rules:
-    - if: $CI_PIPELINE_SOURCE == "push"
+    # Run for backend pipeline or full deployment
+    - if: $CI_COMMIT_BRANCH == "production" && ($PIPELINE == "backend" || $PIPELINE == null)
 
 # ============================================
 # STAGE 3B: Build Forms API
@@ -203,7 +222,8 @@ build_forms_api:
       - apps/forms-api/dist/
     expire_in: 1 hour
   rules:
-    - if: $CI_PIPELINE_SOURCE == "push"
+    # Run for backend pipeline or full deployment
+    - if: $CI_COMMIT_BRANCH == "production" && ($PIPELINE == "backend" || $PIPELINE == null)
 
 # ============================================
 # STAGE 4: Deploy Backend APIs with PM2
@@ -273,7 +293,8 @@ deploy_backend_apis:
     - echo ""
     - echo "✅ Backend deployment completed"
   rules:
-    - if: $CI_PIPELINE_SOURCE == "push"
+    # Run for backend pipeline or full deployment
+    - if: $CI_COMMIT_BRANCH == "production" && ($PIPELINE == "backend" || $PIPELINE == null)
 
 # ============================================
 # STAGE 5: Build Frontend - Main UI (apps/web)
@@ -305,7 +326,8 @@ build_frontend_web:
       - apps/web/dist/
     expire_in: 1 hour
   rules:
-    - if: $CI_PIPELINE_SOURCE == "push"
+    # Run for frontend-web pipeline or full deployment
+    - if: $CI_COMMIT_BRANCH == "production" && ($PIPELINE == "frontend-web" || $PIPELINE == null)
 
 # ============================================
 # STAGE 6: Build Frontend - Form Builder (apps/form-builder-ui)
@@ -337,7 +359,8 @@ build_frontend_form_builder:
       - apps/form-builder-ui/dist/
     expire_in: 1 hour
   rules:
-    - if: $CI_PIPELINE_SOURCE == "push"
+    # Run for frontend-form-builder pipeline or full deployment
+    - if: $CI_COMMIT_BRANCH == "production" && ($PIPELINE == "frontend-form-builder" || $PIPELINE == null)
 
 # ============================================
 # STAGE 7: Deploy Frontend Applications
@@ -382,7 +405,8 @@ deploy_frontend_web:
     - echo ""
     - echo "✅ Main UI deployed to $PROD_DEPLOY_PATH/frontend/web"
   rules:
-    - if: $CI_PIPELINE_SOURCE == "push"
+    # Run for frontend-web pipeline or full deployment
+    - if: $CI_COMMIT_BRANCH == "production" && ($PIPELINE == "frontend-web" || $PIPELINE == null)
 
 deploy_frontend_form_builder:
   stage: deploy-frontend
@@ -424,4 +448,5 @@ deploy_frontend_form_builder:
     - echo ""
     - echo "✅ Form Builder deployed to $PROD_DEPLOY_PATH/frontend/form-builder"
   rules:
-    - if: $CI_PIPELINE_SOURCE == "push"
+    # Run for frontend-form-builder pipeline or full deployment
+    - if: $CI_COMMIT_BRANCH == "production" && ($PIPELINE == "frontend-form-builder" || $PIPELINE == null)
