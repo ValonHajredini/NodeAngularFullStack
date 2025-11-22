@@ -26,7 +26,7 @@ module.exports = {
       max_memory_restart: '500M',
       env: {
         NODE_ENV: 'production',
-        PORT: 3002,
+        PORT: 3000,
       },
       error_file: './logs/api-error.log',
       out_file: './logs/api-out.log',
