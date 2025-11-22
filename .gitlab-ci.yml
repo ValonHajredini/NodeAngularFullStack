@@ -4,15 +4,9 @@ workflow:
     - if: $CI_COMMIT_BRANCH == "production" && $PIPELINE == "shared"
       variables:
         PIPELINE_NAME: "Shared Package"
-    - if: $CI_COMMIT_BRANCH == "production" && $PIPELINE == "backend-dashboard"
-      variables:
-        PIPELINE_NAME: "Backend - Dashboard API"
-    - if: $CI_COMMIT_BRANCH == "production" && $PIPELINE == "backend-forms"
-      variables:
-        PIPELINE_NAME: "Backend - Forms API"
     - if: $CI_COMMIT_BRANCH == "production" && $PIPELINE == "backend"
       variables:
-        PIPELINE_NAME: "Backend - All APIs"
+        PIPELINE_NAME: "Backend API (Forms)"
     - if: $CI_COMMIT_BRANCH == "production" && $PIPELINE == "frontend-web"
       variables:
         PIPELINE_NAME: "Frontend - Main UI"
@@ -150,48 +144,7 @@ build_shared_package:
     - if: $CI_COMMIT_BRANCH == "production" && ($PIPELINE == "shared" || $PIPELINE == null)
 
 # ============================================
-# STAGE 3A: Build Dashboard API
-# ============================================
-build_dashboard_api:
-  stage: build-backend
-  image: node:20-alpine
-  timeout: 15m
-  dependencies:
-    - install_dependencies
-    - build_shared_package
-  script:
-    - echo "=========================================="
-    - echo "Building Dashboard API"
-    - echo "=========================================="
-
-    - echo "🔍 Checking dashboard-api structure..."
-    - ls -la apps/dashboard-api/
-    - echo ""
-    - echo "🔍 Checking src directory..."
-    - ls -la apps/dashboard-api/src/
-
-    - echo ""
-    - echo "🔍 Checking for TypeScript config..."
-    - cat apps/dashboard-api/tsconfig.json
-
-    - echo ""
-    - echo "📦 Building dashboard-api..."
-    - cd apps/dashboard-api
-    - npm run build
-
-    - echo ""
-    - echo "✅ Dashboard API built successfully"
-    - ls -la dist/
-  artifacts:
-    paths:
-      - apps/dashboard-api/dist/
-    expire_in: 1 hour
-  rules:
-    # Run for dashboard, all backend, or full deployment
-    - if: $CI_COMMIT_BRANCH == "production" && ($PIPELINE == "backend-dashboard" || $PIPELINE == "backend" || $PIPELINE == null)
-
-# ============================================
-# STAGE 3B: Build Forms API
+# STAGE 3: Build Forms API
 # ============================================
 build_forms_api:
   stage: build-backend
@@ -228,77 +181,11 @@ build_forms_api:
       - apps/forms-api/dist/
     expire_in: 1 hour
   rules:
-    # Run for forms, all backend, or full deployment
-    - if: $CI_COMMIT_BRANCH == "production" && ($PIPELINE == "backend-forms" || $PIPELINE == "backend" || $PIPELINE == null)
+    # Run for backend or full deployment
+    - if: $CI_COMMIT_BRANCH == "production" && ($PIPELINE == "backend" || $PIPELINE == null)
 
 # ============================================
-# STAGE 4A: Deploy Dashboard API with PM2
-# ============================================
-deploy_dashboard_api:
-  stage: deploy-backend
-  image: node:20-alpine
-  timeout: 15m
-  dependencies:
-    - build_shared_package
-    - build_dashboard_api
-  before_script:
-    - echo "=========================================="
-    - echo "Preparing Dashboard API Deployment"
-    - echo "=========================================="
-
-    # Install SSH client
-    - apk add --no-cache openssh-client rsync
-
-    # Setup SSH
-    - eval $(ssh-agent -s)
-    - echo "$PROD_SSH_PRIVATE_KEY" | base64 -d > /tmp/ssh_key
-    - chmod 600 /tmp/ssh_key
-    - ssh-add /tmp/ssh_key
-    - mkdir -p ~/.ssh
-    - chmod 700 ~/.ssh
-    - ssh-keyscan $PROD_SSH_HOST >> ~/.ssh/known_hosts
-
-    - echo "✅ SSH configured for $PROD_SSH_USER@$PROD_SSH_HOST"
-  script:
-    - echo "=========================================="
-    - echo "Deploying Dashboard API to Production"
-    - echo "=========================================="
-
-    # Create deployment directory structure on server
-    - echo "📁 Creating directory structure..."
-    - ssh $PROD_SSH_USER@$PROD_SSH_HOST "mkdir -p $PROD_DEPLOY_PATH/{apps/dashboard-api,packages/shared,scripts}"
-
-    # Copy shared package dist
-    - echo ""
-    - echo "📦 Copying shared package..."
-    - rsync -avz --delete packages/shared/dist/ $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/packages/shared/dist/
-    - rsync -avz packages/shared/package.json $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/packages/shared/
-
-    # Copy dashboard-api source files
-    - echo ""
-    - echo "📦 Copying dashboard-api..."
-    - rsync -avz --delete --exclude 'node_modules' --exclude 'coverage' --exclude 'logs' --exclude 'uploads' apps/dashboard-api/ $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/apps/dashboard-api/
-
-    # Copy root package files
-    - echo ""
-    - echo "📦 Copying root configuration..."
-    - rsync -avz package.json package-lock.json $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/
-    - rsync -avz ecosystem.config.js $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/
-    - rsync -avz scripts/ $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/scripts/
-
-    # Deploy only dashboard-api with PM2
-    - echo ""
-    - echo "🚀 Deploying dashboard-api with PM2..."
-    - ssh $PROD_SSH_USER@$PROD_SSH_HOST "cd $PROD_DEPLOY_PATH && pm2 restart dashboard-api || pm2 start ecosystem.config.js --only dashboard-api"
-
-    - echo ""
-    - echo "✅ Dashboard API deployment completed"
-  rules:
-    # Run for dashboard, all backend, or full deployment
-    - if: $CI_COMMIT_BRANCH == "production" && ($PIPELINE == "backend-dashboard" || $PIPELINE == "backend" || $PIPELINE == null)
-
-# ============================================
-# STAGE 4B: Deploy Forms API with PM2
+# STAGE 4: Deploy Forms API with PM2
 # ============================================
 deploy_forms_api:
   stage: deploy-backend
@@ -309,7 +196,7 @@ deploy_forms_api:
     - build_forms_api
   before_script:
     - echo "=========================================="
-    - echo "Preparing Forms API Deployment"
+    - echo "Preparing Backend API Deployment"
     - echo "=========================================="
 
     # Install SSH client
@@ -327,7 +214,7 @@ deploy_forms_api:
     - echo "✅ SSH configured for $PROD_SSH_USER@$PROD_SSH_HOST"
   script:
     - echo "=========================================="
-    - echo "Deploying Forms API to Production"
+    - echo "Deploying Backend API to Production"
     - echo "=========================================="
 
     # Create deployment directory structure on server
@@ -352,16 +239,16 @@ deploy_forms_api:
     - rsync -avz ecosystem.config.js $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/
     - rsync -avz scripts/ $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/scripts/
 
-    # Deploy only forms-api with PM2
+    # Deploy forms-api with PM2
     - echo ""
     - echo "🚀 Deploying forms-api with PM2..."
     - ssh $PROD_SSH_USER@$PROD_SSH_HOST "cd $PROD_DEPLOY_PATH && pm2 restart forms-api || pm2 start ecosystem.config.js --only forms-api"
 
     - echo ""
-    - echo "✅ Forms API deployment completed"
+    - echo "✅ Backend API deployment completed"
   rules:
-    # Run for forms, all backend, or full deployment
-    - if: $CI_COMMIT_BRANCH == "production" && ($PIPELINE == "backend-forms" || $PIPELINE == "backend" || $PIPELINE == null)
+    # Run for backend or full deployment
+    - if: $CI_COMMIT_BRANCH == "production" && ($PIPELINE == "backend" || $PIPELINE == null)
 
 # ============================================
 # STAGE 5: Build Frontend - Main UI (apps/web)
