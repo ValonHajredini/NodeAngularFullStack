@@ -280,10 +280,10 @@ deploy_forms_api:
     - rsync -avz ecosystem.config.js $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/
     - rsync -avz scripts/ $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/scripts/
 
-    # Install production dependencies
+    # Install production dependencies for forms-api
     - echo ""
-    - echo "📦 Installing production dependencies on server..."
-    - ssh $PROD_SSH_USER@$PROD_SSH_HOST "cd $PROD_DEPLOY_PATH && npm install --production --no-audit --loglevel=error"
+    - echo "📦 Installing production dependencies for forms-api..."
+    - ssh $PROD_SSH_USER@$PROD_SSH_HOST "cd $PROD_DEPLOY_PATH/apps/forms-api && npm install --production --no-audit --loglevel=error"
 
     # Deploy forms-api with PM2
     - echo ""
@@ -351,10 +351,10 @@ deploy_api:
     - rsync -avz ecosystem.config.js $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/
     - rsync -avz scripts/ $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/scripts/
 
-    # Install production dependencies
+    # Install production dependencies for api
     - echo ""
-    - echo "📦 Installing production dependencies on server..."
-    - ssh $PROD_SSH_USER@$PROD_SSH_HOST "cd $PROD_DEPLOY_PATH && npm install --production --no-audit --loglevel=error"
+    - echo "📦 Installing production dependencies for api..."
+    - ssh $PROD_SSH_USER@$PROD_SSH_HOST "cd $PROD_DEPLOY_PATH/apps/api && npm install --production --no-audit --loglevel=error"
 
     # Deploy api with PM2
     - echo ""
