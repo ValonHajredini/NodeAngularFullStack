@@ -33,8 +33,7 @@ build_shared_package:
     - cat packages/shared/package.json | head -20 || echo "No package.json!"
     - echo "=== Installing dependencies ==="
     - npm install
-    - echo "=== Checking what was installed ==="
-    - ls -la node_modules/ | head -20
+    - echo "=== Building shared package ==="
     - npm --workspace=packages/shared run build
   artifacts:
     paths:
@@ -119,7 +118,7 @@ deploy_frontend_main_ui:
     - echo "Building and deploying main UI (apps/web)..."
 
     # Install dependencies
-    - npm ci
+    - npm install
 
     # Build main UI with production configuration
     - npm --workspace=apps/web run build -- --configuration=production
@@ -161,7 +160,7 @@ deploy_frontend_form_builder:
     - echo "Building and deploying Form Builder UI (apps/form-builder-ui)..."
 
     # Install dependencies
-    - npm ci
+    - npm install
 
     # Build form builder UI with production configuration
     - npm --workspace=apps/form-builder-ui run build -- --configuration=production
