@@ -23,7 +23,7 @@ build_shared_package:
   script:
     - echo "Building shared package..."
     - npm ci --ignore-scripts --include=dev
-    - cd packages/shared && npm ci && cd ../..
+    - npm ci --prefix packages/shared
     - npm --workspace=packages/shared run build
   artifacts:
     paths:
