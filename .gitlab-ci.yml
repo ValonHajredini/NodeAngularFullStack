@@ -22,13 +22,19 @@ build_shared_package:
   image: node:20-alpine
   cache: {}  # Disable cache for this job
   script:
-    - echo "Building shared package..."
-    - echo "Node version:" && node --version
-    - echo "npm version:" && npm --version
-    - echo "Installing dependencies with npm install..."
+    - echo "=== Debugging workspace setup ==="
+    - pwd
+    - ls -la
+    - echo "Checking workspaces..."
+    - ls -la apps/ || echo "No apps directory!"
+    - ls -la packages/ || echo "No packages directory!"
+    - echo "Checking packages/shared..."
+    - ls -la packages/shared/ || echo "No packages/shared!"
+    - cat packages/shared/package.json | head -20 || echo "No package.json!"
+    - echo "=== Installing dependencies ==="
     - npm install
-    - echo "Packages installed:"
-    - npm list --depth=0 | head -20
+    - echo "=== Checking what was installed ==="
+    - ls -la node_modules/ | head -20
     - npm --workspace=packages/shared run build
   artifacts:
     paths:
