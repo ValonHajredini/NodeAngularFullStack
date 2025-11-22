@@ -48,8 +48,8 @@ export class CategoryAnalyticsService {
       throw new Error('Form schema not found');
     }
 
-    // Detect template category from schema
-    const category = detectTemplateCategory(schema.schemaJson);
+    // Detect template category from schema (pass the full schema object)
+    const category = detectTemplateCategory(schema);
 
     // Get appropriate strategy
     const strategy = this.strategyRegistry.getStrategy(category);
@@ -73,7 +73,7 @@ export class CategoryAnalyticsService {
         return false;
       }
 
-      const category = detectTemplateCategory(schema.schemaJson);
+      const category = detectTemplateCategory(schema);
       return this.strategyRegistry.hasStrategy(category);
     } catch (error) {
       return false;
@@ -94,6 +94,6 @@ export class CategoryAnalyticsService {
       return null;
     }
 
-    return detectTemplateCategory(schema.schemaJson);
+    return detectTemplateCategory(schema);
   }
 }

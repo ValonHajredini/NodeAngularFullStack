@@ -14,7 +14,7 @@ import {
   CategoryMetrics,
   QuizMetrics,
   TemplateCategory,
-  QuizLogicConfig,
+  QuizConfig,
 } from '@nodeangularfullstack/shared';
 import { IAnalyticsStrategy } from './analytics-strategy.interface';
 import { FormSchemasRepository } from '../../repositories/form-schemas.repository';
@@ -44,7 +44,7 @@ export class QuizAnalyticsStrategy implements IAnalyticsStrategy {
       throw new Error('Form schema not found');
     }
 
-    const businessLogic = schema.schemaJson.businessLogicConfig as QuizLogicConfig;
+    const businessLogic = schema.businessLogicConfig as QuizConfig;
     if (!businessLogic || businessLogic.type !== 'quiz') {
       throw new Error('Form is not a quiz template');
     }
@@ -61,7 +61,7 @@ export class QuizAnalyticsStrategy implements IAnalyticsStrategy {
 
     // Calculate scores for each submission
     const scores = submissions.map((submission) =>
-      this.calculateScore(submission.valuesJson, businessLogic)
+      this.calculateScore(submission.values, businessLogic)
     );
 
     // Calculate score distribution (0-20%, 20-40%, etc.)
@@ -86,7 +86,7 @@ export class QuizAnalyticsStrategy implements IAnalyticsStrategy {
 
     // Calculate question accuracy (percentage who got each question right)
     const questionAccuracy = this.calculateQuestionAccuracy(
-      submissions.map((s) => s.valuesJson),
+      submissions.map((s) => s.values),
       businessLogic
     );
 
@@ -96,11 +96,12 @@ export class QuizAnalyticsStrategy implements IAnalyticsStrategy {
       averageScore: Math.round(averageScore * 10) / 10,
       medianScore: Math.round(medianScore * 10) / 10,
       passRate: Math.round(passRate * 10) / 10,
-      passedCount,
-      failedCount,
       scoreDistribution,
       questionAccuracy,
-      passingScore,
+      highestScore: Math.max(...scores),
+      lowestScore: Math.min(...scores),
+      firstSubmissionAt: submissions[submissions.length - 1]?.submittedAt.toISOString(),
+      lastSubmissionAt: submissions[0]?.submittedAt.toISOString(),
     };
 
     return metrics;
@@ -115,24 +116,29 @@ export class QuizAnalyticsStrategy implements IAnalyticsStrategy {
    */
   private calculateScore(
     answers: Record<string, any>,
-    config: QuizLogicConfig
+    config: QuizConfig
   ): number {
-    const correctAnswers = config.correctAnswers || {};
-    const totalQuestions = Object.keys(correctAnswers).length;
+    const scoringRules = config.scoringRules || [];
+    const totalQuestions = scoringRules.length;
 
     if (totalQuestions === 0) {
       return 0;
     }
 
-    let correctCount = 0;
-    for (const [fieldName, correctAnswer] of Object.entries(correctAnswers)) {
-      const userAnswer = answers[fieldName];
-      if (userAnswer === correctAnswer) {
-        correctCount++;
+    let totalPoints = 0;
+    let earnedPoints = 0;
+
+    for (const rule of scoringRules) {
+      const points = rule.points || 1;
+      totalPoints += points;
+
+      const userAnswer = answers[rule.fieldId];
+      if (userAnswer === rule.correctAnswer) {
+        earnedPoints += points;
       }
     }
 
-    return (correctCount / totalQuestions) * 100;
+    return totalPoints > 0 ? (earnedPoints / totalPoints) * 100 : 0;
   }
 
   /**
@@ -170,21 +176,21 @@ export class QuizAnalyticsStrategy implements IAnalyticsStrategy {
    */
   private calculateQuestionAccuracy(
     allAnswers: Record<string, any>[],
-    config: QuizLogicConfig
+    config: QuizConfig
   ): Record<string, number> {
-    const correctAnswers = config.correctAnswers || {};
+    const scoringRules = config.scoringRules || [];
     const accuracy: Record<string, number> = {};
 
-    for (const [fieldName, correctAnswer] of Object.entries(correctAnswers)) {
+    for (const rule of scoringRules) {
       let correctCount = 0;
       allAnswers.forEach((answers) => {
-        if (answers[fieldName] === correctAnswer) {
+        if (answers[rule.fieldId] === rule.correctAnswer) {
           correctCount++;
         }
       });
 
       const accuracyPercent = (correctCount / allAnswers.length) * 100;
-      accuracy[fieldName] = Math.round(accuracyPercent * 10) / 10;
+      accuracy[rule.fieldId] = Math.round(accuracyPercent * 10) / 10;
     }
 
     return accuracy;

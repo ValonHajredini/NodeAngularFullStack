@@ -531,6 +531,84 @@ export class FormSubmissionsRepository {
       client.release();
     }
   }
+
+  /**
+   * Alias for countByFormSchemaId for backward compatibility with analytics strategies.
+   * @param formSchemaId - Form schema UUID
+   * @returns Promise containing submission count
+   */
+  async countByFormSchema(formSchemaId: string): Promise<number> {
+    return this.countByFormSchemaId(formSchemaId);
+  }
+
+  /**
+   * Finds submissions for a form schema with sorting and pagination options.
+   * Used by analytics strategies for calculating metrics.
+   *
+   * @param formSchemaId - Form schema UUID
+   * @param options - Query options (limit, offset, sortBy, sortOrder)
+   * @returns Promise containing array of submissions
+   * @throws {Error} When database query fails
+   * @example
+   * const submissions = await repository.findByFormSchema('schema-uuid', {
+   *   limit: 10,
+   *   offset: 0,
+   *   sortBy: 'submitted_at',
+   *   sortOrder: 'asc'
+   * });
+   */
+  async findByFormSchema(
+    formSchemaId: string,
+    options?: {
+      limit?: number;
+      offset?: number;
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
+    }
+  ): Promise<FormSubmission[]> {
+    const client = await this.pool.connect();
+
+    try {
+      const limit = options?.limit || 100;
+      const offset = options?.offset || 0;
+      const sortBy = options?.sortBy || 'submitted_at';
+      const sortOrder = options?.sortOrder || 'desc';
+
+      // Validate sort column to prevent SQL injection
+      const validSortColumns = ['submitted_at', 'id'];
+      if (!validSortColumns.includes(sortBy)) {
+        throw new Error(`Invalid sort column: ${sortBy}`);
+      }
+
+      const query = `
+        SELECT
+          id,
+          form_schema_id as "formSchemaId",
+          values_json as "values",
+          submitted_at as "submittedAt",
+          submitter_ip as "submitterIp",
+          user_id as "userId",
+          metadata
+        FROM form_submissions
+        WHERE form_schema_id = $1
+        ORDER BY ${sortBy} ${sortOrder.toUpperCase()}
+        LIMIT $2 OFFSET $3
+      `;
+
+      const result = await client.query(query, [formSchemaId, limit, offset]);
+      return result.rows.map((row) => ({
+        ...row,
+        values: row.values,
+        metadata: row.metadata || undefined,
+      })) as FormSubmission[];
+    } catch (error: any) {
+      throw new Error(
+        `Failed to find submissions by form schema: ${error.message}`
+      );
+    } finally {
+      client.release();
+    }
+  }
 }
 
 // Export singleton instance

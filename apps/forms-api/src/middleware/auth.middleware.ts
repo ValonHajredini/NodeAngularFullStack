@@ -626,3 +626,9 @@ export class AuthMiddleware {
     next();
   };
 }
+
+/**
+ * Export AuthMiddleware.authenticate as authenticateJWT for backward compatibility
+ * with existing route files that import { authenticateJWT } from './middleware/auth.middleware'
+ */
+export const authenticateJWT = AuthMiddleware.authenticate;

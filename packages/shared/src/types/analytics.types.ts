@@ -389,6 +389,33 @@ export interface EventsMetrics extends CategoryMetricsBase {
 }
 
 /**
+ * Generic metrics for forms without specialized category analytics.
+ * Returns basic submission count and timestamp data.
+ *
+ * @since Epic 30, Story 30.2
+ *
+ * @example
+ * ```typescript
+ * const genericMetrics: GenericMetrics = {
+ *   category: null,
+ *   totalSubmissions: 150,
+ *   firstSubmissionDate: '2025-01-01T00:00:00Z',
+ *   lastSubmissionDate: '2025-01-15T12:30:00Z'
+ * };
+ * ```
+ */
+export interface GenericMetrics {
+  /** Null category indicates generic/unclassified form */
+  category: null;
+  /** Total number of submissions */
+  totalSubmissions: number;
+  /** ISO timestamp of first submission */
+  firstSubmissionDate: string;
+  /** ISO timestamp of most recent submission */
+  lastSubmissionDate: string;
+}
+
+/**
  * Discriminated union of all category-specific analytics metrics
  * Use the `category` property for type narrowing
  * Maps to the 6 template categories: polls, quiz, ecommerce, services, data_collection, events
@@ -411,6 +438,8 @@ export interface EventsMetrics extends CategoryMetricsBase {
  *       return renderDataCollectionChart(metrics); // TypeScript knows this is RestaurantMetrics
  *     case 'events':
  *       return renderEventsChart(metrics); // TypeScript knows this is EventsMetrics
+ *     case null:
+ *       return renderGenericChart(metrics); // TypeScript knows this is GenericMetrics
  *   }
  * }
  * ```
@@ -421,7 +450,8 @@ export type CategoryMetrics =
   | ProductMetrics
   | AppointmentMetrics
   | RestaurantMetrics
-  | EventsMetrics;
+  | EventsMetrics
+  | GenericMetrics;
 
 /**
  * Analytics query parameters
