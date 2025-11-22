@@ -20,10 +20,16 @@ cache:
 build_shared_package:
   stage: build-shared
   image: node:20-alpine
+  timeout: 30m
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - node_modules/
+      - packages/shared/node_modules/
   script:
     - echo "Building shared package..."
     - echo "Installing dependencies..."
-    - npm install
+    - npm install --prefer-offline --no-audit
     - echo "Building TypeScript package..."
     - npm --workspace=packages/shared run build
     - echo "✅ Shared package built successfully"
@@ -93,6 +99,12 @@ deploy_backend_apis:
 deploy_frontend_main_ui:
   stage: deploy-frontend
   image: node:20-alpine
+  timeout: 30m
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}-web
+    paths:
+      - node_modules/
+      - apps/web/node_modules/
   dependencies:
     - build_shared_package
     - deploy_backend_apis
@@ -135,6 +147,12 @@ deploy_frontend_main_ui:
 deploy_frontend_form_builder:
   stage: deploy-frontend
   image: node:20-alpine
+  timeout: 30m
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}-form-builder
+    paths:
+      - node_modules/
+      - apps/form-builder-ui/node_modules/
   dependencies:
     - build_shared_package
     - deploy_backend_apis
