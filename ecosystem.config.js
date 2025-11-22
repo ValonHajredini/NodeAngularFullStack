@@ -16,20 +16,20 @@
 module.exports = {
   apps: [
     {
-      name: 'dashboard-api',
+      name: 'api',
       script: 'npm',
       args: 'start',
-      cwd: './apps/dashboard-api',
+      cwd: './apps/api',
       instances: 1,
       exec_mode: 'fork',
       watch: false,
       max_memory_restart: '500M',
       env: {
         NODE_ENV: 'production',
-        PORT: 3000,
+        PORT: 3002,
       },
-      error_file: './logs/dashboard-api-error.log',
-      out_file: './logs/dashboard-api-out.log',
+      error_file: './logs/api-error.log',
+      out_file: './logs/api-out.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
       merge_logs: true,
       autorestart: true,

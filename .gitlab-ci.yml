@@ -144,7 +144,48 @@ build_shared_package:
     - if: $CI_COMMIT_BRANCH == "production" && ($PIPELINE == "shared" || $PIPELINE == null)
 
 # ============================================
-# STAGE 3: Build Forms API
+# STAGE 3A: Build Main API
+# ============================================
+build_api:
+  stage: build-backend
+  image: node:20-alpine
+  timeout: 15m
+  dependencies:
+    - install_dependencies
+    - build_shared_package
+  script:
+    - echo "=========================================="
+    - echo "Building Main API"
+    - echo "=========================================="
+
+    - echo "🔍 Checking api structure..."
+    - ls -la apps/api/
+    - echo ""
+    - echo "🔍 Checking src directory..."
+    - ls -la apps/api/src/
+
+    - echo ""
+    - echo "🔍 Checking for TypeScript config..."
+    - cat apps/api/tsconfig.json
+
+    - echo ""
+    - echo "📦 Building api..."
+    - cd apps/api
+    - npm run build
+
+    - echo ""
+    - echo "✅ Main API built successfully"
+    - ls -la dist/
+  artifacts:
+    paths:
+      - apps/api/dist/
+    expire_in: 1 hour
+  rules:
+    # Run for backend or full deployment
+    - if: $CI_COMMIT_BRANCH == "production" && ($PIPELINE == "backend" || $PIPELINE == null)
+
+# ============================================
+# STAGE 3B: Build Forms API
 # ============================================
 build_forms_api:
   stage: build-backend
@@ -246,6 +287,72 @@ deploy_forms_api:
 
     - echo ""
     - echo "✅ Backend API deployment completed"
+  rules:
+    # Run for backend or full deployment
+    - if: $CI_COMMIT_BRANCH == "production" && ($PIPELINE == "backend" || $PIPELINE == null)
+
+# ============================================
+# STAGE 4B: Deploy Main API with PM2
+# ============================================
+deploy_api:
+  stage: deploy-backend
+  image: node:20-alpine
+  timeout: 15m
+  dependencies:
+    - build_shared_package
+    - build_api
+  before_script:
+    - echo "=========================================="
+    - echo "Preparing Main API Deployment"
+    - echo "=========================================="
+
+    # Install SSH client
+    - apk add --no-cache openssh-client rsync
+
+    # Setup SSH
+    - eval $(ssh-agent -s)
+    - echo "$PROD_SSH_PRIVATE_KEY" | base64 -d > /tmp/ssh_key
+    - chmod 600 /tmp/ssh_key
+    - ssh-add /tmp/ssh_key
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan $PROD_SSH_HOST >> ~/.ssh/known_hosts
+
+    - echo "✅ SSH configured for $PROD_SSH_USER@$PROD_SSH_HOST"
+  script:
+    - echo "=========================================="
+    - echo "Deploying Main API to Production"
+    - echo "=========================================="
+
+    # Create deployment directory structure on server
+    - echo "📁 Creating directory structure..."
+    - ssh $PROD_SSH_USER@$PROD_SSH_HOST "mkdir -p $PROD_DEPLOY_PATH/{apps/api,packages/shared,scripts}"
+
+    # Copy shared package dist
+    - echo ""
+    - echo "📦 Copying shared package..."
+    - rsync -avz --delete packages/shared/dist/ $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/packages/shared/dist/
+    - rsync -avz packages/shared/package.json $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/packages/shared/
+
+    # Copy api source files
+    - echo ""
+    - echo "📦 Copying api..."
+    - rsync -avz --delete --exclude 'node_modules' --exclude 'coverage' --exclude 'logs' --exclude 'uploads' --exclude 'exports' apps/api/ $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/apps/api/
+
+    # Copy root package files
+    - echo ""
+    - echo "📦 Copying root configuration..."
+    - rsync -avz package.json package-lock.json $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/
+    - rsync -avz ecosystem.config.js $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/
+    - rsync -avz scripts/ $PROD_SSH_USER@$PROD_SSH_HOST:$PROD_DEPLOY_PATH/scripts/
+
+    # Deploy api with PM2
+    - echo ""
+    - echo "🚀 Deploying api with PM2..."
+    - ssh $PROD_SSH_USER@$PROD_SSH_HOST "cd $PROD_DEPLOY_PATH && pm2 restart api || pm2 start ecosystem.config.js --only api"
+
+    - echo ""
+    - echo "✅ Main API deployment completed"
   rules:
     # Run for backend or full deployment
     - if: $CI_COMMIT_BRANCH == "production" && ($PIPELINE == "backend" || $PIPELINE == null)
