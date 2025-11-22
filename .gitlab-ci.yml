@@ -26,6 +26,7 @@ install_dependencies:
   stage: install-deps
   image: node:20-alpine
   timeout: 30m
+  cache: {}  # Disable cache for this job to force fresh install
   script:
     - echo "=========================================="
     - echo "Installing All Dependencies"
@@ -34,18 +35,33 @@ install_dependencies:
     - echo "NPM version:" && npm --version
     - echo ""
 
-    - echo "📦 Cleaning any corrupted cache..."
-    - rm -rf node_modules/.cache || true
+    - echo "📦 Removing any existing node_modules..."
+    - rm -rf node_modules
+    - rm -rf apps/*/node_modules
+    - rm -rf packages/*/node_modules
+
+    - echo ""
+    - echo "🔍 Checking package.json and package-lock.json..."
+    - ls -lh package.json package-lock.json
 
     - echo ""
     - echo "📦 Installing root and workspace dependencies..."
-    - npm install --no-audit
+    - npm ci --no-audit --loglevel=verbose 2>&1 | tail -100
 
     - echo ""
     - echo "🔍 Verifying installations..."
     - echo "Root node_modules count:" && ls node_modules | wc -l
-    - echo "TypeScript installed:" && ls -la node_modules/.bin/tsc || echo "❌ TypeScript NOT found"
-    - echo "Shared package node_modules:" && ls packages/shared/node_modules 2>&1 || echo "No separate shared node_modules (hoisted to root)"
+    - echo "Root node_modules size:" && du -sh node_modules
+    - echo ""
+    - echo "Checking critical dependencies:"
+    - echo "  - TypeScript:" && ls -lh node_modules/.bin/tsc || echo "❌ TypeScript NOT found"
+    - echo "  - Angular CLI:" && ls -lh node_modules/.bin/ng || echo "❌ Angular CLI NOT found"
+    - echo ""
+    - echo "Workspace node_modules:"
+    - echo "  - dashboard-api:" && ls apps/dashboard-api/node_modules 2>&1 | head -5 || echo "No separate node_modules (hoisted)"
+    - echo "  - forms-api:" && ls apps/forms-api/node_modules 2>&1 | head -5 || echo "No separate node_modules (hoisted)"
+    - echo "  - web:" && ls apps/web/node_modules 2>&1 | head -5 || echo "No separate node_modules (hoisted)"
+    - echo "  - shared:" && ls packages/shared/node_modules 2>&1 | head -5 || echo "No separate node_modules (hoisted)"
 
     - echo ""
     - echo "✅ Dependencies installed successfully"
@@ -54,6 +70,7 @@ install_dependencies:
       - node_modules/
       - apps/*/node_modules/
       - packages/*/node_modules/
+      - package-lock.json
     expire_in: 1 hour
   rules:
     - if: $CI_PIPELINE_SOURCE == "push"
@@ -65,6 +82,7 @@ build_shared_package:
   stage: build-shared
   image: node:20-alpine
   timeout: 15m
+  cache: {}  # Disable cache, use only artifacts
   dependencies:
     - install_dependencies
   script:
@@ -72,15 +90,30 @@ build_shared_package:
     - echo "Building Shared Package"
     - echo "=========================================="
 
+    - echo "🔍 Checking artifacts received..."
+    - echo "Root node_modules exists:" && ls -d node_modules || echo "❌ node_modules NOT found"
+    - echo "Root node_modules count:" && ls node_modules 2>/dev/null | wc -l || echo "0"
+    - echo ""
+
     - echo "🔍 Verifying TypeScript availability..."
-    - which tsc || echo "⚠️  tsc not in PATH, checking node_modules..."
-    - ls -la node_modules/.bin/tsc || echo "❌ TypeScript NOT found in node_modules"
+    - if [ -f "node_modules/.bin/tsc" ]; then
+        echo "✅ TypeScript found at node_modules/.bin/tsc";
+        node_modules/.bin/tsc --version;
+      else
+        echo "❌ TypeScript NOT found in node_modules/.bin/";
+        echo "Listing node_modules/.bin/ contents:";
+        ls -la node_modules/.bin/ | head -20 || echo "node_modules/.bin/ does not exist";
+        exit 1;
+      fi
 
     - echo ""
     - echo "📦 Building shared package..."
     - cd packages/shared
-    - npx tsc --version
-    - npm run build
+    - echo "Current directory:" && pwd
+    - echo "Shared package contents:" && ls -la
+    - echo ""
+    - echo "Running TypeScript build..."
+    - ../../node_modules/.bin/tsc --project tsconfig.json
 
     - echo ""
     - echo "✅ Shared package built successfully"
