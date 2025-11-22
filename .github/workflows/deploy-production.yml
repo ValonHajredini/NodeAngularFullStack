@@ -76,12 +76,12 @@ jobs:
             # Wait for services to stabilize
             sleep 10
 
-            # Check dashboard-api health
-            echo "Checking dashboard-api..."
-            curl -f http://localhost:3000/health || echo "⚠️  Dashboard API health check failed"
+            # Check api health
+            echo "Checking api (port 3000)..."
+            curl -f http://localhost:3000/health || echo "⚠️  API health check failed"
 
             # Check forms-api health
-            echo "Checking forms-api..."
+            echo "Checking forms-api (port 3001)..."
             curl -f http://localhost:3001/health || echo "⚠️  Forms API health check failed"
 
             # Check PM2 status

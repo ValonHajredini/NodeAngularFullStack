@@ -253,10 +253,10 @@ build_backend() {
 
   cd "$PROJECT_DIR"
 
-  # Build dashboard-api
-  log_info "Building apps/dashboard-api..."
-  npm --workspace=apps/dashboard-api run build || error_exit "Dashboard API build failed"
-  log_success "apps/dashboard-api built successfully"
+  # Build api
+  log_info "Building apps/api..."
+  npm --workspace=apps/api run build || error_exit "API build failed"
+  log_success "apps/api built successfully"
 
   # Build forms-api
   log_info "Building apps/forms-api..."
@@ -275,9 +275,9 @@ run_migrations() {
 
   cd "$PROJECT_DIR"
 
-  # Run dashboard-api migrations
-  log_info "Running dashboard-api migrations..."
-  npm --workspace=apps/dashboard-api run db:migrate || log_warning "Dashboard API migrations failed (may be expected)"
+  # Run api migrations
+  log_info "Running api migrations..."
+  npm --workspace=apps/api run db:migrate || log_warning "API migrations failed (may be expected)"
 
   # Run forms-api migrations
   log_info "Running forms-api migrations..."
@@ -302,31 +302,31 @@ restart_services() {
   if [ -f "ecosystem.config.js" ]; then
     log_info "Using PM2 ecosystem configuration..."
 
-    # Check if services are already managed by PM2
-    if pm2 list | grep -qE "dashboard-api|forms-api"; then
-      log_info "Restarting all services via ecosystem..."
+    # Check if ANY services are already managed by PM2
+    if pm2 list | grep -qE "api|forms-api"; then
+      log_info "Services found in PM2. Restarting via ecosystem..."
       pm2 restart ecosystem.config.js || log_warning "Failed to restart services via ecosystem"
     else
-      log_info "Starting all services via ecosystem..."
+      log_info "No services found in PM2. Starting all services via ecosystem..."
       pm2 start ecosystem.config.js || log_warning "Failed to start services via ecosystem"
     fi
   else
     # Fallback to individual service management
     log_warning "ecosystem.config.js not found, managing services individually..."
 
-    # Dashboard API (port 3000)
-    if pm2 list | grep -q "dashboard-api"; then
-      log_info "Restarting dashboard-api..."
-      pm2 restart dashboard-api || log_warning "Failed to restart dashboard-api"
+    # API (port 3000)
+    if pm2 list | grep -q "^│ api "; then
+      log_info "Restarting api..."
+      pm2 restart api || log_warning "Failed to restart api"
     else
-      log_info "Starting dashboard-api..."
-      cd "$PROJECT_DIR/apps/dashboard-api"
-      pm2 start npm --name "dashboard-api" --cwd "$PROJECT_DIR/apps/dashboard-api" -- start || log_warning "Failed to start dashboard-api"
+      log_info "Starting api..."
+      cd "$PROJECT_DIR/apps/api"
+      pm2 start npm --name "api" --cwd "$PROJECT_DIR/apps/api" -- start || log_warning "Failed to start api"
       cd "$PROJECT_DIR"
     fi
 
     # Forms API (port 3001)
-    if pm2 list | grep -q "forms-api"; then
+    if pm2 list | grep -q "^│ forms-api "; then
       log_info "Restarting forms-api..."
       pm2 restart forms-api || log_warning "Failed to restart forms-api"
     else
@@ -380,12 +380,12 @@ run_health_checks() {
   log_info "Waiting 5 seconds for services to start..."
   sleep 5
 
-  # Check dashboard-api
-  log_info "Checking dashboard-api health..."
+  # Check api
+  log_info "Checking api health..."
   if curl -sf http://localhost:3000/health > /dev/null 2>&1; then
-    log_success "Dashboard API is healthy (http://localhost:3000/health)"
+    log_success "API is healthy (http://localhost:3000/health)"
   else
-    log_error "Dashboard API health check failed"
+    log_error "API health check failed"
   fi
 
   # Check forms-api
@@ -425,7 +425,7 @@ show_summary() {
     echo "  - apps/web/dist/web/browser"
     echo "  - apps/form-builder-ui/dist/form-builder-ui/browser"
     echo "✓ Backend applications built:"
-    echo "  - apps/dashboard-api"
+    echo "  - apps/api"
     echo "  - apps/forms-api"
   fi
 
@@ -444,8 +444,8 @@ show_summary() {
   echo "🌐 Service URLs:"
   echo "  Main Frontend:     https://legopdf.com"
   echo "  Form Builder:      https://form-builder.legopdf.com"
-  echo "  Dashboard API:     https://api.legopdf.com"
-  echo "  Forms API:         https://forms-api.legopdf.com"
+  echo "  API (port 3000):   https://api.legopdf.com"
+  echo "  Forms API (3001):  https://forms-api.legopdf.com"
   echo ""
   echo "📝 Logs:"
   echo "  PM2 Logs:          pm2 logs"

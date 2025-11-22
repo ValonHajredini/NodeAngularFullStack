@@ -8,7 +8,12 @@
  *   pm2 restart ecosystem.config.js                  # Restart all services
  *   pm2 stop ecosystem.config.js                     # Stop all services
  *   pm2 delete ecosystem.config.js                   # Delete all services
- *   pm2 start ecosystem.config.js --only dashboard-api  # Start specific service
+ *   pm2 start ecosystem.config.js --only api         # Start specific service
+ *   pm2 start ecosystem.config.js --only forms-api   # Start specific service
+ *
+ * Services:
+ *   - api (port 3000)          Main API service (auth, users, admin)
+ *   - forms-api (port 3001)    Forms API service (forms, themes, templates)
  *
  * @see https://pm2.keymetrics.io/docs/usage/application-declaration/
  */
