@@ -284,6 +284,13 @@ run_migrations() {
   npm --workspace=apps/forms-api run db:migrate || log_warning "Forms API migrations failed (may be expected)"
 
   log_success "Database migrations completed"
+
+  # Seed default users if none exist
+  log_step "Seeding Default Users"
+  log_info "Checking for existing users and seeding if necessary..."
+  npm --workspace=apps/api run db:seed:users || log_warning "User seeding skipped or failed (may be expected if users exist)"
+
+  log_success "Database seeding completed"
 }
 
 # Restart services with PM2

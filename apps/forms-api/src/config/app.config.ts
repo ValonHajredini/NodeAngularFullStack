@@ -181,7 +181,7 @@ const appConfigSchema = Joi.object({
 
   // CORS
   CORS_ORIGINS: Joi.string().default(
-    'http://localhost:4200,http://localhost:3000'
+    'http://localhost:4200,http://localhost:4201,http://localhost:3000,http://localhost:3001,https://legopdf.com,https://www.legopdf.com,https://form-builder.legopdf.com,https://api.legopdf.com,https://forms-api.legopdf.com'
   ),
 
   // API Keys

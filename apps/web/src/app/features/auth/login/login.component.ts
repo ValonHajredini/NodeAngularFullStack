@@ -15,17 +15,29 @@ import { environment } from '@env/environment';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterLink],
   template: `
-    <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 auth-container">
-      <div class="max-w-md w-full space-y-8">
-        <!-- Back button -->
-        <div class="text-left">
-          <a routerLink="/welcome" class="inline-flex items-center text-sm auth-back-link">
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-            </svg>
-            Back to home
-          </a>
-        </div>
+    <div class="min-h-screen flex auth-container">
+      <!-- Left Side - Image (Hidden on mobile, visible on lg screens) -->
+      <div class="hidden lg:flex lg:w-1/2 items-center justify-center p-8">
+        <img
+          src="/images/formbuilderImage.png"
+          alt="Form Builder Illustration"
+          class="h-auto object-contain"
+          style="max-width: 75%;"
+        />
+      </div>
+
+      <!-- Right Side - Form -->
+      <div class="w-full lg:w-1/2 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-md w-full space-y-8">
+          <!-- Back button -->
+          <div class="text-left">
+            <a routerLink="/welcome" class="inline-flex items-center text-sm auth-back-link">
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+              </svg>
+              Back to home
+            </a>
+          </div>
 
         <!-- Header -->
         <div>
