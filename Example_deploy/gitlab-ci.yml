@@ -1,0 +1,92 @@
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "mybenp.de"
+      variables:
+        SSH_USER: '${DEV_SSH_USER}'
+        SSH_HOST: '${DEV_SSH_HOST}'
+        DEPLOY_PATH: '${DEV_DEPLOY_PATH}'
+        DEPLOY_FRONT_BUILD: '${DEV_DEPLOY_FRONT_BUILD}'
+        SSH_PRIVATE_KEY: '${DEV_SSH_PRIVATE_KEY}'
+    - if: $CI_COMMIT_BRANCH == "dev.publish.com"
+      variables:
+        SSH_USER: '${DEV_SSH_USER}'
+        SSH_HOST: '${DEV_SSH_HOST}'
+        DEPLOY_PATH: '${DEV_DEPLOY_PATH}'
+        DEPLOY_FRONT_BUILD: '${DEV_DEPLOY_FRONT_BUILD}'
+        SSH_PRIVATE_KEY: '${DEV_SSH_PRIVATE_KEY}'
+    - if: $CI_COMMIT_BRANCH == "staging_branch"
+      variables:
+        SSH_USER: '${STAGING_SSH_USER}'
+        SSH_HOST: '${STAGING_SSH_HOST}'
+        DEPLOY_PATH: '${STAGING_DEPLOY_PATH}'
+        DEPLOY_FRONT_BUILD: '${STAGING_DEPLOY_FRONT_BUILD}'
+        SSH_PRIVATE_KEY: '${DEV_SSH_PRIVATE_KEY}'
+    - if: $CI_COMMIT_BRANCH == "production"
+      variables:
+        SSH_USER: '${PROD_SSH_USER}'
+        SSH_HOST: '${PROD_SSH_HOST}'
+        DEPLOY_PATH: '${PROD_DEPLOY_PATH}'
+        DEPLOY_FRONT_BUILD: '${PROD_DEPLOY_FRONT_BUILD}'
+        SSH_PRIVATE_KEY: '${PROD_SSH_PRIVATE_KEY}'
+
+stages:
+  - deploy-backend
+  - deploy-frontend
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - node_modules/
+
+# Deploy to Development
+deploy_backend_dev:
+  stage: deploy-backend
+  image: composer:latest
+  before_script:
+    - composer config -g cache-dir "$(pwd)/.composer-cache"
+  script:
+#   Add the ssh key to runner
+    - which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )
+    - eval $(ssh-agent -s)
+    - echo $SSH_PRIVATE_KEY | base64 -d | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan $SSH_HOST >> ~/.ssh/known_hosts
+  #  Deploy the code to the server
+    - ssh -T $SSH_USER@$SSH_HOST "./build-backend.sh $DEPLOY_PATH $CI_COMMIT_BRANCH"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "push"
+
+deploy_frontend_dev:
+  stage: deploy-frontend
+  image: node:24.4
+  dependencies:
+    - deploy_backend_dev
+  script:
+#     Add the ssh key to runner
+    - which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )
+    - eval $(ssh-agent -s)
+    - echo $SSH_PRIVATE_KEY | base64 -d | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan $SSH_HOST >> ~/.ssh/known_hosts
+#     Build the frontend
+    - cd resources/frontend/myBenp
+    - npm install --force
+    - npm install -g @angular/cli
+    - npm run build:$DEPLOY_FRONT_BUILD
+#     Deploy the frontend
+    - cd $CI_PROJECT_DIR
+    - ssh -T $SSH_USER@$SSH_HOST "./clear-old-frontend.sh $DEPLOY_PATH;"
+    - scp -r ./public/assets/angular/ $SSH_USER@$SSH_HOST:$DEPLOY_PATH/public/assets
+    # - scp ./public/assets/angular/browser/index.html $SSH_USER@$SSH_HOST:$DEPLOY_PATH/resources/views/angular.blade.php
+    - ssh -T $SSH_USER@$SSH_HOST "./build-frontend.sh $DEPLOY_PATH"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "push"
+
+  artifacts:
+    paths:
+      - node_modules/
+    expire_in: 1 week
