@@ -85,17 +85,17 @@ This runs the full deployment: dependencies → builds → migrations → restar
 - Builds `@nodeangularfullstack/shared`
 - Builds `apps/web` → `dist/web/browser`
 - Builds `apps/form-builder-ui` → `dist/form-builder-ui/browser`
-- Builds `apps/dashboard-api`
+- Builds `apps/api`
 - Builds `apps/forms-api`
 
 ### 5. Runs Migrations 🗄️
 
-- Executes dashboard-api migrations
+- Executes api migrations
 - Executes forms-api migrations
 
 ### 6. Restarts Services 🔄
 
-- Restarts/starts `dashboard-api` via PM2
+- Restarts/starts `api` via PM2
 - Restarts/starts `forms-api` via PM2
 - Saves PM2 process list
 
@@ -106,7 +106,7 @@ This runs the full deployment: dependencies → builds → migrations → restar
 
 ### 8. Health Checks 🏥
 
-- Tests `http://localhost:3000/health` (dashboard-api)
+- Tests `http://localhost:3000/health` (api)
 - Tests `http://localhost:3001/health` (forms-api)
 - Tests frontend accessibility
 

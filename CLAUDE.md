@@ -26,16 +26,16 @@ packages (see Epics 30-33 for details).
 **CRITICAL**: This monorepo contains multiple frontend and backend applications. Choose the correct
 app based on the task:
 
-| Task                                                     | Frontend App           | Backend API          |
-| -------------------------------------------------------- | ---------------------- | -------------------- |
-| Form builder features (drag-drop, canvas, field palette) | `apps/form-builder-ui` | `apps/forms-api`     |
-| Theme designer (create/edit themes)                      | `apps/form-builder-ui` | `apps/forms-api`     |
-| Form analytics & visualizations                          | `apps/form-builder-ui` | `apps/forms-api`     |
-| Public form rendering                                    | `apps/form-builder-ui` | `apps/forms-api`     |
-| User authentication & login                              | `apps/web`             | `apps/dashboard-api` |
-| Admin dashboard & settings                               | `apps/web`             | `apps/dashboard-api` |
-| Tool registry UI                                         | `apps/web`             | `apps/forms-api`     |
-| Export history & job monitoring                          | `apps/web`             | `apps/forms-api`     |
+| Task                                                     | Frontend App           | Backend API      |
+| -------------------------------------------------------- | ---------------------- | ---------------- |
+| Form builder features (drag-drop, canvas, field palette) | `apps/form-builder-ui` | `apps/forms-api` |
+| Theme designer (create/edit themes)                      | `apps/form-builder-ui` | `apps/forms-api` |
+| Form analytics & visualizations                          | `apps/form-builder-ui` | `apps/forms-api` |
+| Public form rendering                                    | `apps/form-builder-ui` | `apps/forms-api` |
+| User authentication & login                              | `apps/web`             | `apps/api`       |
+| Admin dashboard & settings                               | `apps/web`             | `apps/api`       |
+| Tool registry UI                                         | `apps/web`             | `apps/forms-api` |
+| Export history & job monitoring                          | `apps/web`             | `apps/forms-api` |
 
 **Common Mistakes to Avoid:**
 
@@ -54,8 +54,7 @@ app based on the task:
 
 **Backend Services:**
 
-- `npm --workspace=apps/api run dev` - Legacy monolithic API (port 3002)
-- `npm --workspace=apps/dashboard-api run dev` - Dashboard/Auth API (port 3000)
+- `npm --workspace=apps/api run dev` - Main API (auth, users, dashboard) (port 3000)
 - `npm --workspace=apps/forms-api run dev` - Forms/Themes/Export API (port 3001)
 
 **Frontend Applications:**
@@ -83,10 +82,8 @@ app based on the task:
 **Running Single Tests:**
 
 - **Backend APIs**:
-  - Dashboard API:
-    `npm --workspace=apps/dashboard-api run test -- --testPathPattern="filename.test.ts"`
+  - Main API: `npm --workspace=apps/api run test -- --testPathPattern="filename.test.ts"`
   - Forms API: `npm --workspace=apps/forms-api run test -- --testPathPattern="filename.test.ts"`
-  - Legacy API: `npm --workspace=apps/api run test -- --testPathPattern="filename.test.ts"`
 - **Frontend Apps**:
   - Main UI: `npm --workspace=apps/web run test -- --include="**/component-name.spec.ts"`
   - Form Builder UI:
@@ -106,9 +103,9 @@ app based on the task:
 **Workspace-Specific:**
 
 - **Backend APIs**:
-  - `npm --workspace=apps/dashboard-api run lint` - Lint dashboard API
+  - `npm --workspace=apps/api run lint` - Lint main API
   - `npm --workspace=apps/forms-api run lint` - Lint forms API
-  - `npm --workspace=apps/dashboard-api run typecheck` - TypeScript check dashboard API
+  - `npm --workspace=apps/api run typecheck` - TypeScript check main API
   - `npm --workspace=apps/forms-api run typecheck` - TypeScript check forms API
 - **Frontend Apps**:
   - `npm --workspace=apps/web run lint` - Lint main UI
@@ -122,9 +119,9 @@ app based on the task:
 
 **Migration and Seeding:**
 
-- `npm --workspace=apps/dashboard-api run db:migrate` - Run auth/user migrations
+- `npm --workspace=apps/api run db:migrate` - Run auth/user migrations
 - `npm --workspace=apps/forms-api run db:migrate` - Run forms/themes/export migrations
-- `npm --workspace=apps/dashboard-api run db:seed` - Seed user and auth data
+- `npm --workspace=apps/api run db:seed` - Seed user and auth data
 - `npm --workspace=apps/forms-api run db:seed` - Seed forms, themes, and tools data
 - `npm --workspace=apps/forms-api run db:reset` - Clear and re-seed all data
 
@@ -153,9 +150,8 @@ app based on the task:
 
 ```
 apps/
-├── api/                    # Legacy monolithic Express.js backend (TypeScript)
+├── api/                    # Main Express.js backend (auth, users, dashboard) (TypeScript)
 ├── web/                    # Main Angular 20+ frontend (port 4200)
-├── dashboard-api/          # Dashboard/Auth API service (port 3000)
 ├── forms-api/              # Forms/Themes/Export API service (port 3001)
 ├── form-builder-ui/        # Form Builder Angular UI (port 4201)
 packages/
@@ -167,11 +163,11 @@ packages/
 **Architecture Evolution:**
 
 - Original: Monolithic `apps/api` + `apps/web`
-- Current: Transitioning to domain-specific services
-  - `dashboard-api`: Authentication, users, dashboard
-  - `forms-api`: Forms, themes, tool registry, exports
+- Current: Domain-specific separation
+  - `api`: Authentication, users, dashboard (port 3000)
+  - `forms-api`: Forms, themes, tool registry, exports (port 3001)
   - `form-builder-ui`: Dedicated form builder interface (separate from main UI)
-- Strategy: Gradual service extraction while maintaining monolith compatibility
+- Strategy: Maintain separation between authentication/user management and forms/tools domains
 
 ### Key Architectural Patterns
 
@@ -220,16 +216,15 @@ packages/
   - Main UI (`apps/web`): 4200
   - Form Builder UI (`apps/form-builder-ui`): 4201
 - **Backend APIs**:
-  - Dashboard API (`apps/dashboard-api`): 3000
+  - Main API (`apps/api`): 3000
   - Forms API (`apps/forms-api`): 3001
-  - Legacy API (`apps/api`): 3002 (if running)
 - **Infrastructure**:
   - PostgreSQL: 5432
   - pgWeb Database UI: 8080
 
 **Service Responsibilities:**
 
-1. **dashboard-api (port 3000)**:
+1. **api (port 3000)**:
    - User authentication and authorization
    - JWT token management
    - User profile and settings
@@ -627,13 +622,12 @@ deployed separately, but the core system remains monolithic.
 
 - **Main Frontend (web)**: http://localhost:4200
 - **Form Builder UI**: http://localhost:4201
-- **Dashboard API**: http://localhost:3000
+- **Main API**: http://localhost:3000
 - **Forms API**: http://localhost:3001
-- **Legacy API**: http://localhost:3002 (if running)
 - **API Documentation**: http://localhost:3000/api-docs
 - **pgWeb Database UI**: http://localhost:8080
 - **Health Checks**:
-  - Dashboard API: http://localhost:3000/health
+  - Main API: http://localhost:3000/health
   - Forms API: http://localhost:3001/health
 
 **Test User Credentials:**
@@ -669,17 +663,20 @@ The `docs/` directory contains comprehensive project documentation:
 ### Production Deployment
 
 **Automated CI/CD (Recommended):**
+
 - GitHub Actions workflow at `.github/workflows/deploy-production.yml`
 - Triggers automatically on push to `main` branch
 - Setup guide: `.github/CICD-SETUP.md`
 - Setup helper: `./.github/setup-cicd.sh`
 
 **Manual Deployment:**
+
 - Production deployment script: `./deploy.sh`
 - Deployment guide: `DEPLOYMENT.md`
 - Nginx configuration: `nginx/` directory with configs for 4 subdomains
 
 **Production Environment Configuration:**
+
 - `apps/web/src/environments/environment.prod.ts` - Main UI production config
   - API: `https://api.legopdf.com/api/v1` (Dashboard/Auth API)
   - Forms API: `https://forms-api.legopdf.com` (Short links)
@@ -688,22 +685,26 @@ The `docs/` directory contains comprehensive project documentation:
   - Forms API: `https://forms-api.legopdf.com` (Primary API)
 
 **Production Domains:**
+
 - Main UI: `https://legopdf.com` (apps/web)
 - Form Builder: `https://form-builder.legopdf.com` (apps/form-builder-ui)
-- Dashboard API: `https://api.legopdf.com` (port 3000)
+- Main API: `https://api.legopdf.com` (port 3000)
 - Forms API: `https://forms-api.legopdf.com` (port 3001)
 
 **PM2 Process Management:**
+
 - Ecosystem config: `ecosystem.config.js`
 - Start services: `pm2 start ecosystem.config.js`
-- Manages dashboard-api (port 3000) and forms-api (port 3001)
+- Manages api (port 3000) and forms-api (port 3001)
 - Auto-restart on failure, memory limits, centralized logging
 
 **Build Commands for Production:**
+
 - Frontend builds use explicit `--configuration=production` flag
 - Ensures production environment files are used
 - Apps/web: `npm --workspace=apps/web run build -- --configuration=production`
-- Apps/form-builder-ui: `npm --workspace=apps/form-builder-ui run build -- --configuration=production`
+- Apps/form-builder-ui:
+  `npm --workspace=apps/form-builder-ui run build -- --configuration=production`
 
 ## Utility Scripts
 
@@ -743,7 +744,7 @@ files if explicitly requested by the User.
 **CRITICAL**: This repository contains multiple frontend and backend applications:
 
 - When working on **form builder features**, use `apps/form-builder-ui` (NOT `apps/web`)
-- When working on **main dashboard/auth**, use `apps/web` and `apps/dashboard-api`
+- When working on **main dashboard/auth**, use `apps/web` and `apps/api`
 - When working on **forms/themes/export**, use `apps/forms-api`
 - Always verify which app the user is referring to before making changes
 - The `apps/web` and `apps/form-builder-ui` are separate Angular applications with different

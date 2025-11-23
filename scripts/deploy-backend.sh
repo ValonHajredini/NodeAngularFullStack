@@ -48,11 +48,11 @@ npm ci --prefer-offline --no-audit --ignore-scripts --include=dev
 npm run build
 
 # ============================================
-# Step 3: Build Dashboard API
+# Step 3: Build Main API
 # ============================================
 echo ""
-echo "[3/6] Building dashboard-api..."
-cd "$DEPLOY_PATH/apps/dashboard-api"
+echo "[3/6] Building api..."
+cd "$DEPLOY_PATH/apps/api"
 npm ci --prefer-offline --no-audit --ignore-scripts --include=dev
 npm run build
 
@@ -71,11 +71,11 @@ npm run build
 echo ""
 echo "[5/6] Running database migrations..."
 
-# Dashboard API migrations (auth, users)
-cd "$DEPLOY_PATH/apps/dashboard-api"
+# Main API migrations (auth, users)
+cd "$DEPLOY_PATH/apps/api"
 if [ -f "database/migrations" ]; then
-  echo "Running dashboard-api migrations..."
-  npm run db:migrate || echo "Warning: dashboard-api migrations failed or already applied"
+  echo "Running api migrations..."
+  npm run db:migrate || echo "Warning: api migrations failed or already applied"
 fi
 
 # Forms API migrations (forms, themes, exports)
@@ -93,7 +93,7 @@ echo "[6/6] Reloading PM2 processes..."
 cd "$DEPLOY_PATH"
 
 # Check if PM2 processes are already running
-if pm2 list | grep -q "dashboard-api\|forms-api"; then
+if pm2 list | grep -q "api\|forms-api"; then
   echo "PM2 processes found. Reloading..."
   pm2 reload ecosystem.config.js
 else
