@@ -8,6 +8,7 @@ import { ActionCardComponent, type ActionCardData } from '../../shared/component
 import { StatsCardComponent, type StatsCardData } from '../../shared/components/stats-card';
 import { SectionContainerComponent } from '../../shared/components/section-container';
 import { ToolsContainerComponent } from './components/tools-container/tools-container.component';
+import { environment } from '@env/environment';
 
 /**
  * Dashboard component providing overview of user's workspace.
@@ -792,7 +793,7 @@ export class DashboardComponent implements OnInit {
   private redirectToFormBuilder(accessToken: string): void {
     // Build SSO callback URL with token and redirectTo parameters
     // The callback page will process authentication and redirect to /app/dashboard
-    const formBuilderUrl = `http://localhost:4201/auth/sso-callback?token=${encodeURIComponent(accessToken)}&redirectTo=${encodeURIComponent('/app/dashboard')}`;
+    const formBuilderUrl = `${environment.formBuilderUrl}/auth/sso-callback?token=${encodeURIComponent(accessToken)}&redirectTo=${encodeURIComponent('/app/dashboard')}`;
 
     console.log('Redirecting to Form Builder SSO callback...');
 
