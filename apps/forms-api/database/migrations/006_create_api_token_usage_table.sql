@@ -67,7 +67,7 @@ ALTER TABLE api_token_usage ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS api_token_usage_tenant_isolation ON api_token_usage;
 CREATE POLICY api_token_usage_tenant_isolation ON api_token_usage
     FOR ALL
-    TO authenticated
+    TO public
     USING (
         CASE
             WHEN current_setting('app.current_tenant_id', true) IS NOT NULL

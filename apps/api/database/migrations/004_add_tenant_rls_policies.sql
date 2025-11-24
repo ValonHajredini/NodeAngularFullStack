@@ -6,14 +6,16 @@
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'application_role') THEN
-        CREATE ROLE application_role;
+        -- Only attempt creation if we have permission, otherwise assume it exists or skip
+        -- In managed environments (like DigitalOcean), we might not have CREATEROLE
+        NULL; 
     END IF;
 END
 $$;
 
--- Grant necessary permissions to application_role
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO application_role;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO application_role;
+-- Grant necessary permissions to application_role (if it exists)
+-- GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO legopdf;
+-- GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO legopdf;
 
 -- Create function to get current tenant context from session
 CREATE OR REPLACE FUNCTION get_current_tenant_id()
@@ -82,7 +84,7 @@ ALTER TABLE password_resets ENABLE ROW LEVEL SECURITY;
 -- Policy for tenant isolation on users
 DROP POLICY IF EXISTS tenant_isolation_users ON users;
 CREATE POLICY tenant_isolation_users ON users
-    FOR ALL TO application_role
+    FOR ALL TO legopdf
     USING (
         -- Allow access if no tenant context is set (system operations)
         get_current_tenant_id() IS NULL
@@ -105,7 +107,7 @@ CREATE POLICY tenant_isolation_users ON users
 -- Policy for admin users to access all tenants (with explicit permission)
 DROP POLICY IF EXISTS admin_access_users ON users;
 CREATE POLICY admin_access_users ON users
-    FOR ALL TO application_role
+    FOR ALL TO legopdf
     USING (
         -- Check if current user is admin in their tenant context
         EXISTS (
@@ -126,7 +128,7 @@ CREATE POLICY admin_access_users ON users
 -- Policy for session tenant isolation
 DROP POLICY IF EXISTS tenant_isolation_sessions ON sessions;
 CREATE POLICY tenant_isolation_sessions ON sessions
-    FOR ALL TO application_role
+    FOR ALL TO legopdf
     USING (
         -- Allow access based on user's tenant
         user_id IN (
@@ -159,7 +161,7 @@ CREATE POLICY tenant_isolation_sessions ON sessions
 -- Policy for password reset tenant isolation
 DROP POLICY IF EXISTS tenant_isolation_password_resets ON password_resets;
 CREATE POLICY tenant_isolation_password_resets ON password_resets
-    FOR ALL TO application_role
+    FOR ALL TO legopdf
     USING (
         -- Allow access based on user's tenant
         user_id IN (
@@ -328,14 +330,14 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Grant execute permissions on functions
-GRANT EXECUTE ON FUNCTION get_current_tenant_id() TO application_role;
-GRANT EXECUTE ON FUNCTION set_tenant_context(UUID) TO application_role;
-GRANT EXECUTE ON FUNCTION clear_tenant_context() TO application_role;
-GRANT EXECUTE ON FUNCTION user_belongs_to_tenant(UUID, UUID) TO application_role;
-GRANT EXECUTE ON FUNCTION validate_tenant_api_access(UUID, UUID, TEXT) TO application_role;
-GRANT EXECUTE ON FUNCTION log_tenant_access(UUID, UUID, TEXT, TEXT, UUID, INET, TEXT) TO application_role;
-GRANT EXECUTE ON FUNCTION check_tenant_feature_access(UUID, TEXT) TO application_role;
-GRANT EXECUTE ON FUNCTION check_tenant_limit(UUID, TEXT, INTEGER) TO application_role;
+GRANT EXECUTE ON FUNCTION get_current_tenant_id() TO legopdf;
+GRANT EXECUTE ON FUNCTION set_tenant_context(UUID) TO legopdf;
+GRANT EXECUTE ON FUNCTION clear_tenant_context() TO legopdf;
+GRANT EXECUTE ON FUNCTION user_belongs_to_tenant(UUID, UUID) TO legopdf;
+GRANT EXECUTE ON FUNCTION validate_tenant_api_access(UUID, UUID, TEXT) TO legopdf;
+GRANT EXECUTE ON FUNCTION log_tenant_access(UUID, UUID, TEXT, TEXT, UUID, INET, TEXT) TO legopdf;
+GRANT EXECUTE ON FUNCTION check_tenant_feature_access(UUID, TEXT) TO legopdf;
+GRANT EXECUTE ON FUNCTION check_tenant_limit(UUID, TEXT, INTEGER) TO legopdf;
 
 -- Create a view for tenant-aware user queries (optional optimization)
 CREATE OR REPLACE VIEW tenant_users AS
@@ -359,7 +361,7 @@ LEFT JOIN tenants t ON u.tenant_id = t.id
 WHERE u.is_active = true;
 
 -- Grant permissions on the view
-GRANT SELECT ON tenant_users TO application_role;
+GRANT SELECT ON tenant_users TO legopdf;
 
 -- Add comments for documentation
 COMMENT ON FUNCTION get_current_tenant_id() IS 'Gets the current tenant ID from session context for RLS policies';
