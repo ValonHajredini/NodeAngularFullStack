@@ -18,6 +18,10 @@ workflow:
       variables:
         PIPELINE_NAME: "Full Deployment"
 
+# Global variables
+variables:
+  GIT_DEPTH: 0  # Disable shallow clone to prevent "shallow file has changed" errors
+
 stages:
   - install-deps
   - build-shared
