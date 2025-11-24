@@ -126,3 +126,24 @@ pool.on('error', (err) => {
   console.error('Unexpected database error:', err);
   // Don't exit process - let reconnection logic handle it
 });
+
+/**
+ * Multi-Database Support
+ *
+ * Export multi-database pools for separated data domains.
+ * This enables proper data separation between authentication and forms data.
+ *
+ * Pools:
+ * - authPool: Authentication and user management (users, tenants, sessions)
+ * - dashboardPool: Dashboard and tools management (tools, configs, exports)
+ * - checkDatabaseConnections: Health check for all database connections
+ * - getDatabaseInfo: Get connection pool statistics
+ *
+ * @see multi-database.config.ts for detailed configuration
+ */
+export {
+  authPool,
+  dashboardPool,
+  checkDatabaseConnections,
+  getDatabaseInfo,
+} from './multi-database.config';
