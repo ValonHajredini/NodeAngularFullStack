@@ -169,6 +169,9 @@ build_api:
     - cat apps/api/tsconfig.json
 
     - echo ""
+    - echo "🔧 Rebuilding native dependencies for current architecture..."
+    - npm rebuild
+    - echo ""
     - echo "📦 Building api..."
     - cd apps/api
     - npm run build
@@ -209,6 +212,9 @@ build_forms_api:
     - echo "🔍 Checking for TypeScript config..."
     - cat apps/forms-api/tsconfig.json
 
+    - echo ""
+    - echo "🔧 Rebuilding native dependencies for current architecture..."
+    - npm rebuild
     - echo ""
     - echo "📦 Building forms-api..."
     - cd apps/forms-api
@@ -386,6 +392,9 @@ build_frontend_web:
     - npx ng version || echo "Angular CLI will be used via npx"
 
     - echo ""
+    - echo "🔧 Rebuilding native dependencies for current architecture..."
+    - npm rebuild
+    - echo ""
     - echo "📦 Building main UI with production configuration..."
     - npm --workspace=apps/web run build -- --configuration=production
 
@@ -418,6 +427,9 @@ build_frontend_form_builder:
     - echo "🔍 Verifying Angular CLI..."
     - npx ng version || echo "Angular CLI will be used via npx"
 
+    - echo ""
+    - echo "🔧 Rebuilding native dependencies for current architecture..."
+    - npm rebuild
     - echo ""
     - echo "📦 Building form builder UI with production configuration..."
     - npm --workspace=apps/form-builder-ui run build -- --configuration=production
