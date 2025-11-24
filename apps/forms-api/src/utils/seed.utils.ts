@@ -128,14 +128,17 @@ export class SeedUtils {
           ? new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000) // Random time in last 7 days
           : null;
 
-      // For single-tenant mode (tenant_id IS NULL), use the partial unique index
-      // For multi-tenant mode, use the composite unique constraint
-      // Note: WHERE clause must EXACTLY match the partial index definition
-      const conflictClause = user.tenantId
-        ? 'ON CONFLICT (email, tenant_id)'
-        : 'ON CONFLICT (email) WHERE (tenant_id IS NULL AND deleted_at IS NULL)';
+        // For single-tenant mode (tenant_id IS NULL), use the partial unique index
+        // For multi-tenant mode, use the composite unique constraint
+        // Note: WHERE clause must EXACTLY match the partial index definition
+        
+        // In production/postgres, ON CONFLICT syntax needs to match an existing unique constraint or index.
+        // The users table has:
+        // 1. CONSTRAINT unique_email_per_tenant UNIQUE(email, tenant_id)
+        
+        const conflictTarget = '(email, tenant_id)';
 
-      const query = `
+        const query = `
         INSERT INTO users (
           tenant_id,
           email,
@@ -147,7 +150,7 @@ export class SeedUtils {
           is_active,
           last_login
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-        ${conflictClause} DO UPDATE SET
+        ON CONFLICT ${conflictTarget} DO UPDATE SET
           password_hash = EXCLUDED.password_hash,
           first_name = EXCLUDED.first_name,
           last_name = EXCLUDED.last_name,

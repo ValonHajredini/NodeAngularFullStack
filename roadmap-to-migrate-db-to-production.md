@@ -35,9 +35,10 @@ Execute the following SQL commands:
 
 ```sql
 -- Create database user (if not exists)
+-- NOTE: Used 'legopdf' instead of 'dbuser' for this deployment
 CREATE USER legopdf WITH PASSWORD 'your-secure-password-here';
 
--- Create api_prod database
+-- Create api_db database
 CREATE DATABASE api_prod OWNER legopdf;
 
 -- Create form-builder-db database
@@ -60,13 +61,13 @@ GRANT ALL PRIVILEGES ON DATABASE forms_api_prod TO legopdf;
                                   List of databases
       Name        |  Owner   | Encoding |   Collate   |    Ctype
 ------------------+----------+----------+-------------+-------------
- api_prod           | legopdf   | UTF8     | en_US.UTF-8 | en_US.UTF-8
- forms_api_prod  | legopdf   | UTF8     | en_US.UTF-8 | en_US.UTF-8
+ api_prod         | legopdf  | UTF8     | en_US.UTF-8 | en_US.UTF-8
+ forms_api_prod   | legopdf  | UTF8     | en_US.UTF-8 | en_US.UTF-8
 ```
 
 ## Step 2: Update Environment Variables
 
-### 2.1 Main API Environment (`apps/api/.env.prod`)
+### 2.1 Main API Environment (`apps/api/.env`)
 
 Create or update the production environment file:
 
@@ -75,7 +76,7 @@ Create or update the production environment file:
 cd /path/to/NodeAngularFullStack/apps/api
 
 # Edit production environment file
-nano .env.prod
+nano .env
 ```
 
 **Required Database Configuration:**
@@ -84,7 +85,7 @@ nano .env.prod
 # Database Configuration (Main API)
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=forms_api_prod
+DB_NAME=api_prod
 DB_USER=legopdf
 DB_PASSWORD=your-secure-password-here
 DB_SSL=true
@@ -108,14 +109,14 @@ PORT=3000
 FRONTEND_URL=https://legopdf.com
 ```
 
-### 2.2 Forms API Environment (`apps/forms-api/.env.prod`)
+### 2.2 Forms API Environment (`apps/forms-api/.env`)
 
 ```bash
 # Navigate to Forms API directory
 cd /path/to/NodeAngularFullStack/apps/forms-api
 
 # Edit production environment file
-nano .env.prod
+nano .env
 ```
 
 **Required Database Configuration:**
@@ -128,6 +129,7 @@ DB_NAME=forms_api_prod
 DB_USER=legopdf
 DB_PASSWORD=your-secure-password-here
 DB_SSL=true
+FORMS_DB_NAME=forms_api_prod
 
 # Shared Authentication Database (from Main API)
 AUTH_DB_NAME=api_prod
@@ -170,6 +172,7 @@ cd /path/to/NodeAngularFullStack/apps/api
 export NODE_ENV=production
 
 # Run migrations for api_prod
+# Note: May require npx ts-node -r dotenv/config if env not loading
 npm run db:migrate
 
 # Verify migrations completed
@@ -249,6 +252,8 @@ cd /path/to/NodeAngularFullStack/apps/forms-api
 
 # Run seeds to create sample forms and themes
 npm run db:seed
+# Also run themes seeder explicitly if needed
+npx ts-node -r dotenv/config database/seeds/20-seed-default-themes.ts
 ```
 
 **This will create:**
@@ -325,7 +330,7 @@ npm run build
 
 ```bash
 # Start services using PM2 ecosystem
-pm2 start ecosystem.config.js --env production
+pm2 start ecosystem.config.js
 
 # Verify services are running
 pm2 status
@@ -350,12 +355,12 @@ pm2 logs forms-api
 
 ```bash
 # Test Main API health
-curl https://api.legopdf.com/health
+curl http://localhost:3000/health
 
 # Expected: {"status":"alive","timestamp":"...","uptime":...}
 
 # Test Forms API health
-curl https://forms-api.legopdf.com/health
+curl http://localhost:3001/health
 
 # Expected: {"status":"alive","timestamp":"...","uptime":...}
 ```
@@ -366,7 +371,7 @@ curl https://forms-api.legopdf.com/health
 
 ```bash
 # Test login via API
-curl -X POST https://api.legopdf.com/api/v1/auth/login \
+curl -X POST http://localhost:3000/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "admin@example.com",
@@ -390,15 +395,6 @@ curl -X POST https://api.legopdf.com/api/v1/auth/login \
   }
 }
 ```
-
-### 7.2 Access Frontend
-
-1. Navigate to: https://legopdf.com/auth/login
-2. Enter credentials:
-   - **Email:** admin@example.com
-   - **Password:** User123!@#
-3. Click "Sign in"
-4. Verify successful login and dashboard access
 
 ## Step 8: Post-Migration Security Checklist
 
@@ -489,8 +485,8 @@ sudo systemctl status postgresql
 # Check connection parameters
 psql -U legopdf -d api_prod -h localhost -p 5432
 
-# Verify .env.prod file has correct credentials
-cat apps/api/.env.prod | grep DB_
+# Verify .env file has correct credentials
+cat apps/api/.env | grep DB_
 ```
 
 ### Issue: Seed fails with "Users already exist"
@@ -512,7 +508,7 @@ npm run db:seed
 
 ```bash
 # Backup api_prod
-pg_dump -U legopdf -d api_prod -F c -f forms_api_prod_backup_$(date +%Y%m%d).dump
+pg_dump -U legopdf -d api_prod -F c -f api_prod_backup_$(date +%Y%m%d).dump
 
 # Backup forms_api_prod
 pg_dump -U legopdf -d forms_api_prod -F c -f forms_api_prod_backup_$(date +%Y%m%d).dump
@@ -544,25 +540,25 @@ DB_NAME=fapi_prod_staging
 DB_NAME=forms_api_prod_staging
 ```
 
-### Production (.env.prod)
+### Production (.env)
 
 ```bash
-DB_NAME=fapi_prod               # Main API
+DB_NAME=api_prod               # Main API
 # OR
-DB_NAME=forms_api_prod      # Forms API
+DB_NAME=forms_api_prod         # Forms API
 ```
 
 ## Summary
 
 ✅ **Databases Created:**
 
-- `fapi_prod` (Main API - auth, users, dashboard)
+- `api_prod` (Main API - auth, users, dashboard)
 - `forms_api_prod` (Forms API - forms, themes, exports)
 
 ✅ **Environment Variables Configured:**
 
-- `apps/api/.env.prod` → Uses `api_prod`
-- `apps/forms-api/.env.prod` → Uses `forms_api_prod`
+- `apps/api/.env` → Uses `api_prod`
+- `apps/forms-api/.env` → Uses `forms_api_prod`
 
 ✅ **Migrations Completed:**
 
@@ -593,4 +589,4 @@ DB_NAME=forms_api_prod      # Forms API
 
 ---
 
-**Last Updated:** 2025-11-23 **Version:** 1.0.0 **Author:** NodeAngularFullStack Team
+**Last Updated:** 2025-11-24 **Version:** 1.1.0 **Author:** NodeAngularFullStack Team
