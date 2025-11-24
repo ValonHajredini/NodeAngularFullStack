@@ -176,9 +176,9 @@ VALUES (
 --     true
 -- ) ON CONFLICT (email, tenant_id) DO NOTHING;
 
--- Grant appropriate permissions
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO legopdf;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO legopdf;
+-- Grant appropriate permissions (production only - commented out for local development)
+-- GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO legopdf;
+-- GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO legopdf;
 
 -- Add comments for documentation
 COMMENT ON TABLE users IS 'User accounts with authentication and profile information';
