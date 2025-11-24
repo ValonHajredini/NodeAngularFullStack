@@ -7,7 +7,7 @@ export const environment = {
   production: true,
   apiUrl: 'https://api.legopdf.com/api/v1', // Dashboard/Auth API
   formsApiUrl: 'https://forms-api.legopdf.com', // Forms API for analytics and form operations
-  shortLinkBaseUrl: 'https://forms-api.legopdf.com',
+  shortLinkBaseUrl: 'https://form-builder.legopdf.com', // Public form rendering on form builder domain
   mainAppUrl: 'https://legopdf.com', // Main application URL
   appName: 'LegoPDF Form Builder',
   enableMultiTenancy: true,

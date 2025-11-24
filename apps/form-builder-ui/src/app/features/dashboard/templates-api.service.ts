@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 import { map, catchError, shareReplay } from 'rxjs/operators';
-import { ApiClientService } from '@core/api/api-client.service';
+import { FormsApiClientService } from '@core/api/forms-api-client.service';
 import {
   FormTemplate,
   FormSchema,
@@ -14,9 +14,10 @@ import {
 } from '@nodeangularfullstack/shared';
 
 /**
- * Service for interacting with form templates API.
+ * Service for interacting with form templates API via Forms API.
  * Handles template fetching, filtering, application, and CRUD operations for template management.
  * Provides methods to apply templates and generate new form schemas from templates.
+ * Uses FormsApiClientService to communicate with forms-api.legopdf.com.
  *
  * **Features:**
  * - Fetch templates with optional category filtering
@@ -39,7 +40,7 @@ import {
  */
 @Injectable({ providedIn: 'root' })
 export class TemplatesApiService {
-  private readonly apiClient = inject(ApiClientService);
+  private readonly apiClient = inject(FormsApiClientService);
   private cache$: Observable<FormTemplate[]> | null = null;
 
   /**
@@ -60,7 +61,7 @@ export class TemplatesApiService {
     }
 
     return this.apiClient
-      .get<ApiResponse<FormTemplate[]>>('/templates', {
+      .get<ApiResponse<FormTemplate[]>>('/api/v1/templates', {
         params,
       })
       .pipe(
@@ -85,7 +86,7 @@ export class TemplatesApiService {
    */
   getTemplateById(id: string): Observable<FormTemplate> {
     return this.apiClient
-      .get<ApiResponse<FormTemplate>>(`/templates/${id}`)
+      .get<ApiResponse<FormTemplate>>(`/api/v1/templates/${id}`)
       .pipe(
         map((response) => {
           if (!response.data) {
@@ -115,7 +116,7 @@ export class TemplatesApiService {
    */
   applyTemplate(templateId: string): Observable<FormSchema> {
     return this.apiClient
-      .post<ApiResponse<FormSchema>>(`/templates/${templateId}/apply`, {})
+      .post<ApiResponse<FormSchema>>(`/api/v1/templates/${templateId}/apply`, {})
       .pipe(
         map((response) => {
           if (!response.data) {
@@ -200,7 +201,7 @@ export class TemplatesApiService {
    */
   createTemplate(template: CreateFormTemplateRequest): Observable<FormTemplate> {
     return this.apiClient
-      .post<ApiResponse<FormTemplate>>('/templates', template)
+      .post<ApiResponse<FormTemplate>>('/api/v1/templates', template)
       .pipe(
         map((response) => {
           if (response.data) {
@@ -238,7 +239,7 @@ export class TemplatesApiService {
    */
   updateTemplate(id: string, updates: UpdateFormTemplateRequest): Observable<FormTemplate> {
     return this.apiClient
-      .put<ApiResponse<FormTemplate>>(`/templates/${id}`, updates)
+      .put<ApiResponse<FormTemplate>>(`/api/v1/templates/${id}`, updates)
       .pipe(
         map((response) => {
           if (response.data) {
@@ -272,7 +273,7 @@ export class TemplatesApiService {
    */
   deleteTemplate(id: string): Observable<void> {
     return this.apiClient
-      .delete<ApiResponse<void>>(`/templates/${id}`)
+      .delete<ApiResponse<void>>(`/api/v1/templates/${id}`)
       .pipe(
         map(() => {
           this.refreshCache();

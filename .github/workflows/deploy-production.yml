@@ -46,10 +46,36 @@ jobs:
             # Navigate to project directory
             cd ${{ env.PROJECT_DIR }}
 
+            # Backup .env files before git reset
+            echo "💾 Backing up .env files..."
+            mkdir -p /tmp/env_backup
+            if [ -f apps/api/.env ]; then
+              cp apps/api/.env /tmp/env_backup/api.env
+              echo "✓ Backed up apps/api/.env"
+            fi
+            if [ -f apps/forms-api/.env ]; then
+              cp apps/forms-api/.env /tmp/env_backup/forms-api.env
+              echo "✓ Backed up apps/forms-api/.env"
+            fi
+
             # Pull latest changes from main branch
             echo "📥 Pulling latest code..."
             git fetch origin main
             git reset --hard origin/main
+
+            # Restore .env files after git reset
+            echo "♻️  Restoring .env files..."
+            if [ -f /tmp/env_backup/api.env ]; then
+              cp /tmp/env_backup/api.env apps/api/.env
+              echo "✓ Restored apps/api/.env"
+            fi
+            if [ -f /tmp/env_backup/forms-api.env ]; then
+              cp /tmp/env_backup/forms-api.env apps/forms-api/.env
+              echo "✓ Restored apps/forms-api/.env"
+            fi
+
+            # Clean up backup
+            rm -rf /tmp/env_backup
 
             # Set production environment
             export NODE_ENV=production

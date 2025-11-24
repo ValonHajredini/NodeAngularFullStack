@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
-import { ApiClientService } from '@core/api/api-client.service';
+import { FormsApiClientService } from '@core/api/forms-api-client.service';
 import {
   FormMetadata,
   FormSchema,
@@ -18,10 +18,11 @@ import {
 /**
  * API service for form management operations.
  * Handles CRUD operations for form drafts and published forms.
+ * Uses FormsApiClientService to communicate with forms-api.legopdf.com.
  */
 @Injectable({ providedIn: 'root' })
 export class FormsApiService {
-  private readonly apiClient = inject(ApiClientService);
+  private readonly apiClient = inject(FormsApiClientService);
 
   /**
    * Creates a new form draft.
@@ -33,7 +34,7 @@ export class FormsApiService {
    *   .subscribe(form => console.log('Form created:', form));
    */
   createForm(formData: Partial<FormMetadata>): Observable<FormMetadata> {
-    return this.apiClient.post<ApiResponse<FormMetadata>>('/forms', formData).pipe(
+    return this.apiClient.post<ApiResponse<FormMetadata>>('/api/v1/forms', formData).pipe(
       map((response) => this.convertDates(response.data!)),
       catchError((error) => throwError(() => error)),
     );
@@ -50,7 +51,7 @@ export class FormsApiService {
    *   .subscribe(form => console.log('Form updated:', form));
    */
   updateForm(id: string, formData: Partial<FormMetadata>): Observable<FormMetadata> {
-    return this.apiClient.put<ApiResponse<FormMetadata>>(`/forms/${id}`, formData).pipe(
+    return this.apiClient.put<ApiResponse<FormMetadata>>(`/api/v1/forms/${id}`, formData).pipe(
       map((response) => this.convertDates(response.data!)),
       catchError((error) => throwError(() => error)),
     );
@@ -67,7 +68,7 @@ export class FormsApiService {
    */
   getForms(page = 1, limit = 20): Observable<PaginatedResponse<FormMetadata>> {
     return this.apiClient
-      .get<PaginatedResponse<FormMetadata>>('/forms', {
+      .get<PaginatedResponse<FormMetadata>>('/api/v1/forms', {
         params: {
           page: page.toString(),
           limit: limit.toString(),
@@ -92,7 +93,7 @@ export class FormsApiService {
    *   .subscribe(form => console.log('Form:', form));
    */
   getFormById(id: string): Observable<FormMetadata> {
-    return this.apiClient.get<ApiResponse<FormMetadata>>(`/forms/${id}`).pipe(
+    return this.apiClient.get<ApiResponse<FormMetadata>>(`/api/v1/forms/${id}`).pipe(
       map((response) => this.convertDates(response.data!)),
       catchError((error) => throwError(() => error)),
     );
@@ -109,7 +110,7 @@ export class FormsApiService {
    */
   deleteForm(id: string): Observable<void> {
     return this.apiClient
-      .delete<void>(`/forms/${id}`)
+      .delete<void>(`/api/v1/forms/${id}`)
       .pipe(catchError((error) => throwError(() => error)));
   }
 
@@ -148,7 +149,7 @@ export class FormsApiService {
     }
 
     return this.apiClient
-      .post<ApiResponse<PublishFormResponse>>(`/forms/${formId}/publish`, requestBody)
+      .post<ApiResponse<PublishFormResponse>>(`/api/v1/forms/${formId}/publish`, requestBody)
       .pipe(
         map((response) => ({
           form: this.convertDates(response.data!.form),
@@ -173,7 +174,7 @@ export class FormsApiService {
    *   .subscribe(form => console.log('Form unpublished:', form));
    */
   unpublishForm(formId: string): Observable<FormMetadata> {
-    return this.apiClient.post<ApiResponse<FormMetadata>>(`/forms/${formId}/unpublish`, {}).pipe(
+    return this.apiClient.post<ApiResponse<FormMetadata>>(`/api/v1/forms/${formId}/unpublish`, {}).pipe(
       map((response) => this.convertDates(response.data!)),
       catchError((error) => throwError(() => error)),
     );
@@ -197,7 +198,7 @@ export class FormsApiService {
     return this.apiClient
       .post<
         ApiResponse<{ url: string; fileName: string; size: number; mimeType: string }>
-      >('/forms/upload-background', formData)
+      >('/api/v1/forms/upload-background', formData)
       .pipe(
         map((response) => response.data!),
         catchError((error) => throwError(() => error)),
@@ -235,7 +236,7 @@ export class FormsApiService {
     limit = 50,
   ): Observable<PaginatedResponse<FormSubmission>> {
     return this.apiClient
-      .get<PaginatedResponse<FormSubmission>>(`/forms/${formId}/submissions`, {
+      .get<PaginatedResponse<FormSubmission>>(`/api/v1/forms/${formId}/submissions`, {
         params: {
           page: page.toString(),
           limit: limit.toString(),
@@ -270,7 +271,7 @@ export class FormsApiService {
    * });
    */
   exportSubmissions(formId: string, params?: Record<string, string>): Observable<Blob> {
-    return this.apiClient.get(`/forms/${formId}/submissions/export`, {
+    return this.apiClient.get(`/api/v1/forms/${formId}/submissions/export`, {
       params,
       responseType: 'blob',
     });
@@ -312,7 +313,7 @@ export class FormsApiService {
    *   .subscribe(theme => console.log('Theme:', theme));
    */
   getTheme(themeId: string): Observable<FormTheme> {
-    return this.apiClient.get<ApiResponse<FormTheme>>(`/themes/${themeId}`).pipe(
+    return this.apiClient.get<ApiResponse<FormTheme>>(`/api/v1/themes/${themeId}`).pipe(
       map((response) => this.convertThemeDates(response.data!)),
       catchError((error) => throwError(() => error)),
     );
@@ -331,7 +332,7 @@ export class FormsApiService {
    * }).subscribe(theme => console.log('Theme created:', theme));
    */
   createTheme(themeData: Partial<CreateThemeRequest>): Observable<FormTheme> {
-    return this.apiClient.post<ApiResponse<FormTheme>>('/themes', themeData).pipe(
+    return this.apiClient.post<ApiResponse<FormTheme>>('/api/v1/themes', themeData).pipe(
       map((response) => this.convertThemeDates(response.data!)),
       catchError((error) => throwError(() => error)),
     );
@@ -350,7 +351,7 @@ export class FormsApiService {
    * }).subscribe(theme => console.log('Theme updated:', theme));
    */
   updateTheme(themeId: string, themeData: Partial<CreateThemeRequest>): Observable<FormTheme> {
-    return this.apiClient.put<ApiResponse<FormTheme>>(`/themes/${themeId}`, themeData).pipe(
+    return this.apiClient.put<ApiResponse<FormTheme>>(`/api/v1/themes/${themeId}`, themeData).pipe(
       map((response) => this.convertThemeDates(response.data!)),
       catchError((error) => throwError(() => error)),
     );
@@ -367,7 +368,7 @@ export class FormsApiService {
    */
   deleteTheme(themeId: string): Observable<void> {
     return this.apiClient
-      .delete<void>(`/themes/${themeId}`)
+      .delete<void>(`/api/v1/themes/${themeId}`)
       .pipe(catchError((error) => throwError(() => error)));
   }
 
@@ -387,7 +388,7 @@ export class FormsApiService {
     formData.append('thumbnail', file);
 
     return this.apiClient
-      .post<ApiResponse<{ thumbnailUrl: string }>>('/themes/upload-thumbnail', formData)
+      .post<ApiResponse<{ thumbnailUrl: string }>>('/api/v1/themes/upload-thumbnail', formData)
       .pipe(
         map((response) => response.data!.thumbnailUrl),
         catchError((error) => throwError(() => error)),
@@ -409,7 +410,7 @@ export class FormsApiService {
    */
   checkTokenStatus(formId: string): Observable<TokenStatusResponse> {
     return this.apiClient
-      .get<ApiResponse<TokenStatusResponse>>(`/forms/${formId}/tokens/status`)
+      .get<ApiResponse<TokenStatusResponse>>(`/api/v1/forms/${formId}/tokens/status`)
       .pipe(
         map((response) => ({
           ...response.data!,

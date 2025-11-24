@@ -1,17 +1,17 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-// import { ApiClientService } from '../../core/api/api-client.service';
 import { ApiResponse, FormTheme } from '@nodeangularfullstack/shared';
-import {ApiClientService} from '@core/api';
+import { FormsApiClientService } from '@core/api/forms-api-client.service';
 
 /**
- * Service for managing form themes via API.
+ * Service for managing form themes via Forms API.
  * Handles fetching available themes and tracking theme applications.
+ * Uses FormsApiClientService to communicate with forms-api.legopdf.com.
  */
 @Injectable({ providedIn: 'root' })
 export class ThemesApiService {
-  private readonly api = inject(    ApiClientService);
+  private readonly api = inject(FormsApiClientService);
 
   /**
    * Fetches all available themes from the API.
@@ -23,7 +23,7 @@ export class ThemesApiService {
    * });
    */
   getThemes(): Observable<ApiResponse<FormTheme[]>> {
-    return this.api.get<ApiResponse<FormTheme[]>>('/themes');
+    return this.api.get<ApiResponse<FormTheme[]>>('/api/v1/themes');
   }
 
   /**
@@ -39,7 +39,7 @@ export class ThemesApiService {
    */
   getAllThemes(): Observable<FormTheme[]> {
     return this.api
-      .get<ApiResponse<FormTheme[]>>('/themes')
+      .get<ApiResponse<FormTheme[]>>('/api/v1/themes')
       .pipe(map((response) => response.data || []));
   }
 
@@ -54,6 +54,6 @@ export class ThemesApiService {
    * });
    */
   applyTheme(themeId: string): Observable<ApiResponse<{ usageCount: number }>> {
-    return this.api.post<ApiResponse<{ usageCount: number }>>(`/themes/${themeId}/apply`, {});
+    return this.api.post<ApiResponse<{ usageCount: number }>>(`/api/v1/themes/${themeId}/apply`, {});
   }
 }
