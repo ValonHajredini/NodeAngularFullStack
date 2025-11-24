@@ -7,8 +7,8 @@ Forms API services in production.
 
 The application uses a **separated database architecture** with two dedicated databases:
 
-- **`api_db`**: Main API database (auth, users, dashboard) - `apps/api`
-- **`form-builder-db`**: Forms API database (forms, themes, export) - `apps/forms-api`
+- **`api_prod`**: Main API database (auth, users, dashboard) - `apps/api`
+- **`forms_api_prod`**: Forms API database (forms, themes, export) - `apps/forms-api`
 
 ## Prerequisites
 
@@ -35,17 +35,17 @@ Execute the following SQL commands:
 
 ```sql
 -- Create database user (if not exists)
-CREATE USER dbuser WITH PASSWORD 'your-secure-password-here';
+CREATE USER legopdf WITH PASSWORD 'your-secure-password-here';
 
--- Create api_db database
-CREATE DATABASE api_db OWNER dbuser;
+-- Create api_prod database
+CREATE DATABASE api_prod OWNER legopdf;
 
 -- Create form-builder-db database
-CREATE DATABASE form_builder_db OWNER dbuser;
+CREATE DATABASE forms_api_prod OWNER legopdf;
 
 -- Grant all privileges
-GRANT ALL PRIVILEGES ON DATABASE api_db TO dbuser;
-GRANT ALL PRIVILEGES ON DATABASE form_builder_db TO dbuser;
+GRANT ALL PRIVILEGES ON DATABASE api_prod TO legopdf;
+GRANT ALL PRIVILEGES ON DATABASE forms_api_prod TO legopdf;
 
 -- Verify databases were created
 \l
@@ -60,8 +60,8 @@ GRANT ALL PRIVILEGES ON DATABASE form_builder_db TO dbuser;
                                   List of databases
       Name        |  Owner   | Encoding |   Collate   |    Ctype
 ------------------+----------+----------+-------------+-------------
- api_db           | dbuser   | UTF8     | en_US.UTF-8 | en_US.UTF-8
- form_builder_db  | dbuser   | UTF8     | en_US.UTF-8 | en_US.UTF-8
+ api_prod           | legopdf   | UTF8     | en_US.UTF-8 | en_US.UTF-8
+ forms_api_prod  | legopdf   | UTF8     | en_US.UTF-8 | en_US.UTF-8
 ```
 
 ## Step 2: Update Environment Variables
@@ -84,14 +84,14 @@ nano .env.prod
 # Database Configuration (Main API)
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=api_db
-DB_USER=dbuser
+DB_NAME=forms_api_prod
+DB_USER=legopdf
 DB_PASSWORD=your-secure-password-here
 DB_SSL=true
 
 # Multi-Database Architecture
-AUTH_DB_NAME=api_db
-DASHBOARD_DB_NAME=api_db
+AUTH_DB_NAME=api_prod
+DASHBOARD_DB_NAME=api_prod
 
 # JWT Authentication (Production - Use strong secrets)
 JWT_SECRET=your-production-jwt-secret-at-least-64-characters-long-change-this
@@ -124,13 +124,13 @@ nano .env.prod
 # Database Configuration (Forms API)
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=form_builder_db
-DB_USER=dbuser
+DB_NAME=forms_api_prod
+DB_USER=legopdf
 DB_PASSWORD=your-secure-password-here
 DB_SSL=true
 
 # Shared Authentication Database (from Main API)
-AUTH_DB_NAME=api_db
+AUTH_DB_NAME=api_prod
 
 # Other required variables...
 NODE_ENV=production
@@ -140,8 +140,8 @@ FRONTEND_URL=https://form-builder.legopdf.com
 
 **⚠️ CRITICAL NOTES:**
 
-- **Database Names**: MUST use `api_db` and `form_builder_db` exactly as specified
-- **AUTH_DB_NAME**: Both services share `api_db` for authentication/users
+- **Database Names**: MUST use `api_prod` and `forms_api_prod` exactly as specified
+- **AUTH_DB_NAME**: Both services share `api_prod` for authentication/users
 - **Passwords**: Use strong, unique passwords in production (minimum 32 characters)
 - **JWT Secrets**: Generate cryptographically secure secrets (64+ characters)
 
@@ -160,7 +160,7 @@ openssl rand -base64 48
 
 ## Step 3: Run Database Migrations
 
-### 3.1 Main API Migrations (api_db)
+### 3.1 Main API Migrations (api_prod)
 
 ```bash
 # Navigate to API directory
@@ -169,11 +169,11 @@ cd /path/to/NodeAngularFullStack/apps/api
 # Set production environment
 export NODE_ENV=production
 
-# Run migrations for api_db
+# Run migrations for api_prod
 npm run db:migrate
 
 # Verify migrations completed
-psql -U dbuser -d api_db -c "\dt"
+psql -U legopdf -d api_prod -c "\dt"
 ```
 
 **Expected Tables Created:**
@@ -187,7 +187,7 @@ psql -U dbuser -d api_db -c "\dt"
 - `audit_logs`
 - `migrations`
 
-### 3.2 Forms API Migrations (form_builder_db)
+### 3.2 Forms API Migrations (forms_api_prod)
 
 ```bash
 # Navigate to Forms API directory
@@ -196,11 +196,11 @@ cd /path/to/NodeAngularFullStack/apps/forms-api
 # Set production environment
 export NODE_ENV=production
 
-# Run migrations for form_builder_db
+# Run migrations for forms_api_prod
 npm run db:migrate
 
 # Verify migrations completed
-psql -U dbuser -d form_builder_db -c "\dt"
+psql -U legopdf -d forms_api_prod -c "\dt"
 ```
 
 **Expected Tables Created:**
@@ -262,8 +262,8 @@ npm run db:seed
 ### 5.1 Verify User Creation
 
 ```bash
-# Connect to api_db
-psql -U dbuser -d api_db
+# Connect to api_prod
+psql -U legopdf -d api_prod
 
 # Check users were created
 SELECT id, email, role FROM users;
@@ -282,8 +282,8 @@ SELECT id, email, role FROM users;
 ### 5.2 Verify Forms Database
 
 ```bash
-# Connect to form_builder_db
-psql -U dbuser -d form_builder_db
+# Connect to forms_api_prod
+psql -U legopdf -d forms_api_prod
 
 # Check themes were created
 SELECT id, name, is_predefined FROM form_themes;
@@ -405,8 +405,8 @@ curl -X POST https://api.legopdf.com/api/v1/auth/login \
 ### 8.1 Change Default Passwords
 
 ```sql
--- Connect to api_db
-psql -U dbuser -d api_db
+-- Connect to api_prod
+psql -U legopdf -d api_prod
 
 -- Update admin password (replace with bcrypt hash)
 UPDATE users SET password = '$2b$10$NEW_BCRYPT_HASH_HERE' WHERE email = 'admin@example.com';
@@ -430,8 +430,8 @@ curl -X POST https://api.legopdf.com/api/v1/auth/register \
 ### 8.3 Disable Test Accounts (Recommended)
 
 ```sql
--- Connect to api_db
-psql -U dbuser -d api_db
+-- Connect to api_prod
+psql -U legopdf -d api_prod
 
 -- Disable test accounts (don't delete for audit trail)
 UPDATE users SET is_active = false WHERE email IN (
@@ -460,7 +460,7 @@ UPDATE users SET is_active = false WHERE email IN (
 
 ```bash
 # Verify database exists
-psql -U dbuser -l | grep -E 'api_db|form_builder_db'
+psql -U legopdf -l | grep -E 'api_prod|forms_api_prod'
 
 # If missing, recreate following Step 1.2
 ```
@@ -474,8 +474,8 @@ psql -U dbuser -l | grep -E 'api_db|form_builder_db'
 sudo -u postgres psql
 
 -- Grant permissions
-GRANT ALL PRIVILEGES ON DATABASE api_db TO dbuser;
-GRANT ALL PRIVILEGES ON DATABASE form_builder_db TO dbuser;
+GRANT ALL PRIVILEGES ON DATABASE api_prod TO legopdf;
+GRANT ALL PRIVILEGES ON DATABASE forms_api_prod TO legopdf;
 ```
 
 ### Issue: "Cannot connect to database"
@@ -487,7 +487,7 @@ GRANT ALL PRIVILEGES ON DATABASE form_builder_db TO dbuser;
 sudo systemctl status postgresql
 
 # Check connection parameters
-psql -U dbuser -d api_db -h localhost -p 5432
+psql -U legopdf -d api_prod -h localhost -p 5432
 
 # Verify .env.prod file has correct credentials
 cat apps/api/.env.prod | grep DB_
@@ -502,7 +502,7 @@ cat apps/api/.env.prod | grep DB_
 npm run db:reset
 
 # Or manually delete users and re-seed
-psql -U dbuser -d api_db -c "DELETE FROM users WHERE email LIKE '%@example.com';"
+psql -U legopdf -d api_prod -c "DELETE FROM users WHERE email LIKE '%@example.com';"
 npm run db:seed
 ```
 
@@ -511,21 +511,21 @@ npm run db:seed
 ### Create Backup
 
 ```bash
-# Backup api_db
-pg_dump -U dbuser -d api_db -F c -f api_db_backup_$(date +%Y%m%d).dump
+# Backup api_prod
+pg_dump -U legopdf -d api_prod -F c -f forms_api_prod_backup_$(date +%Y%m%d).dump
 
-# Backup form_builder_db
-pg_dump -U dbuser -d form_builder_db -F c -f form_builder_db_backup_$(date +%Y%m%d).dump
+# Backup forms_api_prod
+pg_dump -U legopdf -d forms_api_prod -F c -f forms_api_prod_backup_$(date +%Y%m%d).dump
 ```
 
 ### Restore from Backup
 
 ```bash
-# Restore api_db
-pg_restore -U dbuser -d api_db -c api_db_backup_20250123.dump
+# Restore api_prod
+pg_restore -U legopdf -d api_prod -c api_prod_backup_20250123.dump
 
-# Restore form_builder_db
-pg_restore -U dbuser -d form_builder_db -c form_builder_db_backup_20250123.dump
+# Restore forms_api_prod
+pg_restore -U legopdf -d forms_api_prod -c forms_api_prod_backup_20250123.dump
 ```
 
 ## Environment-Specific Configuration
@@ -539,30 +539,30 @@ DB_NAME=nodeangularfullstack  # Single monolithic DB for dev
 ### Staging (.env.staging)
 
 ```bash
-DB_NAME=api_db_staging
+DB_NAME=fapi_prod_staging
 # OR
-DB_NAME=form_builder_db_staging
+DB_NAME=forms_api_prod_staging
 ```
 
 ### Production (.env.prod)
 
 ```bash
-DB_NAME=api_db               # Main API
+DB_NAME=fapi_prod               # Main API
 # OR
-DB_NAME=form_builder_db      # Forms API
+DB_NAME=forms_api_prod      # Forms API
 ```
 
 ## Summary
 
 ✅ **Databases Created:**
 
-- `api_db` (Main API - auth, users, dashboard)
-- `form_builder_db` (Forms API - forms, themes, exports)
+- `fapi_prod` (Main API - auth, users, dashboard)
+- `forms_api_prod` (Forms API - forms, themes, exports)
 
 ✅ **Environment Variables Configured:**
 
-- `apps/api/.env.prod` → Uses `api_db`
-- `apps/forms-api/.env.prod` → Uses `form_builder_db`
+- `apps/api/.env.prod` → Uses `api_prod`
+- `apps/forms-api/.env.prod` → Uses `forms_api_prod`
 
 ✅ **Migrations Completed:**
 
